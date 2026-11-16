@@ -12,21 +12,22 @@ use std::time::Duration;
 
 use ac_core::combat::CombatMode;
 use ac_core::items::PublicWeenieFlags;
-use ac_core::player::{LiveSkillCreditResolver, SkillFormulaBonusResolver};
 use ac_core::properties::{PropertyBool, PropertyInt};
 use ac_proto::appraise::IdentifyObjectResponse;
 use ac_proto::social::{ConfirmationDone, ConfirmationRequest};
 use ac_proto::{GameEventType, Inbound, PlayerDescription, build_login_complete};
 
+use super::Clocks;
 use super::Outbox;
 use super::Queue;
+use super::Recall;
+use super::SessionCommand;
 use super::portal_failure::{PortalWait, PortalWorldState};
 use super::position_trail::{
     Acceptance, PlayerNotFound, PositionTrail, SelfCastWatch, TrailEvent, TrailMessage,
     TrailPosition, TrailStamps,
 };
-use super::runner::Recall;
-use super::runner::{HostEvent, ObjectSummary, SessionCommand};
+use super::runner::{HostEvent, ObjectSummary};
 use crate::character::{CharacterOptions, OPTIONS, option_id};
 use crate::communication::{
     ChatChannelKind, ClientCommandId, Communication, CommunicationEvent, CommunicationPaths,
@@ -45,16 +46,6 @@ use crate::world::transit::{
     WorldTransit,
 };
 use crate::world::{PlayerView, World, distance};
-
-/// The two clocks the owners read.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct Clocks {
-    /// Wall clock, UTC milliseconds since the Unix epoch (chat lines, the
-    /// journal, the options' auto-save).
-    pub wall_unix_ms: i64,
-    /// Session time (use pacing, appraisal limits, appraisal stamps).
-    pub session: Duration,
-}
 
 impl Clocks {
     fn session_ms(self) -> i64 {
@@ -127,6 +118,9 @@ pub struct SessionState {
     portal_events: Vec<PortalSpaceEvent>,
     /// A window is attached: a portal arrival waits for it.
     window_attached: bool,
+    /// What is attached is a remote presentation, shown over a link that
+    /// may stall: nothing is held for it.
+    window_remote: bool,
     /// The attached window draws the world (it presents the login).
     window_presents_world: bool,
     /// The portal arrival waiting for the attached window to show its
@@ -150,6 +144,8 @@ pub struct SessionState {
     pub frame_clock: crate::frame_clock::FrameClock,
     /// The physics, the local player's movement and other bodies.
     pub movement: Movement,
+    /// The world's own messages, kept for a viewer somewhere else.
+    pub world_tap: super::world_tap::WorldTap,
     /// The 25-second expiry of objects out of range.
     pub liveness: crate::world::liveness::LivenessController,
     /// Walks the client plans and walks, and moves asked for by chat.
@@ -203,6 +199,7 @@ impl SessionState {
             last_logout: LogoutStage::None,
             portal_events: Vec::new(),
             window_attached: false,
+            window_remote: false,
             window_presents_world: false,
             held_arrival: None,
             destination_hold: None,
@@ -213,6 +210,7 @@ impl SessionState {
             last_tick: None,
             frame_clock: crate::frame_clock::FrameClock::default(),
             movement: Movement::default(),
+            world_tap: super::world_tap::WorldTap::default(),
             liveness: crate::world::liveness::LivenessController::default(),
             navigation: Navigation::default(),
             host_events: Vec::new(),
@@ -738,6 +736,11 @@ impl SessionState {
         if changed {
             // A window reports its own minimized state once it is up.
             self.plugin_services.window_minimized = false;
+            if !attached {
+                // Nobody is at the movement keys any more, however the
+                // window went (detached, or its receiver dropped).
+                self.movement.release_keys();
+            }
         }
         self.navigation.set_drawable(attached);
         if !attached {
@@ -748,6 +751,11 @@ impl SessionState {
         }
     }
 
+    /// What is attached is a remote presentation (`true`) or a window.
+    pub fn set_window_remote(&mut self, remote: bool) {
+        self.window_remote = remote;
+    }
+
     /// The attached window draws the world (it has the dats): it presents
     /// the login, and login complete waits for it (OpenAC holds login
     /// complete only for a window with a world to show).
@@ -755,11 +763,12 @@ impl SessionState {
         self.window_presents_world = presents;
     }
 
-    /// Whether an attached window holds the arrivals: one that is not
+    /// Whether an attached window holds the arrivals: one shown here (a
+    /// remote presentation holds nothing) that is not
     /// minimized (a minimized window draws nothing, while OpenAC's update
     /// loop runs its presentation on and completes the arrival).
     fn window_holds(&self) -> bool {
-        self.window_attached && !self.plugin_services.window_minimized
+        self.window_attached && !self.window_remote && !self.plugin_services.window_minimized
     }
 
     /// Whether the attached window presents the login (login complete
@@ -1011,6 +1020,8 @@ impl SessionState {
     /// owners forget the server's state, the world empties and portal space
     /// resets.
     pub fn end_generation(&mut self, wall_unix_ms: i64) {
+        // The server's objects are forgotten with the stay.
+        self.world_tap.forget();
         self.login_commands.cancel(self.generation);
         self.options_seeder.reset_session();
         self.login_complete_seen = false;
@@ -1067,10 +1078,7 @@ impl SessionState {
     /// spell table and the skill formulas, and the quest tracker the
     /// contract table.
     pub fn install_tables(&mut self, tables: Arc<GameTables>, account: &str) {
-        let skills = LiveSkillCreditResolver::new(tables.skills().clone());
-        let resolver: SkillFormulaBonusResolver =
-            Arc::new(move |skill, class, attributes| skills.resolve(skill, class, attributes));
-        let resolver = (!tables.skills().is_empty()).then_some(resolver);
+        let resolver = tables.skill_formula_resolver();
         self.world
             .install_player_rules(Arc::clone(tables.spells()), resolver);
         self.communication
@@ -1172,6 +1180,19 @@ impl SessionState {
         active: bool,
         clocks: Clocks,
     ) -> bool {
+        // `/remoteac` is the host's, before the plugins' interceptors see
+        // the line: it may carry the relay token.
+        if let Some(request) = crate::communication::remote_command::parse(line) {
+            match request {
+                Ok(command) => self.host_events.push(HostEvent::RemoteCommand(command)),
+                Err(answer) => self.communication.show_text(
+                    clocks.wall_unix_ms,
+                    &answer,
+                    ac_core::chat::LogTextType::Default,
+                ),
+            }
+            return true;
+        }
         if crate::communication::is_client_command(line) {
             return false;
         }
@@ -1470,6 +1491,26 @@ impl SessionState {
             }
             SessionCommand::Movement(command) => {
                 self.movement.command(command, &self.world, outbox);
+            }
+            SessionCommand::WorldTap(command) => {
+                use super::world_tap::WorldTapCommand;
+                match command {
+                    WorldTapCommand::Keep(keeping) => self.world_tap.keep(keeping),
+                    WorldTapCommand::Listen(listener) => {
+                        let player = self.world.player_guid().unwrap_or(0);
+                        let world = &self.world;
+                        self.world_tap
+                            .listen(listener, player, |guid| world.object(guid).is_some());
+                    }
+                }
+            }
+            // The runner attaches it. What it replaces is not at the
+            // movement keys any more.
+            attach @ (SessionCommand::Attach(_) | SessionCommand::AttachRemote(_)) => {
+                if self.window_attached {
+                    self.movement.release_keys();
+                }
+                return Some(attach);
             }
             SessionCommand::Character(request) => {
                 if active {
@@ -2945,6 +2986,48 @@ mod tests {
     }
 
     #[test]
+    fn remoteac_goes_to_the_host_and_never_to_the_server_the_chat_or_the_history() {
+        use crate::communication::ChatEntryCommand;
+        use crate::communication::remote_command::RemoteCommand;
+        let (mut state, mut outbox) = state();
+        let typed =
+            |line: &str| SessionCommand::ChatEntry(ChatEntryCommand::Submit(Some(line.to_owned())));
+        state.command(typed("/remoteac status"), &mut outbox, true, CLOCKS);
+        state.command(typed("/remoteac secret hunter2"), &mut outbox, true, CLOCKS);
+        state.command(
+            SessionCommand::Chat("@remoteac url \"wss://relay.example/ws\"".into()),
+            &mut outbox,
+            true,
+            CLOCKS,
+        );
+        state.command(typed("/remoteac hunter2"), &mut outbox, true, CLOCKS);
+        assert!(outbox.is_empty(), "nothing goes to the server");
+        let events = state.drain_host_events();
+        let requests: Vec<&RemoteCommand> = events
+            .iter()
+            .filter_map(|e| match e {
+                HostEvent::RemoteCommand(c) => Some(c),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(requests.len(), 3, "{events:?}");
+        assert_eq!(requests[0], &RemoteCommand::Status);
+        assert!(matches!(requests[1], RemoteCommand::Secret(s) if s.reveal() == "hunter2"));
+        assert_eq!(
+            requests[2],
+            &RemoteCommand::Url("wss://relay.example/ws".into())
+        );
+        // The mistyped line is answered with the help, which repeats nothing
+        // of it; no event shows the token, not even in its debug form.
+        let shown = format!("{events:?}");
+        assert!(!shown.contains("hunter2"), "{shown}");
+        assert!(shown.contains("/remoteac status"), "{shown}");
+        let entry = state.communication.chat_entry_mut();
+        assert_eq!(entry.count(), 1, "only /remoteac status is recalled");
+        assert_eq!(entry.recall_previous().as_deref(), Some("/remoteac status"));
+    }
+
+    #[test]
     fn the_timestamp_option_reaches_the_chat_lines() {
         let (mut state, mut outbox) = state();
         state
@@ -3446,6 +3529,90 @@ mod tests {
         arrive_at(&mut state, &mut outbox, 1, DESTINATION);
         assert!(outbox.is_empty());
         assert!(state.held_arrival().is_some());
+    }
+
+    /// A remote presentation never holds an arrival: its link may stall,
+    /// and the character must not wait in portal space for it.
+    #[test]
+    fn a_remote_presentation_holds_no_arrival() {
+        let (mut state, mut outbox) = in_portal_space(true, 1);
+        state.set_window_remote(true);
+        arrive_at(&mut state, &mut outbox, 1, DESTINATION);
+        assert_eq!(bodies(&mut outbox), [build_login_complete()]);
+        assert!(state.held_arrival().is_none());
+        assert!(state.transit.snapshot().completed);
+    }
+
+    /// Nor the login, even when it says it draws the world.
+    #[test]
+    fn a_remote_presentation_does_not_hold_the_login() {
+        let (mut state, _) = entering(true);
+        assert!(state.window_holds_login());
+        state.set_window_remote(true);
+        assert!(!state.window_holds_login());
+    }
+
+    fn forward_held() -> crate::movement::MovementKeys {
+        crate::movement::MovementKeys {
+            forward: true,
+            ..Default::default()
+        }
+    }
+
+    /// A window that goes away without detaching (its receiver dropped)
+    /// lets go of the movement keys it held, as a detach does: the
+    /// character must not run on with nobody at the keys.
+    #[test]
+    fn a_window_that_goes_away_releases_its_held_keys() {
+        let (mut state, mut outbox) = state();
+        state.set_window_attached(true, &mut outbox);
+        let keys = crate::movement::MovementCommand::Keys(forward_held());
+        state.command(SessionCommand::Movement(keys), &mut outbox, true, CLOCKS);
+        assert_eq!(state.movement.held_keys(), forward_held());
+        state.set_window_attached(false, &mut outbox);
+        assert_eq!(
+            state.movement.held_keys(),
+            crate::movement::MovementKeys::default()
+        );
+    }
+
+    /// A presentation that attaches in place of another does not inherit
+    /// the keys the other held: a remote that only watches would never let
+    /// go of them.
+    #[test]
+    fn attaching_in_place_of_a_window_releases_the_keys_it_held() {
+        let (mut state, mut outbox) = state();
+        state.set_window_attached(true, &mut outbox);
+        let keys = crate::movement::MovementCommand::Keys(forward_held());
+        state.command(SessionCommand::Movement(keys), &mut outbox, true, CLOCKS);
+        let (to_remote, _remote) = std::sync::mpsc::channel();
+        let passed = state.command(
+            SessionCommand::AttachRemote(to_remote),
+            &mut outbox,
+            true,
+            CLOCKS,
+        );
+        assert!(matches!(passed, Some(SessionCommand::AttachRemote(_))));
+        assert_eq!(
+            state.movement.held_keys(),
+            crate::movement::MovementKeys::default()
+        );
+    }
+
+    /// The controller of a presentation lets go without detaching (a remote
+    /// whose input stopped arriving): the held keys are released.
+    #[test]
+    fn release_keys_lets_go_of_the_held_keys() {
+        let (mut state, mut outbox) = state();
+        state.set_window_attached(true, &mut outbox);
+        let keys = crate::movement::MovementCommand::Keys(forward_held());
+        state.command(SessionCommand::Movement(keys), &mut outbox, true, CLOCKS);
+        let release = crate::movement::MovementCommand::ReleaseKeys;
+        state.command(SessionCommand::Movement(release), &mut outbox, true, CLOCKS);
+        assert_eq!(
+            state.movement.held_keys(),
+            crate::movement::MovementKeys::default()
+        );
     }
 
     /// OpenAC `NewerStart_ReplacesOldDestinationWithoutReusingIt`: a newer

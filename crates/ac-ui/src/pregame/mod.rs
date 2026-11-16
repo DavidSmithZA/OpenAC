@@ -16,8 +16,8 @@ pub mod rich_text;
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Instant;
 
+use ac_clock::Instant;
 use ac_core::chargen::ChargenOptions;
 use ac_dat::DatCollection;
 use ac_runtime::session::creation::CreationSnapshot;
@@ -209,7 +209,9 @@ pub struct PreGameScreens {
     credits: Option<CreditsScreen>,
     dialogs: DialogFactory<()>,
     catalog: Option<u32>,
-    epoch: Instant,
+    /// The time of the first call that had one: the credits' clock counts
+    /// from it.
+    epoch: Option<Instant>,
 }
 
 /// A screen's layout, rooted at `root`, from the interface enumeration.
@@ -239,7 +241,15 @@ impl PreGameScreens {
             credits: None,
             dialogs: DialogFactory::new(),
             catalog,
-            epoch: Instant::now(),
+            epoch: None,
+        }
+    }
+
+    /// Forget what the creation screen's swatches found missing, and paint
+    /// them again (a host whose dats arrive while it runs).
+    pub fn forget_misses(&mut self) {
+        if let Some(creation) = self.creation.as_mut() {
+            creation.forget_misses();
         }
     }
 
@@ -418,8 +428,9 @@ impl PreGameScreens {
             .any(|r| ui.is_within(Some(element), r))
     }
 
-    fn seconds(&self, now: Instant) -> f64 {
-        now.saturating_duration_since(self.epoch).as_secs_f64()
+    fn seconds(&mut self, now: Instant) -> f64 {
+        let epoch = *self.epoch.get_or_insert(now);
+        now.saturating_duration_since(epoch).as_secs_f64()
     }
 
     /// One frame at `now`: every screen follows the state; the requests
@@ -740,4 +751,23 @@ fn credits_screen(
 #[must_use]
 pub fn default_font(content: &DatContent) -> Option<Arc<UiFont>> {
     content.font(DEFAULT_FONT_ID)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use super::PreGameScreens;
+
+    #[test]
+    fn the_screens_clock_starts_at_the_first_time_handed_in() {
+        // A time well after the screens were made: the screens' clock
+        // starts there, not when they were made.
+        let first = Instant::now() + Duration::from_secs(60);
+        let mut screens = PreGameScreens::empty(None);
+        assert_eq!(screens.seconds(first), 0.0);
+        assert_eq!(screens.seconds(first + Duration::from_millis(2500)), 2.5);
+        // An earlier time reads as the start, never as negative.
+        assert_eq!(screens.seconds(first - Duration::from_secs(1)), 0.0);
+    }
 }

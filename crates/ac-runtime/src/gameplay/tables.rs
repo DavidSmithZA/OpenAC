@@ -9,7 +9,9 @@ use std::sync::Arc;
 
 use ac_core::chargen::{ChargenOptions, ChargenPalSet, ChargenPalSetSource};
 use ac_core::items::component_fill::ComponentDescription;
-use ac_core::player::{SkillBase, SkillFormula};
+use ac_core::player::{
+    LiveSkillCreditResolver, SkillBase, SkillFormula, SkillFormulaBonusResolver,
+};
 use ac_core::quests::{ContractCatalog, ContractEntry};
 use ac_core::spells::{
     ComponentType, SpellBaseRecord, SpellComponentInfo, SpellComponentRequirements,
@@ -238,6 +240,8 @@ impl GameTables {
     ///
     /// # Errors
     /// No dat directory, or [`GameTables::load`]'s errors.
+    // A browser has no dat files to open; it hands the tables in.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn open(dir: Option<&std::path::Path>) -> Result<Self, TablesError> {
         let dir = dir
             .map(std::path::Path::to_path_buf)
@@ -412,6 +416,19 @@ impl GameTables {
             })),
             experience_levels,
         })
+    }
+
+    /// What scores a skill from attributes for the player's numbers: the
+    /// skill table's formulas (`None` when the table has no skills).
+    #[must_use]
+    pub fn skill_formula_resolver(&self) -> Option<SkillFormulaBonusResolver> {
+        if self.skills.is_empty() {
+            return None;
+        }
+        let skills = LiveSkillCreditResolver::new(self.skills.clone());
+        Some(Arc::new(move |skill, class, attributes| {
+            skills.resolve(skill, class, attributes)
+        }))
     }
 
     /// A spell component's category and name, by the weenie class that

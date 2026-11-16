@@ -88,12 +88,12 @@ pub fn run(
     let session_folder =
         ac_host::layout::LauncherSessionFolder::claim(&plan.paths, &plan.config_path);
 
-    let logins = {
+    let (logins, mut relays) = {
         let stdin = std::io::stdin();
         let mut lock = stdin.lock();
         let mut resolver =
             CredentialResolver::new(&mut lock, &plan.paths.config_directory, &platform);
-        match ac_host::resolve_session_logins(
+        let logins = match ac_host::resolve_session_logins(
             &plan.config,
             plan.direct_credentials.take(),
             &mut resolver,
@@ -103,7 +103,10 @@ pub fn run(
                 errln!("openac: {error}");
                 return exit(HostExit::Credential);
             }
-        }
+        };
+        // The relays of the sessions that offer themselves to one.
+        let relays = crate::remote::resolve(&plan.config.sessions, &mut resolver);
+        (logins, relays)
     };
 
     let prefs = crate::graphics::DisplayPrefs::load(Some(&plan.paths));
@@ -249,6 +252,17 @@ pub fn run(
             }
         };
         sessions.insert(descriptor.id.clone(), handle.commands());
+        // A probe has nothing to show.
+        let relay = relays.remove(&descriptor.id);
+        let remote = enter_world.then(|| {
+            crate::remote::RemoteControl::new(
+                &descriptor,
+                &plan.config_path,
+                &plan.paths.config_directory,
+                relay,
+                handle.commands(),
+            )
+        });
         let status = StatusWriter::for_file(descriptor.status_file.as_deref());
         let codes = Arc::clone(&exit_codes);
         let id = descriptor.id.clone();
@@ -272,7 +286,12 @@ pub fn run(
             std::thread::Builder::new()
                 .name(format!("monitor-{id}"))
                 .spawn(move || {
-                    let code = monitor(&id, handle, status, &printer, policy, notes, liveness);
+                    let beside = Beside {
+                        window: notes,
+                        liveness,
+                        remote,
+                    };
+                    let code = monitor(&id, handle, status, &printer, policy, beside);
                     if let Ok(mut codes) = codes.lock() {
                         codes.push(code);
                     }
@@ -492,6 +511,17 @@ impl ChatPrinter {
     }
 }
 
+/// What a session's monitor keeps beside the session.
+pub(crate) struct Beside {
+    /// What the window host says of the session's window.
+    pub(crate) window: Option<std::sync::mpsc::Receiver<WindowNote>>,
+    /// What the session's heartbeat watches.
+    pub(crate) liveness: Option<Liveness>,
+    /// The session's remote window (none for a probe); its endpoint stops
+    /// with the monitor.
+    pub(crate) remote: Option<crate::remote::RemoteControl>,
+}
+
 /// Print one session's events with its id, keep its status file, run its
 /// bot policy, and return its exit code when it ends.
 pub(crate) fn monitor(
@@ -500,9 +530,13 @@ pub(crate) fn monitor(
     mut status: StatusWriter<ac_host::FileSink>,
     printer: &ChatPrinter,
     mut policy: Option<Box<dyn session::policy::Policy>>,
-    window: Option<std::sync::mpsc::Receiver<WindowNote>>,
-    liveness: Option<Liveness>,
+    beside: Beside,
 ) -> HostExit {
+    let Beside {
+        window,
+        liveness,
+        mut remote,
+    } = beside;
     status.started(id);
     // A notice names its session only when several share the console, as
     // OpenAC's console does; with one session the id is noise.
@@ -589,6 +623,14 @@ pub(crate) fn monitor(
                 outln!("[{id}] policy complete; logging off");
                 let _ = commands.send(SessionCommand::Shutdown);
             }
+        }
+        // The session's relay follows what it is doing. The endpoint stops
+        // with this monitor, when the session has ended.
+        if let Some(remote) = &mut remote {
+            if let Some(event) = &event {
+                remote.observe(event);
+            }
+            remote.print_notes(id);
         }
         // What a player would see of the event, when the launcher marks lines.
         let kind = event.as_ref().and_then(|event| printer.kind_of(event));

@@ -181,6 +181,42 @@ comments and trailing commas are refused:
   last; every new generation runs the list again. A line the chat box cannot
   route writes a `loginCommandFailed` status line and the list goes on.
 - `plugins`, `pluginTags`, `pluginSettings`: see [Plugins](#plugins).
+- `sessions[].remote` (optional): a relay the session offers itself to, so it
+  can be shown and played somewhere else:
+  `{ "url": "wss://…", "enabled": true, "credential": { "provider": …, "reference": … } }`.
+  The client dials out to `url` (a `wss://` address; `ws://` only for this
+  computer) and keeps the link open; the credential names where the
+  session's token for the relay comes from, read as the login credential is,
+  so the token is never in the document. `enabled` (optional, default
+  `true`) set to `false` keeps the block without connecting. Without the
+  member, and without a setting made with `/remoteac` (below), nothing
+  connects anywhere. A relay can never stop a session: an address or token that
+  cannot be used, a relay that is down, a lost link or a closed remote
+  window leave the session playing, with a line on the console when the
+  endpoint could not start. A remote window that takes control loses it
+  after a second without input, and the movement keys are let go. Not
+  started for `mode: "probe"`.
+- `/remoteac`, typed in the chat box, on the console or as a login command,
+  sets the remote window while the session runs; it never reaches the
+  server, the plugins or the chat. `/remoteac url "<wss url>"` sets the
+  address (the same rules as `url`), `/remoteac secret "<token>"` the token
+  (answered `secret set` only, never recalled with the up arrow, and
+  starred out in the draft an attached browser sees while it is typed),
+  `/remoteac enable` and `/remoteac disable` connect and leave (a browser
+  attached is let go; the address and token are kept), and
+  `/remoteac status` says whether it is on, the address, the link
+  (connected, refused or trying again) and whether a browser is attached,
+  never the token. A session whose document has a `remote` block keeps the
+  settings in that block. Every other session keeps them in the settings
+  folder, since the launcher writes a new document for every start: the
+  address and the token are the install's, shared by all its sessions
+  (`<config>/remote/relay.json`, which holds where the token is, never the
+  token, and the token in `<config>/remote/relay.token`, readable only by
+  its owner on Unix), so they are set once on any client and every other
+  client of the install uses them from its next command; whether a session
+  connects is its own (`<config>/remote/<server>/<account>/<character>.json`),
+  so `/remoteac enable` is typed on each one that should connect. Turned on
+  in the middle of a session, a browser sees the world from that point on.
 - `process.content.preparedAssetPath` and the overlay members are parsed and
   checked but not used: this client reads the dats directly and has no
   prepared asset package.
@@ -353,6 +389,12 @@ move of the install folder holds it exclusively.
 | `OPENAC_LIVE_WINDOW` | `openac` tests | unset | Test-only: `1` makes the launcher end-to-end test start the windowed form (`openac --session-config <file> --console`) instead; a game window opens on the desktop for the length of the test. |
 | `OPENAC_DIAGNOSTIC_TESTS` | `ac-nav` tests | unset | Test-only: `1` lets the diagnostic tests run; they print measurements rather than pin behaviour and are slow. They are `#[ignore]`d, and even with `--include-ignored` they do nothing without it: every installed dungeon cell routed to by its middle, as given and stood on the floor (`ac-nav` `tests/retail_nav.rs` `the_middle_of_every_dungeon_cell_routes_once_it_stands_on_the_floor`, about three minutes in a debug build). Run with `OPENAC_DIAGNOSTIC_TESTS=1 cargo test -p ac-nav --test retail_nav the_middle_of_every -- --include-ignored --nocapture`. |
 | `OPENAC_TEST_VIEWPORT_PNG` | `ac-render` tests | unset | Test-only: a file path; the real-dat viewport test (`renderer::viewport::tests::the_human_body_draws_into_a_viewport_texture`) writes the offscreen figure it drew there as a PNG, for looking at. |
+| `OPENAC_UI_CAPTURE` | `ac-ui-web` test `replay` | unset | Test-only: a recorded remote-window stream (a capture `.bin`), or a folder of them, that the `#[ignore]`d replay test feeds to the browser panel code and draws with a software rasteriser, over the installed dats. Without it the test says it was skipped and passes. Captures hold a live session's data and are never committed. Run with `cargo test -p ac-ui-web --test replay -- --ignored --nocapture`. |
+| `OPENAC_UI_REPLAY_OUT` | `ac-ui-web` test `replay` | `<temp>/openac-ui-replay` | Test-only: the folder the replay writes its pictures (PNG) and logs to. |
+| `OPENAC_UI_REPLAY_SCRIPT` | `ac-ui-web` test `replay` | none | Test-only: a script file of input steps (pointer moves, clicks, keys, text; one a line, described at the top of `crates/ac-ui-web/tests/replay.rs`) played after the capture, with a picture saved where the script asks. |
+| `OPENAC_UI_REPLAY_CONTROL` | `ac-ui-web` test `replay` | off | Test-only: `1` replays as a page that has control, so keys and clicks act; otherwise the page only watches. |
+| `OPENAC_OFFLINE_DATA` | `ac-ui-web` test `offline` | unset | Test-only: a character's stored data file (the JSON a page hands to `ui_offline_data`: `character`, `player_id`, `items`) that the `#[ignore]`d test shows in the inventory, examination and character windows, without a session, over the installed dats. Without it that test says it was skipped and passes. Such a file holds a real character's data and is never committed. |
+| `OPENAC_OFFLINE_PNG` | `ac-ui-web` test `offline` | none | Test-only: a folder the offline tests write each window they draw to, as PNG. |
 | `OPENAC_LAUNCHER_TEST_FIXTURE` | `ac-launcher-core` tests | unset | Test-only: set by the launcher's process-supervision tests when they start their own test program again as a child process; the child then acts as the named fixture. |
 | `OPENAC_SELF_UPDATE_FIXTURE_DATA`, `OPENAC_SELF_UPDATE_FIXTURE_TARGET`, `OPENAC_SELF_UPDATE_FIXTURE_HELPER_PID`, `OPENAC_SELF_UPDATE_FIXTURE_MODE`, `OPENAC_SELF_UPDATE_FIXTURE_STARTS` | `ac-launcher-core` tests | unset | Test-only: set by the self-update process tests (`tests/self_update_process.rs`) when they run their own test program as a launcher: the data folder and launcher folder the self-update bootstrap works on, a file the helper writes its process id to, a fixture mode (apply and freeze, a startup probe), and a file every start as the launcher adds a line to. |
 

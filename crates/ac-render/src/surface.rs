@@ -40,7 +40,7 @@ use crate::renderer::{WorldRenderer, WorldSettings, WorldStats};
 use crate::scene::{SceneEffect, SceneSource};
 use crate::title::{TitleFacts, TitleStats, TitleSubject, format_title};
 use crate::ui::input::{self as ui_input, Routed, WorldInput};
-use crate::ui::{UiBatch, UiRenderer, WindowUi};
+use crate::ui::{SettingsStores, UiBatch, UiRenderer, WindowUi};
 use crate::ui_scale::UiScale;
 use crate::{RenderError, WindowSpec};
 use ac_core::sky::EnvironmentEffect;
@@ -512,6 +512,19 @@ impl AttachedWindow {
         // window without dats draws no UI.
         let choices = resolution_choices_of(&window);
         let platform_scale = UiScale::for_window(HostOs::current(), window.scale_factor());
+        // The key configuration screen edits the dispatcher's bindings and
+        // saves where they were read from.
+        let keyboard_storage = match (&options.key_bindings_file, &options.keymap_directory) {
+            (Some(bindings_file), Some(keymap_directory)) => Some(Box::new(
+                crate::ui::keyboard_window::KeyboardFiles {
+                    bindings_file: bindings_file.clone(),
+                    keymap_directory: keymap_directory.clone(),
+                }
+                .storage(),
+            )
+                as Box<dyn ac_ui::storage::UiStorage>),
+            _ => None,
+        };
         let ui = world.and_then(|world| {
             let built = world.content.ui_dats().and_then(|dats| {
                 WindowUi::build_with(
@@ -519,10 +532,13 @@ impl AttachedWindow {
                     platform_scale.ui_size((config.width, config.height)),
                     settings,
                     choices,
+                    keyboard_storage,
                 )
             });
             match built {
                 Ok(mut ui) => {
+                    ui.set_clipboard(Box::new(crate::ui::clipboard::SystemClipboard::new()));
+                    ui.set_os_key_names(crate::platform::key_name_provider);
                     notices.extend(ui.take_notices());
                     notices.push(format!("ui: mounted {}", ui.mounted().join(", ")));
                     Some(ui)
@@ -574,20 +590,9 @@ impl AttachedWindow {
             options.keymap_directory.as_deref(),
             &mut notices,
         );
-        // The key configuration screen edits the dispatcher's bindings and
-        // saves where they were read from.
         let mut ui = ui;
         if let Some(ui) = ui.as_mut() {
-            let files = match (&options.key_bindings_file, &options.keymap_directory) {
-                (Some(bindings_file), Some(keymap_directory)) => {
-                    Some(crate::ui::keyboard_window::KeyboardFiles {
-                        bindings_file: bindings_file.clone(),
-                        keymap_directory: keymap_directory.clone(),
-                    })
-                }
-                _ => None,
-            };
-            ui.attach_key_bindings(gameplay.dispatcher().bindings(), files);
+            ui.attach_key_bindings(gameplay.dispatcher().bindings());
             // The player's style sheet in the game folder (OpenAC
             // `InteractionRetainedUiComposition`): a missing file is an empty
             // sheet.
@@ -863,6 +868,10 @@ impl AttachedWindow {
 
     pub(crate) fn id(&self) -> WindowId {
         self.window.id()
+    }
+
+    pub(crate) fn winit_window(&self) -> &Window {
+        &self.window
     }
 
     pub(crate) fn adapter(&self) -> &AdapterSummary {
@@ -2773,7 +2782,9 @@ impl AttachedWindow {
             _ => Vec::new(),
         };
         ui.set_plugin_world(
-            self.world.as_ref(),
+            self.world
+                .as_ref()
+                .map(|w| w as &dyn ac_ui_window::world::WorldFrame),
             self.scene.as_deref().map(SceneSource::scene),
         );
         // The navigation view and the plugins' world lines, triangles and

@@ -424,6 +424,108 @@ fn a_session_with_a_window_attached_ends_when_its_server_falls_silent() {
     assert!(no_second_login, "the session did not log in again");
 }
 
+/// A remote presentation is not a window the player sits at: the session
+/// logs in again as it does with nothing attached, and the remote stays
+/// attached through it, shown the new connection from a fresh snapshot.
+#[test]
+fn a_session_with_a_remote_attached_logs_in_again_and_keeps_the_remote() {
+    let (ports, address) = Ports::new();
+    let server = thread::spawn(move || {
+        let (mut first, _) = ports.accept();
+        first.enter_world();
+        // Silence: the client finds the server gone and logs in again.
+        let (second, _) =
+            ports.listen(Instant::now() + Duration::from_secs(20), Some(first.client));
+        let (client, _) = second.expect("the client logged in again");
+        let mut again = ports.answer(client);
+        again.enter_world();
+        again.wait_for(0xF653);
+        again.send(&words(&[0xF653]));
+    });
+
+    let handle = spawn_timed(config(address, None), TIMING).unwrap();
+    let mut seen = Seen::default();
+    seen.until(&handle, |s| s.entered == 1);
+    let (to_remote, remote) = mpsc::channel();
+    handle
+        .commands()
+        .send(SessionCommand::AttachRemote(to_remote))
+        .unwrap();
+    seen.until(&handle, |s| s.entered == 2);
+    let snapshots = remote
+        .try_iter()
+        .filter(|event| matches!(event, PresentationEvent::Snapshot(_)))
+        .count();
+    handle.commands().send(SessionCommand::Shutdown).unwrap();
+    let summary = seen.end(&handle);
+    server.join().unwrap();
+    handle.join();
+
+    assert_eq!(summary.error, None, "a re-login is not a failure");
+    assert_eq!(summary.connections, 2);
+    assert_eq!(
+        seen.relogins,
+        [Relogin::Scheduled {
+            after: TIMING.relogin_interval
+        }]
+    );
+    assert!(
+        snapshots >= 2,
+        "the remote saw {snapshots} snapshots: the attach's and the new connection's"
+    );
+}
+
+/// A session told to keep the world's messages hands a listener the world
+/// as the server described it: the player's own creation, byte for byte.
+#[test]
+fn a_listener_of_the_world_tap_is_given_the_messages_that_made_the_world() {
+    use super::super::world_tap::WorldTapCommand;
+    let (ports, address) = Ports::new();
+    let server = thread::spawn(move || {
+        let (mut first, _) = ports.accept();
+        first.enter_world();
+        first.wait_for(0xF653);
+        first.send(&words(&[0xF653]));
+    });
+    let handle = spawn_timed(config(address, None), TIMING).unwrap();
+    // Before the login, as a host that may be viewed does.
+    handle
+        .commands()
+        .send(SessionCommand::WorldTap(WorldTapCommand::Keep(true)))
+        .unwrap();
+    let mut seen = Seen::default();
+    seen.until(&handle, |s| s.entered == 1);
+    let created = words(&[0xF745, PLAYER, 0x11, 0, 0, 0, 0, 0, 0, 0]);
+    // The creation follows the entry; ask until the tap has it.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let snapshot = loop {
+        assert!(Instant::now() < deadline, "the tap never had the player");
+        let (to_listener, listener) = mpsc::channel();
+        handle
+            .commands()
+            .send(SessionCommand::WorldTap(WorldTapCommand::Listen(Some(
+                to_listener,
+            ))))
+            .unwrap();
+        let batch = listener
+            .recv_timeout(Duration::from_secs(5))
+            .expect("the world as it stands");
+        if !batch.messages.is_empty() {
+            break batch;
+        }
+        thread::sleep(Duration::from_millis(20));
+    };
+    handle.commands().send(SessionCommand::Shutdown).unwrap();
+    seen.end(&handle);
+    server.join().unwrap();
+    handle.join();
+
+    assert_eq!(snapshot.player, PLAYER);
+    assert_eq!(snapshot.messages.len(), 1, "{:?}", snapshot.messages);
+    assert_eq!(snapshot.messages[0].body, created);
+    assert!(!snapshot.messages[0].client_to_server);
+}
+
 #[test]
 fn a_boot_ends_a_windowless_session_without_logging_in_again() {
     let (ports, address) = Ports::new();

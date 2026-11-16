@@ -130,6 +130,21 @@ pub struct SessionDescriptor {
     pub login_command_delay_ms: u32,
     /// Where status events go, one JSON line each (`statusFile`).
     pub status_file: Option<PathBuf>,
+    /// The relay through which the session can be shown and played
+    /// somewhere else (`remote`); `None` and nothing connects anywhere.
+    pub remote: Option<RemoteDescriptor>,
+}
+
+/// A relay a session offers itself to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RemoteDescriptor {
+    /// The relay's WebSocket address (`url`), `wss://` or `ws://`.
+    pub url: String,
+    /// Where the session's token for the relay comes from (`credential`).
+    pub credential: CredentialReference,
+    /// Whether the session connects to the relay (`enabled`, default
+    /// `true`): `false` keeps the address and token for `/remoteac enable`.
+    pub enabled: bool,
 }
 
 /// The login server.
@@ -329,6 +344,23 @@ struct RawSession {
     login_command_delay_ms: i32,
     status_file: Option<String>,
     plugin_settings: Option<RawPluginSettings>,
+    remote: Option<RawRemote>,
+}
+
+#[derive(Debug)]
+struct RawRemote {
+    url: Option<String>,
+    credential: (CredentialProvider, Option<String>),
+    enabled: Option<bool>,
+}
+
+/// Reads a credential reference: a provider and what it looks up.
+fn credential_reference(node: &Node) -> Result<(CredentialProvider, Option<String>), JsonError> {
+    let mut credential = ObjectReader::new(node)?;
+    let provider = json::enumeration(credential.required("provider")?, &PROVIDERS)?;
+    let reference = required_nullable(&mut credential, "reference", string)?;
+    credential.finish()?;
+    Ok((provider, reference))
 }
 
 /// Reads an optional member that may also be `null`.
@@ -510,13 +542,7 @@ impl RawSession {
             policy.finish()?;
             Ok(RawPolicy { id, role })
         })?;
-        let credential = required_nullable(&mut object, "credential", |node| {
-            let mut credential = ObjectReader::new(node)?;
-            let provider = json::enumeration(credential.required("provider")?, &PROVIDERS)?;
-            let reference = required_nullable(&mut credential, "reference", string)?;
-            credential.finish()?;
-            Ok((provider, reference))
-        })?;
+        let credential = required_nullable(&mut object, "credential", credential_reference)?;
         let character_options = optional(&mut object, "characterOptions", |node| {
             json::object_members(node)?
                 .iter()
@@ -554,6 +580,18 @@ impl RawSession {
                 })
                 .collect()
         })?;
+        let remote = optional(&mut object, "remote", |node| {
+            let mut remote = ObjectReader::new(node)?;
+            let url = required_nullable(&mut remote, "url", string)?;
+            let credential = credential_reference(remote.required("credential")?)?;
+            let enabled = optional(&mut remote, "enabled", json::boolean)?;
+            remote.finish()?;
+            Ok(RawRemote {
+                url,
+                credential,
+                enabled,
+            })
+        })?;
         object.finish()?;
         Ok(Self {
             id,
@@ -570,6 +608,7 @@ impl RawSession {
             login_command_delay_ms,
             status_file,
             plugin_settings,
+            remote,
         })
     }
 }
@@ -702,6 +741,7 @@ impl RawSession {
         let login_commands = validate_login_commands(&id, self.login_commands)?;
         let login_command_delay_ms = validate_delay(&id, self.login_command_delay_ms)?;
         let status_file = validate_status_file(&id, self.status_file)?;
+        let remote = validate_remote(&id, self.remote)?;
         let plugin_settings = validate_plugin_settings(&id, self.plugin_settings)?;
         Ok(SessionDescriptor {
             id,
@@ -716,6 +756,7 @@ impl RawSession {
             login_commands,
             login_command_delay_ms,
             status_file,
+            remote,
         })
     }
 
@@ -796,6 +837,7 @@ impl RawSession {
         let character_options = validate_character_options(&id, self.character_options)?;
         let login_command_delay_ms = validate_delay(&id, self.login_command_delay_ms)?;
         let status_file = validate_status_file(&id, self.status_file)?;
+        let remote = validate_remote(&id, self.remote)?;
         match self.mode {
             Presence::Value(RawMode::Named(mode)) if mode == "probe" => {
                 return Err(invalid(format!(
@@ -830,6 +872,7 @@ impl RawSession {
             login_commands,
             login_command_delay_ms,
             status_file,
+            remote,
         })
     }
 }
@@ -956,6 +999,34 @@ fn validate_delay(id: &str, delay: i32) -> Result<u32, ConfigError> {
             "Session '{id}' loginCommandDelayMs must be non-negative."
         ))
     })
+}
+
+fn validate_remote(
+    id: &str,
+    remote: Option<RawRemote>,
+) -> Result<Option<RemoteDescriptor>, ConfigError> {
+    let Some(remote) = remote else {
+        return Ok(None);
+    };
+    let url = remote.url.unwrap_or_default();
+    if !(url.starts_with("wss://") || url.starts_with("ws://")) {
+        return Err(invalid(format!(
+            "Session '{id}' remote url must be a wss:// or ws:// address."
+        )));
+    }
+    match remote.credential {
+        (provider, Some(reference)) if !reference.trim().is_empty() => Ok(Some(RemoteDescriptor {
+            url,
+            credential: CredentialReference {
+                provider,
+                reference,
+            },
+            enabled: remote.enabled.unwrap_or(true),
+        })),
+        _ => Err(invalid(format!(
+            "Session '{id}' remote requires a credential reference."
+        ))),
+    }
 }
 
 fn validate_status_file(
