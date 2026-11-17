@@ -1194,3 +1194,21 @@ fn a_window_applied_for_a_plugin_keeps_a_state_managed_shown_state() {
     let s = saved(&dir.store(), "Alice", "800x600", "combat").unwrap();
     assert_eq!((s.x, s.y), (40.0, 50.0));
 }
+
+#[test]
+fn the_layout_is_restored_only_for_a_character_in_the_game() {
+    let dir = Dir::new();
+    let mut host = host(800.0, 600.0);
+    mount_default(&mut host, "radar");
+    let mut p = persist(&mut host, Some(dir.store()), "default", (800, 600));
+    p.restore_all(&mut host);
+    assert!(!p.is_restored(), "the pre-login key is never restored");
+    p.set_character(&mut host, "Alice");
+    assert!(!p.is_restored(), "not before the character's restore");
+    p.restore_all(&mut host);
+    assert!(p.is_restored());
+    p.set_gameplay_active(&mut host, false);
+    assert!(!p.is_restored(), "a pre-game screen covers the game");
+    p.set_gameplay_active(&mut host, true);
+    assert!(p.is_restored());
+}

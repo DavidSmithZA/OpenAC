@@ -107,6 +107,9 @@ pub struct FakeHost {
     /// Every window placing the plugin asked for, in order, as it asked
     /// (one entry per window of a batch).
     pub window_applies: Vec<ac_plugin_abi::ui::UiWindowApply>,
+    /// The fake window does not have the character's layout restored
+    /// ([`Self::set_layout_restored`]); it has by default.
+    layout_not_restored: bool,
 }
 
 impl FakeHost {
@@ -423,6 +426,16 @@ impl FakeHost {
         self.tell_windows(plugin);
     }
 
+    /// Whether the fake window has the character's layout restored (it has
+    /// by default). Before, a placing is refused, as before the client's
+    /// login restore; when it becomes restored the plugin hears
+    /// [`Event::ScreenSizeChanged`] and [`Event::UiWindowsChanged`] again, as
+    /// the client tells them after the restore.
+    pub fn set_layout_restored<P: Plugin>(&mut self, plugin: &mut P, restored: bool) {
+        self.layout_not_restored = !restored;
+        self.tell_windows(plugin);
+    }
+
     /// The registered windows as the fake window has them now: as set, and
     /// placed where the plugin's placings put them.
     #[must_use]
@@ -443,6 +456,7 @@ impl FakeHost {
         };
         self.ui.input(ac_plugin_ui::UiInput::Windows {
             screen,
+            ready: !self.layout_not_restored,
             windows: self.windows.clone(),
         });
         if let Some((width, height)) = self.ui.take_screen_change() {
@@ -483,6 +497,7 @@ impl FakeHost {
         }
         self.ui.input(ac_plugin_ui::UiInput::Windows {
             screen,
+            ready: !self.layout_not_restored,
             windows: self.windows.clone(),
         });
     }
@@ -805,6 +820,7 @@ fn window_report(w: crate::ui::UiWindowInfo) -> ac_plugin_ui::WindowReport {
         state_managed: w.state_managed,
         min_size: (w.min_width, w.min_height),
         max_size: (w.max_width, w.max_height),
+        resizable: (w.resizable_width, w.resizable_height),
     }
 }
 
@@ -1464,6 +1480,8 @@ mod tests {
             min_height: 50.0,
             max_width: 600.0,
             max_height: 400.0,
+            resizable_width: true,
+            resizable_height: true,
         }
     }
 
@@ -1514,5 +1532,16 @@ mod tests {
         plugin.heard.clear();
         host.set_screen_size(&mut plugin, 800, 600);
         assert_eq!(plugin.heard, ["screen 800x600"]);
+        // Before the character's layout is restored a placing is refused;
+        // the restore is told as both events, and the plugin places again.
+        plugin.heard.clear();
+        host.set_layout_restored(&mut plugin, false);
+        assert!(plugin.heard.is_empty());
+        let refused =
+            host.with_host(|h| h.apply_window("radar", &windows[0].layout, WindowParts::PLACE));
+        assert!(refused.is_err());
+        host.set_layout_restored(&mut plugin, true);
+        assert_eq!(plugin.heard, ["screen 800x600", "windows radar,vendor"]);
+        assert!(plugin.answers[0].is_ok());
     }
 }

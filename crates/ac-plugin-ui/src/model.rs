@@ -1167,6 +1167,10 @@ pub enum UiInput {
     Windows {
         /// Width and height, pixels.
         screen: (i32, i32),
+        /// The character's layout is restored, so a placing is saved for
+        /// it (false before login and while a pre-game screen covers the
+        /// game: a placing then is refused).
+        ready: bool,
         /// The registered windows, in registration order.
         windows: Vec<crate::windows::WindowReport>,
     },

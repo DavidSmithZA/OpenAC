@@ -104,8 +104,11 @@ macro_rules! import_table {
                 permission: None, window: true, since: (1, 14);
             /// Place a registered window as the client restores a saved
             /// layout, saved for the character as the player's own change;
-            /// the answer is where it ends up. An error without a window or
-            /// for a name no window has.
+            /// the answer is where the client's rules put it. Placings of one
+            /// window in a row build on each other. An error without a
+            /// window, for a name no window has, or before the character's
+            /// layout is restored (the screen and windows events follow the
+            /// restore).
             UiWindowApply = ui_window_apply($crate::ui::UiWindowApply)
                 -> Result<$crate::ui::UiWindowApplied, String> = Err("no plugin UI".to_owned()),
                 permission: None, window: true, since: (1, 14);

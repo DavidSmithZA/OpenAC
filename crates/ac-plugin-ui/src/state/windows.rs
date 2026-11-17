@@ -2,18 +2,27 @@
 //! reported them, and the placings plugins ask of it. The window places a
 //! window a frame later; the answer here is where the same rules put it
 //! ([`WindowReport::fit`]), and the window's next report is where it went.
+//! Placings wait for the character's layout: before it is restored the
+//! window would put them back, and nothing would be saved.
+
+use std::collections::BTreeMap;
 
 use super::PluginUi;
 use crate::model::UiChange;
-use crate::windows::{WindowApplied, WindowLayout, WindowParts, WindowReport};
+use crate::windows::{WindowApplied, WindowLayout, WindowParts, WindowReport, merged};
 
 /// What the session knows of the window's screen and registered windows.
 #[derive(Debug, Default)]
 pub(super) struct WindowMirror {
     /// The screen, once the attached window reported it.
     screen: Option<(i32, i32)>,
+    /// The character's layout is restored: placings are taken.
+    ready: bool,
     /// The registered windows, in registration order.
     windows: Vec<WindowReport>,
+    /// Where the placings asked since the last report put each window, so
+    /// the next placing of the same window starts from there.
+    pending: BTreeMap<String, WindowLayout>,
     /// The screen changed since the session last took the change.
     screen_changed: Option<(i32, i32)>,
     /// A window was registered or unregistered since the session last
@@ -22,8 +31,11 @@ pub(super) struct WindowMirror {
 }
 
 impl WindowMirror {
-    /// The window reported the screen and its windows.
-    pub(super) fn report(&mut self, screen: (i32, i32), windows: Vec<WindowReport>) {
+    /// The window reported the screen, whether the character's layout is
+    /// restored, and its windows. When the layout has just been restored
+    /// both changes are told again, so a plugin places the windows over
+    /// the character's own layout.
+    pub(super) fn report(&mut self, screen: (i32, i32), ready: bool, windows: Vec<WindowReport>) {
         if self.screen != Some(screen) {
             self.screen = Some(screen);
             self.screen_changed = Some(screen);
@@ -37,15 +49,18 @@ impl WindowMirror {
         if names_differ {
             self.windows_changed = true;
         }
+        if ready && !self.ready {
+            self.screen_changed = Some(screen);
+            self.windows_changed = true;
+        }
+        self.ready = ready;
         self.windows = windows;
+        self.pending.clear();
     }
 
     /// The window left: nothing is known until another reports.
     pub(super) fn forget(&mut self) {
-        self.screen = None;
-        self.windows.clear();
-        self.screen_changed = None;
-        self.windows_changed = false;
+        *self = Self::default();
     }
 }
 
@@ -55,6 +70,13 @@ impl PluginUi {
     #[must_use]
     pub fn screen_size(&self) -> Option<(i32, i32)> {
         self.window_mirror.screen
+    }
+
+    /// Whether the attached window has the character's layout restored, so
+    /// a placing is taken and saved for the character.
+    #[must_use]
+    pub fn windows_ready(&self) -> bool {
+        self.window_attached && self.window_mirror.ready
     }
 
     /// The registered windows as the attached window last reported them, in
@@ -69,10 +91,13 @@ impl PluginUi {
     /// only for a window the game does not show and hide by itself. The
     /// window applies it the way it restores a saved layout and saves the
     /// result for the character, as the player's own change. The answer is
-    /// where those rules put it.
+    /// where those rules put it. Placings of one window before the window
+    /// reports again build on each other, in order.
     ///
     /// # Errors
-    /// No window is attached, or none of its windows is called `name`.
+    /// No window is attached, the character's layout is not restored yet
+    /// (before login, or while a pre-game screen covers the game), or none
+    /// of the window's windows is called `name`.
     pub fn apply_window(
         &mut self,
         name: &str,
@@ -82,30 +107,46 @@ impl PluginUi {
         let Some(screen) = self.window_mirror.screen.filter(|_| self.window_attached) else {
             return Err("no window is attached".to_owned());
         };
+        if !self.window_mirror.ready {
+            return Err(
+                "the character's window layout is not restored yet: place windows after the \
+                 screen and windows events that follow it"
+                    .to_owned(),
+            );
+        }
         let Some(report) = self.window_mirror.windows.iter().find(|w| w.name == name) else {
             return Err(format!("no registered window is called '{name}'"));
         };
+        let now = self
+            .window_mirror
+            .pending
+            .get(name)
+            .copied()
+            .unwrap_or(report.layout);
+        let fit = report.fit_from(&now, layout, parts, screen);
         let applied = WindowApplied {
-            layout: report.fit(layout, parts, screen),
+            layout: fit,
             shown_ignored: parts.shown && report.state_managed,
         };
         self.changes.push(UiChange::WindowApply {
             name: name.to_owned(),
-            layout: report.merged(layout, parts),
+            layout: merged(&now, layout, parts),
             parts,
         });
+        self.window_mirror.pending.insert(name.to_owned(), fit);
         Ok(applied)
     }
 
     /// The screen's new size, once, when it changed since the last call
-    /// (the first report of an attached window is a change).
+    /// (the first report of an attached window is a change, and so is the
+    /// character's layout being restored).
     pub fn take_screen_change(&mut self) -> Option<(i32, i32)> {
         self.window_mirror.screen_changed.take()
     }
 
     /// Whether a window was registered or unregistered since the last
     /// call (the first report of an attached window with any is such a
-    /// change).
+    /// change, and so is the character's layout being restored).
     pub fn take_windows_change(&mut self) -> bool {
         std::mem::take(&mut self.window_mirror.windows_changed)
     }
@@ -134,49 +175,77 @@ mod tests {
             state_managed,
             min_size: (50.0, 50.0),
             max_size: (500.0, 500.0),
+            resizable: (true, true),
         }
     }
 
-    fn windows(names: &[&str]) -> Vec<WindowReport> {
-        names.iter().map(|n| report(n, *n == "vendor")).collect()
+    fn input(screen: (i32, i32), ready: bool, names: &[&str]) -> UiInput {
+        UiInput::Windows {
+            screen,
+            ready,
+            windows: names.iter().map(|n| report(n, *n == "vendor")).collect(),
+        }
+    }
+
+    fn take(ui: &mut PluginUi) -> (Option<(i32, i32)>, bool) {
+        (ui.take_screen_change(), ui.take_windows_change())
     }
 
     #[test]
     fn the_screen_and_the_windows_are_what_the_window_last_reported() {
         let mut ui = PluginUi::new();
-        let input = |screen, names: &[&str]| UiInput::Windows {
-            screen,
-            windows: windows(names),
-        };
         // Without a window nothing is known.
-        ui.input(input((800, 600), &["radar"]));
+        ui.input(input((800, 600), true, &["radar"]));
         assert_eq!(ui.screen_size(), None);
         assert!(ui.registered_windows().is_empty());
         ui.set_window_attached(true);
-        ui.input(input((800, 600), &["radar"]));
+        ui.input(input((800, 600), true, &["radar"]));
         assert_eq!(ui.screen_size(), Some((800, 600)));
-        assert_eq!(ui.take_screen_change(), Some((800, 600)));
-        assert!(ui.take_windows_change());
+        assert_eq!(take(&mut ui), (Some((800, 600)), true));
         // A move is no change of either.
-        let mut moved = windows(&["radar"]);
-        moved[0].layout.x = 300.0;
+        let mut moved = report("radar", false);
+        moved.layout.x = 300.0;
         ui.input(UiInput::Windows {
             screen: (800, 600),
-            windows: moved,
+            ready: true,
+            windows: vec![moved],
         });
-        assert_eq!(ui.take_screen_change(), None);
-        assert!(!ui.take_windows_change());
+        assert_eq!(take(&mut ui), (None, false));
         assert_eq!(ui.registered_windows()[0].layout.x, 300.0);
         // A new screen, a window registered.
-        ui.input(input((1280, 720), &["radar", "vendor"]));
-        assert_eq!(ui.take_screen_change(), Some((1280, 720)));
-        assert!(ui.take_windows_change());
+        ui.input(input((1280, 720), true, &["radar", "vendor"]));
+        assert_eq!(take(&mut ui), (Some((1280, 720)), true));
         // The window leaves: nothing is known, and no change is told.
         ui.set_window_attached(false);
         assert_eq!(ui.screen_size(), None);
         assert!(ui.registered_windows().is_empty());
-        assert_eq!(ui.take_screen_change(), None);
-        assert!(!ui.take_windows_change());
+        assert_eq!(take(&mut ui), (None, false));
+    }
+
+    // Before the character's layout is restored a placing is refused (the
+    // restore would undo it, and nothing would be saved); once it is, both
+    // changes are told again so a plugin places the windows then.
+    #[test]
+    fn placings_wait_for_the_characters_layout_and_hear_it_restored() {
+        let mut ui = PluginUi::new();
+        ui.set_window_attached(true);
+        ui.input(input((800, 600), false, &["radar"]));
+        assert_eq!(take(&mut ui), (Some((800, 600)), true));
+        assert!(!ui.windows_ready());
+        let layout = report("radar", false).layout;
+        let refused = ui
+            .apply_window("radar", &layout, WindowParts::ALL)
+            .unwrap_err();
+        assert!(refused.contains("not restored"), "{refused}");
+        ui.input(input((800, 600), true, &["radar"]));
+        assert!(ui.windows_ready());
+        assert_eq!(take(&mut ui), (Some((800, 600)), true));
+        assert!(ui.apply_window("radar", &layout, WindowParts::ALL).is_ok());
+        // A pre-game screen covers the game, then goes: told again.
+        ui.input(input((800, 600), false, &["radar"]));
+        assert_eq!(take(&mut ui), (None, false));
+        ui.input(input((800, 600), true, &["radar"]));
+        assert_eq!(take(&mut ui), (Some((800, 600)), true));
     }
 
     #[test]
@@ -193,10 +262,7 @@ mod tests {
         };
         assert!(ui.apply_window("radar", &asked, WindowParts::ALL).is_err());
         ui.set_window_attached(true);
-        ui.input(UiInput::Windows {
-            screen: (800, 600),
-            windows: windows(&["radar", "vendor"]),
-        });
+        ui.input(input((800, 600), true, &["radar", "vendor"]));
         ui.take_changes();
         let error = ui
             .apply_window("nowhere", &asked, WindowParts::ALL)
@@ -209,28 +275,54 @@ mod tests {
         let vendor = ui.apply_window("vendor", &asked, WindowParts::ALL).unwrap();
         assert!(!vendor.layout.visible);
         assert!(vendor.shown_ignored);
-        let size_only = WindowParts {
+        let changes = ui.take_changes();
+        assert_eq!(changes.len(), 2);
+        // What the session knows stays the window's report until the next.
+        assert_eq!(ui.registered_windows()[0].layout.x, 10.0);
+    }
+
+    // Two placings of one window before it reports again build on each
+    // other: a size alone after a place keeps the new place.
+    #[test]
+    fn placings_of_one_window_in_a_row_build_on_each_other() {
+        let mut ui = PluginUi::new();
+        ui.set_window_attached(true);
+        ui.input(input((800, 600), true, &["radar"]));
+        ui.take_changes();
+        let place = WindowParts {
+            place: true,
+            ..WindowParts::default()
+        };
+        let size = WindowParts {
             size: true,
             ..WindowParts::default()
         };
-        ui.apply_window("radar", &asked, size_only).unwrap();
-        let changes = ui.take_changes();
-        assert_eq!(changes.len(), 3);
-        // The window is asked for the whole layout: the parts not asked for
-        // are where the window was.
+        let at = WindowLayout {
+            x: 400.0,
+            y: 300.0,
+            ..report("radar", false).layout
+        };
+        ui.apply_window("radar", &at, place).unwrap();
+        let bigger = WindowLayout {
+            width: 450.0,
+            height: 200.0,
+            ..report("radar", false).layout
+        };
+        let second = ui.apply_window("radar", &bigger, size).unwrap();
+        // Kept on the screen at its new size: 800 - 450.
         assert_eq!(
-            changes[2],
-            UiChange::WindowApply {
-                name: "radar".into(),
-                layout: WindowLayout {
-                    width: 300.0,
-                    height: 100.0,
-                    ..report("radar", false).layout
-                },
-                parts: size_only,
-            }
+            (second.layout.x, second.layout.y, second.layout.width),
+            (350.0, 300.0, 450.0)
         );
-        // What the session knows stays the window's report until the next.
-        assert_eq!(ui.registered_windows()[0].layout.x, 10.0);
+        let changes = ui.take_changes();
+        let UiChange::WindowApply { layout, .. } = &changes[1] else {
+            panic!("{changes:?}");
+        };
+        assert_eq!((layout.x, layout.y, layout.width), (400.0, 300.0, 450.0));
+        // The window's next report is where it is: the next placing starts
+        // from there.
+        ui.input(input((800, 600), true, &["radar"]));
+        let again = ui.apply_window("radar", &bigger, size).unwrap();
+        assert_eq!((again.layout.x, again.layout.y), (10.0, 10.0));
     }
 }

@@ -1055,9 +1055,9 @@ fn windows_report(
     commands: &[SessionCommand],
 ) -> Option<((i32, i32), Vec<ac_plugin_ui::WindowReport>)> {
     commands.iter().rev().find_map(|c| match c {
-        SessionCommand::PluginUi(UiInput::Windows { screen, windows }) => {
-            Some((*screen, windows.clone()))
-        }
+        SessionCommand::PluginUi(UiInput::Windows {
+            screen, windows, ..
+        }) => Some((*screen, windows.clone())),
         _ => None,
     })
 }
@@ -1087,10 +1087,27 @@ fn a_plugin_reads_and_places_the_registered_windows() {
         None,
     );
     let mut scene = Scene::default();
-    scene.apply(in_world("Alice"));
     scene.apply(PresentationEvent::Interface(InterfaceEvent::PluginUi(
         state.snapshot(),
     )));
+    ui.feed(&mut scene);
+    ui.frame(Instant::now(), size);
+    // Before the character's layout is restored the windows are reported,
+    // but a placing is refused: the restore would undo it.
+    deliver(&mut state, ui.drain());
+    assert_eq!(state.screen_size(), Some((1280, 720)));
+    assert!(!state.windows_ready());
+    assert_eq!(state.take_screen_change(), Some((1280, 720)));
+    assert!(state.take_windows_change());
+    let early = state.registered_windows()[0].clone();
+    assert!(
+        state
+            .apply_window(&early.name, &early.layout, WindowParts::ALL)
+            .is_err()
+    );
+
+    // In the world: the layout is restored, and both are told again.
+    scene.apply(in_world("Alice"));
     ui.feed(&mut scene);
     ui.frame(Instant::now(), size);
     let commands = ui.drain();
@@ -1111,8 +1128,8 @@ fn a_plugin_reads_and_places_the_registered_windows() {
     assert!(vendor.state_managed);
     assert!(!vendor.layout.visible);
     deliver(&mut state, commands);
-    assert_eq!(state.screen_size(), Some((1280, 720)));
-    assert!(state.take_screen_change().is_some());
+    assert!(state.windows_ready());
+    assert_eq!(state.take_screen_change(), Some((1280, 720)));
     assert!(state.take_windows_change());
 
     // The plugin moves the radar and its own window, and asks to show the
@@ -1148,12 +1165,69 @@ fn a_plugin_reads_and_places_the_registered_windows() {
     assert!(vendor_applied.shown_ignored);
     assert!(!vendor_applied.layout.visible);
     assert!(state.apply_window("nowhere", &radar_at, place).is_err());
+    // A hidden main panel placed, sized and shown in one go: shown through
+    // the panel switcher first, so the switcher's shared place does not
+    // undo the placing, and the other main panels take its place.
+    let inventory = find(&windows, INVENTORY_WINDOW).unwrap();
+    assert!(!inventory.layout.visible);
+    let inventory_at = WindowLayout {
+        x: 60.0,
+        y: 50.0,
+        width: inventory.layout.width,
+        height: 500.0,
+        visible: true,
+        ..inventory.layout
+    };
+    let inventory_applied = state
+        .apply_window(INVENTORY_WINDOW, &inventory_at, WindowParts::ALL)
+        .unwrap();
+    // The toolbar: a size it cannot take on a fixed axis is not predicted.
+    let toolbar = find(&windows, "toolbar").unwrap();
+    let toolbar_size = WindowParts {
+        size: true,
+        ..WindowParts::default()
+    };
+    let toolbar_applied = state
+        .apply_window(
+            "toolbar",
+            &WindowLayout {
+                width: 600.0,
+                height: 60.0,
+                ..toolbar.layout
+            },
+            toolbar_size,
+        )
+        .unwrap();
     scene.apply(PresentationEvent::Interface(InterfaceEvent::PluginUi(
         state.take_changes(),
     )));
     ui.feed(&mut scene);
     ui.frame(Instant::now(), size);
     let (_, windows) = windows_report(&ui.drain()).expect("the moves are reported");
+    // Each answer was where the window went.
+    let landed = |name: &str| find(&windows, name).unwrap().layout;
+    assert_eq!(landed(INVENTORY_WINDOW), inventory_applied.layout);
+    // The toolbar is fixed in width, as predicted; its height snaps to the
+    // stop its own state keeps (expanded), which the answer cannot know.
+    let toolbar_landed = landed("toolbar");
+    assert!(!toolbar.resizable.0);
+    assert_eq!(
+        (toolbar_landed.x, toolbar_landed.width),
+        (toolbar_applied.layout.x, toolbar_applied.layout.width)
+    );
+    assert_eq!(toolbar_landed.width, toolbar.layout.width);
+    assert_eq!(
+        toolbar_landed.height, toolbar.layout.height,
+        "its expanded stop"
+    );
+    assert_eq!(landed(RADAR_WINDOW), applied.layout);
+    let shared = landed(ac_render::ui::window::CHARACTER_WINDOW);
+    assert_eq!(
+        (shared.x, shared.y, shared.height),
+        (60.0, 50.0, 500.0),
+        "the other main panels share the placed one's place and size"
+    );
+    assert!(ui.host().root.is_window_visible(INVENTORY_WINDOW));
     let place_of = |name: &str| {
         let w = find(&windows, name).unwrap();
         (w.layout.x, w.layout.y, w.layout.visible)
@@ -1179,6 +1253,19 @@ fn a_plugin_reads_and_places_the_registered_windows() {
             .map(|l| (l.x, l.y))
     };
     assert_eq!(saved(RADAR_WINDOW), Some((40.0, 60.0)));
+    assert_eq!(saved(INVENTORY_WINDOW), Some((60.0, 50.0)));
+    assert!(
+        store
+            .load_window_layout(
+                "Alice",
+                "1280x720",
+                INVENTORY_WINDOW,
+                &ac_host::settings::UiWindowLayout::default(),
+            )
+            .unwrap()
+            .visible,
+        "shown, and saved shown"
+    );
     assert_eq!(saved("plugin:test.demo:main"), Some((500.0, 300.0)));
 
     // A smaller screen: the report that carries it has the windows already

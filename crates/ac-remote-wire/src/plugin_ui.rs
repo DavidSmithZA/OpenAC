@@ -54,6 +54,7 @@ record! {
         state_managed: bool,
         min_size: (f32, f32),
         max_size: (f32, f32),
+        resizable: (bool, bool),
     }
     PluginIcon { width: u32, height: u32, rgba: Arc<Vec<u8>> }
     WindowIcon { named: Option<PluginIcon>, light: Option<PluginIcon>, dark: Option<PluginIcon> }
@@ -637,7 +638,7 @@ union! {
         9 => DisplayDensity(density: f32),
         10 => CanvasHosted { canvas: u32, size: Option<(i32, i32)> },
         11 => DialogAnswered { handle: u32, button: i32 },
-        12 => Windows { screen: (i32, i32), windows: Vec<WindowReport> },
+        12 => Windows { screen: (i32, i32), ready: bool, windows: Vec<WindowReport> },
     }
 }
 

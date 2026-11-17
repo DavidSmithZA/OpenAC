@@ -124,6 +124,11 @@ struct PlacedIcon {
     anchor: WorldIconAnchor,
 }
 
+/// The screen and registered windows as told to the session: the snapshot
+/// (attach) they were told in, the screen, whether the character's layout
+/// was restored, and the windows.
+type ToldWindows = (u64, (i32, i32), bool, Vec<WindowReport>);
+
 /// What the window keeps of the plugins' UI.
 #[derive(Debug, Default)]
 pub struct PluginWindowUi {
@@ -150,7 +155,7 @@ pub struct PluginWindowUi {
     reported: Option<(u16, u16)>,
     /// The screen and registered windows as last told to the session, with
     /// the snapshot (attach) they were told in.
-    reported_windows: Option<(u64, (i32, i32), Vec<WindowReport>)>,
+    reported_windows: Option<ToldWindows>,
     /// The key map's chords as last told to the session, with the
     /// snapshot (attach) they were told in.
     reported_chords: Option<(u64, Vec<ac_plugin_ui::hotkeys::Chord>)>,
@@ -1292,13 +1297,27 @@ impl WindowUi {
 
     /// A plugin's placing of a registered window: applied as a named
     /// layout is restored, and saved for the character as the player's own
-    /// change. A main panel is shown or hidden through the panel switcher,
-    /// so the toolbar follows.
+    /// change. Refused (with a notice) until the character's layout is
+    /// restored, as the session refuses it; a placing still on its way when
+    /// the character left lands here. A main panel is shown through the
+    /// panel switcher before it is placed (showing one puts it where the
+    /// main panels share their place), and hidden after; the other main
+    /// panels then take its place and size, as when the player moves one.
     fn apply_window_layout(&mut self, name: &str, layout: &WindowLayout, parts: WindowParts) {
         let Some(layouts) = self.status.layouts.as_mut() else {
             return;
         };
-        let panel = self.panels.panel_of(name);
+        if !layouts.is_restored() {
+            self.notices.push(format!(
+                "ui: a plugin placed window {name} before the character's layout was restored; \
+                 left where it is"
+            ));
+            return;
+        }
+        let panel = self
+            .panels
+            .panel_of(name)
+            .filter(|_| !layouts.is_state_managed(name));
         let wanted = ac_host::settings::UiWindowLayout {
             x: layout.x,
             y: layout.y,
@@ -1309,6 +1328,13 @@ impl WindowUi {
             maximized: layout.maximized,
             authored_geometry_revision: 0,
         };
+        if let Some(panel) = panel
+            && parts.shown
+            && layout.visible
+        {
+            self.panels.set_visibility(&mut self.host.root, panel, true);
+            self.host.pump();
+        }
         let show = parts.shown && panel.is_none();
         if layouts
             .apply_as_player(&mut self.host, name, &wanted, show)
@@ -1319,14 +1345,16 @@ impl WindowUi {
             ));
             return;
         }
-        if let Some(panel) = panel
-            && parts.shown
-            && !layouts.is_state_managed(name)
-        {
-            self.panels
-                .set_visibility(&mut self.host.root, panel, layout.visible);
+        if let Some(panel) = panel {
+            self.panels.observe_geometry(&mut self.host.root, name);
+            if parts.shown && !layout.visible {
+                self.panels
+                    .set_visibility(&mut self.host.root, panel, false);
+            }
         }
         self.host.pump();
+        // What the panel switcher did is saved as the player's change too.
+        layouts.follow(&mut self.host);
     }
 
     /// Tell the session the screen the interface lays out in and every
@@ -1342,6 +1370,7 @@ impl WindowUi {
             return;
         };
         let screen = layouts.screen();
+        let ready = layouts.is_restored();
         let windows: Vec<WindowReport> = self
             .host
             .root
@@ -1380,22 +1409,26 @@ impl WindowUi {
                     state_managed: layouts.is_state_managed(&w.name),
                     min_size: (frame.min_width, frame.min_height),
                     max_size: (frame.max_width, frame.max_height),
+                    resizable: (frame.resize_x, frame.resize_y),
                 })
             })
             .collect();
-        let same = self
-            .plugins
-            .reported_windows
-            .as_ref()
-            .is_some_and(|(s, at, told)| *s == snapshots && *at == screen && *told == windows);
+        let same =
+            self.plugins
+                .reported_windows
+                .as_ref()
+                .is_some_and(|(s, at, was_ready, told)| {
+                    *s == snapshots && *at == screen && *was_ready == ready && *told == windows
+                });
         if same {
             return;
         }
-        self.plugins.reported_windows = Some((snapshots, screen, windows.clone()));
-        self.plugins
-            .outbox
-            .borrow_mut()
-            .push(UiInput::Windows { screen, windows });
+        self.plugins.reported_windows = Some((snapshots, screen, ready, windows.clone()));
+        self.plugins.outbox.borrow_mut().push(UiInput::Windows {
+            screen,
+            ready,
+            windows,
+        });
     }
 
     /// One frame of the plugins' overlays: the canvases on the screen and

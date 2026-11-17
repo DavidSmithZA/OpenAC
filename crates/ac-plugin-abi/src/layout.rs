@@ -214,7 +214,7 @@ mod tests {
     /// value as 1.12: it added WebP to the image formats the client
     /// decodes, not a shape, and API 1.14 (the screen and the registered
     /// windows: two events and four imports) changed it again.
-    const PUBLISHED: u64 = 0xf825_e402_1116_62b3;
+    const PUBLISHED: u64 = 0xc024_a62d_1364_3a66;
 
     /// The fingerprint API 1.12 was published with.
     const PUBLISHED_1_12: u64 = 0x4ae5_d2f7_29f5_02b6;
