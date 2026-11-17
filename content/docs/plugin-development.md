@@ -176,12 +176,11 @@ BMP, TGA and GIF before): lossy, lossless and with alpha, and an animation's
 first frame, as for a GIF. No call changed; a client older than 1.13 refuses
 the bytes (handle 0), so a plugin that ships only WebP art builds for 1.13.
 API 1.14 added the screen and the registered windows: `Host::screen_size`,
-`Host::windows`, `Host::apply_window` and `Host::apply_windows`, and the
-events `Event::ScreenSizeChanged` and `Event::UiWindowsChanged`, which a
-plugin built for an older version never gets ([Window layouts](#window-layouts)).
-API 1.15 added `shares_place` and `held` to `UiWindowInfo` (a plugin built
-for 1.14 reads the records without them) and `Host::hold_windows`
-([Holding windows out of sight](#holding-windows-out-of-sight)).
+`Host::windows`, `Host::apply_window`, `Host::apply_windows` and
+`Host::hold_windows`, and the events `Event::ScreenSizeChanged` and
+`Event::UiWindowsChanged`, which a plugin built for an older version never
+gets ([Window layouts](#window-layouts), [Holding windows out of
+sight](#holding-windows-out-of-sight)).
 
 Everything the client offers goes through
 `Host`: game state, items, chat, movement and navigation, trade and vendors,
@@ -341,8 +340,8 @@ the client saves it), `state_managed`, and its smallest and largest width and
 height, and whether its width and its height can change at all
 (`resizable_width`, `resizable_height`). A `state_managed` window is one the
 game shows and hides by itself (a vendor, a trade, the combat bar).
-Windows that share one place and size carry the same `shares_place` key
-(API 1.15): every main panel (inventory, character, spellbook, the map and
+Windows that share one place and size carry the same `shares_place` key:
+every main panel (inventory, character, spellbook, the map and
 the rest) has `UI_WINDOWS_MAIN_PANELS` (`"main-panels"`), and a window on its
 own has `None`. Placing one of them places them all, so keep one place for
 the group; the one shown now has `layout.visible` set. `held` says a plugin
@@ -392,7 +391,7 @@ neither is raised on a session without a window.
 
 ### Holding windows out of sight
 
-`Host::hold_windows(&names)` (API 1.15) holds registered windows out of
+`Host::hold_windows(&names)` holds registered windows out of
 sight, say while a layout editor paints a box for every window on canvases,
 which sit under every window. A held window is not drawn and takes no
 pointer or keys, the game's own windows included: the vitals, the combat bar
@@ -753,7 +752,7 @@ Every plugin folder holds a `plugin.json` beside its module:
   "displayName": "Hello",
   "version": "0.1.0",
   "entry": "hello.wasm",
-  "apiVersion": "1.15",
+  "apiVersion": "1.14",
   "minHostVersion": "0.1.0",
   "permissionsVersion": 1,
   "permissions": [
@@ -769,7 +768,7 @@ Every plugin folder holds a `plugin.json` beside its module:
 | `displayName` | The name players see. |
 | `version` | A SemVer 2.0 version (`1.2.0`, `1.3.0-beta.1`). |
 | `entry` | The `.wasm` file, inside the plugin folder. |
-| `apiVersion` | The plugin API version it was built for, `"MAJOR.MINOR"`: the SDK's `API_CURRENT` (currently `"1.15"`), which must match the version the SDK writes into the module. The launcher installs a plugin only when the installed client loads this version (each client release says which versions it loads; see [Plugin API versions](rust-client.md#plugin-api-versions)), and refuses an install while no client is installed. |
+| `apiVersion` | The plugin API version it was built for, `"MAJOR.MINOR"`: the SDK's `API_CURRENT` (currently `"1.14"`), which must match the version the SDK writes into the module. The launcher installs a plugin only when the installed client loads this version (each client release says which versions it loads; see [Plugin API versions](rust-client.md#plugin-api-versions)), and refuses an install while no client is installed. |
 | `minHostVersion`, `maxHostVersion`, `skipHostVersions` | The client versions it supports or is known broken on. `minHostVersion` is required for a launcher install. |
 | `permissionsVersion` | The permission vocabulary version (`1`); required when `permissions` is present. |
 | `permissions` | What it may do beyond the basics, each with a one-sentence `note` (at most 120 characters) the player reads before installing. |

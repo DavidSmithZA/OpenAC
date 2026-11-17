@@ -1536,7 +1536,7 @@ impl Host<'_> {
     /// For a list that is not empty: no window is attached, or the
     /// character's window layout is not restored yet (hold windows after
     /// the screen and windows events that follow it). The plugin's holds
-    /// stay as they were (API 1.15).
+    /// stay as they were (API 1.14).
     pub fn hold_windows<S: AsRef<str>>(&mut self, names: &[S]) -> Result<UiWindowsHeld, String> {
         let request: Vec<String> = names.iter().map(|n| n.as_ref().to_owned()).collect();
         let request = request.to_bytes();
