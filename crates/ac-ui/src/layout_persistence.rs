@@ -838,6 +838,18 @@ impl LayoutPersistence {
         self.valid_screen()
     }
 
+    /// Whether the character's layout is restored and the game is shown:
+    /// what the windows show now is the character's, and what changes is
+    /// saved for it. False before the first restore (the windows at their
+    /// default places), for the pre-login "default" key, and while a
+    /// pre-game screen covers the game.
+    #[must_use]
+    pub fn is_restored(&self) -> bool {
+        self.gameplay_active
+            && can_persist(&self.character)
+            && self.restored_character.as_deref() == Some(self.character.as_str())
+    }
+
     /// Whether the game shows and hides window `name` by itself (its
     /// visibility is never restored or saved).
     #[must_use]

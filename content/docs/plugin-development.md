@@ -335,34 +335,50 @@ its layout under; a plugin's window is `plugin:<plugin id>:<window id>`), its
 `owner` (`Client`, `Dock` or `Plugin(id)`), a plugin window's `title`, its
 `layout` (`x`, `y`, `width`, `height`, `visible`, `collapsed`, `maximized`, as
 the client saves it), `state_managed`, and its smallest and largest width and
-height. A `state_managed` window is one the game shows and hides by itself
-(a vendor, a trade, the combat bar).
+height, and whether its width and its height can change at all
+(`resizable_width`, `resizable_height`). A `state_managed` window is one the
+game shows and hides by itself (a vendor, a trade, the combat bar).
 
 `Host::apply_window(name, &layout, parts)` places a window as the client
 restores a saved layout. `parts` (`WindowParts::PLACE`, `SIZE`, `SHOWN`,
 `STATE`, combined with `|`, or `ALL`) says which parts of the layout to
 apply; the window keeps the rest. The size stays within the window's limits
-and the screen, and the window on the screen. A shown state is never applied
+and the screen (a window fixed in width or height keeps it), and the window
+on the screen. A shown state is never applied
 to a `state_managed` window: the answer's `shown_ignored` says so, and its
 place and size still apply. A main panel is shown or hidden through the
-panel switcher, so the toolbar follows. The client saves the result for the
-character, per screen size, as if the player had moved the window, so the
-character keeps it if the plugin goes. `Host::apply_windows` places several
-in one call, one answer each.
+panel switcher, so the toolbar follows: it is shown before it is placed and
+hidden after, and the other main panels take its place and size, as when the
+player moves one. The client saves the result for the character, per screen
+size, as if the player had moved the window, so the character keeps it if
+the plugin goes. `Host::apply_windows` places several in one call, one
+answer each. Placings of one window in a row build on each other: a size
+alone after a place keeps the new place.
+
+Placings wait for the character's window layout. Before it is restored (on
+entering the world), and while a pre-game screen covers the game, a placing
+is an error: the restore would put the window back, and nothing would be
+saved. Once the layout is restored, the client tells
+`Event::ScreenSizeChanged` and then `Event::UiWindowsChanged` again, so a
+plugin that places its layout on those events places it over the
+character's own, at login and on every new screen.
 
 The windows live in the window, the plugin in the session, so a placing is
 carried out before the next frame, not during the call. The answer is where
-the client's rules put the window; a collapsed or maximized window's own
-state can change its size further. `Host::windows` reads what the window
+the client's rules put the window, worked out when asked. A window whose own
+state changes its size (the toolbar snaps to its collapsed or expanded stop,
+a maximized chat window fills its place, a dock closed to its tile) can end
+up at another size and place. `Host::windows` reads what the window
 last reported, so a window just placed reads where it went from the next
 pass. A name no window has, or no window attached, is an error.
 
 `Event::ScreenSizeChanged` carries each new screen size, the first one a
-window reports included. The client has reflowed its windows onto the new
-screen before it tells the size, so the windows a plugin reads then are
-where they landed. `Event::UiWindowsChanged` says a window was registered or
-unregistered (a plugin's window came or went, the first report of a window
-included): read `Host::windows` again. Neither needs a permission, and
+window reports included, and the size again when the character's layout is
+restored. The client has reflowed or restored its windows before it tells
+the size, so the windows a plugin reads then are where they landed.
+`Event::UiWindowsChanged` says a window was registered or unregistered (a
+plugin's window came or went, the first report of a window included), or
+the layout was restored: read `Host::windows` again. Neither needs a permission, and
 neither is raised on a session without a window.
 
 **World drawing.** A plugin can put labels over objects
@@ -682,7 +698,9 @@ gets the inert answer (nothing found, unavailable). For services,
 `FakeHost::request_service` calls one of the plugin's own as another plugin
 would. For window layouts, `FakeHost::report_windows` plays a window's report
 of the screen and its windows (the plugin hears both events) and
-`FakeHost::set_screen_size` a new screen; the fake window places the windows
+`FakeHost::set_screen_size` a new screen, and `FakeHost::set_layout_restored`
+the character's layout not yet restored, then restored; the fake window
+places the windows
 the plugin asks for as the client would, `FakeHost::windows` reads them back,
 and `FakeHost::window_applies` records each request.
 

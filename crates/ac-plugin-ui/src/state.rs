@@ -1758,9 +1758,13 @@ impl PluginUi {
             UiInput::FileIconsShown { panel, paths } => self.file_icons_shown(panel, paths),
             UiInput::DisplayDensity(density) => self.set_font_density(density),
             UiInput::CanvasHosted { canvas, size } => self.canvas_hosted(canvas, size),
-            UiInput::Windows { screen, windows } => {
+            UiInput::Windows {
+                screen,
+                ready,
+                windows,
+            } => {
                 if self.window_attached {
-                    self.window_mirror.report(screen, windows);
+                    self.window_mirror.report(screen, ready, windows);
                 }
             }
         }

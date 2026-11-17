@@ -77,15 +77,19 @@ pub struct WindowReport {
     pub min_size: (f32, f32),
     /// Its largest width and height.
     pub max_size: (f32, f32),
+    /// Whether its width, and its height, can change: a window fixed on an
+    /// axis keeps its size there whatever is asked.
+    pub resizable: (bool, bool),
 }
 
 impl WindowReport {
     /// Where the window ends up when `parts` of `layout` are applied to it
     /// on a screen of `screen` pixels: its size within its limits and the
-    /// screen, its place on the screen, its shown state unchanged when the
-    /// game manages it. The window's own state can still change its size
-    /// (a collapsed toolbar, a maximized chat window); the window's next
-    /// report says.
+    /// screen (unchanged on an axis it cannot be resized on), its place on
+    /// the screen, its shown state unchanged when the game manages it. The
+    /// window's own state can still change its size, and with it its place
+    /// (a collapsed toolbar, a maximized chat window, a dock closed to its
+    /// tile); the window's next report says.
     #[must_use]
     pub fn fit(
         &self,
@@ -93,7 +97,20 @@ impl WindowReport {
         parts: WindowParts,
         screen: (i32, i32),
     ) -> WindowLayout {
-        let now = self.layout;
+        self.fit_from(&self.layout, layout, parts, screen)
+    }
+
+    /// [`Self::fit`] from `now` instead of the reported layout: where the
+    /// window is once the placings already asked of it are applied.
+    #[must_use]
+    pub fn fit_from(
+        &self,
+        now: &WindowLayout,
+        layout: &WindowLayout,
+        parts: WindowParts,
+        screen: (i32, i32),
+    ) -> WindowLayout {
+        let now = *now;
         let screen = (screen.0.max(1) as f32, screen.1.max(1) as f32);
         let pick = |asked: f32, current: f32, take: bool| {
             if take && asked.is_finite() {
@@ -107,13 +124,13 @@ impl WindowReport {
             clamp(value, minimum, upper)
         };
         let width = dimension(
-            pick(layout.width, now.width, parts.size),
+            pick(layout.width, now.width, parts.size && self.resizable.0),
             self.min_size.0,
             self.max_size.0,
             screen.0,
         );
         let height = dimension(
-            pick(layout.height, now.height, parts.size),
+            pick(layout.height, now.height, parts.size && self.resizable.1),
             self.min_size.1,
             self.max_size.1,
             screen.1,
@@ -128,6 +145,7 @@ impl WindowReport {
             0.0,
             (screen.1 - height).max(0.0),
         );
+        let state = |asked: bool, current: bool| if parts.state { asked } else { current };
         WindowLayout {
             x,
             y,
@@ -138,16 +156,8 @@ impl WindowReport {
             } else {
                 now.visible
             },
-            collapsed: if parts.state {
-                layout.collapsed
-            } else {
-                now.collapsed
-            },
-            maximized: if parts.state {
-                layout.maximized
-            } else {
-                now.maximized
-            },
+            collapsed: state(layout.collapsed, now.collapsed),
+            maximized: state(layout.maximized, now.maximized),
         }
     }
 
@@ -155,32 +165,23 @@ impl WindowReport {
     /// window is now: what the window is asked to apply as a whole.
     #[must_use]
     pub fn merged(&self, layout: &WindowLayout, parts: WindowParts) -> WindowLayout {
-        let now = self.layout;
-        WindowLayout {
-            x: if parts.place { layout.x } else { now.x },
-            y: if parts.place { layout.y } else { now.y },
-            width: if parts.size { layout.width } else { now.width },
-            height: if parts.size {
-                layout.height
-            } else {
-                now.height
-            },
-            visible: if parts.shown {
-                layout.visible
-            } else {
-                now.visible
-            },
-            collapsed: if parts.state {
-                layout.collapsed
-            } else {
-                now.collapsed
-            },
-            maximized: if parts.state {
-                layout.maximized
-            } else {
-                now.maximized
-            },
-        }
+        merged(&self.layout, layout, parts)
+    }
+}
+
+/// `layout` with the parts `parts` leaves out taken from `now`.
+#[must_use]
+pub fn merged(now: &WindowLayout, layout: &WindowLayout, parts: WindowParts) -> WindowLayout {
+    let pick = |take: bool, asked: f32, current: f32| if take { asked } else { current };
+    let flag = |take: bool, asked: bool, current: bool| if take { asked } else { current };
+    WindowLayout {
+        x: pick(parts.place, layout.x, now.x),
+        y: pick(parts.place, layout.y, now.y),
+        width: pick(parts.size, layout.width, now.width),
+        height: pick(parts.size, layout.height, now.height),
+        visible: flag(parts.shown, layout.visible, now.visible),
+        collapsed: flag(parts.state, layout.collapsed, now.collapsed),
+        maximized: flag(parts.state, layout.maximized, now.maximized),
     }
 }
 
@@ -228,6 +229,7 @@ mod tests {
             state_managed,
             min_size: (100.0, 80.0),
             max_size: (400.0, 300.0),
+            resizable: (true, true),
         }
     }
 
@@ -293,5 +295,24 @@ mod tests {
             (fit.width, fit.height, fit.x, fit.y),
             (100.0, 80.0, 0.0, 0.0)
         );
+    }
+
+    #[test]
+    fn a_window_fixed_on_an_axis_keeps_its_size_there() {
+        let fixed_height = WindowReport {
+            resizable: (true, false),
+            ..report(false)
+        };
+        let asked = WindowLayout {
+            x: 0.0,
+            y: 1000.0,
+            width: 300.0,
+            height: 280.0,
+            ..report(false).layout
+        };
+        let fit = fixed_height.fit(&asked, WindowParts::ALL, (800, 600));
+        assert_eq!((fit.width, fit.height), (300.0, 150.0));
+        // The place follows the size the window keeps.
+        assert_eq!(fit.y, 450.0);
     }
 }

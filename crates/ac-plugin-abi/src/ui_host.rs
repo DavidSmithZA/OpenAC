@@ -830,6 +830,8 @@ pub fn window_info(w: &ui::WindowReport) -> abi::UiWindowInfo {
         min_height: w.min_size.1,
         max_width: w.max_size.0,
         max_height: w.max_size.1,
+        resizable_width: w.resizable.0,
+        resizable_height: w.resizable.1,
     }
 }
 
@@ -1088,9 +1090,11 @@ mod theme_tests {
             state_managed,
             min_size: (50.0, 40.0),
             max_size: (400.0, 300.0),
+            resizable: (true, true),
         };
         state.input(ui::UiInput::Windows {
             screen: (1024, 768),
+            ready: true,
             windows: vec![
                 report("radar", ui::WindowOwner::Client, false),
                 report("vendor", ui::WindowOwner::Client, true),

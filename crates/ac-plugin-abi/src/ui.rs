@@ -957,6 +957,11 @@ wire_record! {
         pub max_width: f32,
         /// Its largest height (the screen limits it too).
         pub max_height: f32,
+        /// Its width can change: a window fixed in width keeps it whatever
+        /// a placing asks.
+        pub resizable_width: bool,
+        /// Its height can change.
+        pub resizable_height: bool,
     }
 }
 
@@ -990,11 +995,14 @@ wire_record! {
 wire_record! {
     /// What placing a window answers (API 1.14).
     pub struct UiWindowApplied {
-        /// Where the window ends up: the parts asked for, its size within
-        /// its limits and the screen, its place on the screen. A collapsed
-        /// or maximized window's own state can change its size further;
-        /// [`crate::Import::UiWindows`] reads where it went once the window
-        /// placed it (the frame after).
+        /// Where the client's rules put the window: the parts asked for, its
+        /// size within its limits and the screen (unchanged on an axis it
+        /// cannot be resized on), its place on the screen. It is worked out
+        /// when asked; the window places it before its next frame. A
+        /// window whose own state changes its size (a collapsed toolbar, a
+        /// maximized chat window, a dock closed to its tile) can end up at
+        /// another size and place: [`crate::Import::UiWindows`] reads where
+        /// it went once the window placed it.
         pub layout: UiWindowLayout,
         /// The shown state was asked for and left alone: the game shows and
         /// hides this window.

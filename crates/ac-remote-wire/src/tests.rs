@@ -2137,6 +2137,7 @@ fn every_command() -> Vec<SessionCommand> {
         },
         UiInput::Windows {
             screen: (1920, 1080),
+            ready: true,
             windows: [
                 ac_plugin_ui::WindowOwner::Client,
                 ac_plugin_ui::WindowOwner::Dock,
@@ -2160,6 +2161,7 @@ fn every_command() -> Vec<SessionCommand> {
                 state_managed: at == 0,
                 min_size: (100.0, 50.0),
                 max_size: (f32::MAX, 900.0),
+                resizable: (true, at != 0),
             })
             .collect(),
         },
@@ -2781,7 +2783,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "870462aea0f6c12e", "{:#x}", shape());
+    assert_eq!(shape_hex(), "09048654083f7148", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full
