@@ -12,6 +12,27 @@ before 0.2.0 are at
 The entries below 0.2.0 cover both clients, as they were maintained side by
 side until then.
 
+## OpenAC (Rust) 0.2.13 (2026-11-16)
+
+- A new diagnostic, off unless you set `OPENAC_PROBE_OBJECTS=1`: the client
+  log gets a line whenever an object in the world (a monster, a portal, a
+  statue, an item on the ground) is created, sent again, deleted by the
+  server, or forgotten by the client after 25 s out of range, with where
+  it was, where your character was and how far apart they were. This is
+  to find out why a bot sometimes can't find an object right next to it
+  until it logs in again.
+
+## OpenAC (Rust) 0.2.12 (2026-11-16)
+
+- When the client shows a combat mode the server never confirmed (it asked
+  for magic, say, and no answer came), the client log now says so after
+  5 s, with the combat-mode events that led there. Seen on bots right
+  after a death: the character stood at the lifestone, waiting for a mode
+  the server never sent.
+- The client log's combat-mode history keeps an event that repeats only
+  once, with how many times and until when. A plugin asking again many
+  times a second no longer pushes the events that matter out of it.
+
 ## OpenAC (Rust) 0.2.11 (2026-11-14)
 
 - The remote window's relay address and secret are now shared by every
