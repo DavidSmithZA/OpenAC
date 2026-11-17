@@ -572,9 +572,9 @@ pub fn handle(
         Import::UiWindows => state
             .registered_windows()
             .iter()
-            .map(window_info)
+            .map(|w| window_info(w, state.is_window_held(&w.name)))
             .collect::<Vec<_>>()
-            .to_bytes(),
+            .to_bytes_at(version),
         Import::UiWindowApply => {
             let r = abi::UiWindowApply::from_bytes(request).map_err(bad)?;
             apply_window(state, &r).to_bytes()
@@ -584,6 +584,20 @@ pub fn handle(
             all.iter()
                 .map(|r| apply_window(state, r))
                 .collect::<Vec<_>>()
+                .to_bytes()
+        }
+        Import::UiWindowsHold => {
+            let names = Vec::<String>::from_bytes(request).map_err(bad)?;
+            state
+                .hold_windows(id, &names)
+                .map(|answer| abi::UiWindowsHeld {
+                    held: answer.held,
+                    refused: answer
+                        .refused
+                        .into_iter()
+                        .map(|(name, reason)| abi::UiWindowHoldRefused { name, reason })
+                        .collect(),
+                })
                 .to_bytes()
         }
         Import::UiCanvasResize => {
@@ -813,9 +827,10 @@ fn window_layout(l: &ui::WindowLayout) -> abi::UiWindowLayout {
     }
 }
 
-/// A registered window as a plugin reads it.
+/// A registered window as a plugin reads it; `held` when a plugin holds
+/// it out of sight.
 #[must_use]
-pub fn window_info(w: &ui::WindowReport) -> abi::UiWindowInfo {
+pub fn window_info(w: &ui::WindowReport, held: bool) -> abi::UiWindowInfo {
     abi::UiWindowInfo {
         name: w.name.clone(),
         owner: match &w.owner {
@@ -832,6 +847,8 @@ pub fn window_info(w: &ui::WindowReport) -> abi::UiWindowInfo {
         max_height: w.max_size.1,
         resizable_width: w.resizable.0,
         resizable_height: w.resizable.1,
+        shares_place: w.shares_place.clone(),
+        held,
     }
 }
 
@@ -1091,6 +1108,7 @@ mod theme_tests {
             min_size: (50.0, 40.0),
             max_size: (400.0, 300.0),
             resizable: (true, true),
+            shares_place: None,
         };
         state.input(ui::UiInput::Windows {
             screen: (1024, 768),
@@ -1183,6 +1201,83 @@ mod theme_tests {
         });
         assert_eq!(resized.since(), ApiVersion::new(1, 14));
         assert_eq!(Event::UiWindowsChanged.since(), ApiVersion::new(1, 14));
+    }
+
+    // API 1.15: the place a window shares and whether it is held come with
+    // the window list for a plugin built for 1.15, not for one built for
+    // 1.14; holding windows answers which are held and refuses the rest.
+    #[test]
+    fn shared_places_and_holds_came_with_api_1_15() {
+        let owner = UiOwner::new("test.layout", "Layout");
+        let mut state = PluginUi::new();
+        let call = |state: &mut PluginUi, import, request: &[u8], version| {
+            handle(import, request, &owner, state, None, version).unwrap()
+        };
+        let hold = |state: &mut PluginUi, names: &[&str]| {
+            let names: Vec<String> = names.iter().map(|n| (*n).to_owned()).collect();
+            Result::<abi::UiWindowsHeld, String>::from_bytes(&call(
+                state,
+                Import::UiWindowsHold,
+                &names.to_bytes(),
+                crate::API_CURRENT,
+            ))
+            .unwrap()
+        };
+        assert!(hold(&mut state, &["inventory"]).is_err(), "no window");
+        state.set_window_attached(true);
+        let report = |name: &str, shares_place: Option<&str>| ui::WindowReport {
+            name: name.into(),
+            owner: ui::WindowOwner::Client,
+            title: None,
+            layout: ui::WindowLayout::default(),
+            state_managed: false,
+            min_size: (50.0, 40.0),
+            max_size: (400.0, 300.0),
+            resizable: (true, true),
+            shares_place: shares_place.map(str::to_owned),
+        };
+        state.input(ui::UiInput::Windows {
+            screen: (1024, 768),
+            ready: true,
+            windows: vec![
+                report("inventory", Some(ui::MAIN_PANELS)),
+                report("character", Some(ui::MAIN_PANELS)),
+                report("chat", None),
+            ],
+        });
+        let held = hold(&mut state, &["inventory", "nowhere"]).unwrap();
+        assert_eq!(held.held, ["inventory"]);
+        assert_eq!(held.refused.len(), 1);
+        assert_eq!(held.refused[0].name, "nowhere");
+
+        let windows = Vec::<abi::UiWindowInfo>::from_bytes(&call(
+            &mut state,
+            Import::UiWindows,
+            &[],
+            crate::API_CURRENT,
+        ))
+        .unwrap();
+        assert_eq!(
+            windows[0].shares_place.as_deref(),
+            Some(abi::UI_WINDOWS_MAIN_PANELS)
+        );
+        assert_eq!(windows[1].shares_place, windows[0].shares_place);
+        assert_eq!(windows[2].shares_place, None);
+        assert!(windows[0].held && !windows[1].held && !windows[2].held);
+        // A plugin built for 1.14 reads the records as 1.14 had them.
+        let v1_14 = ApiVersion::new(1, 14);
+        let old = call(&mut state, Import::UiWindows, &[], v1_14);
+        assert_ne!(old, windows.to_bytes());
+        let old = Vec::<abi::UiWindowInfo>::from_bytes_at(&old, v1_14).unwrap();
+        assert_eq!(old.len(), 3);
+        assert_eq!(old[0].name, "inventory");
+        assert!(old[0].shares_place.is_none() && !old[0].held);
+        // An empty list lets them all go.
+        assert!(hold(&mut state, &[]).unwrap().held.is_empty());
+        assert!(!state.is_window_held("inventory"));
+        assert_eq!(Import::UiWindowsHold.since(), ApiVersion::new(1, 15));
+        assert_eq!(Import::UiWindowsHold.permission(), None);
+        assert_eq!(ui::MAIN_PANELS, abi::UI_WINDOWS_MAIN_PANELS);
     }
 
     // A plugin built before API 1.12 registers a canvas without saying
