@@ -246,9 +246,19 @@ fn the_minus_button_hides_the_window_and_tells_the_session() {
     };
     assert!(!shown(&mut page), "hidden at once");
     page.frame();
-    assert_eq!(
-        sent(&mut page),
-        ["PluginUi(PanelShown { panel: 1, shown: false })"]
+    let sent = sent(&mut page);
+    assert_eq!(sent[0], "PluginUi(PanelShown { panel: 1, shown: false })");
+    // Then the window's report of its registered windows, which has the
+    // plugin's window hidden.
+    assert_eq!(sent.len(), 2, "{sent:?}");
+    assert!(sent[1].starts_with("PluginUi(Windows {"), "{}", sent[1]);
+    assert!(
+        sent[1].contains(
+            "title: Some(\"Demo\"), layout: WindowLayout { x: 300.0, y: 200.0, width: 240.0, \
+             height: 120.0, visible: false"
+        ),
+        "{}",
+        sent[1]
     );
 }
 

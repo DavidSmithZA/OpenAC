@@ -1033,6 +1033,17 @@ pub enum UiChange {
         /// The window it blocks.
         owner: Option<u32>,
     },
+    /// A plugin asks for a registered window to be placed: `layout` whole
+    /// (the parts not asked for are where the window was), applied as the
+    /// saved layouts are, and saved as the player's own change.
+    WindowApply {
+        /// The window's registered name.
+        name: String,
+        /// Where it goes.
+        layout: crate::windows::WindowLayout,
+        /// Which parts were asked for.
+        parts: crate::windows::WindowParts,
+    },
 }
 
 /// A plugin's question in a dialog box (OpenAC `PluginDialog`), as a window
@@ -1149,6 +1160,15 @@ pub enum UiInput {
         handle: u32,
         /// The button.
         button: i32,
+    },
+    /// The screen the interface lays out in and every registered window,
+    /// sent at attach and whenever any of it changes (after the window's
+    /// own reflow when the screen changed).
+    Windows {
+        /// Width and height, pixels.
+        screen: (i32, i32),
+        /// The registered windows, in registration order.
+        windows: Vec<crate::windows::WindowReport>,
     },
 }
 

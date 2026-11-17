@@ -175,6 +175,10 @@ API 1.13 added WebP to the formats `Host::image_decode` reads (PNG, JPEG,
 BMP, TGA and GIF before): lossy, lossless and with alpha, and an animation's
 first frame, as for a GIF. No call changed; a client older than 1.13 refuses
 the bytes (handle 0), so a plugin that ships only WebP art builds for 1.13.
+API 1.14 added the screen and the registered windows: `Host::screen_size`,
+`Host::windows`, `Host::apply_window` and `Host::apply_windows`, and the
+events `Event::ScreenSizeChanged` and `Event::UiWindowsChanged`, which a
+plugin built for an older version never gets ([Window layouts](#window-layouts)).
 
 Everything the client offers goes through
 `Host`: game state, items, chat, movement and navigation, trade and vendors,
@@ -318,6 +322,48 @@ of the handle keeps the old size; `Canvas::state` asks the client for the size
 it has now. Resizing to the size it has answers true and changes nothing.
 It answers false, and nothing changes, for a width or height below 1, a
 removed canvas, and an in-markup canvas.
+
+### Window layouts
+
+A plugin can read the screen the interface lays out in and every registered
+window, and place them (API 1.14), say to keep one layout per screen size for
+every character. `Host::screen_size` is the game window's size in interface
+pixels (`None` until a window tells the session). `Host::windows` lists every
+registered window in registration order: the client's own, the plugin dock
+and every plugin's. Each `UiWindowInfo` has its `name` (what the client saves
+its layout under; a plugin's window is `plugin:<plugin id>:<window id>`), its
+`owner` (`Client`, `Dock` or `Plugin(id)`), a plugin window's `title`, its
+`layout` (`x`, `y`, `width`, `height`, `visible`, `collapsed`, `maximized`, as
+the client saves it), `state_managed`, and its smallest and largest width and
+height. A `state_managed` window is one the game shows and hides by itself
+(a vendor, a trade, the combat bar).
+
+`Host::apply_window(name, &layout, parts)` places a window as the client
+restores a saved layout. `parts` (`WindowParts::PLACE`, `SIZE`, `SHOWN`,
+`STATE`, combined with `|`, or `ALL`) says which parts of the layout to
+apply; the window keeps the rest. The size stays within the window's limits
+and the screen, and the window on the screen. A shown state is never applied
+to a `state_managed` window: the answer's `shown_ignored` says so, and its
+place and size still apply. A main panel is shown or hidden through the
+panel switcher, so the toolbar follows. The client saves the result for the
+character, per screen size, as if the player had moved the window, so the
+character keeps it if the plugin goes. `Host::apply_windows` places several
+in one call, one answer each.
+
+The windows live in the window, the plugin in the session, so a placing is
+carried out before the next frame, not during the call. The answer is where
+the client's rules put the window; a collapsed or maximized window's own
+state can change its size further. `Host::windows` reads what the window
+last reported, so a window just placed reads where it went from the next
+pass. A name no window has, or no window attached, is an error.
+
+`Event::ScreenSizeChanged` carries each new screen size, the first one a
+window reports included. The client has reflowed its windows onto the new
+screen before it tells the size, so the windows a plugin reads then are
+where they landed. `Event::UiWindowsChanged` says a window was registered or
+unregistered (a plugin's window came or went, the first report of a window
+included): read `Host::windows` again. Neither needs a permission, and
+neither is raised on a session without a window.
 
 **World drawing.** A plugin can put labels over objects
 (`Host::show_labels`), lines (`Host::create_line_layer`) and filled triangles
@@ -634,7 +680,11 @@ assert_eq!(host.posted[0].text, "Hello, world!");
 gets the inert answer (nothing found, unavailable). For services,
 `FakeHost::set_service` stands in for another plugin's service, and
 `FakeHost::request_service` calls one of the plugin's own as another plugin
-would.
+would. For window layouts, `FakeHost::report_windows` plays a window's report
+of the screen and its windows (the plugin hears both events) and
+`FakeHost::set_screen_size` a new screen; the fake window places the windows
+the plugin asks for as the client would, `FakeHost::windows` reads them back,
+and `FakeHost::window_applies` records each request.
 
 ## plugin.json
 
@@ -646,7 +696,7 @@ Every plugin folder holds a `plugin.json` beside its module:
   "displayName": "Hello",
   "version": "0.1.0",
   "entry": "hello.wasm",
-  "apiVersion": "1.13",
+  "apiVersion": "1.14",
   "minHostVersion": "0.1.0",
   "permissionsVersion": 1,
   "permissions": [
@@ -662,7 +712,7 @@ Every plugin folder holds a `plugin.json` beside its module:
 | `displayName` | The name players see. |
 | `version` | A SemVer 2.0 version (`1.2.0`, `1.3.0-beta.1`). |
 | `entry` | The `.wasm` file, inside the plugin folder. |
-| `apiVersion` | The plugin API version it was built for, `"MAJOR.MINOR"`: the SDK's `API_CURRENT` (currently `"1.13"`), which must match the version the SDK writes into the module. The launcher installs a plugin only when the installed client loads this version (each client release says which versions it loads; see [Plugin API versions](rust-client.md#plugin-api-versions)), and refuses an install while no client is installed. |
+| `apiVersion` | The plugin API version it was built for, `"MAJOR.MINOR"`: the SDK's `API_CURRENT` (currently `"1.14"`), which must match the version the SDK writes into the module. The launcher installs a plugin only when the installed client loads this version (each client release says which versions it loads; see [Plugin API versions](rust-client.md#plugin-api-versions)), and refuses an install while no client is installed. |
 | `minHostVersion`, `maxHostVersion`, `skipHostVersions` | The client versions it supports or is known broken on. `minHostVersion` is required for a launcher install. |
 | `permissionsVersion` | The permission vocabulary version (`1`); required when `permissions` is present. |
 | `permissions` | What it may do beyond the basics, each with a one-sentence `note` (at most 120 characters) the player reads before installing. |

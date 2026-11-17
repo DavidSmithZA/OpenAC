@@ -1015,3 +1015,187 @@ fn a_plugin_windows_file_icon_is_held_while_drawn_and_drawn_once_held() {
         SessionCommand::PluginUi(UiInput::FileIconsShown { panel: p, paths })
             if *p == panel && paths.is_empty())));
 }
+
+/// A character in the world, so the window restores, reflows and saves its
+/// layouts.
+fn in_world(name: &str) -> PresentationEvent {
+    use ac_runtime::world::{ObjectKey, ObjectView, WorldSnapshot};
+    PresentationEvent::Snapshot(WorldSnapshot {
+        player_guid: Some(0x5000_0001),
+        objects: vec![ObjectView {
+            key: ObjectKey {
+                local_id: 1,
+                incarnation: 1,
+            },
+            guid: 0x5000_0001,
+            name: Some(name.to_owned()),
+            setup_id: None,
+            position: None,
+            parent: None,
+            placement: None,
+            rest_placement: 0,
+            scale: None,
+            translucency: None,
+            state: 0,
+            velocity: None,
+            model: ac_proto::ModelData::default(),
+            motion_table_id: None,
+            sound_table_id: None,
+            radar: ac_runtime::world::RadarFacts::default(),
+            motion: None,
+            effects: ac_runtime::world::EffectFacts::default(),
+            step_blend: None,
+        }],
+    })
+}
+
+/// The last report of the screen and the registered windows among the
+/// window's commands.
+fn windows_report(
+    commands: &[SessionCommand],
+) -> Option<((i32, i32), Vec<ac_plugin_ui::WindowReport>)> {
+    commands.iter().rev().find_map(|c| match c {
+        SessionCommand::PluginUi(UiInput::Windows { screen, windows }) => {
+            Some((*screen, windows.clone()))
+        }
+        _ => None,
+    })
+}
+
+/// The window tells the session its screen and every registered window
+/// (whose each is, its limits, which the game shows and hides); a plugin
+/// places a client window and its own as a saved layout is restored, the
+/// result is saved for the character as the player's own change, a window
+/// the game shows and hides keeps its shown state, and a new screen
+/// arrives with the windows already reflowed onto it.
+#[test]
+#[ignore = "needs the retail dat files"]
+fn a_plugin_reads_and_places_the_registered_windows() {
+    use ac_plugin_ui::{WindowLayout, WindowOwner, WindowParts};
+    use ac_render::ui::window::RADAR_WINDOW;
+    const VENDOR_WINDOW: &str = "vendor";
+    let settings =
+        std::env::temp_dir().join(format!("openac-plugin-windows-{}.json", std::process::id()));
+    let _ = std::fs::remove_file(&settings);
+    let size = (1280, 720);
+    let (mut state, _) = session();
+    let mut ui = WindowUi::build(dats(), size).expect("the UI builds");
+    ui.set_stores(
+        Some(Box::new(ac_host::settings::SettingsStore::new(
+            settings.clone(),
+        ))),
+        None,
+    );
+    let mut scene = Scene::default();
+    scene.apply(in_world("Alice"));
+    scene.apply(PresentationEvent::Interface(InterfaceEvent::PluginUi(
+        state.snapshot(),
+    )));
+    ui.feed(&mut scene);
+    ui.frame(Instant::now(), size);
+    let commands = ui.drain();
+    let (screen, windows) = windows_report(&commands).expect("the window reports its windows");
+    assert_eq!(screen, (1280, 720));
+    let find = |windows: &[ac_plugin_ui::WindowReport], name: &str| {
+        windows.iter().find(|w| w.name == name).cloned()
+    };
+    let plugin = find(&windows, "plugin:test.demo:main").unwrap();
+    assert_eq!(plugin.owner, WindowOwner::Plugin("test.demo".into()));
+    assert_eq!(plugin.title.as_deref(), Some("Demo"));
+    let dock = find(&windows, ac_ui::plugin::dock::WINDOW).unwrap();
+    assert_eq!(dock.owner, WindowOwner::Dock);
+    let radar = find(&windows, RADAR_WINDOW).unwrap();
+    assert_eq!(radar.owner, WindowOwner::Client);
+    assert!(!radar.state_managed);
+    let vendor = find(&windows, VENDOR_WINDOW).unwrap();
+    assert!(vendor.state_managed);
+    assert!(!vendor.layout.visible);
+    deliver(&mut state, commands);
+    assert_eq!(state.screen_size(), Some((1280, 720)));
+    assert!(state.take_screen_change().is_some());
+    assert!(state.take_windows_change());
+
+    // The plugin moves the radar and its own window, and asks to show the
+    // vendor window, which the game shows by itself.
+    let place = WindowParts {
+        place: true,
+        ..WindowParts::default()
+    };
+    let radar_at = WindowLayout {
+        x: 40.0,
+        y: 60.0,
+        ..radar.layout
+    };
+    let applied = state.apply_window(RADAR_WINDOW, &radar_at, place).unwrap();
+    assert_eq!((applied.layout.x, applied.layout.y), (40.0, 60.0));
+    let plugin_at = WindowLayout {
+        x: 500.0,
+        y: 300.0,
+        ..plugin.layout
+    };
+    state
+        .apply_window("plugin:test.demo:main", &plugin_at, place)
+        .unwrap();
+    let vendor_at = WindowLayout {
+        x: 100.0,
+        y: 120.0,
+        visible: true,
+        ..vendor.layout
+    };
+    let vendor_applied = state
+        .apply_window(VENDOR_WINDOW, &vendor_at, WindowParts::ALL)
+        .unwrap();
+    assert!(vendor_applied.shown_ignored);
+    assert!(!vendor_applied.layout.visible);
+    assert!(state.apply_window("nowhere", &radar_at, place).is_err());
+    scene.apply(PresentationEvent::Interface(InterfaceEvent::PluginUi(
+        state.take_changes(),
+    )));
+    ui.feed(&mut scene);
+    ui.frame(Instant::now(), size);
+    let (_, windows) = windows_report(&ui.drain()).expect("the moves are reported");
+    let place_of = |name: &str| {
+        let w = find(&windows, name).unwrap();
+        (w.layout.x, w.layout.y, w.layout.visible)
+    };
+    assert_eq!(place_of(RADAR_WINDOW), (40.0, 60.0, radar.layout.visible));
+    assert_eq!(
+        place_of("plugin:test.demo:main"),
+        (500.0, 300.0, plugin.layout.visible)
+    );
+    assert_eq!(place_of(VENDOR_WINDOW), (100.0, 120.0, false));
+    assert!(!ui.host().root.is_window_visible(VENDOR_WINDOW));
+
+    // Saved for the character at this screen size, as a drag would be.
+    let store = ac_host::settings::SettingsStore::new(settings.clone());
+    let saved = |name: &str| {
+        store
+            .load_window_layout(
+                "Alice",
+                "1280x720",
+                name,
+                &ac_host::settings::UiWindowLayout::default(),
+            )
+            .map(|l| (l.x, l.y))
+    };
+    assert_eq!(saved(RADAR_WINDOW), Some((40.0, 60.0)));
+    assert_eq!(saved("plugin:test.demo:main"), Some((500.0, 300.0)));
+
+    // A smaller screen: the report that carries it has the windows already
+    // reflowed onto it.
+    let small = (800, 600);
+    ui.frame(Instant::now(), small);
+    let (screen, windows) = windows_report(&ui.drain()).expect("the new screen is reported");
+    assert_eq!(screen, (800, 600));
+    for w in &windows {
+        let l = w.layout;
+        assert!(
+            l.x + l.width.min(800.0) <= 800.5 && l.y + l.height.min(600.0) <= 600.5,
+            "{} is off the 800x600 screen: {l:?}",
+            w.name
+        );
+    }
+    let plugin = find(&windows, "plugin:test.demo:main").unwrap();
+    assert!(plugin.layout.x < 500.0, "reflowed: {:?}", plugin.layout);
+    let _ = std::fs::remove_file(&settings);
+}

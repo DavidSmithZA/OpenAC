@@ -296,6 +296,17 @@ wire_union! {
         /// other than the one registered (API 1.12). What it shows was
         /// painted for the old size: paint it again.
         29 => CanvasResized(crate::ui::CanvasSize) since (1, 12),
+        /// The screen the interface lays out in changed size (the game
+        /// window was resized or moved to another display), or a window
+        /// first told it: the new size. The client has already reflowed
+        /// its windows onto it, so the windows read now are where they
+        /// landed. Never raised on a session without a window (API 1.14).
+        30 => ScreenSizeChanged(crate::ui::ScreenSize) since (1, 14),
+        /// A window was registered or unregistered (a plugin's window came
+        /// or went, a game window was made), or a window first told the
+        /// session its windows: read them again with
+        /// [`crate::Import::UiWindows`] (API 1.14).
+        31 => UiWindowsChanged since (1, 14),
         /// One of the plugin's panels or canvases was used ([`crate::ui`];
         /// the tag is `crate::ui::EVENT_TAG`).
         100 => Ui(crate::ui::UiEvent),
