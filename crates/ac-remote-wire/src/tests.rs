@@ -2165,6 +2165,16 @@ fn every_command() -> Vec<SessionCommand> {
             })
             .collect(),
         },
+        UiInput::WindowsChanged(vec![ac_plugin_ui::WindowReport {
+            name: "radar".into(),
+            owner: ac_plugin_ui::WindowOwner::Client,
+            title: None,
+            layout: ac_plugin_ui::WindowLayout::default(),
+            state_managed: false,
+            min_size: (40.0, 40.0),
+            max_size: (400.0, 400.0),
+            resizable: (true, true),
+        }]),
     ];
     let mut commands = vec![
         C::Chat("/who".into()),
@@ -2783,7 +2793,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "09048654083f7148", "{:#x}", shape());
+    assert_eq!(shape_hex(), "27b65b98c25d45cf", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full
@@ -2878,7 +2888,7 @@ variants! {
     }
     ui_input_variant, UI_INPUT: UiInput {
         Action, PanelShown, Pointer, ClientWindows, ClientChords, Hotkey, InputAction, Theme,
-        FileIconsShown, DisplayDensity, CanvasHosted, DialogAnswered, Windows,
+        FileIconsShown, DisplayDensity, CanvasHosted, DialogAnswered, Windows, WindowsChanged,
     }
     interface_variant, INTERFACE: InterfaceEvent {
         Items, Player, State, Appraisal, Trade, Vendor, Social, Contracts, Book, House,

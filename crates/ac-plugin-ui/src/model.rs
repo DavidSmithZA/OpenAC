@@ -1162,8 +1162,9 @@ pub enum UiInput {
         button: i32,
     },
     /// The screen the interface lays out in and every registered window,
-    /// sent at attach and whenever any of it changes (after the window's
-    /// own reflow when the screen changed).
+    /// sent at attach, and when the screen, the layout's readiness or which
+    /// windows there are changed (after the window's own reflow when the
+    /// screen changed); other changes go as [`Self::WindowsChanged`].
     Windows {
         /// Width and height, pixels.
         screen: (i32, i32),
@@ -1174,6 +1175,11 @@ pub enum UiInput {
         /// The registered windows, in registration order.
         windows: Vec<crate::windows::WindowReport>,
     },
+    /// Some registered windows changed (moved, resized, shown, hidden,
+    /// collapsed), or a plugin placed them: those windows as they are now,
+    /// sent instead of a whole [`Self::Windows`] when the screen, the
+    /// layout's readiness and which windows there are stayed the same.
+    WindowsChanged(Vec<crate::windows::WindowReport>),
 }
 
 /// Something a plugin hears from its UI.

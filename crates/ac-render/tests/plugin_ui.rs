@@ -1203,7 +1203,42 @@ fn a_plugin_reads_and_places_the_registered_windows() {
     )));
     ui.feed(&mut scene);
     ui.frame(Instant::now(), size);
-    let (_, windows) = windows_report(&ui.drain()).expect("the moves are reported");
+    // Only the windows that changed or were placed are reported, not the
+    // whole list: the toolbar's placing changed nothing, and it is
+    // reported all the same.
+    let commands = ui.drain();
+    assert!(windows_report(&commands).is_none(), "no whole report");
+    let changed: Vec<String> = commands
+        .iter()
+        .find_map(|c| match c {
+            SessionCommand::PluginUi(UiInput::WindowsChanged(windows)) => {
+                Some(windows.iter().map(|w| w.name.clone()).collect())
+            }
+            _ => None,
+        })
+        .expect("the changed windows are reported");
+    for name in [
+        RADAR_WINDOW,
+        "plugin:test.demo:main",
+        VENDOR_WINDOW,
+        INVENTORY_WINDOW,
+        "toolbar",
+        ac_render::ui::window::CHARACTER_WINDOW,
+    ] {
+        assert!(changed.iter().any(|n| n == name), "{name}: {changed:?}");
+    }
+    assert!(!changed.iter().any(|n| n == "chat"), "{changed:?}");
+    deliver(&mut state, commands);
+    let windows = state.registered_windows().to_vec();
+    // A frame with nothing changed reports nothing.
+    ui.frame(Instant::now(), size);
+    assert!(
+        !ui.drain().iter().any(|c| matches!(
+            c,
+            SessionCommand::PluginUi(UiInput::Windows { .. } | UiInput::WindowsChanged(_))
+        )),
+        "nothing changed"
+    );
     // Each answer was where the window went.
     let landed = |name: &str| find(&windows, name).unwrap().layout;
     assert_eq!(landed(INVENTORY_WINDOW), inventory_applied.layout);

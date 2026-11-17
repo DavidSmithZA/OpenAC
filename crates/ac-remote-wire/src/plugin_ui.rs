@@ -639,6 +639,7 @@ union! {
         10 => CanvasHosted { canvas: u32, size: Option<(i32, i32)> },
         11 => DialogAnswered { handle: u32, button: i32 },
         12 => Windows { screen: (i32, i32), ready: bool, windows: Vec<WindowReport> },
+        13 => WindowsChanged(windows: Vec<WindowReport>),
     }
 }
 
