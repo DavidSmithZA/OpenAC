@@ -129,7 +129,7 @@ macro_rules! import_table {
             /// restored; a name no window has is refused in the answer.
             UiWindowsHold = ui_windows_hold(Vec<String>)
                 -> Result<$crate::ui::UiWindowsHeld, String> = Err("no plugin UI".to_owned()),
-                permission: None, window: true, since: (1, 15);
+                permission: None, window: true, since: (1, 14);
             /// Register a canvas.
             UiCanvasRegister = ui_canvas_register($crate::ui::CanvasRegistration)
                 -> Result<u32, String> = Err("no plugin UI".to_owned()),

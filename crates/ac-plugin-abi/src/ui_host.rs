@@ -574,7 +574,7 @@ pub fn handle(
             .iter()
             .map(|w| window_info(w, state.is_window_held(&w.name)))
             .collect::<Vec<_>>()
-            .to_bytes_at(version),
+            .to_bytes(),
         Import::UiWindowApply => {
             let r = abi::UiWindowApply::from_bytes(request).map_err(bad)?;
             apply_window(state, &r).to_bytes()
@@ -1203,11 +1203,10 @@ mod theme_tests {
         assert_eq!(Event::UiWindowsChanged.since(), ApiVersion::new(1, 14));
     }
 
-    // API 1.15: the place a window shares and whether it is held come with
-    // the window list for a plugin built for 1.15, not for one built for
-    // 1.14; holding windows answers which are held and refuses the rest.
+    // The window list says which windows share a place and which are held;
+    // holding windows answers which are held and refuses the rest.
     #[test]
-    fn shared_places_and_holds_came_with_api_1_15() {
+    fn windows_report_their_shared_place_and_can_be_held() {
         let owner = UiOwner::new("test.layout", "Layout");
         let mut state = PluginUi::new();
         let call = |state: &mut PluginUi, import, request: &[u8], version| {
@@ -1264,18 +1263,10 @@ mod theme_tests {
         assert_eq!(windows[1].shares_place, windows[0].shares_place);
         assert_eq!(windows[2].shares_place, None);
         assert!(windows[0].held && !windows[1].held && !windows[2].held);
-        // A plugin built for 1.14 reads the records as 1.14 had them.
-        let v1_14 = ApiVersion::new(1, 14);
-        let old = call(&mut state, Import::UiWindows, &[], v1_14);
-        assert_ne!(old, windows.to_bytes());
-        let old = Vec::<abi::UiWindowInfo>::from_bytes_at(&old, v1_14).unwrap();
-        assert_eq!(old.len(), 3);
-        assert_eq!(old[0].name, "inventory");
-        assert!(old[0].shares_place.is_none() && !old[0].held);
         // An empty list lets them all go.
         assert!(hold(&mut state, &[]).unwrap().held.is_empty());
         assert!(!state.is_window_held("inventory"));
-        assert_eq!(Import::UiWindowsHold.since(), ApiVersion::new(1, 15));
+        assert_eq!(Import::UiWindowsHold.since(), ApiVersion::new(1, 14));
         assert_eq!(Import::UiWindowsHold.permission(), None);
         assert_eq!(ui::MAIN_PANELS, abi::UI_WINDOWS_MAIN_PANELS);
     }

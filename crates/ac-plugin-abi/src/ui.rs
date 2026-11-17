@@ -966,17 +966,16 @@ wire_record! {
         /// here ([`UI_WINDOWS_MAIN_PANELS`] for the main panels: inventory,
         /// character, spellbook and the rest); none for a window on its
         /// own. A placing of one of them places them all, so keep one place
-        /// for the group. The one shown now has `layout.visible` set
-        /// (API 1.15).
-        since (1, 15) pub shares_place: Option<String>,
+        /// for the group. The one shown now has `layout.visible` set.
+        pub shares_place: Option<String>,
         /// A plugin holds it out of sight ([`crate::Import::UiWindowsHold`]):
         /// it is not drawn and takes no input, while `layout` says what the
-        /// game has, shown or not (API 1.15).
-        since (1, 15) pub held: bool,
+        /// game has, shown or not.
+        pub held: bool,
     }
 }
 
-/// [`UiWindowInfo::shares_place`] of the main panels (API 1.15).
+/// [`UiWindowInfo::shares_place`] of the main panels (API 1.14).
 pub const UI_WINDOWS_MAIN_PANELS: &str = "main-panels";
 
 /// [`UiWindowApply::parts`]: the left and top edges.
@@ -1026,7 +1025,7 @@ wire_record! {
 
 wire_record! {
     /// A window [`crate::Import::UiWindowsHold`] did not hold, and why
-    /// (API 1.15).
+    /// (API 1.14).
     pub struct UiWindowHoldRefused {
         /// The name asked for.
         pub name: String,
@@ -1037,7 +1036,7 @@ wire_record! {
 
 wire_record! {
     /// What holding windows out of sight answers
-    /// ([`crate::Import::UiWindowsHold`]; API 1.15).
+    /// ([`crate::Import::UiWindowsHold`]; API 1.14).
     pub struct UiWindowsHeld {
         /// The windows the plugin now holds, in the order asked.
         pub held: Vec<String>,
