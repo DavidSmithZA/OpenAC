@@ -58,6 +58,19 @@ impl WindowMirror {
         self.pending.clear();
     }
 
+    /// Some windows changed: each as it is now, and where a placing of it
+    /// went, so the next placing of it starts from there. A window the
+    /// session does not know (one a whole report has not named yet) is left
+    /// for that report.
+    pub(super) fn update(&mut self, windows: Vec<WindowReport>) {
+        for window in windows {
+            self.pending.remove(&window.name);
+            if let Some(known) = self.windows.iter_mut().find(|w| w.name == window.name) {
+                *known = window;
+            }
+        }
+    }
+
     /// The window left: nothing is known until another reports.
     pub(super) fn forget(&mut self) {
         *self = Self::default();
@@ -324,5 +337,49 @@ mod tests {
         ui.input(input((800, 600), true, &["radar"]));
         let again = ui.apply_window("radar", &bigger, size).unwrap();
         assert_eq!((again.layout.x, again.layout.y), (10.0, 10.0));
+    }
+
+    // A report of the changed windows only: those are updated, the rest
+    // kept, no change is told, and a placing of a reported window starts
+    // from where it went.
+    #[test]
+    fn a_report_of_the_changed_windows_updates_only_those() {
+        let mut ui = PluginUi::new();
+        ui.set_window_attached(true);
+        ui.input(input((800, 600), true, &["radar", "chat"]));
+        take(&mut ui);
+        let place = WindowParts {
+            place: true,
+            ..WindowParts::default()
+        };
+        let at = WindowLayout {
+            x: 400.0,
+            y: 300.0,
+            ..report("radar", false).layout
+        };
+        ui.apply_window("radar", &at, place).unwrap();
+        ui.apply_window("chat", &at, place).unwrap();
+        let mut radar = report("radar", false);
+        radar.layout.x = 390.0;
+        ui.input(UiInput::WindowsChanged(vec![
+            radar,
+            report("nowhere", false),
+        ]));
+        assert_eq!(take(&mut ui), (None, false));
+        let names: Vec<&str> = ui
+            .registered_windows()
+            .iter()
+            .map(|w| w.name.as_str())
+            .collect();
+        assert_eq!(names, ["radar", "chat"]);
+        assert_eq!(ui.registered_windows()[0].layout.x, 390.0);
+        let size = WindowParts {
+            size: true,
+            ..WindowParts::default()
+        };
+        let radar = ui.apply_window("radar", &at, size).unwrap();
+        assert_eq!(radar.layout.x, 390.0, "from where it went");
+        let chat = ui.apply_window("chat", &at, size).unwrap();
+        assert_eq!(chat.layout.x, 400.0, "still from its own placing");
     }
 }

@@ -1767,6 +1767,11 @@ impl PluginUi {
                     self.window_mirror.report(screen, ready, windows);
                 }
             }
+            UiInput::WindowsChanged(windows) => {
+                if self.window_attached {
+                    self.window_mirror.update(windows);
+                }
+            }
         }
     }
 

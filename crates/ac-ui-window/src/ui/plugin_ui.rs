@@ -156,6 +156,9 @@ pub struct PluginWindowUi {
     /// The screen and registered windows as last told to the session, with
     /// the snapshot (attach) they were told in.
     reported_windows: Option<ToldWindows>,
+    /// The windows plugins placed since the last report: the next report
+    /// carries them even when nothing about them changed.
+    placed_since_report: std::collections::BTreeSet<String>,
     /// The key map's chords as last told to the session, with the
     /// snapshot (attach) they were told in.
     reported_chords: Option<(u64, Vec<ac_plugin_ui::hotkeys::Chord>)>,
@@ -1019,6 +1022,7 @@ impl WindowUi {
         let applies = self.facts.plugin_ui.take_window_applies();
         for (name, layout, parts) in applies {
             self.apply_window_layout(&name, &layout, parts);
+            self.plugins.placed_since_report.insert(name);
         }
         self.report_client_windows();
         let appearance_asked = self.plugins.dock
@@ -1413,22 +1417,45 @@ impl WindowUi {
                 })
             })
             .collect();
-        let same =
-            self.plugins
-                .reported_windows
-                .as_ref()
-                .is_some_and(|(s, at, was_ready, told)| {
-                    *s == snapshots && *at == screen && *was_ready == ready && *told == windows
-                });
-        if same {
-            return;
-        }
-        self.plugins.reported_windows = Some((snapshots, screen, ready, windows.clone()));
-        self.plugins.outbox.borrow_mut().push(UiInput::Windows {
-            screen,
-            ready,
-            windows,
-        });
+        let placed = std::mem::take(&mut self.plugins.placed_since_report);
+        // The whole report when the session has none of this attach, the
+        // screen or the layout's readiness changed, or a window came or
+        // went; otherwise only the windows that changed (a drag sends the
+        // one window), and every window a plugin placed, changed or not,
+        // so the session learns where its placing went.
+        let told = self
+            .plugins
+            .reported_windows
+            .as_ref()
+            .filter(|(s, at, was_ready, told)| {
+                *s == snapshots
+                    && *at == screen
+                    && *was_ready == ready
+                    && told.len() == windows.len()
+                    && told.iter().zip(&windows).all(|(a, b)| a.name == b.name)
+            })
+            .map(|(_, _, _, told)| told);
+        let input = match told {
+            Some(told) => {
+                let changed: Vec<WindowReport> = windows
+                    .iter()
+                    .zip(told)
+                    .filter(|(now, was)| *now != *was || placed.contains(&now.name))
+                    .map(|(now, _)| now.clone())
+                    .collect();
+                if changed.is_empty() {
+                    return;
+                }
+                UiInput::WindowsChanged(changed)
+            }
+            None => UiInput::Windows {
+                screen,
+                ready,
+                windows: windows.clone(),
+            },
+        };
+        self.plugins.reported_windows = Some((snapshots, screen, ready, windows));
+        self.plugins.outbox.borrow_mut().push(input);
     }
 
     /// One frame of the plugins' overlays: the canvases on the screen and
