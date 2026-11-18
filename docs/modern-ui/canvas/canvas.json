@@ -316,6 +316,100 @@
       "page": "char",
       "title": "High-level servers: level 4,782, the plate grows with the number",
       "is_interactive": true
+    },
+    "ChatInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "chat",
+      "title": "Chat over the bronze HUD, with Combat popped out as a window"
+    },
+    "Chat.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 560,
+      "h": 440,
+      "page": "chat",
+      "title": "Chat open: tabs, channel button, names you can click",
+      "is_interactive": true
+    },
+    "ChatIdle.dc.html": {
+      "x": 2160,
+      "y": 0,
+      "w": 560,
+      "h": 440,
+      "page": "chat",
+      "title": "Idle: no panel, last lines fade"
+    },
+    "ChatChannels.dc.html": {
+      "x": 2800,
+      "y": 0,
+      "w": 560,
+      "h": 440,
+      "page": "chat",
+      "title": "Channel menu: every retail channel, with its @ verb",
+      "is_interactive": true
+    },
+    "ChatCommands.dc.html": {
+      "x": 1520,
+      "y": 560,
+      "w": 560,
+      "h": 440,
+      "page": "chat",
+      "title": "Typing @: commands complete, the button shows where the line goes"
+    },
+    "ChatName.dc.html": {
+      "x": 2160,
+      "y": 560,
+      "w": 560,
+      "h": 440,
+      "page": "chat",
+      "title": "Click a name: tell, invite, friend, squelch",
+      "is_interactive": true
+    },
+    "ChatScrolled.dc.html": {
+      "x": 2800,
+      "y": 560,
+      "w": 560,
+      "h": 440,
+      "page": "chat",
+      "title": "Reading back: chat holds still, new lines wait below",
+      "is_interactive": true
+    },
+    "ChatSearch.dc.html": {
+      "x": 1520,
+      "y": 1120,
+      "w": 560,
+      "h": 440,
+      "page": "chat",
+      "title": "Search chat history",
+      "is_interactive": true
+    },
+    "ChatNewTab.dc.html": {
+      "x": 2160,
+      "y": 1120,
+      "w": 560,
+      "h": 440,
+      "page": "chat",
+      "title": "New tab: name it, pick what it shows, own window or not"
+    },
+    "ChatFloat.dc.html": {
+      "x": 2800,
+      "y": 1120,
+      "w": 380,
+      "h": 300,
+      "page": "chat",
+      "title": "Popped-out window: Combat, read only",
+      "is_interactive": true
+    },
+    "ChatFloatTrade.dc.html": {
+      "x": 3260,
+      "y": 1120,
+      "w": 380,
+      "h": 300,
+      "page": "chat",
+      "title": "Popped-out window: Trade watch, talks on Trade"
     }
   },
   "createdOnFiles": {
@@ -325,7 +419,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "char"
+    "page": "chat"
   },
   "notes": {
     "t1": {
@@ -384,6 +478,14 @@
       "x": 0,
       "y": -300,
       "page": "char"
+    },
+    "t8": {
+      "kind": "title1",
+      "maxW": 3640,
+      "text": "Chat (bronze)",
+      "x": 0,
+      "y": -300,
+      "page": "chat"
     }
   },
   "order": [
@@ -423,7 +525,18 @@
     "CharacterTrain.dc.html",
     "CharacterTitles.dc.html",
     "CharacterInfo.dc.html",
-    "CharacterHighLevel.dc.html"
+    "CharacterHighLevel.dc.html",
+    "ChatInGame.dc.html",
+    "Chat.dc.html",
+    "ChatIdle.dc.html",
+    "ChatChannels.dc.html",
+    "ChatCommands.dc.html",
+    "ChatName.dc.html",
+    "ChatScrolled.dc.html",
+    "ChatSearch.dc.html",
+    "ChatNewTab.dc.html",
+    "ChatFloat.dc.html",
+    "ChatFloatTrade.dc.html"
   ],
   "pages": [
     {
@@ -449,6 +562,10 @@
     {
       "id": "char",
       "name": "Character"
+    },
+    {
+      "id": "chat",
+      "name": "Chat"
     },
     {
       "id": "r1",

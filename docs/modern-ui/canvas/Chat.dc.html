@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 560px; height: 440px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: {{rootBg}};">
+
+  <!-- the chat block, anchored bottom left as on the HUD -->
+  <div style="position: absolute; left: 16px; bottom: 14px; width: 440px; display: flex; flex-direction: column; gap: 6px;">
+
+    <!-- tabs -->
+    <sc-if value="{{showTabs}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; align-items: center; gap: 2px;">
+        <div role="tablist" aria-label="Chat tabs" style="display: flex; gap: 2px;">
+          <sc-for list="{{tabs}}" as="tb" hint-placeholder-count="5">
+            <button role="tab" aria-selected="{{tb.on}}" onClick="{{tb.pick}}" style="height: 24px; padding: 0 9px; display: flex; align-items: center; gap: 5px; border: 1px solid {{tb.edge}}; border-radius: 3px; background: {{tb.bg}}; color: {{tb.fg}}; font-size: 11px; font-weight: 600; cursor: pointer;">
+              <span>{{tb.label}}</span>
+              <sc-if value="{{tb.hasUnread}}" hint-placeholder-val="{{false}}">
+                <span style="min-width: 15px; height: 15px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: {{tb.badge}}; color: #1A140D; font-size: 9.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{tb.unread}}</span>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+        <button aria-label="New tab" title="New tab" onClick="{{openNewTab}}" style="width: 24px; height: 24px; padding: 0; border-radius: 3px; border: 1px solid {{newTabEdge}}; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        </button>
+        <span style="flex: 1;"></span>
+        <button aria-label="Search chat" title="Search chat" onClick="{{openSearch}}" style="width: 24px; height: 24px; padding: 0; border-radius: 3px; border: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+        </button>
+        <button aria-label="Pop this tab out into its own window" title="Pop out into a window (or drag the tab off)" style="width: 24px; height: 24px; padding: 0; border-radius: 3px; border: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-8 8M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>
+        </button>
+        <button aria-label="Chat settings" title="Chat settings (Options › Chat)" style="width: 24px; height: 24px; padding: 0; border-radius: 3px; border: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"></path></svg>
+        </button>
+      </div>
+    </sc-if>
+
+    <!-- search row, in place of the tabs -->
+    <sc-if value="{{isSearch}}" hint-placeholder-val="{{false}}">
+      <div style="height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 4px 0 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.8); background: rgba(0,0,0,0.6);">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+        <label style="flex: 1; min-width: 0; display: flex;">
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Search chat</span>
+          <input value="drudge" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12px;">
+        </label>
+        <span style="font-size: 11px; color: #C8B89C; font-variant-numeric: tabular-nums; white-space: nowrap;">3 of 3 in Main</span>
+        <button aria-label="Previous match" style="width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: transparent; cursor: pointer; font-size: 10px;">▲</button>
+        <button aria-label="Next match" style="width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: transparent; cursor: pointer; font-size: 10px;">▼</button>
+        <button aria-label="Close search" onClick="{{backToActive}}" style="width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+        </button>
+      </div>
+    </sc-if>
+
+    <!-- transcript -->
+    <div role="log" aria-label="Chat messages" style="position: relative; height: {{boxH}}; box-sizing: border-box; padding: 8px 14px 8px 12px; border-radius: 6px; border: 1px solid {{boxEdge}}; background: {{boxBg}}; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; font-size: 12.5px; line-height: 1.45; text-shadow: 0 1px 2px rgba(0,0,0,0.9);">
+      <sc-for list="{{lines}}" as="l" hint-placeholder-count="10">
+        <div style="display: flex; gap: 8px; align-items: baseline; padding: 1px 6px; margin: 0 -6px; border-radius: 3px; background: {{l.bg}}; opacity: {{l.op}};">
+          <sc-if value="{{showTimes}}" hint-placeholder-val="{{true}}">
+            <span style="flex: none; width: 30px; font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">{{l.time}}</span>
+          </sc-if>
+          <span style="flex: 1; min-width: 0;">
+            <sc-if value="{{l.hasTag}}" hint-placeholder-val="{{false}}">
+              <span style="margin-right: 6px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; color: {{l.tagColor}};">{{l.tag}}</span>
+            </sc-if>
+            <sc-if value="{{l.hasWho}}" hint-placeholder-val="{{false}}">
+              <button onClick="{{l.pick}}" title="Tell, select, invite, squelch" style="padding: 0; border: 0; background: transparent; font-size: inherit; line-height: inherit; font-weight: 700; color: {{l.whoColor}}; text-shadow: inherit; cursor: pointer;">{{l.who}}</button><span style="margin-right: 5px; font-weight: 700; color: {{l.whoColor}};">:</span>
+            </sc-if>
+            <sc-for list="{{l.parts}}" as="p" hint-placeholder-count="1">
+              <span style="color: {{p.color}}; background: {{p.bg}}; border-radius: 2px; text-decoration: {{p.deco}}; text-shadow: {{p.shadow}};">{{p.t}}</span>
+            </sc-for>
+          </span>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{showScroll}}" hint-placeholder-val="{{true}}">
+        <div aria-hidden="true" style="position: absolute; right: 4px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: rgba(255,255,255,0.08);">
+          <div style="position: absolute; left: 0; right: 0; top: {{thumbTop}}; height: 20%; border-radius: 2px; background: rgba(201,160,98,0.7);"></div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{isScrolled}}" hint-placeholder-val="{{false}}">
+        <div style="position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: center; padding-top: 6px; pointer-events: none;">
+          <span style="font-size: 10.5px; font-weight: 600; color: #C8B89C; padding: 2px 8px; border-radius: 999px; background: rgba(0,0,0,0.55);">Reading back · 5:41 AM</span>
+        </div>
+        <button onClick="{{backToActive}}" style="position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); height: 26px; padding: 0 12px; border-radius: 999px; border: 1px solid #E0B068; background: rgba(224,176,104,0.92); color: #1A140D; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer; text-shadow: none; box-shadow: 0 4px 12px rgba(0,0,0,0.45);">
+          14 new messages
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1A140D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"></path></svg>
+        </button>
+      </sc-if>
+    </div>
+
+    <!-- idle: a quiet way back in -->
+    <sc-if value="{{isIdle}}" hint-placeholder-val="{{false}}">
+      <button onClick="{{backToActive}}" style="align-self: flex-start; height: 22px; padding: 0 8px; border: 0; border-radius: 3px; background: rgba(0,0,0,0.25); color: rgba(244,235,220,0.7); font-size: 11px; font-weight: 500; cursor: pointer; text-shadow: 0 1px 2px rgba(0,0,0,0.9);">Enter to chat</button>
+    </sc-if>
+
+    <!-- entry -->
+    <sc-if value="{{showEntry}}" hint-placeholder-val="{{true}}">
+      <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 4px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.8); background: rgba(0,0,0,0.62);">
+        <button aria-haspopup="menu" aria-expanded="{{chOpen}}" aria-label="Talking to {{ch.label}}. Change channel" onClick="{{toggleChannels}}" style="flex: none; height: 24px; padding: 0 8px; display: flex; align-items: center; gap: 6px; border: 1px solid {{ch.edge}}; border-radius: 3px; background: {{ch.bg}}; color: {{ch.c}}; font-size: 11.5px; font-weight: 700; cursor: pointer;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: {{ch.c}};"></span>
+          <span>{{ch.label}}</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{ch.c}}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+        </button>
+        <label style="flex: 1; min-width: 0; display: flex;">
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Message</span>
+          <input placeholder="{{ch.ph}}" value="{{entryText}}" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12.5px;">
+        </label>
+        <span style="font-size: 10.5px; color: #A89A82; white-space: nowrap;">{{entryHint}}</span>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- channel menu -->
+  <sc-if value="{{isChannels}}" hint-placeholder-val="{{false}}">
+    <div role="menu" aria-label="Talk to" style="position: absolute; left: 16px; bottom: 54px; width: 440px; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.97); box-shadow: 0 14px 34px rgba(0,0,0,0.6); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px;">
+      <sc-for list="{{menuCols}}" as="col" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 1px;">
+          <sc-for list="{{col.groups}}" as="g" hint-placeholder-count="2">
+            <span style="padding: 6px 6px 3px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">{{g.title}}</span>
+            <sc-for list="{{g.items}}" as="it" hint-placeholder-count="3">
+              <button role="menuitemradio" aria-checked="{{it.on}}" disabled="{{it.off}}" onClick="{{it.pick}}" style="height: 26px; padding: 0 6px; display: flex; align-items: center; gap: 8px; border: 0; border-radius: 3px; background: {{it.bg}}; opacity: {{it.op}}; text-align: left; font-size: 12px; cursor: pointer;">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: {{it.c}}; flex: none;"></span>
+                <span style="flex: 1; font-weight: 600; color: {{it.fg}};">{{it.label}}</span>
+                <span style="font-size: 10.5px; color: #A89A82;">{{it.note}}</span>
+              </button>
+            </sc-for>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- @ command suggestions -->
+  <sc-if value="{{isCommands}}" hint-placeholder-val="{{false}}">
+    <div role="listbox" aria-label="Commands" style="position: absolute; left: 16px; bottom: 54px; width: 440px; box-sizing: border-box; padding: 6px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.97); box-shadow: 0 14px 34px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 1px;">
+      <sc-for list="{{cmds}}" as="c" hint-placeholder-count="3">
+        <div role="option" aria-selected="{{c.on}}" style="min-height: 34px; padding: 4px 8px; box-sizing: border-box; border-radius: 3px; background: {{c.bg}}; display: flex; align-items: center; gap: 10px;">
+          <span style="width: 76px; font-size: 12px; font-weight: 700; color: #E0B068;">{{c.verb}}</span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 1px;">
+            <span style="font-size: 12px;">{{c.desc}}</span>
+            <span style="font-size: 10.5px; color: #A89A82;">{{c.alias}}</span>
+          </span>
+          <span style="font-size: 11.5px; font-weight: 700; color: {{c.targetColor}};">{{c.target}}</span>
+        </div>
+      </sc-for>
+      <div style="display: flex; gap: 14px; padding: 6px 8px 2px; border-top: 1px solid rgba(201,160,98,0.2); margin-top: 4px; font-size: 10.5px; color: #A89A82;">
+        <span>Tab completes</span><span>↑ ↓ choose</span><span>@help lists every command</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- name menu -->
+  <sc-if value="{{isName}}" hint-placeholder-val="{{false}}">
+    <div role="menu" aria-label="{{who}}" style="position: absolute; left: 318px; top: 150px; width: 226px; box-sizing: border-box; padding: 6px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.97); box-shadow: 0 14px 34px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 1px;">
+      <div style="padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid rgba(201,160,98,0.2); margin-bottom: 4px;">
+        <span style="font-size: 13px; font-weight: 700;">{{who}}</span>
+        <span style="font-size: 10.5px; color: #A89A82;">{{where}}</span>
+      </div>
+      <sc-for list="{{nameItems}}" as="n" hint-placeholder-count="5">
+        <button role="menuitem" disabled="{{n.off}}" onClick="{{backToActive}}" style="height: 28px; padding: 0 8px; display: flex; align-items: center; gap: 9px; border: 0; border-radius: 3px; background: transparent; opacity: {{n.op}}; text-align: left; font-size: 12px; cursor: pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{n.c}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{n.d}}"></path></svg>
+          <span style="flex: 1; font-weight: 600; color: {{n.c}};">{{n.label}}</span>
+          <span style="font-size: 10.5px; color: #A89A82;">{{n.note}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- new tab -->
+  <sc-if value="{{isNewTab}}" hint-placeholder-val="{{false}}">
+    <div role="dialog" aria-label="New chat tab" style="position: absolute; left: 60px; top: 158px; width: 380px; box-sizing: border-box; padding: 14px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.97); box-shadow: 0 14px 34px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 13px; font-weight: 700;">New chat tab</span>
+      <label style="display: flex; flex-direction: column; gap: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: #C8B89C;">
+        NAME
+        <input value="Trade watch" style="height: 28px; box-sizing: border-box; padding: 0 8px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.4); color: #F4EBDC; font: inherit; font-size: 12px; font-weight: 500; letter-spacing: 0;">
+      </label>
+      <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: #C8B89C;">SHOWS</span>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 8px; margin-top: -4px;">
+        <sc-for list="{{types}}" as="ty" hint-placeholder-count="12">
+          <label style="display: flex; align-items: center; gap: 7px; height: 22px; font-size: 12px; cursor: pointer;">
+            <input type="checkbox" checked="{{ty.on}}" style="position: absolute; opacity: 0; width: 1px; height: 1px;">
+            <span style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 3px; border: 1px solid {{ty.edge}}; background: {{ty.bg}}; display: flex; align-items: center; justify-content: center; flex: none;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{ty.tick}}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+            </span>
+            <span style="color: {{ty.fg}};">{{ty.label}}</span>
+          </label>
+        </sc-for>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 12px;">
+        <span style="color: #C8B89C;">Talks on</span>
+        <button style="height: 26px; padding: 0 8px; border-radius: 3px; border: 1px solid rgba(140,200,240,0.5); background: rgba(140,200,240,0.12); color: #8CC8F0; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #8CC8F0;"></span>Trade ▾</button>
+        <span style="flex: 1;"></span>
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <span style="width: 30px; height: 16px; border-radius: 999px; background: rgba(224,176,104,0.85); position: relative; flex: none;"><span style="position: absolute; right: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #1A140D;"></span></span>
+          <input type="checkbox" checked style="position: absolute; opacity: 0; width: 1px; height: 1px;">
+          Own window
+        </label>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; padding-top: 10px; border-top: 1px solid rgba(201,160,98,0.2);">
+        <span style="flex: 1; font-size: 10.5px; color: #A89A82;">Every tab is also in Options › Chat.</span>
+        <button onClick="{{backToActive}}" style="height: 30px; padding: 0 12px; border-radius: 4px; border: 0; background: transparent; color: #C8B89C; font-size: 12px; font-weight: 600; cursor: pointer;">Cancel</button>
+        <button onClick="{{backToActive}}" style="height: 30px; padding: 0 14px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Make tab</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["active","idle","channels","commands","name","scrolled","search","newtab"],"default":"active"},"times":{"editor":"enum","options":["on","off"],"default":"on"},"backdrop":{"editor":"enum","options":["on","off"],"default":"on"},"$preview":{"width":560,"height":440}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const view = st.view || this.props.state || 'active';
+    const tabKey = st.tab || 'main';
+    const backdrop = (this.props.backdrop ?? 'on') !== 'off';
+    const TXT = '#F4EBDC', MUTED = '#C8B89C', GOLD = '#E0B068';
+    const set = (o) => () => this.setState(o);
+
+    // message kinds: tag shown before the name, and the colour of the line
+    const K = {
+      say: { tag: '', c: TXT }, tell: { tag: 'TELL', c: '#C9A2FF' }, tellout: { tag: 'YOU TELL', c: '#C9A2FF' },
+      fellow: { tag: 'FELLOW', c: '#7FD08A' }, alleg: { tag: 'ALLEG', c: '#F0A04B' },
+      general: { tag: 'GENERAL', c: '#8CC8F0' }, trade: { tag: 'TRADE', c: '#8CC8F0' }, lfg: { tag: 'LFG', c: '#8CC8F0' },
+      plugin: { tag: 'PLUGIN', c: '#9FD9C8' },
+      sys: { c: '#B8C2CC' }, emote: { c: '#D2D2C8' }, magic: { c: '#7FB2FF' }, hit: { c: '#FF9A6B' }, hurt: { c: '#FF8A8E' }, xp: { c: GOLD }
+    };
+
+    const q = view === 'search' ? 'drudge' : '';
+    const plain = (t, color) => ({ t, color, bg: 'transparent', deco: 'none', shadow: 'inherit' });
+    const split = (text, color) => {
+      if (!q) return [plain(text, color)];
+      const out = []; const low = text.toLowerCase(); let i = 0;
+      for (;;) {
+        const j = low.indexOf(q, i);
+        if (j < 0) { out.push(plain(text.slice(i), color)); break; }
+        if (j > i) out.push(plain(text.slice(i, j), color));
+        out.push({ t: text.slice(j, j + q.length), color: '#1A140D', bg: GOLD, deco: 'none', shadow: 'none' });
+        i = j + q.length;
+      }
+      return out.filter((p) => p.t);
+    };
+    const whoSel = view === 'name' ? (st.who || 'Osk') : '';
+    const L = (time, kind, who, text, o) => {
+      o = o || {};
+      const k = K[kind];
+      const lineColor = kind === 'say' ? TXT : k.c;
+      const parts = split(text, lineColor);
+      if (o.link) parts.push({ t: o.link, color: GOLD, bg: 'transparent', deco: 'underline', shadow: 'inherit' });
+      const hit = !q || text.toLowerCase().indexOf(q) >= 0;
+      let bg = 'transparent';
+      if (o.mention) bg = 'rgba(224,176,104,0.16)';
+      if (who && who === whoSel && o.sel) bg = 'rgba(255,255,255,0.10)';
+      return {
+        time, hasTag: !!k.tag, tag: k.tag || '', tagColor: k.c,
+        hasWho: !!who, who: who || '', whoColor: k.c,
+        pick: () => this.setState({ view: 'name', who, where: o.where || 'Main · ' + time + ' AM' }),
+        parts, bg, op: o.op || (hit ? '1' : '0.38')
+      };
+    };
+
+    const main = [
+      L('6:00', 'sys', null, 'Rook is now online.'),
+      L('6:01', 'tell', 'Rook', 'portal gem ready when you are', { where: 'Tell · 6:01 AM' }),
+      L('6:01', 'fellow', 'Mira', 'pulling the next room, stay on the ramp', { where: 'Fellowship · 6:01 AM' }),
+      L('6:02', 'general', 'Osk', 'anyone selling Major Coordination?', { where: 'General chat · 6:02 AM', sel: true }),
+      L('6:02', 'magic', null, 'You cast Incantation of Flame Bolt on Drudge Ravener.'),
+      L('6:02', 'hit', null, 'You hit Drudge Ravener for 212 points of fire damage.'),
+      L('6:02', 'hurt', null, 'Drudge Ravener slashes you for 38 points of damage.'),
+      L('6:03', 'alleg', 'Thessaly', 'Kestrel, grats on 87!', { mention: true, where: 'Allegiance · 6:03 AM' }),
+      L('6:03', 'plugin', 'Dungeon Hunting', 'next unexplored room is east, ', { link: '42.3N 33.9E', where: 'Plugin message' }),
+      L('6:03', 'xp', null, 'You gain 18,420 experience.'),
+      L('6:03', 'tellout', 'Rook', 'omw, two minutes', { where: 'Tell · 6:03 AM' })
+    ];
+    const older = [
+      L('5:41', 'say', 'Bryn', 'anyone know where the Lugian camp is?'),
+      L('5:41', 'lfg', 'Varn', 'LF2M Lugian quest, meet at the Holtburg lifestone'),
+      L('5:42', 'fellow', 'Mira', 'I can take one more'),
+      L('5:43', 'emote', null, 'Rook waves.'),
+      L('5:44', 'trade', 'Osk', 'WTS Major Coordination, 40k'),
+      L('5:45', 'sys', null, 'Mira has joined your fellowship.'),
+      L('5:46', 'tell', 'Rook', 'need a portal later?'),
+      L('5:46', 'tellout', 'Rook', 'yes please, in a bit'),
+      L('5:47', 'magic', null, 'You cast Incantation of Armor Self on yourself.'),
+      L('5:47', 'magic', null, 'You cast Incantation of Focus Self on yourself.'),
+      L('5:48', 'general', 'Bryn', 'thanks all')
+    ];
+    const combat = [
+      L('6:02', 'magic', null, 'You cast Incantation of Flame Bolt on Drudge Ravener.'),
+      L('6:02', 'hit', null, 'You hit Drudge Ravener for 212 points of fire damage.'),
+      L('6:02', 'hurt', null, 'Drudge Ravener slashes you for 38 points of damage.'),
+      L('6:02', 'sys', null, 'Drudge Ravener misses you.'),
+      L('6:02', 'magic', null, 'You cast Incantation of Lightning Bolt on Drudge Ravener.'),
+      L('6:03', 'hit', null, 'Critical hit! You hit Drudge Ravener for 488 points of electric damage.'),
+      L('6:03', 'hit', null, 'You killed Drudge Ravener!'),
+      L('6:03', 'xp', null, 'You gain 18,420 experience.')
+    ];
+    const fellows = [
+      L('5:42', 'fellow', 'Mira', 'I can take one more'),
+      L('5:45', 'sys', null, 'Mira has joined your fellowship.'),
+      L('5:58', 'fellow', 'Bryn', 'buffing, 30s'),
+      L('6:01', 'fellow', 'Mira', 'pulling the next room, stay on the ramp'),
+      L('6:02', 'fellow', 'Bryn', 'ok'),
+      L('6:03', 'fellow', 'Mira', 'nice, that is the last of them')
+    ];
+    const alleg = [
+      L('5:30', 'alleg', 'Thessaly', 'house open tonight for anyone who needs a lifestone tie'),
+      L('5:51', 'alleg', 'Corvan', 'anyone have spare Mana Scarabs?'),
+      L('6:03', 'alleg', 'Thessaly', 'Kestrel, grats on 87!', { mention: true })
+    ];
+    const tells = [
+      L('5:46', 'tell', 'Rook', 'need a portal later?'),
+      L('5:46', 'tellout', 'Rook', 'yes please, in a bit'),
+      L('6:01', 'tell', 'Rook', 'portal gem ready when you are'),
+      L('6:03', 'tellout', 'Rook', 'omw, two minutes')
+    ];
+    const byTab = { main, combat, fellow: fellows, alleg, tells };
+
+    // talk channels, as the retail talk-focus menu has them
+    const CH = {
+      say: ['Say', '@s', TXT, 'Say something to people nearby'],
+      fellow: ['Fellowship', '@f', '#7FD08A', 'Message your fellowship'],
+      alleg: ['Allegiance', '@a', '#F0A04B', 'Message your allegiance'],
+      monarch: ['Monarch', '@m', '#F0A04B', 'Message your monarch'],
+      patron: ['Patron', '@p', '#F0A04B', 'Message your patron'],
+      vassals: ['Vassals', '@v', '#F0A04B', 'Message your vassals'],
+      general: ['General', '@cg', '#8CC8F0', 'Message General chat'],
+      trade: ['Trade', '@ct', '#8CC8F0', 'Message Trade chat'],
+      lfg: ['LFG', '@lfg', '#8CC8F0', 'Message Looking for Group'],
+      rp: ['Roleplay', '@crp', '#8CC8F0', 'Message Roleplay chat'],
+      society: ['Society', '@soc', '#8CC8F0', ''],
+      olthoi: ['Olthoi', '@o', '#8CC8F0', ''],
+      rook: ['Tell Rook', '@r', '#C9A2FF', 'Tell Rook'],
+      mira: ['Tell Mira', '', '#C9A2FF', 'Tell Mira'],
+      someone: ['Tell someone…', '@t', '#C9A2FF', '']
+    };
+    const OFF = { vassals: 'no vassals', society: 'not in one', olthoi: 'Olthoi only' };
+    const tabTalk = { alleg: 'alleg', tells: 'rook', fellow: 'fellow' };
+    let chKey = st.ch || tabTalk[tabKey] || 'fellow';
+    if (view === 'commands') chKey = 'rook';
+    const c = CH[chKey];
+    const ch = { label: c[0], c: c[2], ph: c[3], bg: c[2] + '1F', edge: c[2] + '66' };
+    if (view === 'commands') ch.label = 'Reply · Rook';
+
+    const item = (key, extra) => {
+      const v = CH[key];
+      const on = key === chKey && view !== 'commands';
+      const off = !!OFF[key];
+      return { label: v[0], c: v[2], fg: off ? MUTED : TXT, note: OFF[key] || extra || v[1], on, off, op: off ? '0.5' : '1',
+        bg: on ? 'rgba(224,176,104,0.16)' : 'transparent', pick: off ? null : set({ view: 'active', ch: key }) };
+    };
+    const menuCols = [
+      { groups: [
+        { title: 'NEARBY', items: [item('say')] },
+        { title: 'FELLOWSHIP AND ALLEGIANCE', items: ['fellow', 'alleg', 'monarch', 'patron', 'vassals'].map((k) => item(k)) },
+        { title: 'TELL', items: [item('rook', 'last tell · @r'), item('mira'), item('someone')] }
+      ] },
+      { groups: [
+        { title: 'CHANNELS', items: ['general', 'trade', 'lfg', 'rp', 'society', 'olthoi'].map((k) => item(k)) }
+      ] }
+    ];
+
+    const tabDefs = [['main', 'Main', 0], ['combat', 'Combat', 0], ['fellow', 'Fellowship', 3], ['alleg', 'Allegiance', 0], ['tells', 'Tells', 1]];
+    const badge = { fellow: '#7FD08A', tells: '#C9A2FF' };
+    const tabs = tabDefs.map(([key, label, n]) => {
+      const on = key === tabKey;
+      return { label, on, unread: n, hasUnread: n > 0 && !on, badge: badge[key] || GOLD,
+        bg: on ? 'rgba(0,0,0,0.62)' : 'rgba(0,0,0,0.3)', fg: on ? GOLD : TXT, edge: on ? 'rgba(201,160,98,0.8)' : 'transparent',
+        pick: () => this.setState({ tab: key, view: 'active', ch: undefined }) };
+    });
+
+    let lines = byTab[tabKey] || main;
+    if (view === 'scrolled') lines = older;
+    const isIdle = view === 'idle';
+    if (isIdle) {
+      const ops = ['0.3', '0.5', '0.7', '0.9', '1', '1'];
+      lines = main.slice(-6).map((l, i) => Object.assign({}, l, { op: ops[i] }));
+    }
+
+    const N = (label, d, note, off, danger) => ({ label, d, note: note || '', off: !!off, op: off ? '0.45' : '1', c: danger ? '#FF8A8E' : TXT });
+    const who = st.who || 'Osk';
+    const nameItems = [
+      N('Tell ' + who, 'M4 5h16v11H8l-4 4z'),
+      N('Select', 'M12 3v4M12 17v4M3 12h4M17 12h4M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6', 'not nearby', true),
+      N('Invite to fellowship', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M19 8v6M16 11h6'),
+      N('Add friend', 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z'),
+      N('Copy name', 'M8 8h12v12H8zM4 16V4h12'),
+      N('Squelch ' + who, 'M4 4l16 16M9 5h9v9M5 9v10h10', 'hides their chat', false, true)
+    ];
+
+    const cmds = [
+      { verb: '@reply', alias: 'also @r', desc: 'Reply to your last tell', target: 'Rook', on: true },
+      { verb: '@retell', alias: 'also @rt', desc: 'Tell the last person you told', target: 'Rook', on: false },
+      { verb: '@roleplay', alias: 'also @crp', desc: 'Message Roleplay chat', target: '', on: false }
+    ].map((x) => Object.assign(x, { bg: x.on ? 'rgba(224,176,104,0.16)' : 'transparent', targetColor: '#C9A2FF' }));
+
+    const T = (label, on) => ({ label, on, edge: on ? GOLD : 'rgba(201,160,98,0.45)', bg: on ? 'rgba(224,176,104,0.85)' : 'transparent', tick: on ? '#1A140D' : 'transparent', fg: on ? TXT : MUTED });
+    const types = [T('Say'), T('Tells', true), T('Emotes'), T('Fellowship'), T('Allegiance'), T('General'), T('Trade', true), T('LFG', true), T('Roleplay'), T('Combat'), T('Magic'), T('Experience, loot')];
+
+    const active = !isIdle;
+    return {
+      rootBg: backdrop ? 'linear-gradient(180deg, #6F8A55 0%, #4A6338 45%, #2E3F22 100%)' : 'transparent',
+      showTabs: active && view !== 'search', isSearch: view === 'search', isIdle,
+      showEntry: active, showTimes: active && (this.props.times ?? 'on') !== 'off',
+      showScroll: active, thumbTop: view === 'scrolled' ? '30%' : '80%', isScrolled: view === 'scrolled',
+      boxH: isIdle ? '128px' : '232px',
+      boxBg: isIdle ? 'transparent' : 'linear-gradient(90deg, rgba(0,0,0,0.58), rgba(0,0,0,0.3))',
+      boxEdge: isIdle ? 'transparent' : 'rgba(201,160,98,0.3)',
+      tabs, lines, ch, chOpen: view === 'channels', menuCols,
+      entryText: view === 'commands' ? '@r' : '',
+      entryHint: view === 'commands' ? 'Tab ↹' : 'Enter ↵',
+      isChannels: view === 'channels', isCommands: view === 'commands', isName: view === 'name', isNewTab: view === 'newtab',
+      newTabEdge: view === 'newtab' ? GOLD : 'transparent',
+      who, where: st.where || 'General chat · 6:02 AM', nameItems, cmds, types,
+      toggleChannels: () => this.setState({ view: view === 'channels' ? 'active' : 'channels' }),
+      openSearch: set({ view: 'search' }), openNewTab: set({ view: 'newtab' }), backToActive: set({ view: 'active' })
+    };
+  }
+}
+</script>
+</body>
+</html>

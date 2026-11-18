@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chat window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 380px; height: 300px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: {{rootBg}};">
+  <section aria-label="{{title}} chat window" style="position: absolute; left: 16px; top: 16px; width: 348px; height: 268px; box-sizing: border-box; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(20,16,12,{{alpha}}); box-shadow: 0 10px 30px rgba(0,0,0,0.45); display: flex; flex-direction: column; overflow: hidden;">
+    <div style="height: 30px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 4px 0 10px; border-bottom: 1px solid rgba(201,160,98,0.3); cursor: move;">
+      <h2 style="margin: 0; font-size: 12px; font-weight: 700; flex: 1;">{{title}}</h2>
+      <button aria-label="What this window shows" aria-expanded="{{filterOpen}}" onClick="{{toggleFilter}}" title="What this window shows" style="width: 24px; height: 24px; padding: 0; border-radius: 3px; border: 1px solid {{filterEdge}}; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"></path></svg>
+      </button>
+      <button aria-label="Put back as a tab" title="Put back as a tab" style="width: 24px; height: 24px; padding: 0; border-radius: 3px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14 4 20M4 14v6h6M14 4h6v16H8v-2"></path></svg>
+      </button>
+      <button aria-label="Close window" title="Close (the tab stays in Options › Chat)" style="width: 24px; height: 24px; padding: 0; border-radius: 3px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+      </button>
+    </div>
+
+    <div role="log" aria-label="{{title}} messages" style="flex: 1; min-height: 0; padding: 6px 10px; display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; font-size: 12px; line-height: 1.45; text-shadow: 0 1px 2px rgba(0,0,0,0.9); overflow: hidden;">
+      <sc-for list="{{lines}}" as="l" hint-placeholder-count="8">
+        <div>
+          <sc-if value="{{l.hasTag}}" hint-placeholder-val="{{false}}"><span style="margin-right: 6px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; color: {{l.c}};">{{l.tag}}</span></sc-if>
+          <sc-if value="{{l.hasWho}}" hint-placeholder-val="{{false}}"><span style="margin-right: 5px; font-weight: 700; color: {{l.c}};">{{l.who}}:</span></sc-if>
+          <span style="color: {{l.c}};">{{l.text}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{hasEntry}}" hint-placeholder-val="{{false}}">
+      <div style="height: 30px; flex: none; margin: 0 6px 6px; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 3px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.5);">
+        <button aria-label="Talking to Trade. Change channel" style="height: 22px; padding: 0 7px; display: flex; align-items: center; gap: 5px; border: 1px solid rgba(140,200,240,0.4); border-radius: 3px; background: rgba(140,200,240,0.12); color: #8CC8F0; font-size: 11px; font-weight: 700; cursor: pointer;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #8CC8F0;"></span>Trade</button>
+        <label style="flex: 1; min-width: 0; display: flex;">
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Message</span>
+          <input placeholder="Message Trade chat" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12px;">
+        </label>
+      </div>
+    </sc-if>
+
+    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style="position: absolute; right: 3px; bottom: 3px;"><path d="M9 1 1 9M9 5 5 9" stroke="rgba(201,160,98,0.8)" stroke-width="1.2" stroke-linecap="round"></path></svg>
+  </section>
+
+  <sc-if value="{{filterOpen}}" hint-placeholder-val="{{false}}">
+    <div role="dialog" aria-label="What this window shows" style="position: absolute; left: 150px; top: 48px; width: 206px; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.98); box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 3px;">
+      <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C; padding-bottom: 3px;">SHOWS</span>
+      <sc-for list="{{types}}" as="ty" hint-placeholder-count="7">
+        <label style="display: flex; align-items: center; gap: 8px; height: 21px; font-size: 12px; cursor: pointer;">
+          <input type="checkbox" checked="{{ty.on}}" style="position: absolute; opacity: 0; width: 1px; height: 1px;">
+          <span style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 3px; border: 1px solid {{ty.edge}}; background: {{ty.bg}}; display: flex; align-items: center; justify-content: center; flex: none;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{ty.tick}}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+          </span>
+          <span style="color: {{ty.fg}};">{{ty.label}}</span>
+        </label>
+      </sc-for>
+      <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 6px; padding-top: 8px; border-top: 1px solid rgba(201,160,98,0.2);">
+        <div style="display: flex; justify-content: space-between; font-size: 11px;"><span style="color: #C8B89C;">Background</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">{{alphaPct}}</span></div>
+        <div style="height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12); position: relative;"><div style="width: {{alphaPct}}; height: 100%; border-radius: 2px; background: #E0B068;"></div><div style="position: absolute; left: {{alphaPct}}; top: -5px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #F4EBDC; border: 2px solid #E0B068; box-sizing: border-box;"></div></div>
+        <span style="font-size: 10.5px; line-height: 1.4; color: #A89A82;">{{talkNote}}</span>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":"enum","options":["combat","trade"],"default":"combat"},"filter":{"editor":"enum","options":["closed","open"],"default":"closed"},"backdrop":{"editor":"enum","options":["on","off"],"default":"on"},"$preview":{"width":380,"height":300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const trade = (this.props.kind ?? 'combat') === 'trade';
+    const filterOpen = st.filter !== undefined ? st.filter : (this.props.filter ?? 'closed') === 'open';
+    const backdrop = (this.props.backdrop ?? 'on') !== 'off';
+    const TXT = '#F4EBDC', MUTED = '#C8B89C', GOLD = '#E0B068';
+    const C = { magic: '#7FB2FF', hit: '#FF9A6B', hurt: '#FF8A8E', sys: '#B8C2CC', xp: GOLD, chan: '#8CC8F0', tell: '#C9A2FF' };
+    const M = (c, text, tag, who) => ({ c, text, tag: tag || '', hasTag: !!tag, who: who || '', hasWho: !!who });
+    const combat = [
+      M(C.magic, 'You cast Incantation of Flame Bolt on Drudge Ravener.'),
+      M(C.hit, 'You hit Drudge Ravener for 212 points of fire damage.'),
+      M(C.hurt, 'Drudge Ravener slashes you for 38 points of damage.'),
+      M(C.sys, 'Drudge Ravener misses you.'),
+      M(C.magic, 'You cast Incantation of Lightning Bolt on Drudge Ravener.'),
+      M(C.hit, 'Critical hit! You hit Drudge Ravener for 488 points of electric damage.'),
+      M(C.hit, 'You killed Drudge Ravener!'),
+      M(C.xp, 'You gain 18,420 experience.'),
+      M(C.hurt, 'Drudge Sneaker bashes you for 22 points of damage.')
+    ];
+    const tradeLines = [
+      M(C.chan, 'WTS Major Coordination, 40k', 'TRADE', 'Osk'),
+      M(C.chan, 'LF2M Lugian quest, meet at the Holtburg lifestone', 'LFG', 'Varn'),
+      M(C.chan, 'WTB Mana Scarabs, paying well', 'TRADE', 'Corvan'),
+      M(C.tell, 'still need that Coordination?', 'TELL', 'Osk'),
+      M(C.chan, 'selling salvage bags, all kinds, tell me', 'TRADE', 'Hask'),
+      M(C.chan, 'LF tank for Bandit Castle', 'LFG', 'Bryn')
+    ];
+    const T = (label, on) => ({ label, on, edge: on ? GOLD : 'rgba(201,160,98,0.45)', bg: on ? 'rgba(224,176,104,0.85)' : 'transparent', tick: on ? '#1A140D' : 'transparent', fg: on ? TXT : MUTED });
+    const types = trade
+      ? [T('Trade', true), T('LFG', true), T('Tells', true), T('General'), T('Say'), T('Fellowship'), T('Combat')]
+      : [T('Your hits', true), T('Hits on you', true), T('Misses and evades', true), T('Magic', true), T('Kills', true), T('Experience', true), T('Loot')];
+    const alpha = trade ? '0.78' : '0.62';
+    return {
+      rootBg: backdrop ? 'linear-gradient(180deg, #6F8A55 0%, #4A6338 50%, #2E3F22 100%)' : 'transparent',
+      title: trade ? 'Trade watch' : 'Combat',
+      lines: trade ? tradeLines : combat,
+      hasEntry: trade, types, filterOpen, alpha,
+      alphaPct: trade ? '78%' : '62%',
+      talkNote: trade ? 'Talks on Trade. Change it from the channel button.' : 'Read only: this window has no channel to talk on.',
+      filterEdge: filterOpen ? 'rgba(224,176,104,0.9)' : 'transparent',
+      toggleFilter: () => this.setState({ filter: !filterOpen })
+    };
+  }
+}
+</script>
+</body>
+</html>

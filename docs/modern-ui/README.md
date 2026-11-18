@@ -94,11 +94,50 @@ This folder holds the design only. There is no code yet.
 - Titles tab: pick the title others see. Information tab: life,
   allegiance, fellowship, housing, pursuits, and what you carry.
 
+## Chat
+
+- Bottom left, as on the HUD. Idle, it has no panel or tabs: the last
+  few lines fade out, with a small "Enter to chat". Enter (or a click)
+  brings back the tabs, the message box and the entry.
+- Tabs (Main, Combat, Fellowship, Allegiance, Tells, and any you make)
+  show unread counts. A new tab gets a name, the message types it
+  shows, the channel it talks on, and whether it opens as its own
+  window. What every tab shows is also the grid in Options › Chat.
+- Retail's four floating chat windows become popped-out tabs: drag a
+  tab off, or use the pop-out button. A window has its own filter and
+  background opacity and can be put back as a tab. It talks on its
+  tab's channel; a window with no channel (Combat) has no entry. There
+  is no limit of four.
+- Lines: optional time, a channel tag (TELL, FELLOW, ALLEG, GENERAL,
+  TRADE, LFG, PLUGIN), the speaker's name, then the text, in the
+  channel's colour. Combat, magic, experience and system lines have no
+  tag. A line that mentions your name is tinted gold. Coordinates in a
+  plugin's line are links.
+- The entry's channel button shows where a line goes. Its menu lists
+  every retail talk channel (Say; Fellowship, Allegiance, Monarch,
+  Patron, Vassals; General, Trade, LFG, Roleplay, Society, Olthoi) and
+  recent tells, each with its @ command. Channels you cannot use now
+  are greyed with the reason ("no vassals", "Olthoi only").
+- Clicking a tab switches the channel to that tab's own; Main keeps the
+  last one used.
+- Typing @ suggests commands (@reply, @retell, @cg, …), and the channel
+  button shows where the line will really go, such as "Reply · Rook".
+- Clicking a name: Tell, Select (greyed when not nearby), Invite to
+  fellowship, Add friend, Copy name, Squelch.
+- Reading back holds the chat still; new lines wait behind a "14 new
+  messages" button.
+- Search finds text in the chat history and marks the matches.
+- Retail's yellow status messages ("out of range") become one short
+  line under the target, which fades.
+- Not in retail, all kept: search, highlighting your name, more than
+  four windows, per-window opacity. In Options they carry the OPENAC
+  tag.
+
 ## Still to design
 
-Chat windows, vendor, trade, salvage, appraising other players and
-creatures, social (allegiance, fellowship, friends), map, journal and
-quests, pop-up dialogs, login and character creation. After that, a check
+Vendor, trade, salvage, appraising other players and creatures, social
+(allegiance, fellowship, friends), map, journal and quests, pop-up
+dialogs, login and character creation. After that, a check
 of every retail panel in `crates/ac-ui/src/panels` against this design.
 
 Open question: at a server's level cap, does the XP bar say "Max level"

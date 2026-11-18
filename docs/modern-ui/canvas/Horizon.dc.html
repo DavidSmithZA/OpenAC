@@ -85,6 +85,7 @@ button{font:inherit;color:inherit}
   </div>
 
   <!-- chat, bottom left -->
+  <sc-if value="{{showChat}}" hint-placeholder-val="{{true}}">
   <div style="position: absolute; left: 16px; bottom: 14px; width: 420px; display: flex; flex-direction: column; gap: 6px;">
     <div role="tablist" aria-label="Chat channels" style="display: flex; gap: 2px;">
       <sc-for list="{{tabs}}" as="tb" hint-placeholder-count="5">
@@ -97,6 +98,7 @@ button{font:inherit;color:inherit}
       </sc-for>
     </div>
   </div>
+  </sc-if>
 
   <!-- shortcut bars + xp, bottom centre -->
   <div style="position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px;">
@@ -146,7 +148,7 @@ button{font:inherit;color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"trim":{"editor":"enum","options":["neutral","bronze"],"default":"neutral"},"bars":{"editor":"enum","options":["stacked","none"],"default":"stacked"},"accent":{"editor":"color","default":"","options":["#7CC4FF","#D9A75B","#8BE38F","#C9A2FF"]},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"trim":{"editor":"enum","options":["neutral","bronze"],"default":"neutral"},"bars":{"editor":"enum","options":["stacked","none"],"default":"stacked"},"chat":{"editor":"enum","options":["shown","none"],"default":"shown"},"accent":{"editor":"color","default":"","options":["#7CC4FF","#D9A75B","#8BE38F","#C9A2FF"]},"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
   renderVals() {
     const bronze = (this.props.trim ?? 'neutral') === 'bronze';
@@ -188,6 +190,7 @@ class Component extends DCLogic {
     return {
       t,
       showBars: (this.props.bars ?? 'stacked') !== 'none',
+      showChat: (this.props.chat ?? 'shown') !== 'none',
       vitals: [
         { label: 'HEALTH', val: '412 / 450', pct: '92%', color: '#B8323A' },
         { label: 'STAMINA', val: '298 / 410', pct: '73%', color: '#B88A1E' },
