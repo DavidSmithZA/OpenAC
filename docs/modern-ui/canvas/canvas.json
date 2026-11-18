@@ -1,1625 +1,2025 @@
 {
-  "v": 3,
-  "attachments": {},
-  "boards": {
-    "Horizon.dc.html": {
-      "h": 900,
-      "title": "D \u00b7 Horizon (neutral): world first, chrome barely there",
-      "w": 1440,
-      "x": 0,
-      "y": 0,
-      "page": "r2"
-    },
-    "HorizonBronze.dc.html": {
-      "h": 900,
-      "title": "D \u00b7 Horizon (bronze trim): same layout, warmer edges",
-      "w": 1440,
-      "x": 1520,
-      "y": 0,
-      "page": "r2"
-    },
-    "Main.dc.html": {
-      "h": 900,
-      "title": "A \u00b7 Glass: quiet, floating, fades away",
-      "w": 1440,
-      "x": 0,
-      "y": 0,
-      "page": "r1"
-    },
-    "Orbit.dc.html": {
-      "h": 900,
-      "title": "C \u00b7 Orbit: everything around one centre",
-      "w": 1440,
-      "x": 3040,
-      "y": 0,
-      "page": "r1"
-    },
-    "Tactical.dc.html": {
-      "h": 900,
-      "title": "B \u00b7 Tactical: solid, dense, numbers first",
-      "w": 1440,
-      "x": 1520,
-      "y": 0,
-      "page": "r1"
-    },
-    "InventoryInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "inv",
-      "title": "Inventory open over the bronze HUD"
-    },
-    "Inventory.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 1080,
-      "h": 640,
-      "page": "inv",
-      "title": "Browse: item selected, details inline",
-      "is_interactive": true
-    },
-    "InventoryDrag.dc.html": {
-      "x": 2680,
-      "y": 0,
-      "w": 1080,
-      "h": 640,
-      "page": "inv",
-      "title": "Drag to equip: the slots it covers light up"
-    },
-    "InventorySplit.dc.html": {
-      "x": 1520,
-      "y": 760,
-      "w": 1080,
-      "h": 640,
-      "page": "inv",
-      "title": "Split a stack"
-    },
-    "InventoryHeavy.dc.html": {
-      "x": 2680,
-      "y": 760,
-      "w": 1080,
-      "h": 640,
-      "page": "inv",
-      "title": "Over-burdened"
-    },
-    "InventoryAll.dc.html": {
-      "x": 1520,
-      "y": 1520,
-      "w": 1080,
-      "h": 640,
-      "page": "inv",
-      "title": "All packs, grouped by pack (click a heading to fold it)",
-      "is_interactive": true
-    },
-    "InventoryLong.dc.html": {
-      "x": 2680,
-      "y": 1520,
-      "w": 1080,
-      "h": 640,
-      "page": "inv",
-      "title": "Long item: the same four tabs as the inspect sheet (Spells tab open)",
-      "is_interactive": true
-    },
-    "InventorySort.dc.html": {
-      "x": 1520,
-      "y": 2280,
-      "w": 1080,
-      "h": 640,
-      "page": "inv",
-      "title": "Sort and tidy menu",
-      "is_interactive": true
-    },
-    "InventoryCompact.dc.html": {
-      "x": 2680,
-      "y": 2280,
-      "w": 792,
-      "h": 640,
-      "page": "inv",
-      "title": "Nothing selected: details tuck away (792 wide)",
-      "is_interactive": true
-    },
-    "InventoryFloat.dc.html": {
-      "x": 3552,
-      "y": 2280,
-      "w": 792,
-      "h": 640,
-      "page": "inv",
-      "title": "Small screen: details pop up as a card beside the item",
-      "is_interactive": true
-    },
-    "SpellbookInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "spells",
-      "title": "Spellbook open over the bronze HUD"
-    },
-    "Spellbook.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 940,
-      "h": 640,
-      "page": "spells",
-      "title": "Spells: filter by school and level, details inline",
-      "is_interactive": true
-    },
-    "SpellbookForget.dc.html": {
-      "x": 1520,
-      "y": 760,
-      "w": 940,
-      "h": 640,
-      "page": "spells",
-      "title": "Forget a spell: confirm first"
-    },
-    "SpellbookComponents.dc.html": {
-      "x": 2540,
-      "y": 760,
-      "w": 940,
-      "h": 640,
-      "page": "spells",
-      "title": "Components: carried and restock amounts",
-      "is_interactive": true
-    },
-    "HudBarsCombat.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "bars",
-      "title": "Melee mode: spells on any bar sit greyed out"
-    },
-    "HudBars.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "bars",
-      "title": "Magic mode: spells wake up, Main bar keys move to Shift"
-    },
-    "HudBarsEdit.dc.html": {
-      "x": 0,
-      "y": 1020,
-      "w": 1440,
-      "h": 900,
-      "page": "bars",
-      "title": "Edit layout: move, turn, resize bars; set each slot\u2019s keys"
-    },
-    "HudBarsDrag.dc.html": {
-      "x": 1520,
-      "y": 1020,
-      "w": 1440,
-      "h": 900,
-      "page": "bars",
-      "title": "Dragging from the spellbook: the book fades so bars behind it take the drop"
-    },
-    "OptionsInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "opts",
-      "title": "Options open over the bronze HUD"
-    },
-    "Options.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 1100,
-      "h": 720,
-      "page": "opts",
-      "title": "Interface: the Modern / Retail switch lives here",
-      "is_interactive": true
-    },
-    "OptionsGameplay.dc.html": {
-      "x": 2700,
-      "y": 0,
-      "w": 1100,
-      "h": 720,
-      "page": "opts",
-      "title": "Gameplay: character options, saved on the server",
-      "is_interactive": true
-    },
-    "OptionsChat.dc.html": {
-      "x": 1520,
-      "y": 840,
-      "w": 1100,
-      "h": 720,
-      "page": "opts",
-      "title": "Chat: channels, and what each tab shows as one grid",
-      "is_interactive": true
-    },
-    "OptionsControls.dc.html": {
-      "x": 2700,
-      "y": 840,
-      "w": 1100,
-      "h": 720,
-      "page": "opts",
-      "title": "Controls: key bindings, with a clash caught",
-      "is_interactive": true
-    },
-    "OptionsGraphics.dc.html": {
-      "x": 1520,
-      "y": 1680,
-      "w": 1100,
-      "h": 720,
-      "page": "opts",
-      "title": "Graphics: one preset, or fine-tune",
-      "is_interactive": true
-    },
-    "OptionsSearch.dc.html": {
-      "x": 2700,
-      "y": 1680,
-      "w": 1100,
-      "h": 720,
-      "page": "opts",
-      "title": "Search across every section",
-      "is_interactive": true
-    },
-    "CharacterInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "char",
-      "title": "Character sheet open over the bronze HUD"
-    },
-    "Character.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 1100,
-      "h": 720,
-      "page": "char",
-      "title": "Skill selected: how it adds up, raise +1, +10 or max",
-      "is_interactive": true
-    },
-    "CharacterAttribute.dc.html": {
-      "x": 2700,
-      "y": 0,
-      "w": 1100,
-      "h": 720,
-      "page": "char",
-      "title": "Attribute selected: what it feeds",
-      "is_interactive": true
-    },
-    "CharacterTrain.dc.html": {
-      "x": 1520,
-      "y": 840,
-      "w": 1100,
-      "h": 720,
-      "page": "char",
-      "title": "Untrained skill: train it with credits",
-      "is_interactive": true
-    },
-    "CharacterTitles.dc.html": {
-      "x": 2700,
-      "y": 840,
-      "w": 1100,
-      "h": 720,
-      "page": "char",
-      "title": "Titles: pick the one others see",
-      "is_interactive": true
-    },
-    "CharacterInfo.dc.html": {
-      "x": 1520,
-      "y": 1680,
-      "w": 1100,
-      "h": 720,
-      "page": "char",
-      "title": "Information: life, allegiance, fellowship, housing"
-    },
-    "CharacterHighLevel.dc.html": {
-      "x": 2700,
-      "y": 1680,
-      "w": 1100,
-      "h": 720,
-      "page": "char",
-      "title": "High-level servers: level 4,782, the plate grows with the number",
-      "is_interactive": true
-    },
-    "ChatInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "chat",
-      "title": "Chat over the bronze HUD, with Combat popped out as a window"
-    },
-    "Chat.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 560,
-      "h": 440,
-      "page": "chat",
-      "title": "Chat open: tabs, channel button, names you can click",
-      "is_interactive": true
-    },
-    "ChatIdle.dc.html": {
-      "x": 2160,
-      "y": 0,
-      "w": 560,
-      "h": 440,
-      "page": "chat",
-      "title": "Idle: no panel, last lines fade"
-    },
-    "ChatChannels.dc.html": {
-      "x": 2800,
-      "y": 0,
-      "w": 560,
-      "h": 440,
-      "page": "chat",
-      "title": "Channel menu: every retail channel, with its @ verb",
-      "is_interactive": true
-    },
-    "ChatCommands.dc.html": {
-      "x": 1520,
-      "y": 560,
-      "w": 560,
-      "h": 440,
-      "page": "chat",
-      "title": "Typing @: commands complete, the button shows where the line goes"
-    },
-    "ChatName.dc.html": {
-      "x": 2160,
-      "y": 560,
-      "w": 560,
-      "h": 440,
-      "page": "chat",
-      "title": "Click a name: tell, invite, friend, squelch",
-      "is_interactive": true
-    },
-    "ChatScrolled.dc.html": {
-      "x": 2800,
-      "y": 560,
-      "w": 560,
-      "h": 440,
-      "page": "chat",
-      "title": "Reading back: chat holds still, new lines wait below",
-      "is_interactive": true
-    },
-    "ChatSearch.dc.html": {
-      "x": 1520,
-      "y": 1120,
-      "w": 560,
-      "h": 440,
-      "page": "chat",
-      "title": "Search chat history",
-      "is_interactive": true
-    },
-    "ChatNewTab.dc.html": {
-      "x": 2160,
-      "y": 1120,
-      "w": 560,
-      "h": 440,
-      "page": "chat",
-      "title": "New tab: name it, pick what it shows, own window or not"
-    },
-    "ChatFloat.dc.html": {
-      "x": 2800,
-      "y": 1120,
-      "w": 380,
-      "h": 300,
-      "page": "chat",
-      "title": "Popped-out window: Combat, read only",
-      "is_interactive": true
-    },
-    "ChatFloatTrade.dc.html": {
-      "x": 3260,
-      "y": 1120,
-      "w": 380,
-      "h": 300,
-      "page": "chat",
-      "title": "Popped-out window: Trade watch, talks on Trade"
-    },
-    "VendorInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "vendor",
-      "title": "Vendor open over the bronze HUD"
-    },
-    "Vendor.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 1040,
-      "h": 640,
-      "page": "vendor",
-      "title": "Buy: goods by category, selected item, your buy list",
-      "is_interactive": true
-    },
-    "VendorSell.dc.html": {
-      "x": 2640,
-      "y": 0,
-      "w": 1040,
-      "h": 640,
-      "page": "vendor",
-      "title": "Sell: your own items, with what she pays or why she won't",
-      "is_interactive": true
-    },
-    "VendorComponents.dc.html": {
-      "x": 1520,
-      "y": 760,
-      "w": 1040,
-      "h": 640,
-      "page": "vendor",
-      "title": "Spell components: restock to your amounts in one go",
-      "is_interactive": true
-    },
-    "VendorRefused.dc.html": {
-      "x": 2640,
-      "y": 760,
-      "w": 1040,
-      "h": 640,
-      "page": "vendor",
-      "title": "Dropped on the sell list and refused, with the reason"
-    },
-    "VendorTokens.dc.html": {
-      "x": 1520,
-      "y": 1520,
-      "w": 1040,
-      "h": 640,
-      "page": "vendor",
-      "title": "A shop that takes another currency",
-      "is_interactive": true
-    },
-    "VendorLeave.dc.html": {
-      "x": 2640,
-      "y": 1520,
-      "w": 1040,
-      "h": 640,
-      "page": "vendor",
-      "title": "Leaving with lists unfinished: asks first"
-    },
-    "VendorCompact.dc.html": {
-      "x": 1520,
-      "y": 2280,
-      "w": 792,
-      "h": 640,
-      "page": "vendor",
-      "title": "Small screens (792 wide): categories become a drop-down",
-      "is_interactive": true
-    },
-    "VendorCompactSell.dc.html": {
-      "x": 2392,
-      "y": 2280,
-      "w": 792,
-      "h": 640,
-      "page": "vendor",
-      "title": "Small screens, selling: packs drop-down, what she buys behind the info button",
-      "is_interactive": true
-    },
-    "TradeInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "trade",
-      "title": "Trade open over the bronze HUD"
-    },
-    "Trade.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 900,
-      "h": 560,
-      "page": "trade",
-      "title": "Osk accepted: your accept completes it",
-      "is_interactive": true
-    },
-    "TradeOpen.dc.html": {
-      "x": 2500,
-      "y": 0,
-      "w": 900,
-      "h": 560,
-      "page": "trade",
-      "title": "Offering: nobody has accepted yet",
-      "is_interactive": true
-    },
-    "TradeWaiting.dc.html": {
-      "x": 1520,
-      "y": 680,
-      "w": 900,
-      "h": 560,
-      "page": "trade",
-      "title": "You accepted: waiting for Osk, or withdraw",
-      "is_interactive": true
-    },
-    "TradeChanged.dc.html": {
-      "x": 2500,
-      "y": 680,
-      "w": 900,
-      "h": 560,
-      "page": "trade",
-      "title": "Changed after you accepted: acceptance taken back, new item marked",
-      "is_interactive": true
-    },
-    "TradePick.dc.html": {
-      "x": 1520,
-      "y": 1360,
-      "w": 900,
-      "h": 560,
-      "page": "trade",
-      "title": "Add from your packs without opening the inventory",
-      "is_interactive": true
-    },
-    "TradeInspect.dc.html": {
-      "x": 2500,
-      "y": 1360,
-      "w": 900,
-      "h": 560,
-      "page": "trade",
-      "title": "Inspect what they offer before you accept",
-      "is_interactive": true
-    },
-    "TradeFailed.dc.html": {
-      "x": 1520,
-      "y": 2040,
-      "w": 900,
-      "h": 560,
-      "page": "trade",
-      "title": "The trade did not go through, and why"
-    },
-    "TradeCompact.dc.html": {
-      "x": 2500,
-      "y": 2040,
-      "w": 792,
-      "h": 560,
-      "page": "trade",
-      "title": "Small screens (792 wide): same two columns, hints dropped",
-      "is_interactive": true
-    },
-    "TradeCompactInspect.dc.html": {
-      "x": 3372,
-      "y": 2040,
-      "w": 792,
-      "h": 560,
-      "page": "trade",
-      "title": "Small screens: inspecting what they offer",
-      "is_interactive": true
-    },
-    "SalvageInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "salvage",
-      "title": "Salvage open over the bronze HUD"
-    },
-    "Salvage.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 820,
-      "h": 540,
-      "page": "salvage",
-      "title": "Items staged, one bag per material, ask before anything with spells",
-      "is_interactive": true
-    },
-    "SalvageEmpty.dc.html": {
-      "x": 2420,
-      "y": 0,
-      "w": 820,
-      "h": 540,
-      "page": "salvage",
-      "title": "Just opened on an Ust: drop items, or add from packs",
-      "is_interactive": true
-    },
-    "SalvagePick.dc.html": {
-      "x": 1520,
-      "y": 660,
-      "w": 820,
-      "h": 540,
-      "page": "salvage",
-      "title": "Add from packs: only what can be salvaged, by material",
-      "is_interactive": true
-    },
-    "SalvageRefused.dc.html": {
-      "x": 2420,
-      "y": 660,
-      "w": 820,
-      "h": 540,
-      "page": "salvage",
-      "title": "Dropped and refused: retained items"
-    },
-    "SalvageDone.dc.html": {
-      "x": 1520,
-      "y": 1320,
-      "w": 820,
-      "h": 540,
-      "page": "salvage",
-      "title": "Done: the bags you got",
-      "is_interactive": true
-    },
-    "InspectInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "inspect",
-      "title": "A creature: the sheet on the right edge"
-    },
-    "InspectInGamePlayer.dc.html": {
-      "x": 0,
-      "y": 1020,
-      "w": 1440,
-      "h": 900,
-      "page": "inspect",
-      "title": "A player"
-    },
-    "InspectInGameItem.dc.html": {
-      "x": 0,
-      "y": 2040,
-      "w": 1440,
-      "h": 900,
-      "page": "inspect",
-      "title": "Loot on the ground"
-    },
-    "Inspect.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 360,
-      "h": 620,
-      "page": "inspect",
-      "title": "Creature: one column, no tabs"
-    },
-    "InspectFailed.dc.html": {
-      "x": 1960,
-      "y": 0,
-      "w": 360,
-      "h": 620,
-      "page": "inspect",
-      "title": "Assessment failed: only health is known"
-    },
-    "InspectPlayer.dc.html": {
-      "x": 2400,
-      "y": 0,
-      "w": 360,
-      "h": 620,
-      "page": "inspect",
-      "title": "Player: Stats, Allegiance, Armor, About",
-      "is_interactive": true
-    },
-    "InspectPlayerArmor.dc.html": {
-      "x": 2840,
-      "y": 0,
-      "w": 360,
-      "h": 620,
-      "page": "inspect",
-      "title": "Player, Armor tab",
-      "is_interactive": true
-    },
-    "InspectItem.dc.html": {
-      "x": 1520,
-      "y": 740,
-      "w": 360,
-      "h": 620,
-      "page": "inspect",
-      "title": "Item: Overview, Spells, Needs, Details",
-      "is_interactive": true
-    },
-    "InspectItemSpells.dc.html": {
-      "x": 1960,
-      "y": 740,
-      "w": 360,
-      "h": 620,
-      "page": "inspect",
-      "title": "Item, Spells tab: casting and every spell",
-      "is_interactive": true
-    },
-    "InspectItemNeeds.dc.html": {
-      "x": 2400,
-      "y": 740,
-      "w": 360,
-      "h": 620,
-      "page": "inspect",
-      "title": "Item, Needs tab: what it takes, against what you have",
-      "is_interactive": true
-    },
-    "InspectInscribe.dc.html": {
-      "x": 2840,
-      "y": 740,
-      "w": 360,
-      "h": 620,
-      "page": "inspect",
-      "title": "Item, Details tab: an inscription you can write",
-      "is_interactive": true
-    },
-    "InspectPortal.dc.html": {
-      "x": 1520,
-      "y": 1480,
-      "w": 360,
-      "h": 620,
-      "page": "inspect",
-      "title": "Portal: where it goes, who may use it"
-    },
-    "InspectChest.dc.html": {
-      "x": 1960,
-      "y": 1480,
-      "w": 360,
-      "h": 620,
-      "page": "inspect",
-      "title": "Chest: lock and capacity"
-    },
-    "InspectSpell.dc.html": {
-      "x": 2400,
-      "y": 1480,
-      "w": 360,
-      "h": 620,
-      "page": "inspect",
-      "title": "Spell from a bar: casting, components"
-    },
-    "SocialInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "social",
-      "title": "Social open over the bronze HUD (allegiance tab)"
-    },
-    "Social.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 792,
-      "h": 600,
-      "page": "social",
-      "title": "Allegiance: your monarch, patron and vassals; click anyone",
-      "is_interactive": true
-    },
-    "SocialRelease.dc.html": {
-      "x": 2392,
-      "y": 0,
-      "w": 792,
-      "h": 600,
-      "page": "social",
-      "title": "Release a vassal: asked first"
-    },
-    "SocialManage.dc.html": {
-      "x": 3264,
-      "y": 0,
-      "w": 792,
-      "h": 600,
-      "page": "social",
-      "title": "Monarch only: name, message, officers, joining, bans",
-      "is_interactive": true
-    },
-    "SocialHud.dc.html": {
-      "x": 0,
-      "y": 1020,
-      "w": 1440,
-      "h": 900,
-      "page": "social",
-      "title": "Fellows on screen: click one to select them",
-      "is_interactive": true
-    },
-    "SocialFellow.dc.html": {
-      "x": 1520,
-      "y": 1020,
-      "w": 792,
-      "h": 600,
-      "page": "social",
-      "title": "Fellowship: everyone\u2019s share and vitals",
-      "is_interactive": true
-    },
-    "SocialFellowLead.dc.html": {
-      "x": 2392,
-      "y": 1020,
-      "w": 792,
-      "h": 600,
-      "page": "social",
-      "title": "You lead: recruit, hand on the lead, dismiss, close, disband",
-      "is_interactive": true
-    },
-    "SocialFellowNone.dc.html": {
-      "x": 3264,
-      "y": 1020,
-      "w": 792,
-      "h": 600,
-      "page": "social",
-      "title": "No fellowship: start one, or how to join",
-      "is_interactive": true
-    },
-    "SocialFriends.dc.html": {
-      "x": 1520,
-      "y": 2040,
-      "w": 792,
-      "h": 600,
-      "page": "social",
-      "title": "Friends: online first, actions on the selected one",
-      "is_interactive": true
-    },
-    "SocialIgnored.dc.html": {
-      "x": 2392,
-      "y": 2040,
-      "w": 792,
-      "h": 600,
-      "page": "social",
-      "title": "Ignored: who, how wide, and what is hidden",
-      "is_interactive": true
-    },
-    "SocialNone.dc.html": {
-      "x": 3264,
-      "y": 2040,
-      "w": 792,
-      "h": 600,
-      "page": "social",
-      "title": "No allegiance yet"
-    },
-    "Map.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "map",
-      "title": "Full-screen map (M): you, your house, towns, pins; click a town",
-      "is_interactive": true
-    },
-    "MapSearch.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "map",
-      "title": "Find a town or pin: matches lit, the place shown",
-      "is_interactive": true
-    },
-    "MapPin.dc.html": {
-      "x": 3040,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "map",
-      "title": "Right-click to pin a spot"
-    },
-    "MapUnderground.dc.html": {
-      "x": 0,
-      "y": 1020,
-      "w": 1440,
-      "h": 900,
-      "page": "map",
-      "title": "Underground: no place on the world map"
-    },
-    "MapCompact.dc.html": {
-      "x": 1520,
-      "y": 1020,
-      "w": 1280,
-      "h": 720,
-      "page": "map",
-      "title": "Smaller screen (1280 x 720): the side column becomes a drawer, the basics move onto the map",
-      "is_interactive": true
-    },
-    "House.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 900,
-      "h": 600,
-      "page": "house",
-      "title": "House window (H): maintenance paid, who may come in",
-      "is_interactive": true
-    },
-    "HouseDue.dc.html": {
-      "x": 2500,
-      "y": 0,
-      "w": 900,
-      "h": 600,
-      "page": "house",
-      "title": "Maintenance not paid: warning in the window, red dot on the House button",
-      "is_interactive": true
-    },
-    "HouseNone.dc.html": {
-      "x": 3480,
-      "y": 0,
-      "w": 900,
-      "h": 600,
-      "page": "house",
-      "title": "No house: when you may buy, free houses on the map"
-    },
-    "HouseInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "house",
-      "title": "House open over the HUD (its own button, bottom right, marked)"
-    },
-    "JournalInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "journal",
-      "title": "Journal open over the bronze HUD"
-    },
-    "Journal.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 900,
-      "h": 600,
-      "page": "journal",
-      "title": "Quests: grouped by state; who and where, each on the map",
-      "is_interactive": true
-    },
-    "JournalAbandon.dc.html": {
-      "x": 2500,
-      "y": 0,
-      "w": 900,
-      "h": 600,
-      "page": "journal",
-      "title": "Abandon a quest: asked first"
-    },
-    "JournalNotes.dc.html": {
-      "x": 1520,
-      "y": 720,
-      "w": 900,
-      "h": 600,
-      "page": "journal",
-      "title": "Notes: your own pages, a place and a countdown each",
-      "is_interactive": true
-    },
-    "JournalNotesRunning.dc.html": {
-      "x": 2500,
-      "y": 720,
-      "w": 900,
-      "h": 600,
-      "page": "journal",
-      "title": "Searching pages; a countdown running",
-      "is_interactive": true
-    },
-    "QuestsHud.dc.html": {
-      "x": 0,
-      "y": 1020,
-      "w": 1440,
-      "h": 900,
-      "page": "journal",
-      "title": "Quests on screen: a panel you move anywhere (Edit layout); click one to open it",
-      "is_interactive": true
-    },
-    "Book.dc.html": {
-      "x": 1520,
-      "y": 1440,
-      "w": 560,
-      "h": 620,
-      "page": "journal",
-      "title": "Book: reading someone else\u2019s page",
-      "is_interactive": true
-    },
-    "BookWrite.dc.html": {
-      "x": 2160,
-      "y": 1440,
-      "w": 560,
-      "h": 620,
-      "page": "journal",
-      "title": "Book: a blank page you can write on",
-      "is_interactive": true
-    },
-    "BookMenu.dc.html": {
-      "x": 2800,
-      "y": 1440,
-      "w": 560,
-      "h": 620,
-      "page": "journal",
-      "title": "Book: every page it can hold, and who wrote each",
-      "is_interactive": true
-    },
-    "DialogInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "dialogs",
-      "title": "A question from the server: centred, the world dims a little"
-    },
-    "DialogInvites.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "dialogs",
-      "title": "Invitations as cards under the target: play goes on"
-    },
-    "Dialog.dc.html": {
-      "x": 3040,
-      "y": 0,
-      "w": 440,
-      "h": 320,
-      "page": "dialogs",
-      "title": "One dialog (kind is a property)"
-    },
-    "DialogSheet.dc.html": {
-      "x": 0,
-      "y": 1020,
-      "w": 1440,
-      "h": 1400,
-      "page": "dialogs",
-      "title": "Every kind: the server\u2019s seven questions, message, wait, typed answer, choice",
-      "is_interactive": true
-    },
-    "Slumlord.dc.html": {
-      "x": 1520,
-      "y": 1020,
-      "w": 640,
-      "h": 560,
-      "page": "dialogs",
-      "title": "House sale window: Buy (who may buy, price rows to drop items on)",
-      "is_interactive": true
-    },
-    "SlumlordPay.dc.html": {
-      "x": 2240,
-      "y": 1020,
-      "w": 640,
-      "h": 560,
-      "page": "dialogs",
-      "title": "Maintenance: paid so far plus what is on the row",
-      "is_interactive": true
-    },
-    "SlumlordOther.dc.html": {
-      "x": 2960,
-      "y": 1020,
-      "w": 640,
-      "h": 560,
-      "page": "dialogs",
-      "title": "Paying someone else\u2019s house: asked first",
-      "is_interactive": true
-    },
-    "LootInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "misc",
-      "title": "Looting a corpse over the bronze HUD"
-    },
-    "Loot.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 400,
-      "h": 470,
-      "page": "misc",
-      "title": "Corpse: pick an item for Inspect and Loot, double-click to loot, or drag to a pack",
-      "is_interactive": true
-    },
-    "LootChest.dc.html": {
-      "x": 2000,
-      "y": 0,
-      "w": 400,
-      "h": 520,
-      "page": "misc",
-      "title": "Chest: the packs inside, and putting something in",
-      "is_interactive": true
-    },
-    "Barber.dc.html": {
-      "x": 1520,
-      "y": 640,
-      "w": 760,
-      "h": 560,
-      "page": "misc",
-      "title": "Barber: hair (style and colour), turn the figure",
-      "is_interactive": true
-    },
-    "BarberSkin.dc.html": {
-      "x": 2360,
-      "y": 640,
-      "w": 760,
-      "h": 560,
-      "page": "misc",
-      "title": "Barber: skin has a shade only",
-      "is_interactive": true
-    },
-    "Chess.dc.html": {
-      "x": 1520,
-      "y": 1320,
-      "w": 800,
-      "h": 560,
-      "page": "misc",
-      "title": "Chess: your side at the bottom, where a piece can go",
-      "is_interactive": true
-    },
-    "ChessResign.dc.html": {
-      "x": 2400,
-      "y": 1320,
-      "w": 800,
-      "h": 560,
-      "page": "misc",
-      "title": "Resign: asked first",
-      "is_interactive": true
-    },
-    "LootMenu.dc.html": {
-      "x": 2480,
-      "y": 0,
-      "w": 400,
-      "h": 470,
-      "page": "misc",
-      "title": "Right-click: Inspect, Loot, or loot straight into a chosen pack"
-    },
-    "EffectsInGame.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "effects",
-      "title": "Hovering the harmful count: vitae, then every debuff, ending first"
-    },
-    "EffectsHover.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "effects",
-      "title": "Hovering the helpful count: all 42 in a small scrolling pane, soonest to end first"
-    },
-    "Effects.dc.html": {
-      "x": 0,
-      "y": 1020,
-      "w": 760,
-      "h": 560,
-      "page": "effects",
-      "title": "Click a count: the full window, Helpful (ending soon, timed, from your gear)",
-      "is_interactive": true
-    },
-    "EffectsHarmful.dc.html": {
-      "x": 840,
-      "y": 1020,
-      "w": 760,
-      "h": 560,
-      "page": "effects",
-      "title": "Effects window, Harmful: vitae and what is on you, ending first",
-      "is_interactive": true
-    },
-    "CombatInGame.dc.html": {
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "combat",
-      "title": "Melee: the mode pill grows into the combat strip; charging a Mid attack; a hit drains the health bar"
-    },
-    "CombatMissile.dc.html": {
-      "x": 1520,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "combat",
-      "title": "Missile: accuracy fully charged, arrows left; a heal fills the health bar"
-    },
-    "CombatLowHealth.dc.html": {
-      "x": 3040,
-      "y": 0,
-      "w": 1440,
-      "h": 900,
-      "page": "combat",
-      "title": "Under 25% health: the bar pulses, the screen edge glows (option)"
-    },
-    "CombatLab.dc.html": {
-      "x": 0,
-      "y": 1020,
-      "w": 900,
-      "h": 380,
-      "page": "combat",
-      "title": "Combat strip: hold High, Mid or Low to charge, click the bar to set power",
-      "is_interactive": true
-    },
-    "VitalsLab.dc.html": {
-      "x": 980,
-      "y": 1020,
-      "w": 900,
-      "h": 380,
-      "page": "combat",
-      "title": "Vitals: press the buttons to see damage, healing, mana and stamina",
-      "is_interactive": true
-    },
-    "CombatBar.dc.html": {
-      "x": 0,
-      "y": 1520,
-      "w": 600,
-      "h": 74,
-      "page": "combat",
-      "title": "Part: the combat strip (melee, missile, jump)",
-      "is_interactive": true
-    },
-    "VitalBars.dc.html": {
-      "x": 900,
-      "y": 1520,
-      "w": 770,
-      "h": 90,
-      "page": "combat",
-      "title": "Part: the vital bars (moment is a property)"
-    }
+ "v": 3,
+ "attachments": {},
+ "boards": {
+  "Horizon.dc.html": {
+   "h": 900,
+   "title": "D · Horizon (neutral): world first, chrome barely there",
+   "w": 1440,
+   "x": 0,
+   "y": 0,
+   "page": "r2"
   },
-  "createdOnFiles": {
-    "at": "2026-11-18T09:00:00Z",
-    "v": 1
+  "HorizonBronze.dc.html": {
+   "h": 900,
+   "title": "D · Horizon (bronze trim): same layout, warmer edges",
+   "w": 1440,
+   "x": 1520,
+   "y": 0,
+   "page": "r2"
   },
-  "designSystems": [],
-  "launch": {
-    "view": "canvas",
-    "page": "combat"
+  "Main.dc.html": {
+   "h": 900,
+   "title": "A · Glass: quiet, floating, fades away",
+   "w": 1440,
+   "x": 0,
+   "y": 0,
+   "page": "r1"
   },
-  "notes": {
-    "t1": {
-      "kind": "title1",
-      "maxW": 4480,
-      "text": "In-world HUD: three directions",
-      "w": 240,
-      "x": 0,
-      "y": -300,
-      "page": "r1"
-    },
-    "t2": {
-      "kind": "title1",
-      "maxW": 2960,
-      "text": "Round 2: Horizon, world first",
-      "x": 0,
-      "y": -300,
-      "page": "r2"
-    },
-    "t3": {
-      "kind": "title1",
-      "maxW": 3760,
-      "text": "Inventory (bronze)",
-      "x": 0,
-      "y": -300,
-      "page": "inv"
-    },
-    "t4": {
-      "kind": "title1",
-      "maxW": 3480,
-      "text": "Spellbook (bronze)",
-      "x": 0,
-      "y": -300,
-      "page": "spells"
-    },
-    "t5": {
-      "kind": "title1",
-      "maxW": 2960,
-      "text": "Your bars: anywhere, any shape",
-      "x": 0,
-      "y": -300,
-      "page": "bars"
-    },
-    "t6": {
-      "kind": "title1",
-      "maxW": 3800,
-      "text": "Options (bronze)",
-      "x": 0,
-      "y": -300,
-      "page": "opts"
-    },
-    "t7": {
-      "kind": "title1",
-      "maxW": 3800,
-      "text": "Character sheet (bronze)",
-      "x": 0,
-      "y": -300,
-      "page": "char"
-    },
-    "t8": {
-      "kind": "title1",
-      "maxW": 3640,
-      "text": "Chat (bronze)",
-      "x": 0,
-      "y": -300,
-      "page": "chat"
-    },
-    "t9": {
-      "kind": "title1",
-      "maxW": 3680,
-      "text": "Vendor (bronze)",
-      "x": 0,
-      "y": -300,
-      "page": "vendor"
-    },
-    "t10": {
-      "kind": "title1",
-      "maxW": 4164,
-      "text": "Trade (bronze)",
-      "x": 0,
-      "y": -300,
-      "page": "trade"
-    },
-    "t11": {
-      "kind": "title1",
-      "maxW": 3240,
-      "text": "Salvage (bronze)",
-      "x": 0,
-      "y": -300,
-      "page": "salvage"
-    },
-    "t12": {
-      "kind": "title1",
-      "maxW": 3200,
-      "text": "Inspect: everything you can assess",
-      "x": 0,
-      "y": -300,
-      "page": "inspect"
-    },
-    "t13": {
-      "kind": "title1",
-      "maxW": 4056,
-      "text": "Social: allegiance, fellowship, friends",
-      "x": 0,
-      "y": -300,
-      "page": "social"
-    },
-    "t14": {
-      "kind": "title1",
-      "maxW": 4480,
-      "text": "Map (full screen)",
-      "x": 0,
-      "y": -300,
-      "page": "map"
-    },
-    "t15": {
-      "kind": "title1",
-      "maxW": 4380,
-      "text": "House (its own window)",
-      "x": 0,
-      "y": -300,
-      "page": "house"
-    },
-    "t16": {
-      "kind": "title1",
-      "maxW": 3400,
-      "text": "Journal: quests, notes, books",
-      "x": 0,
-      "y": -300,
-      "page": "journal"
-    },
-    "t17": {
-      "kind": "title1",
-      "maxW": 3600,
-      "text": "Dialogs and the house sale window",
-      "x": 0,
-      "y": -300,
-      "page": "dialogs"
-    },
-    "t18": {
-      "kind": "title1",
-      "maxW": 3200,
-      "text": "Loot, barber, chess",
-      "x": 0,
-      "y": -300,
-      "page": "misc"
-    },
-    "t19": {
-      "kind": "title1",
-      "maxW": 4480,
-      "text": "Effects on you: buffs, debuffs, vitae",
-      "x": 0,
-      "y": -300,
-      "page": "effects"
-    },
-    "t20": {
-      "kind": "title1",
-      "maxW": 4480,
-      "text": "Combat strip and living vitals",
-      "x": 0,
-      "y": -300,
-      "page": "combat"
-    }
+  "Orbit.dc.html": {
+   "h": 900,
+   "title": "C · Orbit: everything around one centre",
+   "w": 1440,
+   "x": 3040,
+   "y": 0,
+   "page": "r1"
   },
-  "order": [
-    "Horizon.dc.html",
-    "HorizonBronze.dc.html",
-    "Main.dc.html",
-    "Tactical.dc.html",
-    "Orbit.dc.html",
-    "InventoryInGame.dc.html",
-    "Inventory.dc.html",
-    "InventoryDrag.dc.html",
-    "InventorySplit.dc.html",
-    "InventoryHeavy.dc.html",
-    "InventoryAll.dc.html",
-    "InventoryLong.dc.html",
-    "InventorySort.dc.html",
-    "InventoryCompact.dc.html",
-    "InventoryFloat.dc.html",
-    "SpellbookInGame.dc.html",
-    "Spellbook.dc.html",
-    "SpellbookForget.dc.html",
-    "SpellbookComponents.dc.html",
-    "HudBarsCombat.dc.html",
-    "HudBars.dc.html",
-    "HudBarsEdit.dc.html",
-    "HudBarsDrag.dc.html",
-    "OptionsInGame.dc.html",
-    "Options.dc.html",
-    "OptionsGameplay.dc.html",
-    "OptionsChat.dc.html",
-    "OptionsControls.dc.html",
-    "OptionsGraphics.dc.html",
-    "OptionsSearch.dc.html",
-    "CharacterInGame.dc.html",
-    "Character.dc.html",
-    "CharacterAttribute.dc.html",
-    "CharacterTrain.dc.html",
-    "CharacterTitles.dc.html",
-    "CharacterInfo.dc.html",
-    "CharacterHighLevel.dc.html",
-    "ChatInGame.dc.html",
-    "Chat.dc.html",
-    "ChatIdle.dc.html",
-    "ChatChannels.dc.html",
-    "ChatCommands.dc.html",
-    "ChatName.dc.html",
-    "ChatScrolled.dc.html",
-    "ChatSearch.dc.html",
-    "ChatNewTab.dc.html",
-    "ChatFloat.dc.html",
-    "ChatFloatTrade.dc.html",
-    "VendorInGame.dc.html",
-    "Vendor.dc.html",
-    "VendorSell.dc.html",
-    "VendorComponents.dc.html",
-    "VendorRefused.dc.html",
-    "VendorTokens.dc.html",
-    "VendorLeave.dc.html",
-    "VendorCompact.dc.html",
-    "VendorCompactSell.dc.html",
-    "TradeInGame.dc.html",
-    "Trade.dc.html",
-    "TradeOpen.dc.html",
-    "TradeWaiting.dc.html",
-    "TradeChanged.dc.html",
-    "TradePick.dc.html",
-    "TradeInspect.dc.html",
-    "TradeFailed.dc.html",
-    "TradeCompact.dc.html",
-    "TradeCompactInspect.dc.html",
-    "SalvageInGame.dc.html",
-    "Salvage.dc.html",
-    "SalvageEmpty.dc.html",
-    "SalvagePick.dc.html",
-    "SalvageRefused.dc.html",
-    "SalvageDone.dc.html",
-    "InspectInGame.dc.html",
-    "InspectInGamePlayer.dc.html",
-    "InspectInGameItem.dc.html",
-    "Inspect.dc.html",
-    "InspectFailed.dc.html",
-    "InspectPlayer.dc.html",
-    "InspectPlayerArmor.dc.html",
-    "InspectItem.dc.html",
-    "InspectItemSpells.dc.html",
-    "InspectItemNeeds.dc.html",
-    "InspectInscribe.dc.html",
-    "InspectPortal.dc.html",
-    "InspectChest.dc.html",
-    "InspectSpell.dc.html",
-    "SocialInGame.dc.html",
-    "Social.dc.html",
-    "SocialRelease.dc.html",
-    "SocialManage.dc.html",
-    "SocialHud.dc.html",
-    "SocialFellow.dc.html",
-    "SocialFellowLead.dc.html",
-    "SocialFellowNone.dc.html",
-    "SocialFriends.dc.html",
-    "SocialIgnored.dc.html",
-    "SocialNone.dc.html",
-    "Map.dc.html",
-    "MapSearch.dc.html",
-    "MapPin.dc.html",
-    "MapUnderground.dc.html",
-    "MapCompact.dc.html",
-    "House.dc.html",
-    "HouseDue.dc.html",
-    "HouseNone.dc.html",
-    "HouseInGame.dc.html",
-    "JournalInGame.dc.html",
-    "Journal.dc.html",
-    "JournalAbandon.dc.html",
-    "JournalNotes.dc.html",
-    "JournalNotesRunning.dc.html",
-    "QuestsHud.dc.html",
-    "Book.dc.html",
-    "BookWrite.dc.html",
-    "BookMenu.dc.html",
-    "DialogInGame.dc.html",
-    "DialogInvites.dc.html",
-    "Dialog.dc.html",
-    "DialogSheet.dc.html",
-    "Slumlord.dc.html",
-    "SlumlordPay.dc.html",
-    "SlumlordOther.dc.html",
-    "LootInGame.dc.html",
-    "Loot.dc.html",
-    "LootChest.dc.html",
-    "Barber.dc.html",
-    "BarberSkin.dc.html",
-    "Chess.dc.html",
-    "ChessResign.dc.html",
-    "LootMenu.dc.html",
-    "EffectsHover.dc.html",
-    "EffectsInGame.dc.html",
-    "Effects.dc.html",
-    "EffectsHarmful.dc.html",
-    "CombatInGame.dc.html",
-    "CombatMissile.dc.html",
-    "CombatLowHealth.dc.html",
-    "CombatLab.dc.html",
-    "VitalsLab.dc.html",
-    "CombatBar.dc.html",
-    "VitalBars.dc.html"
-  ],
-  "pages": [
-    {
-      "id": "r2",
-      "name": "Round 2: Horizon"
-    },
-    {
-      "id": "bars",
-      "name": "Your bars"
-    },
-    {
-      "id": "inv",
-      "name": "Inventory"
-    },
-    {
-      "id": "spells",
-      "name": "Spellbook"
-    },
-    {
-      "id": "opts",
-      "name": "Options"
-    },
-    {
-      "id": "char",
-      "name": "Character"
-    },
-    {
-      "id": "chat",
-      "name": "Chat"
-    },
-    {
-      "id": "vendor",
-      "name": "Vendor"
-    },
-    {
-      "id": "trade",
-      "name": "Trade"
-    },
-    {
-      "id": "salvage",
-      "name": "Salvage"
-    },
-    {
-      "id": "inspect",
-      "name": "Inspect"
-    },
-    {
-      "id": "social",
-      "name": "Social"
-    },
-    {
-      "id": "map",
-      "name": "Map"
-    },
-    {
-      "id": "house",
-      "name": "House"
-    },
-    {
-      "id": "journal",
-      "name": "Journal"
-    },
-    {
-      "id": "dialogs",
-      "name": "Dialogs"
-    },
-    {
-      "id": "misc",
-      "name": "Loot, barber, chess"
-    },
-    {
-      "id": "effects",
-      "name": "Effects on you"
-    },
-    {
-      "id": "combat",
-      "name": "Combat and vitals"
-    },
-    {
-      "id": "r1",
-      "name": "Round 1"
-    }
-  ],
-  "title": "OpenAC Modern UI"
+  "Tactical.dc.html": {
+   "h": 900,
+   "title": "B · Tactical: solid, dense, numbers first",
+   "w": 1440,
+   "x": 1520,
+   "y": 0,
+   "page": "r1"
+  },
+  "InventoryInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "inv",
+   "title": "Inventory open over the bronze HUD"
+  },
+  "Inventory.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1080,
+   "h": 640,
+   "page": "inv",
+   "title": "Browse: item selected, details inline",
+   "is_interactive": true
+  },
+  "InventoryDrag.dc.html": {
+   "x": 2680,
+   "y": 0,
+   "w": 1080,
+   "h": 640,
+   "page": "inv",
+   "title": "Drag to equip: the slots it covers light up"
+  },
+  "InventorySplit.dc.html": {
+   "x": 1520,
+   "y": 760,
+   "w": 1080,
+   "h": 640,
+   "page": "inv",
+   "title": "Split a stack"
+  },
+  "InventoryHeavy.dc.html": {
+   "x": 2680,
+   "y": 760,
+   "w": 1080,
+   "h": 640,
+   "page": "inv",
+   "title": "Over-burdened"
+  },
+  "InventoryAll.dc.html": {
+   "x": 1520,
+   "y": 1520,
+   "w": 1080,
+   "h": 640,
+   "page": "inv",
+   "title": "All packs, grouped by pack (click a heading to fold it)",
+   "is_interactive": true
+  },
+  "InventoryLong.dc.html": {
+   "x": 2680,
+   "y": 1520,
+   "w": 1080,
+   "h": 640,
+   "page": "inv",
+   "title": "Long item: the same four tabs as the inspect sheet (Spells tab open)",
+   "is_interactive": true
+  },
+  "InventorySort.dc.html": {
+   "x": 1520,
+   "y": 2280,
+   "w": 1080,
+   "h": 640,
+   "page": "inv",
+   "title": "Sort and tidy menu",
+   "is_interactive": true
+  },
+  "InventoryCompact.dc.html": {
+   "x": 2680,
+   "y": 2280,
+   "w": 792,
+   "h": 640,
+   "page": "inv",
+   "title": "Nothing selected: details tuck away (792 wide)",
+   "is_interactive": true
+  },
+  "InventoryFloat.dc.html": {
+   "x": 3552,
+   "y": 2280,
+   "w": 792,
+   "h": 640,
+   "page": "inv",
+   "title": "Small screen: details pop up as a card beside the item",
+   "is_interactive": true
+  },
+  "SpellbookInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "spells",
+   "title": "Spellbook open over the bronze HUD"
+  },
+  "Spellbook.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 940,
+   "h": 640,
+   "page": "spells",
+   "title": "Spells: filter by school and level, details inline",
+   "is_interactive": true
+  },
+  "SpellbookForget.dc.html": {
+   "x": 1520,
+   "y": 760,
+   "w": 940,
+   "h": 640,
+   "page": "spells",
+   "title": "Forget a spell: confirm first"
+  },
+  "SpellbookComponents.dc.html": {
+   "x": 2540,
+   "y": 760,
+   "w": 940,
+   "h": 640,
+   "page": "spells",
+   "title": "Components: carried and restock amounts",
+   "is_interactive": true
+  },
+  "HudBarsCombat.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "bars",
+   "title": "Melee mode: spells on any bar sit greyed out"
+  },
+  "HudBars.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "bars",
+   "title": "Magic mode: spells wake up, Main bar keys move to Shift"
+  },
+  "HudBarsEdit.dc.html": {
+   "x": 0,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "page": "bars",
+   "title": "Edit layout: move, turn, resize bars; set each slot’s keys"
+  },
+  "HudBarsDrag.dc.html": {
+   "x": 1520,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "page": "bars",
+   "title": "Dragging from the spellbook: the book fades so bars behind it take the drop"
+  },
+  "OptionsInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "opts",
+   "title": "Options open over the bronze HUD"
+  },
+  "Options.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1100,
+   "h": 720,
+   "page": "opts",
+   "title": "Interface: the Modern / Retail switch lives here",
+   "is_interactive": true
+  },
+  "OptionsGameplay.dc.html": {
+   "x": 2700,
+   "y": 0,
+   "w": 1100,
+   "h": 720,
+   "page": "opts",
+   "title": "Gameplay: character options, saved on the server",
+   "is_interactive": true
+  },
+  "OptionsChat.dc.html": {
+   "x": 1520,
+   "y": 840,
+   "w": 1100,
+   "h": 720,
+   "page": "opts",
+   "title": "Chat: channels, and what each tab shows as one grid",
+   "is_interactive": true
+  },
+  "OptionsControls.dc.html": {
+   "x": 2700,
+   "y": 840,
+   "w": 1100,
+   "h": 720,
+   "page": "opts",
+   "title": "Controls: key bindings, with a clash caught",
+   "is_interactive": true
+  },
+  "OptionsGraphics.dc.html": {
+   "x": 1520,
+   "y": 1680,
+   "w": 1100,
+   "h": 720,
+   "page": "opts",
+   "title": "Graphics: one preset, or fine-tune",
+   "is_interactive": true
+  },
+  "OptionsSearch.dc.html": {
+   "x": 2700,
+   "y": 1680,
+   "w": 1100,
+   "h": 720,
+   "page": "opts",
+   "title": "Search across every section",
+   "is_interactive": true
+  },
+  "CharacterInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "char",
+   "title": "Character sheet open over the bronze HUD"
+  },
+  "Character.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1100,
+   "h": 720,
+   "page": "char",
+   "title": "Skill selected: how it adds up, raise +1, +10 or max",
+   "is_interactive": true
+  },
+  "CharacterAttribute.dc.html": {
+   "x": 2700,
+   "y": 0,
+   "w": 1100,
+   "h": 720,
+   "page": "char",
+   "title": "Attribute selected: what it feeds",
+   "is_interactive": true
+  },
+  "CharacterTrain.dc.html": {
+   "x": 1520,
+   "y": 840,
+   "w": 1100,
+   "h": 720,
+   "page": "char",
+   "title": "Untrained skill: train it with credits",
+   "is_interactive": true
+  },
+  "CharacterTitles.dc.html": {
+   "x": 2700,
+   "y": 840,
+   "w": 1100,
+   "h": 720,
+   "page": "char",
+   "title": "Titles: pick the one others see",
+   "is_interactive": true
+  },
+  "CharacterInfo.dc.html": {
+   "x": 1520,
+   "y": 1680,
+   "w": 1100,
+   "h": 720,
+   "page": "char",
+   "title": "Information: life, allegiance, fellowship, housing"
+  },
+  "CharacterHighLevel.dc.html": {
+   "x": 2700,
+   "y": 1680,
+   "w": 1100,
+   "h": 720,
+   "page": "char",
+   "title": "High-level servers: level 4,782, the plate grows with the number",
+   "is_interactive": true
+  },
+  "ChatInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "chat",
+   "title": "Chat over the bronze HUD, with Combat popped out as a window"
+  },
+  "Chat.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 560,
+   "h": 440,
+   "page": "chat",
+   "title": "Chat open: tabs, channel button, names you can click",
+   "is_interactive": true
+  },
+  "ChatIdle.dc.html": {
+   "x": 2160,
+   "y": 0,
+   "w": 560,
+   "h": 440,
+   "page": "chat",
+   "title": "Idle: no panel, last lines fade"
+  },
+  "ChatChannels.dc.html": {
+   "x": 2800,
+   "y": 0,
+   "w": 560,
+   "h": 440,
+   "page": "chat",
+   "title": "Channel menu: every retail channel, with its @ verb",
+   "is_interactive": true
+  },
+  "ChatCommands.dc.html": {
+   "x": 1520,
+   "y": 560,
+   "w": 560,
+   "h": 440,
+   "page": "chat",
+   "title": "Typing @: commands complete, the button shows where the line goes"
+  },
+  "ChatName.dc.html": {
+   "x": 2160,
+   "y": 560,
+   "w": 560,
+   "h": 440,
+   "page": "chat",
+   "title": "Click a name: tell, invite, friend, squelch",
+   "is_interactive": true
+  },
+  "ChatScrolled.dc.html": {
+   "x": 2800,
+   "y": 560,
+   "w": 560,
+   "h": 440,
+   "page": "chat",
+   "title": "Reading back: chat holds still, new lines wait below",
+   "is_interactive": true
+  },
+  "ChatSearch.dc.html": {
+   "x": 1520,
+   "y": 1120,
+   "w": 560,
+   "h": 440,
+   "page": "chat",
+   "title": "Search chat history",
+   "is_interactive": true
+  },
+  "ChatNewTab.dc.html": {
+   "x": 2160,
+   "y": 1120,
+   "w": 560,
+   "h": 440,
+   "page": "chat",
+   "title": "New tab: name it, pick what it shows, own window or not"
+  },
+  "ChatFloat.dc.html": {
+   "x": 2800,
+   "y": 1120,
+   "w": 380,
+   "h": 300,
+   "page": "chat",
+   "title": "Popped-out window: Combat, read only",
+   "is_interactive": true
+  },
+  "ChatFloatTrade.dc.html": {
+   "x": 3260,
+   "y": 1120,
+   "w": 380,
+   "h": 300,
+   "page": "chat",
+   "title": "Popped-out window: Trade watch, talks on Trade"
+  },
+  "VendorInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "vendor",
+   "title": "Vendor open over the bronze HUD"
+  },
+  "Vendor.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1040,
+   "h": 640,
+   "page": "vendor",
+   "title": "Buy: goods by category, selected item, your buy list",
+   "is_interactive": true
+  },
+  "VendorSell.dc.html": {
+   "x": 2640,
+   "y": 0,
+   "w": 1040,
+   "h": 640,
+   "page": "vendor",
+   "title": "Sell: your own items, with what she pays or why she won't",
+   "is_interactive": true
+  },
+  "VendorComponents.dc.html": {
+   "x": 1520,
+   "y": 760,
+   "w": 1040,
+   "h": 640,
+   "page": "vendor",
+   "title": "Spell components: restock to your amounts in one go",
+   "is_interactive": true
+  },
+  "VendorRefused.dc.html": {
+   "x": 2640,
+   "y": 760,
+   "w": 1040,
+   "h": 640,
+   "page": "vendor",
+   "title": "Dropped on the sell list and refused, with the reason"
+  },
+  "VendorTokens.dc.html": {
+   "x": 1520,
+   "y": 1520,
+   "w": 1040,
+   "h": 640,
+   "page": "vendor",
+   "title": "A shop that takes another currency",
+   "is_interactive": true
+  },
+  "VendorLeave.dc.html": {
+   "x": 2640,
+   "y": 1520,
+   "w": 1040,
+   "h": 640,
+   "page": "vendor",
+   "title": "Leaving with lists unfinished: asks first"
+  },
+  "VendorCompact.dc.html": {
+   "x": 1520,
+   "y": 2280,
+   "w": 792,
+   "h": 640,
+   "page": "vendor",
+   "title": "Small screens (792 wide): categories become a drop-down",
+   "is_interactive": true
+  },
+  "VendorCompactSell.dc.html": {
+   "x": 2392,
+   "y": 2280,
+   "w": 792,
+   "h": 640,
+   "page": "vendor",
+   "title": "Small screens, selling: packs drop-down, what she buys behind the info button",
+   "is_interactive": true
+  },
+  "TradeInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "trade",
+   "title": "Trade open over the bronze HUD"
+  },
+  "Trade.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 900,
+   "h": 560,
+   "page": "trade",
+   "title": "Osk accepted: your accept completes it",
+   "is_interactive": true
+  },
+  "TradeOpen.dc.html": {
+   "x": 2500,
+   "y": 0,
+   "w": 900,
+   "h": 560,
+   "page": "trade",
+   "title": "Offering: nobody has accepted yet",
+   "is_interactive": true
+  },
+  "TradeWaiting.dc.html": {
+   "x": 1520,
+   "y": 680,
+   "w": 900,
+   "h": 560,
+   "page": "trade",
+   "title": "You accepted: waiting for Osk, or withdraw",
+   "is_interactive": true
+  },
+  "TradeChanged.dc.html": {
+   "x": 2500,
+   "y": 680,
+   "w": 900,
+   "h": 560,
+   "page": "trade",
+   "title": "Changed after you accepted: acceptance taken back, new item marked",
+   "is_interactive": true
+  },
+  "TradePick.dc.html": {
+   "x": 1520,
+   "y": 1360,
+   "w": 900,
+   "h": 560,
+   "page": "trade",
+   "title": "Add from your packs without opening the inventory",
+   "is_interactive": true
+  },
+  "TradeInspect.dc.html": {
+   "x": 2500,
+   "y": 1360,
+   "w": 900,
+   "h": 560,
+   "page": "trade",
+   "title": "Inspect what they offer before you accept",
+   "is_interactive": true
+  },
+  "TradeFailed.dc.html": {
+   "x": 1520,
+   "y": 2040,
+   "w": 900,
+   "h": 560,
+   "page": "trade",
+   "title": "The trade did not go through, and why"
+  },
+  "TradeCompact.dc.html": {
+   "x": 2500,
+   "y": 2040,
+   "w": 792,
+   "h": 560,
+   "page": "trade",
+   "title": "Small screens (792 wide): same two columns, hints dropped",
+   "is_interactive": true
+  },
+  "TradeCompactInspect.dc.html": {
+   "x": 3372,
+   "y": 2040,
+   "w": 792,
+   "h": 560,
+   "page": "trade",
+   "title": "Small screens: inspecting what they offer",
+   "is_interactive": true
+  },
+  "SalvageInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "salvage",
+   "title": "Salvage open over the bronze HUD"
+  },
+  "Salvage.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 820,
+   "h": 540,
+   "page": "salvage",
+   "title": "Items staged, one bag per material, ask before anything with spells",
+   "is_interactive": true
+  },
+  "SalvageEmpty.dc.html": {
+   "x": 2420,
+   "y": 0,
+   "w": 820,
+   "h": 540,
+   "page": "salvage",
+   "title": "Just opened on an Ust: drop items, or add from packs",
+   "is_interactive": true
+  },
+  "SalvagePick.dc.html": {
+   "x": 1520,
+   "y": 660,
+   "w": 820,
+   "h": 540,
+   "page": "salvage",
+   "title": "Add from packs: only what can be salvaged, by material",
+   "is_interactive": true
+  },
+  "SalvageRefused.dc.html": {
+   "x": 2420,
+   "y": 660,
+   "w": 820,
+   "h": 540,
+   "page": "salvage",
+   "title": "Dropped and refused: retained items"
+  },
+  "SalvageDone.dc.html": {
+   "x": 1520,
+   "y": 1320,
+   "w": 820,
+   "h": 540,
+   "page": "salvage",
+   "title": "Done: the bags you got",
+   "is_interactive": true
+  },
+  "InspectInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "inspect",
+   "title": "A creature: the sheet on the right edge"
+  },
+  "InspectInGamePlayer.dc.html": {
+   "x": 0,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "page": "inspect",
+   "title": "A player"
+  },
+  "InspectInGameItem.dc.html": {
+   "x": 0,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "page": "inspect",
+   "title": "Loot on the ground"
+  },
+  "Inspect.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 360,
+   "h": 620,
+   "page": "inspect",
+   "title": "Creature: one column, no tabs"
+  },
+  "InspectFailed.dc.html": {
+   "x": 1960,
+   "y": 0,
+   "w": 360,
+   "h": 620,
+   "page": "inspect",
+   "title": "Assessment failed: only health is known"
+  },
+  "InspectPlayer.dc.html": {
+   "x": 2400,
+   "y": 0,
+   "w": 360,
+   "h": 620,
+   "page": "inspect",
+   "title": "Player: Stats, Allegiance, Armor, About",
+   "is_interactive": true
+  },
+  "InspectPlayerArmor.dc.html": {
+   "x": 2840,
+   "y": 0,
+   "w": 360,
+   "h": 620,
+   "page": "inspect",
+   "title": "Player, Armor tab",
+   "is_interactive": true
+  },
+  "InspectItem.dc.html": {
+   "x": 1520,
+   "y": 740,
+   "w": 360,
+   "h": 620,
+   "page": "inspect",
+   "title": "Item: Overview, Spells, Needs, Details",
+   "is_interactive": true
+  },
+  "InspectItemSpells.dc.html": {
+   "x": 1960,
+   "y": 740,
+   "w": 360,
+   "h": 620,
+   "page": "inspect",
+   "title": "Item, Spells tab: casting and every spell",
+   "is_interactive": true
+  },
+  "InspectItemNeeds.dc.html": {
+   "x": 2400,
+   "y": 740,
+   "w": 360,
+   "h": 620,
+   "page": "inspect",
+   "title": "Item, Needs tab: what it takes, against what you have",
+   "is_interactive": true
+  },
+  "InspectInscribe.dc.html": {
+   "x": 2840,
+   "y": 740,
+   "w": 360,
+   "h": 620,
+   "page": "inspect",
+   "title": "Item, Details tab: an inscription you can write",
+   "is_interactive": true
+  },
+  "InspectPortal.dc.html": {
+   "x": 1520,
+   "y": 1480,
+   "w": 360,
+   "h": 620,
+   "page": "inspect",
+   "title": "Portal: where it goes, who may use it"
+  },
+  "InspectChest.dc.html": {
+   "x": 1960,
+   "y": 1480,
+   "w": 360,
+   "h": 620,
+   "page": "inspect",
+   "title": "Chest: lock and capacity"
+  },
+  "InspectSpell.dc.html": {
+   "x": 2400,
+   "y": 1480,
+   "w": 360,
+   "h": 620,
+   "page": "inspect",
+   "title": "Spell from a bar: casting, components"
+  },
+  "SocialInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "social",
+   "title": "Social open over the bronze HUD (allegiance tab)"
+  },
+  "Social.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 792,
+   "h": 600,
+   "page": "social",
+   "title": "Allegiance: your monarch, patron and vassals; click anyone",
+   "is_interactive": true
+  },
+  "SocialRelease.dc.html": {
+   "x": 2392,
+   "y": 0,
+   "w": 792,
+   "h": 600,
+   "page": "social",
+   "title": "Release a vassal: asked first"
+  },
+  "SocialManage.dc.html": {
+   "x": 3264,
+   "y": 0,
+   "w": 792,
+   "h": 600,
+   "page": "social",
+   "title": "Monarch only: name, message, officers, joining, bans",
+   "is_interactive": true
+  },
+  "SocialHud.dc.html": {
+   "x": 0,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "page": "social",
+   "title": "Fellows on screen: click one to select them",
+   "is_interactive": true
+  },
+  "SocialFellow.dc.html": {
+   "x": 1520,
+   "y": 1020,
+   "w": 792,
+   "h": 600,
+   "page": "social",
+   "title": "Fellowship: everyone’s share and vitals",
+   "is_interactive": true
+  },
+  "SocialFellowLead.dc.html": {
+   "x": 2392,
+   "y": 1020,
+   "w": 792,
+   "h": 600,
+   "page": "social",
+   "title": "You lead: recruit, hand on the lead, dismiss, close, disband",
+   "is_interactive": true
+  },
+  "SocialFellowNone.dc.html": {
+   "x": 3264,
+   "y": 1020,
+   "w": 792,
+   "h": 600,
+   "page": "social",
+   "title": "No fellowship: start one, or how to join",
+   "is_interactive": true
+  },
+  "SocialFriends.dc.html": {
+   "x": 1520,
+   "y": 2040,
+   "w": 792,
+   "h": 600,
+   "page": "social",
+   "title": "Friends: online first, actions on the selected one",
+   "is_interactive": true
+  },
+  "SocialIgnored.dc.html": {
+   "x": 2392,
+   "y": 2040,
+   "w": 792,
+   "h": 600,
+   "page": "social",
+   "title": "Ignored: who, how wide, and what is hidden",
+   "is_interactive": true
+  },
+  "SocialNone.dc.html": {
+   "x": 3264,
+   "y": 2040,
+   "w": 792,
+   "h": 600,
+   "page": "social",
+   "title": "No allegiance yet"
+  },
+  "Map.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "map",
+   "title": "Full-screen map (M): you, your house, towns, pins; click a town",
+   "is_interactive": true
+  },
+  "MapSearch.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "map",
+   "title": "Find a town or pin: matches lit, the place shown",
+   "is_interactive": true
+  },
+  "MapPin.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "map",
+   "title": "Right-click to pin a spot"
+  },
+  "MapUnderground.dc.html": {
+   "x": 0,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "page": "map",
+   "title": "Underground: no place on the world map"
+  },
+  "MapCompact.dc.html": {
+   "x": 1520,
+   "y": 1020,
+   "w": 1280,
+   "h": 720,
+   "page": "map",
+   "title": "Smaller screen (1280 x 720): the side column becomes a drawer, the basics move onto the map",
+   "is_interactive": true
+  },
+  "House.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 900,
+   "h": 600,
+   "page": "house",
+   "title": "House window (H): maintenance paid, who may come in",
+   "is_interactive": true
+  },
+  "HouseDue.dc.html": {
+   "x": 2500,
+   "y": 0,
+   "w": 900,
+   "h": 600,
+   "page": "house",
+   "title": "Maintenance not paid: warning in the window, red dot on the House button",
+   "is_interactive": true
+  },
+  "HouseNone.dc.html": {
+   "x": 3480,
+   "y": 0,
+   "w": 900,
+   "h": 600,
+   "page": "house",
+   "title": "No house: when you may buy, free houses on the map"
+  },
+  "HouseInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "house",
+   "title": "House open over the HUD (its own button, bottom right, marked)"
+  },
+  "JournalInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "journal",
+   "title": "Journal open over the bronze HUD"
+  },
+  "Journal.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 900,
+   "h": 600,
+   "page": "journal",
+   "title": "Quests: grouped by state; who and where, each on the map",
+   "is_interactive": true
+  },
+  "JournalAbandon.dc.html": {
+   "x": 2500,
+   "y": 0,
+   "w": 900,
+   "h": 600,
+   "page": "journal",
+   "title": "Abandon a quest: asked first"
+  },
+  "JournalNotes.dc.html": {
+   "x": 1520,
+   "y": 720,
+   "w": 900,
+   "h": 600,
+   "page": "journal",
+   "title": "Notes: your own pages, a place and a countdown each",
+   "is_interactive": true
+  },
+  "JournalNotesRunning.dc.html": {
+   "x": 2500,
+   "y": 720,
+   "w": 900,
+   "h": 600,
+   "page": "journal",
+   "title": "Searching pages; a countdown running",
+   "is_interactive": true
+  },
+  "QuestsHud.dc.html": {
+   "x": 0,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "page": "journal",
+   "title": "Quests on screen: a panel you move anywhere (Edit layout); click one to open it",
+   "is_interactive": true
+  },
+  "Book.dc.html": {
+   "x": 1520,
+   "y": 1440,
+   "w": 560,
+   "h": 620,
+   "page": "journal",
+   "title": "Book: reading someone else’s page",
+   "is_interactive": true
+  },
+  "BookWrite.dc.html": {
+   "x": 2160,
+   "y": 1440,
+   "w": 560,
+   "h": 620,
+   "page": "journal",
+   "title": "Book: a blank page you can write on",
+   "is_interactive": true
+  },
+  "BookMenu.dc.html": {
+   "x": 2800,
+   "y": 1440,
+   "w": 560,
+   "h": 620,
+   "page": "journal",
+   "title": "Book: every page it can hold, and who wrote each",
+   "is_interactive": true
+  },
+  "DialogInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "dialogs",
+   "title": "A question from the server: centred, the world dims a little"
+  },
+  "DialogInvites.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "dialogs",
+   "title": "Invitations as cards under the target: play goes on"
+  },
+  "Dialog.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 440,
+   "h": 320,
+   "page": "dialogs",
+   "title": "One dialog (kind is a property)"
+  },
+  "DialogSheet.dc.html": {
+   "x": 0,
+   "y": 1020,
+   "w": 1440,
+   "h": 1400,
+   "page": "dialogs",
+   "title": "Every kind: the server’s seven questions, message, wait, typed answer, choice",
+   "is_interactive": true
+  },
+  "Slumlord.dc.html": {
+   "x": 1520,
+   "y": 1020,
+   "w": 640,
+   "h": 560,
+   "page": "dialogs",
+   "title": "House sale window: Buy (who may buy, price rows to drop items on)",
+   "is_interactive": true
+  },
+  "SlumlordPay.dc.html": {
+   "x": 2240,
+   "y": 1020,
+   "w": 640,
+   "h": 560,
+   "page": "dialogs",
+   "title": "Maintenance: paid so far plus what is on the row",
+   "is_interactive": true
+  },
+  "SlumlordOther.dc.html": {
+   "x": 2960,
+   "y": 1020,
+   "w": 640,
+   "h": 560,
+   "page": "dialogs",
+   "title": "Paying someone else’s house: asked first",
+   "is_interactive": true
+  },
+  "LootInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "misc",
+   "title": "Looting a corpse over the bronze HUD"
+  },
+  "Loot.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 400,
+   "h": 470,
+   "page": "misc",
+   "title": "Corpse: pick an item for Inspect and Loot, double-click to loot, or drag to a pack",
+   "is_interactive": true
+  },
+  "LootChest.dc.html": {
+   "x": 2000,
+   "y": 0,
+   "w": 400,
+   "h": 520,
+   "page": "misc",
+   "title": "Chest: the packs inside, and putting something in",
+   "is_interactive": true
+  },
+  "Barber.dc.html": {
+   "x": 1520,
+   "y": 640,
+   "w": 760,
+   "h": 560,
+   "page": "misc",
+   "title": "Barber: hair (style and colour), turn the figure",
+   "is_interactive": true
+  },
+  "BarberSkin.dc.html": {
+   "x": 2360,
+   "y": 640,
+   "w": 760,
+   "h": 560,
+   "page": "misc",
+   "title": "Barber: skin has a shade only",
+   "is_interactive": true
+  },
+  "Chess.dc.html": {
+   "x": 1520,
+   "y": 1320,
+   "w": 800,
+   "h": 560,
+   "page": "misc",
+   "title": "Chess: your side at the bottom, where a piece can go",
+   "is_interactive": true
+  },
+  "ChessResign.dc.html": {
+   "x": 2400,
+   "y": 1320,
+   "w": 800,
+   "h": 560,
+   "page": "misc",
+   "title": "Resign: asked first",
+   "is_interactive": true
+  },
+  "LootMenu.dc.html": {
+   "x": 2480,
+   "y": 0,
+   "w": 400,
+   "h": 470,
+   "page": "misc",
+   "title": "Right-click: Inspect, Loot, or loot straight into a chosen pack"
+  },
+  "EffectsInGame.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "effects",
+   "title": "Hovering the harmful count: vitae, then every debuff, ending first"
+  },
+  "EffectsHover.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "effects",
+   "title": "Hovering the helpful count: all 42 in a small scrolling pane, soonest to end first"
+  },
+  "Effects.dc.html": {
+   "x": 0,
+   "y": 1020,
+   "w": 760,
+   "h": 560,
+   "page": "effects",
+   "title": "Click a count: the full window, Helpful (ending soon, timed, from your gear)",
+   "is_interactive": true
+  },
+  "EffectsHarmful.dc.html": {
+   "x": 840,
+   "y": 1020,
+   "w": 760,
+   "h": 560,
+   "page": "effects",
+   "title": "Effects window, Harmful: vitae and what is on you, ending first",
+   "is_interactive": true
+  },
+  "CombatInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "combat",
+   "title": "Melee: the mode pill grows into the combat strip; charging a Mid attack; a hit drains the health bar"
+  },
+  "CombatMissile.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "combat",
+   "title": "Missile: accuracy fully charged, arrows left; a heal fills the health bar"
+  },
+  "CombatLowHealth.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "combat",
+   "title": "Under 25% health: the bar pulses, the screen edge glows (option)"
+  },
+  "CombatLab.dc.html": {
+   "x": 0,
+   "y": 1020,
+   "w": 900,
+   "h": 380,
+   "page": "combat",
+   "title": "Combat strip: hold High, Mid or Low to charge, click the bar to set power",
+   "is_interactive": true
+  },
+  "VitalsLab.dc.html": {
+   "x": 980,
+   "y": 1020,
+   "w": 900,
+   "h": 380,
+   "page": "combat",
+   "title": "Vitals: press the buttons to see damage, healing, mana and stamina",
+   "is_interactive": true
+  },
+  "CombatBar.dc.html": {
+   "x": 0,
+   "y": 1520,
+   "w": 600,
+   "h": 74,
+   "page": "combat",
+   "title": "Part: the combat strip (melee, missile, jump)",
+   "is_interactive": true
+  },
+  "VitalBars.dc.html": {
+   "x": 900,
+   "y": 1520,
+   "w": 770,
+   "h": 90,
+   "page": "combat",
+   "title": "Part: the vital bars (moment is a property)"
+  },
+  "LoginStage.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Stage · Choose: the picked character stands in its remembered place",
+   "is_interactive": true
+  },
+  "LoginStageConnecting.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Stage · Connecting: the world's name and two meters over the dusk"
+  },
+  "LoginStageDelete.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Stage · Delete: type DELETE to delete Brannoch Stoneheart"
+  },
+  "LoginStageEmpty.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Stage · New account: one Create your first character button"
+  },
+  "LoginLineup.dc.html": {
+   "x": 0,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Lineup · Choose: the picked one steps forward into the light",
+   "is_interactive": true
+  },
+  "LoginLineupConnecting.dc.html": {
+   "x": 1520,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Lineup · Connecting: the portal ring charges, two meters on its arcs"
+  },
+  "LoginLineupDelete.dc.html": {
+   "x": 3040,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Lineup · Delete: type DELETE"
+  },
+  "LoginLineupEmpty.dc.html": {
+   "x": 4560,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Lineup · New account: an empty stage with one lit slot"
+  },
+  "LoginAtlas.dc.html": {
+   "x": 0,
+   "y": 2600,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Atlas · Choose: the map flies to the picked character's last place",
+   "is_interactive": true
+  },
+  "LoginAtlasConnecting.dc.html": {
+   "x": 1520,
+   "y": 2600,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Atlas · Connecting: the map draws itself in, meters in a slim bar"
+  },
+  "LoginAtlasDelete.dc.html": {
+   "x": 3040,
+   "y": 2600,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Atlas · Delete: type DELETE"
+  },
+  "LoginAtlasEmpty.dc.html": {
+   "x": 4560,
+   "y": 2600,
+   "w": 1440,
+   "h": 900,
+   "page": "login",
+   "title": "Atlas · New account: the four starting towns and a welcome card"
+  },
+  "CreateStudio.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Studio · Heritage: 13 tiles and gender; the figure on the plinth, So far on the right",
+   "is_interactive": true
+  },
+  "CreateStudioProfession.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Studio · Profession: templates, attribute sliders with locks, points left, vitals"
+  },
+  "CreateStudioSkills.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Studio · Skills: grouped with train and specialize costs, credits, info pane"
+  },
+  "CreateStudioAppearance.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Studio · Appearance: face and clothes parts, styles, colours, shade"
+  },
+  "CreateStudioTown.dc.html": {
+   "x": 6080,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Studio · Town: four town cards; the backdrop takes the town's colours"
+  },
+  "CreateStudioName.dc.html": {
+   "x": 7600,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Studio · Name: name field, suggestions, Before you finish, summary"
+  },
+  "CreateStudioDialog.dc.html": {
+   "x": 9120,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Studio · Name refused by the server; three near names (OPENAC)"
+  },
+  "CreateSheet.dc.html": {
+   "x": 0,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Sheet · Heritage open; only the name is still needed",
+   "is_interactive": true
+  },
+  "CreateSheetLook.dc.html": {
+   "x": 1520,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Sheet · Look open: face and clothes, part, style, colour, shade"
+  },
+  "CreateSheetProfession.dc.html": {
+   "x": 3040,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Sheet · Profession open: seven templates with a line each"
+  },
+  "CreateSheetAttributes.dc.html": {
+   "x": 4560,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Sheet · Attributes moved off War Mage: 4 points left, now Custom"
+  },
+  "CreateSheetSkills.dc.html": {
+   "x": 6080,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Sheet · Skills open: credits, the four groups, info box"
+  },
+  "CreateSheetTown.dc.html": {
+   "x": 7600,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Sheet · Starting town open: four town cards"
+  },
+  "CreateSheetFinish.dc.html": {
+   "x": 9120,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Sheet · Named Aerin Vale, ready to create"
+  },
+  "CreateSheetRefused.dc.html": {
+   "x": 10640,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Sheet · The server refused the name"
+  },
+  "CreateSheetGearKnight.dc.html": {
+   "x": 12160,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Sheet · Gear Knight: Look picks the whole body"
+  },
+  "CreateSheetOlthoi.dc.html": {
+   "x": 13680,
+   "y": 1300,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Sheet · Olthoi: four sections fold into one line"
+  },
+  "CreateJourney.dc.html": {
+   "x": 0,
+   "y": 2600,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Journey · Who are you? 13 heritage panels, the picked one opens",
+   "is_interactive": true
+  },
+  "CreateJourneyProfession.dc.html": {
+   "x": 1520,
+   "y": 2600,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Journey · How do you fight? Template cards over an attribute hexagon"
+  },
+  "CreateJourneySkills.dc.html": {
+   "x": 3040,
+   "y": 2600,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Journey · What have you learned? A 50-credit purse and three skill trays"
+  },
+  "CreateJourneyAppearance.dc.html": {
+   "x": 4560,
+   "y": 2600,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Journey · How do you look? The figure large, parts around it"
+  },
+  "CreateJourneyTown.dc.html": {
+   "x": 6080,
+   "y": 2600,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Journey · Where does it begin? Four towns on the map, a view of the picked one"
+  },
+  "CreateJourneyName.dc.html": {
+   "x": 7600,
+   "y": 2600,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Journey · What is your name? One sentence tells the whole build"
+  },
+  "CreateJourneyOlthoi.dc.html": {
+   "x": 9120,
+   "y": 2600,
+   "w": 1440,
+   "h": 900,
+   "page": "create",
+   "title": "Journey · Olthoi Spitter: the journey drops to three steps"
+  }
+ },
+ "createdOnFiles": {
+  "at": "2026-11-18T09:00:00Z",
+  "v": 1
+ },
+ "designSystems": [],
+ "launch": {
+  "view": "canvas",
+  "page": "login"
+ },
+ "notes": {
+  "t1": {
+   "kind": "title1",
+   "maxW": 4480,
+   "text": "In-world HUD: three directions",
+   "w": 240,
+   "x": 0,
+   "y": -300,
+   "page": "r1"
+  },
+  "t2": {
+   "kind": "title1",
+   "maxW": 2960,
+   "text": "Round 2: Horizon, world first",
+   "x": 0,
+   "y": -300,
+   "page": "r2"
+  },
+  "t3": {
+   "kind": "title1",
+   "maxW": 3760,
+   "text": "Inventory (bronze)",
+   "x": 0,
+   "y": -300,
+   "page": "inv"
+  },
+  "t4": {
+   "kind": "title1",
+   "maxW": 3480,
+   "text": "Spellbook (bronze)",
+   "x": 0,
+   "y": -300,
+   "page": "spells"
+  },
+  "t5": {
+   "kind": "title1",
+   "maxW": 2960,
+   "text": "Your bars: anywhere, any shape",
+   "x": 0,
+   "y": -300,
+   "page": "bars"
+  },
+  "t6": {
+   "kind": "title1",
+   "maxW": 3800,
+   "text": "Options (bronze)",
+   "x": 0,
+   "y": -300,
+   "page": "opts"
+  },
+  "t7": {
+   "kind": "title1",
+   "maxW": 3800,
+   "text": "Character sheet (bronze)",
+   "x": 0,
+   "y": -300,
+   "page": "char"
+  },
+  "t8": {
+   "kind": "title1",
+   "maxW": 3640,
+   "text": "Chat (bronze)",
+   "x": 0,
+   "y": -300,
+   "page": "chat"
+  },
+  "t9": {
+   "kind": "title1",
+   "maxW": 3680,
+   "text": "Vendor (bronze)",
+   "x": 0,
+   "y": -300,
+   "page": "vendor"
+  },
+  "t10": {
+   "kind": "title1",
+   "maxW": 4164,
+   "text": "Trade (bronze)",
+   "x": 0,
+   "y": -300,
+   "page": "trade"
+  },
+  "t11": {
+   "kind": "title1",
+   "maxW": 3240,
+   "text": "Salvage (bronze)",
+   "x": 0,
+   "y": -300,
+   "page": "salvage"
+  },
+  "t12": {
+   "kind": "title1",
+   "maxW": 3200,
+   "text": "Inspect: everything you can assess",
+   "x": 0,
+   "y": -300,
+   "page": "inspect"
+  },
+  "t13": {
+   "kind": "title1",
+   "maxW": 4056,
+   "text": "Social: allegiance, fellowship, friends",
+   "x": 0,
+   "y": -300,
+   "page": "social"
+  },
+  "t14": {
+   "kind": "title1",
+   "maxW": 4480,
+   "text": "Map (full screen)",
+   "x": 0,
+   "y": -300,
+   "page": "map"
+  },
+  "t15": {
+   "kind": "title1",
+   "maxW": 4380,
+   "text": "House (its own window)",
+   "x": 0,
+   "y": -300,
+   "page": "house"
+  },
+  "t16": {
+   "kind": "title1",
+   "maxW": 3400,
+   "text": "Journal: quests, notes, books",
+   "x": 0,
+   "y": -300,
+   "page": "journal"
+  },
+  "t17": {
+   "kind": "title1",
+   "maxW": 3600,
+   "text": "Dialogs and the house sale window",
+   "x": 0,
+   "y": -300,
+   "page": "dialogs"
+  },
+  "t18": {
+   "kind": "title1",
+   "maxW": 3200,
+   "text": "Loot, barber, chess",
+   "x": 0,
+   "y": -300,
+   "page": "misc"
+  },
+  "t19": {
+   "kind": "title1",
+   "maxW": 4480,
+   "text": "Effects on you: buffs, debuffs, vitae",
+   "x": 0,
+   "y": -300,
+   "page": "effects"
+  },
+  "t20": {
+   "kind": "title1",
+   "maxW": 4480,
+   "text": "Combat strip and living vitals",
+   "x": 0,
+   "y": -300,
+   "page": "combat"
+  },
+  "t21": {
+   "kind": "title1",
+   "maxW": 6000,
+   "text": "A · Stage: your character standing where you left it",
+   "x": 0,
+   "y": -300,
+   "page": "login"
+  },
+  "t22": {
+   "kind": "title1",
+   "maxW": 6000,
+   "text": "B · Lineup: everyone on one stage",
+   "x": 0,
+   "y": 1000,
+   "page": "login"
+  },
+  "t23": {
+   "kind": "title1",
+   "maxW": 6000,
+   "text": "C · Atlas: your characters on the map of Dereth",
+   "x": 0,
+   "y": 2300,
+   "page": "login"
+  },
+  "t24": {
+   "kind": "title1",
+   "maxW": 10560,
+   "text": "A · Studio: a polished six-step wizard around the figure",
+   "x": 0,
+   "y": -300,
+   "page": "create"
+  },
+  "t25": {
+   "kind": "title1",
+   "maxW": 15120,
+   "text": "B · Sheet: no wizard, one living character sheet",
+   "x": 0,
+   "y": 1000,
+   "page": "create"
+  },
+  "t26": {
+   "kind": "title1",
+   "maxW": 10560,
+   "text": "C · Journey: one big question per screen",
+   "x": 0,
+   "y": 2300,
+   "page": "create"
+  },
+  "s_login": {
+   "x": -620,
+   "y": 0,
+   "w": 520,
+   "page": "login",
+   "text": "Signing in to an account stays in the OpenAC launcher. In the client, \"login\" is the connecting screen and then choosing a character (retail calls it the Character Login Screen).\n\nThe server only sends names. Level, look and last place are remembered by OpenAC on this computer (OPENAC). Quill was never played here, so it shows a name only."
+  },
+  "s_create": {
+   "x": -620,
+   "y": 0,
+   "w": 520,
+   "page": "create",
+   "text": "Three directions for the same retail wizard: heritage, profession and attributes, skills, appearance, town, name.\n\nOnly War Mage's numbers are real (50/40/10/30/100/100). Other templates' numbers and skill costs are made up: the client reads them from the game data.\n\nThe first board of each row can be played."
+  }
+ },
+ "order": [
+  "Horizon.dc.html",
+  "HorizonBronze.dc.html",
+  "Main.dc.html",
+  "Tactical.dc.html",
+  "Orbit.dc.html",
+  "InventoryInGame.dc.html",
+  "Inventory.dc.html",
+  "InventoryDrag.dc.html",
+  "InventorySplit.dc.html",
+  "InventoryHeavy.dc.html",
+  "InventoryAll.dc.html",
+  "InventoryLong.dc.html",
+  "InventorySort.dc.html",
+  "InventoryCompact.dc.html",
+  "InventoryFloat.dc.html",
+  "SpellbookInGame.dc.html",
+  "Spellbook.dc.html",
+  "SpellbookForget.dc.html",
+  "SpellbookComponents.dc.html",
+  "HudBarsCombat.dc.html",
+  "HudBars.dc.html",
+  "HudBarsEdit.dc.html",
+  "HudBarsDrag.dc.html",
+  "OptionsInGame.dc.html",
+  "Options.dc.html",
+  "OptionsGameplay.dc.html",
+  "OptionsChat.dc.html",
+  "OptionsControls.dc.html",
+  "OptionsGraphics.dc.html",
+  "OptionsSearch.dc.html",
+  "CharacterInGame.dc.html",
+  "Character.dc.html",
+  "CharacterAttribute.dc.html",
+  "CharacterTrain.dc.html",
+  "CharacterTitles.dc.html",
+  "CharacterInfo.dc.html",
+  "CharacterHighLevel.dc.html",
+  "ChatInGame.dc.html",
+  "Chat.dc.html",
+  "ChatIdle.dc.html",
+  "ChatChannels.dc.html",
+  "ChatCommands.dc.html",
+  "ChatName.dc.html",
+  "ChatScrolled.dc.html",
+  "ChatSearch.dc.html",
+  "ChatNewTab.dc.html",
+  "ChatFloat.dc.html",
+  "ChatFloatTrade.dc.html",
+  "VendorInGame.dc.html",
+  "Vendor.dc.html",
+  "VendorSell.dc.html",
+  "VendorComponents.dc.html",
+  "VendorRefused.dc.html",
+  "VendorTokens.dc.html",
+  "VendorLeave.dc.html",
+  "VendorCompact.dc.html",
+  "VendorCompactSell.dc.html",
+  "TradeInGame.dc.html",
+  "Trade.dc.html",
+  "TradeOpen.dc.html",
+  "TradeWaiting.dc.html",
+  "TradeChanged.dc.html",
+  "TradePick.dc.html",
+  "TradeInspect.dc.html",
+  "TradeFailed.dc.html",
+  "TradeCompact.dc.html",
+  "TradeCompactInspect.dc.html",
+  "SalvageInGame.dc.html",
+  "Salvage.dc.html",
+  "SalvageEmpty.dc.html",
+  "SalvagePick.dc.html",
+  "SalvageRefused.dc.html",
+  "SalvageDone.dc.html",
+  "InspectInGame.dc.html",
+  "InspectInGamePlayer.dc.html",
+  "InspectInGameItem.dc.html",
+  "Inspect.dc.html",
+  "InspectFailed.dc.html",
+  "InspectPlayer.dc.html",
+  "InspectPlayerArmor.dc.html",
+  "InspectItem.dc.html",
+  "InspectItemSpells.dc.html",
+  "InspectItemNeeds.dc.html",
+  "InspectInscribe.dc.html",
+  "InspectPortal.dc.html",
+  "InspectChest.dc.html",
+  "InspectSpell.dc.html",
+  "SocialInGame.dc.html",
+  "Social.dc.html",
+  "SocialRelease.dc.html",
+  "SocialManage.dc.html",
+  "SocialHud.dc.html",
+  "SocialFellow.dc.html",
+  "SocialFellowLead.dc.html",
+  "SocialFellowNone.dc.html",
+  "SocialFriends.dc.html",
+  "SocialIgnored.dc.html",
+  "SocialNone.dc.html",
+  "Map.dc.html",
+  "MapSearch.dc.html",
+  "MapPin.dc.html",
+  "MapUnderground.dc.html",
+  "MapCompact.dc.html",
+  "House.dc.html",
+  "HouseDue.dc.html",
+  "HouseNone.dc.html",
+  "HouseInGame.dc.html",
+  "JournalInGame.dc.html",
+  "Journal.dc.html",
+  "JournalAbandon.dc.html",
+  "JournalNotes.dc.html",
+  "JournalNotesRunning.dc.html",
+  "QuestsHud.dc.html",
+  "Book.dc.html",
+  "BookWrite.dc.html",
+  "BookMenu.dc.html",
+  "DialogInGame.dc.html",
+  "DialogInvites.dc.html",
+  "Dialog.dc.html",
+  "DialogSheet.dc.html",
+  "Slumlord.dc.html",
+  "SlumlordPay.dc.html",
+  "SlumlordOther.dc.html",
+  "LootInGame.dc.html",
+  "Loot.dc.html",
+  "LootChest.dc.html",
+  "Barber.dc.html",
+  "BarberSkin.dc.html",
+  "Chess.dc.html",
+  "ChessResign.dc.html",
+  "LootMenu.dc.html",
+  "EffectsHover.dc.html",
+  "EffectsInGame.dc.html",
+  "Effects.dc.html",
+  "EffectsHarmful.dc.html",
+  "CombatInGame.dc.html",
+  "CombatMissile.dc.html",
+  "CombatLowHealth.dc.html",
+  "CombatLab.dc.html",
+  "VitalsLab.dc.html",
+  "CombatBar.dc.html",
+  "VitalBars.dc.html",
+  "LoginStage.dc.html",
+  "LoginStageConnecting.dc.html",
+  "LoginStageDelete.dc.html",
+  "LoginStageEmpty.dc.html",
+  "LoginLineup.dc.html",
+  "LoginLineupConnecting.dc.html",
+  "LoginLineupDelete.dc.html",
+  "LoginLineupEmpty.dc.html",
+  "LoginAtlas.dc.html",
+  "LoginAtlasConnecting.dc.html",
+  "LoginAtlasDelete.dc.html",
+  "LoginAtlasEmpty.dc.html",
+  "CreateStudio.dc.html",
+  "CreateStudioProfession.dc.html",
+  "CreateStudioSkills.dc.html",
+  "CreateStudioAppearance.dc.html",
+  "CreateStudioTown.dc.html",
+  "CreateStudioName.dc.html",
+  "CreateStudioDialog.dc.html",
+  "CreateSheet.dc.html",
+  "CreateSheetLook.dc.html",
+  "CreateSheetProfession.dc.html",
+  "CreateSheetAttributes.dc.html",
+  "CreateSheetSkills.dc.html",
+  "CreateSheetTown.dc.html",
+  "CreateSheetFinish.dc.html",
+  "CreateSheetRefused.dc.html",
+  "CreateSheetGearKnight.dc.html",
+  "CreateSheetOlthoi.dc.html",
+  "CreateJourney.dc.html",
+  "CreateJourneyProfession.dc.html",
+  "CreateJourneySkills.dc.html",
+  "CreateJourneyAppearance.dc.html",
+  "CreateJourneyTown.dc.html",
+  "CreateJourneyName.dc.html",
+  "CreateJourneyOlthoi.dc.html"
+ ],
+ "pages": [
+  {
+   "id": "r2",
+   "name": "Round 2: Horizon"
+  },
+  {
+   "id": "bars",
+   "name": "Your bars"
+  },
+  {
+   "id": "inv",
+   "name": "Inventory"
+  },
+  {
+   "id": "spells",
+   "name": "Spellbook"
+  },
+  {
+   "id": "opts",
+   "name": "Options"
+  },
+  {
+   "id": "char",
+   "name": "Character"
+  },
+  {
+   "id": "chat",
+   "name": "Chat"
+  },
+  {
+   "id": "vendor",
+   "name": "Vendor"
+  },
+  {
+   "id": "trade",
+   "name": "Trade"
+  },
+  {
+   "id": "salvage",
+   "name": "Salvage"
+  },
+  {
+   "id": "inspect",
+   "name": "Inspect"
+  },
+  {
+   "id": "social",
+   "name": "Social"
+  },
+  {
+   "id": "map",
+   "name": "Map"
+  },
+  {
+   "id": "house",
+   "name": "House"
+  },
+  {
+   "id": "journal",
+   "name": "Journal"
+  },
+  {
+   "id": "dialogs",
+   "name": "Dialogs"
+  },
+  {
+   "id": "misc",
+   "name": "Loot, barber, chess"
+  },
+  {
+   "id": "effects",
+   "name": "Effects on you"
+  },
+  {
+   "id": "combat",
+   "name": "Combat and vitals"
+  },
+  {
+   "id": "login",
+   "name": "Login"
+  },
+  {
+   "id": "create",
+   "name": "Character creation"
+  },
+  {
+   "id": "r1",
+   "name": "Round 1"
+  }
+ ],
+ "title": "OpenAC Modern UI"
 }

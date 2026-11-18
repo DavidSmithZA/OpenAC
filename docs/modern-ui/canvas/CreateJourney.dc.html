@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Create: the journey</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{opacity:0.4;cursor:default}
+input[type=range]{accent-color:#E0B068}
+input::placeholder{color:rgba(244,235,220,0.28)}
+@keyframes cj-caret{0%,100%{opacity:1}50%{opacity:0}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: {{bg}};">
+
+  <!-- atmosphere -->
+  <div aria-hidden="true" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: {{glow}};"></div>
+  <sc-if value="{{showHills}}" hint-placeholder-val="{{true}}">
+    <svg aria-hidden="true" width="1440" height="300" viewBox="0 0 1440 300" style="position: absolute; left: 0; bottom: 0;">
+      <path d="M0 190 C140 150 260 170 380 140 C520 104 640 160 780 132 C920 104 1040 150 1180 122 C1290 100 1380 120 1440 112 V300 H0 Z" fill="rgba(0,0,0,0.28)"></path>
+      <path d="M0 236 C180 210 320 228 480 206 C660 182 820 222 1000 200 C1160 182 1300 206 1440 196 V300 H0 Z" fill="rgba(0,0,0,0.38)"></path>
+    </svg>
+  </sc-if>
+
+  <!-- top bar -->
+  <div style="position: absolute; left: 64px; right: 64px; top: 26px; height: 36px; display: flex; align-items: center; gap: 10px;">
+    <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">NEW CHARACTER</span>
+    <span style="font-size: 11.5px; color: #A89A82;">Leafcull · 5 of 11 slots used</span>
+    <span style="flex: 1;"></span>
+    <button title="Roll this step again" onClick="{{rollStep}}" disabled="{{rollOff}}" style="height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.3); display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; cursor: pointer;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4zM8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01"></path></svg>Random
+    </button>
+    <button onClick="{{askRoll}}" style="height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: transparent; font-size: 12px; font-weight: 600; color: #C8B89C; cursor: pointer;">Roll everything</button>
+    <button onClick="{{askExit}}" style="height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.3); display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>Exit
+    </button>
+  </div>
+
+  <!-- headline -->
+  <div style="position: absolute; left: 64px; top: 92px; width: {{headW}}; display: flex; flex-direction: column; gap: 8px;">
+    <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #E0B068;">{{stepLabel}}</span>
+    <h1 style="margin: 0; font-size: 46px; line-height: 1.05; font-weight: 700; letter-spacing: -0.02em;">{{cur.q}}</h1>
+    <p style="margin: 2px 0 0; font-size: 15px; line-height: 1.45; color: #C8B89C;">{{cur.sub}}</p>
+  </div>
+
+  <!-- ============ HERITAGE ============ -->
+  <sc-if value="{{isHeritage}}" hint-placeholder-val="{{true}}">
+    <div role="radiogroup" aria-label="Heritage" style="position: absolute; left: 64px; right: 64px; top: 222px; height: 540px; display: flex; gap: 6px;">
+      <sc-for list="{{hers}}" as="h" hint-placeholder-count="13">
+        <sc-if value="{{h.on}}" hint-placeholder-val="{{false}}">
+          <section aria-label="{{h.name}}, picked" style="flex: 0 0 430px; position: relative; border-radius: 6px; border: 1px solid #E0B068; background: {{h.bgOn}}; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+            <div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 0; height: 330px; background: radial-gradient(ellipse at 50% 85%, rgba(224,176,104,0.22), rgba(0,0,0,0) 62%);"></div>
+            <span style="position: absolute; left: 22px; top: 18px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #E0B068;">{{h.num}}</span>
+            <div aria-hidden="true" style="position: absolute; left: 50%; top: {{h.sTop}}; transform: translateX(-50%); width: {{h.sw}}; height: {{h.sh}}; border: 1.5px dashed rgba(255,255,255,0.5); border-radius: {{h.sr}}; background: {{h.sFill}};"></div>
+            <sc-if value="{{h.crown}}" hint-placeholder-val="{{false}}">
+              <div aria-hidden="true" style="position: absolute; left: 50%; top: {{h.cTop}}; transform: translateX(-50%); width: 76px; height: 26px; border-radius: 50%; background: {{h.crownC}}; filter: blur(7px);"></div>
+            </sc-if>
+            <div aria-hidden="true" style="position: absolute; left: 50%; top: 318px; transform: translateX(-50%); width: 180px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.45); filter: blur(4px);"></div>
+            <span style="position: absolute; right: 18px; top: 18px; font-size: 10px; color: rgba(244,235,220,0.45);">The 3-D figure is drawn here</span>
+            <div style="position: absolute; left: 26px; right: 26px; bottom: 24px; display: flex; flex-direction: column; gap: 12px;">
+              <h2 style="margin: 0; font-size: 34px; line-height: 1; font-weight: 700; letter-spacing: -0.01em;">{{h.name}}</h2>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <sc-for list="{{h.chips}}" as="c" hint-placeholder-count="2">
+                  <span style="height: 26px; padding: 0 11px; border-radius: 999px; border: 1px solid {{c.edge}}; background: rgba(0,0,0,0.3); display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: {{c.fg}};">{{c.label}}</span>
+                </sc-for>
+              </div>
+              <p style="margin: 0; font-size: 13.5px; line-height: 1.5; color: #E9D3AE;">{{h.line}}</p>
+              <div role="radiogroup" aria-label="Gender" style="align-self: flex-start; display: flex; gap: 2px; padding: 3px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.38);">
+                <sc-for list="{{genders}}" as="g" hint-placeholder-count="2">
+                  <button role="radio" aria-checked="{{g.on}}" onClick="{{g.pick}}" style="height: 30px; padding: 0 16px; border-radius: 999px; border: 0; background: {{g.bg}}; color: {{g.fg}}; font-size: 12px; font-weight: 700; cursor: pointer;">{{g.label}}</button>
+                </sc-for>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{h.off}}" hint-placeholder-val="{{true}}">
+          <button role="radio" aria-checked="false" aria-label="{{h.name}}" title="{{h.name}}" onClick="{{h.pick}}" style="flex: 1 1 0; min-width: 0; position: relative; padding: 0; border-radius: 6px; border: 1px solid rgba(201,160,98,0.28); background: {{h.bg}}; cursor: pointer; overflow: hidden;">
+            <span style="position: absolute; left: 0; right: 0; top: 16px; text-align: center; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; color: #C8B89C;">{{h.num}}</span>
+            <span aria-hidden="true" style="position: absolute; left: 50%; top: 52px; transform: translateX(-50%); width: 22px; height: {{h.mini}}; border: 1px dashed rgba(255,255,255,0.28); border-radius: 11px 11px 4px 4px;"></span>
+            <span style="position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%) rotate(180deg); writing-mode: vertical-rl; white-space: nowrap; font-size: 15px; font-weight: 600; letter-spacing: 0.03em;">{{h.name}}</span>
+          </button>
+        </sc-if>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- ============ PROFESSION ============ -->
+  <sc-if value="{{isProfession}}" hint-placeholder-val="{{false}}">
+    <div role="radiogroup" aria-label="Profession" style="position: absolute; left: 64px; right: 64px; top: 212px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px;">
+      <sc-for list="{{tpls}}" as="t" hint-placeholder-count="7">
+        <button role="radio" aria-checked="{{t.on}}" onClick="{{t.pick}}" style="height: 84px; padding: 12px 14px; box-sizing: border-box; border-radius: 6px; border: 1px solid {{t.edge}}; background: {{t.bg}}; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; text-align: left; cursor: pointer;">
+          <span style="display: flex; align-items: center; gap: 6px; width: 100%;">
+            <span style="flex: 1; font-size: 14px; font-weight: 700;">{{t.name}}</span>
+            <sc-if value="{{t.changed}}" hint-placeholder-val="{{false}}"><span style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #E0B068;">CHANGED</span></sc-if>
+          </span>
+          <span style="font-size: 11.5px; line-height: 1.35; color: #A89A82;">{{t.line}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <sc-if value="{{tplNoteOn}}" hint-placeholder-val="{{false}}">
+      <p style="position: absolute; left: 64px; top: 306px; margin: 0; font-size: 12px; color: #C8B89C;">{{tplNote}}</p>
+    </sc-if>
+
+    <!-- the hexagon -->
+    <div style="position: absolute; left: 104px; top: 344px; width: 420px; height: 420px;">
+      <svg width="420" height="420" viewBox="0 0 420 420" aria-hidden="true" style="position: absolute; left: 0; top: 0; overflow: visible;">
+        <polygon points="{{ring1}}" fill="none" stroke="rgba(201,160,98,0.14)" stroke-width="1"></polygon>
+        <polygon points="{{ring2}}" fill="none" stroke="rgba(201,160,98,0.14)" stroke-width="1"></polygon>
+        <polygon points="{{ring3}}" fill="none" stroke="rgba(201,160,98,0.14)" stroke-width="1"></polygon>
+        <polygon points="{{ring4}}" fill="rgba(0,0,0,0.25)" stroke="rgba(201,160,98,0.3)" stroke-width="1"></polygon>
+        <path d="{{spokes}}" stroke="rgba(201,160,98,0.2)" stroke-width="1"></path>
+        <polygon points="{{tplPts}}" fill="none" stroke="rgba(233,211,174,0.4)" stroke-width="1.2" stroke-dasharray="4 4"></polygon>
+        <polygon points="{{attrPts}}" fill="rgba(224,176,104,0.2)" stroke="#E0B068" stroke-width="2" stroke-linejoin="round"></polygon>
+        <path d="{{vdots}}" fill="#E0B068" stroke="#1A140D" stroke-width="2"></path>
+      </svg>
+      <sc-for list="{{ticks}}" as="k" hint-placeholder-count="12">
+        <button aria-label="{{k.label}}" title="{{k.label}}" onClick="{{k.pick}}" disabled="{{k.off}}" style="position: absolute; left: {{k.x}}; top: {{k.y}}; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <span style="width: 4px; height: 4px; border-radius: 50%; background: rgba(233,211,174,0.35);"></span>
+        </button>
+      </sc-for>
+      <sc-for list="{{axes}}" as="x" hint-placeholder-count="6">
+        <span style="position: absolute; left: {{x.x}}; top: {{x.y}}; width: 120px; display: flex; flex-direction: column; align-items: center; gap: 1px; pointer-events: none;">
+          <span style="font-size: 11px; font-weight: 600; color: #C8B89C;">{{x.name}}</span>
+          <span style="font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; color: {{x.fg}};">{{x.val}}</span>
+        </span>
+      </sc-for>
+    </div>
+    <p style="position: absolute; left: 104px; top: 788px; width: 420px; margin: 0; text-align: center; font-size: 11px; color: #A89A82;">Drag a corner, or click along a line. The dashed shape is the profession as it came.</p>
+
+    <!-- exact values -->
+    <section aria-label="Attributes" style="position: absolute; left: 600px; top: 352px; width: 420px; display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C; margin-bottom: 4px;">ATTRIBUTES · 10 TO 100 EACH</span>
+      <sc-for list="{{attrRows}}" as="a" hint-placeholder-count="6">
+        <div style="height: 50px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 4px; border-bottom: 1px solid rgba(201,160,98,0.16);">
+          <button aria-label="{{a.lockLabel}}" title="{{a.lockLabel}}" aria-pressed="{{a.locked}}" onClick="{{a.lock}}" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{a.lockC}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.lockD}}"></path></svg>
+          </button>
+          <span style="width: 108px; font-size: 13.5px; font-weight: 600;">{{a.name}}</span>
+          <span aria-hidden="true" style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); position: relative;">
+            <span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{a.pct}}; border-radius: 2px; background: {{a.bar}};"></span>
+          </span>
+          <button aria-label="{{a.downLabel}}" onClick="{{a.down}}" disabled="{{a.downOff}}" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.4); background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+          <span style="width: 34px; text-align: center; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums;">{{a.val}}</span>
+          <button aria-label="{{a.upLabel}}" onClick="{{a.up}}" disabled="{{a.upOff}}" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.4); background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+        </div>
+      </sc-for>
+      <span style="margin-top: 6px; font-size: 11px; color: #A89A82;">A locked attribute keeps its value when another one needs points.</span>
+    </section>
+
+    <!-- budget and vitals -->
+    <section aria-label="Points and vitals" style="position: absolute; left: 1096px; top: 352px; width: 280px; display: flex; flex-direction: column; gap: 26px;">
+      <div style="display: flex; align-items: center; gap: 18px;">
+        <div style="position: relative; width: 120px; height: 120px; flex: none;">
+          <svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true" style="position: absolute; left: 0; top: 0; transform: rotate(-90deg);">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="7"></circle>
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#E0B068" stroke-width="7" stroke-linecap="round" stroke-dasharray="{{ringDash}}"></circle>
+          </svg>
+          <div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <span style="font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; color: {{leftC}};">{{left}}</span>
+            <span style="font-size: 10.5px; color: #A89A82;">points left</span>
+          </div>
+        </div>
+        <span style="font-size: 12px; line-height: 1.5; color: #C8B89C;">{{spentLine}}</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">VITALS THEY GIVE</span>
+        <sc-for list="{{vitals}}" as="v" hint-placeholder-count="3">
+          <div style="display: flex; align-items: baseline; gap: 12px;">
+            <span style="width: 64px; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; color: {{v.c}};">{{v.val}}</span>
+            <span style="display: flex; flex-direction: column; gap: 1px;">
+              <span style="font-size: 13px; font-weight: 600;">{{v.name}}</span>
+              <span style="font-size: 11px; color: #A89A82;">{{v.from}}</span>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-if>
+
+  <!-- ============ SKILLS ============ -->
+  <sc-if value="{{isSkills}}" hint-placeholder-val="{{false}}">
+    <!-- purse -->
+    <div style="position: absolute; right: 64px; top: 88px; width: 400px; display: flex; align-items: center; gap: 18px; justify-content: flex-end;">
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right;">
+        <span style="font-size: 13px; font-weight: 600; color: {{preview.c}};">{{preview.text}}</span>
+        <span style="font-size: 11px; color: #A89A82;">{{specLine}}</span>
+      </div>
+      <div style="width: 104px; height: 104px; flex: none; border-radius: 50%; border: 2px solid {{purseEdge}}; background: radial-gradient(circle at 50% 35%, rgba(224,176,104,0.2), rgba(0,0,0,0.4)); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <span style="font-size: 36px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;">{{credLeft}}</span>
+        <span style="font-size: 10.5px; color: #C8B89C;">of 50 credits</span>
+        <sc-if value="{{preview.show}}" hint-placeholder-val="{{true}}">
+          <span style="margin-top: 2px; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; color: {{preview.c}};">{{preview.delta}}</span>
+        </sc-if>
+      </div>
+    </div>
+
+    <div style="position: absolute; left: 64px; right: 64px; top: 230px; height: 540px; display: grid; grid-template-columns: 290px 290px minmax(0, 1fr) 270px; gap: 14px;">
+      <sc-for list="{{trays}}" as="y" hint-placeholder-count="3">
+        <section aria-label="{{y.title}}" style="border-radius: 6px; border: 1px solid {{y.edge}}; background: rgba(20,16,12,0.72); backdrop-filter: blur(10px); padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; min-height: 0;">
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <h2 style="margin: 0; flex: 1; font-size: 15px; font-weight: 700;">{{y.title}}</h2>
+            <span style="font-size: 11px; color: #A89A82; font-variant-numeric: tabular-nums;">{{y.meta}}</span>
+          </div>
+          <sc-for list="{{y.groups}}" as="gr" hint-placeholder-count="1">
+            <sc-if value="{{gr.hasLabel}}" hint-placeholder-val="{{false}}">
+              <span style="margin-top: 4px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">{{gr.label}}</span>
+            </sc-if>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <sc-for list="{{gr.chips}}" as="c" hint-placeholder-count="4">
+                <button aria-pressed="{{c.on}}" onClick="{{c.pick}}" style="height: 32px; padding: 0 11px; border-radius: 999px; border: 1px solid {{c.edge}}; background: {{c.bg}}; display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: {{c.fg}}; cursor: pointer;">{{c.name}}<span style="font-size: 11px; font-weight: 600; color: #A89A82; font-variant-numeric: tabular-nums;">{{c.score}}</span></button>
+              </sc-for>
+            </div>
+          </sc-for>
+          <sc-if value="{{y.empty}}" hint-placeholder-val="{{false}}">
+            <span style="font-size: 12px; color: #A89A82;">{{y.emptyText}}</span>
+          </sc-if>
+        </section>
+      </sc-for>
+
+      <!-- the picked skill -->
+      <section aria-label="Picked skill" style="border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(20,16,12,0.94); backdrop-filter: blur(14px); padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px;">
+        <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #E0B068;">{{sel.group}}</span>
+        <h2 style="margin: 0; font-size: 22px; line-height: 1.1; font-weight: 700;">{{sel.name}}</h2>
+        <div style="display: flex; align-items: baseline; gap: 10px;">
+          <span style="font-size: 38px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;">{{sel.score}}</span>
+          <span style="font-size: 11.5px; line-height: 1.4; color: #A89A82;">{{sel.scoreNote}}</span>
+        </div>
+        <div style="padding: 9px 10px; border-radius: 4px; background: rgba(0,0,0,0.3); font-size: 11.5px; color: #C8B89C;">Formula: {{sel.formula}}</div>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.5; color: #E9D3AE;">{{sel.desc}}</p>
+        <span style="font-size: 11px; color: #A89A82;">Training adds +5, specializing +10.</span>
+        <span style="flex: 1;"></span>
+        <sc-for list="{{sel.moves}}" as="m" hint-placeholder-count="2">
+          <button onClick="{{m.go}}" disabled="{{m.off}}" style="height: 40px; padding: 0 14px; border-radius: 4px; border: 1px solid {{m.edge}}; background: {{m.bg}}; color: {{m.fg}}; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer;">
+            <span style="flex: 1; text-align: left;">{{m.label}}</span>
+            <span style="font-size: 12px; font-variant-numeric: tabular-nums;">{{m.cost}}</span>
+          </button>
+        </sc-for>
+        <sc-if value="{{sel.hasWhy}}" hint-placeholder-val="{{false}}">
+          <span style="font-size: 11.5px; line-height: 1.4; color: #FF8A8E;">{{sel.why}}</span>
+        </sc-if>
+      </section>
+    </div>
+  </sc-if>
+
+  <!-- ============ APPEARANCE + NAME: the figure ============ -->
+  <sc-if value="{{showFigure}}" hint-placeholder-val="{{false}}">
+    <div aria-hidden="true" style="position: absolute; left: {{fig.spotX}}; top: 100px; width: 640px; height: 760px; background: radial-gradient(ellipse at 50% 45%, rgba(224,176,104,0.16), rgba(0,0,0,0) 62%);"></div>
+    <div aria-hidden="true" style="position: absolute; left: {{fig.floorX}}; top: {{fig.floorY}}; width: 300px; height: 34px; border-radius: 50%; background: rgba(0,0,0,0.5); filter: blur(6px);"></div>
+    <div aria-hidden="true" style="position: absolute; left: {{fig.x}}; top: {{fig.y}}; width: 240px; height: 600px; transform: scale({{fig.scale}}) scaleX({{fig.flip}}); transform-origin: 50% 0;">
+      <sc-if value="{{look.bug}}" hint-placeholder-val="{{false}}">
+        <div style="position: absolute; left: -90px; top: 300px; width: 420px; height: 230px; border-radius: 200px 200px 70px 70px; background: {{look.shirt}}; border: 1.5px dashed rgba(255,255,255,0.4);"></div>
+        <div style="position: absolute; left: 150px; top: 250px; width: 130px; height: 110px; border-radius: 60px 70px 40px 40px; background: {{look.hair}}; border: 1.5px dashed rgba(255,255,255,0.4);"></div>
+      </sc-if>
+      <sc-if value="{{look.human}}" hint-placeholder-val="{{true}}">
+      <div style="position: absolute; left: 14px; top: 150px; width: 30px; height: 190px; border-radius: 16px; background: {{look.shirt}}; border: 1.5px dashed rgba(255,255,255,0.28);"></div>
+      <div style="position: absolute; left: 196px; top: 150px; width: 30px; height: 190px; border-radius: 16px; background: {{look.shirt}}; border: 1.5px dashed rgba(255,255,255,0.28);"></div>
+      <div style="position: absolute; left: 62px; top: 326px; width: 54px; height: 224px; border-radius: 10px; background: {{look.trousers}}; border: 1.5px dashed rgba(255,255,255,0.28);"></div>
+      <div style="position: absolute; left: 124px; top: 326px; width: 54px; height: 224px; border-radius: 10px; background: {{look.trousers}}; border: 1.5px dashed rgba(255,255,255,0.28);"></div>
+      <div style="position: absolute; left: 52px; top: 544px; width: 66px; height: 28px; border-radius: 12px 12px 6px 6px; background: {{look.feet}};"></div>
+      <div style="position: absolute; left: 122px; top: 544px; width: 66px; height: 28px; border-radius: 12px 12px 6px 6px; background: {{look.feet}};"></div>
+      <div style="position: absolute; left: 40px; top: 136px; width: 160px; height: 206px; border-radius: 60px 60px 22px 22px; background: {{look.shirt}}; border: 1.5px dashed rgba(255,255,255,0.35);"></div>
+      <div style="position: absolute; left: 104px; top: 116px; width: 32px; height: 26px; background: {{look.skin}};"></div>
+      <div style="position: absolute; left: 74px; top: 20px; width: 92px; height: 108px; border-radius: 46px 46px 40px 40px; background: {{look.skin}}; border: 1.5px dashed rgba(255,255,255,0.45);"></div>
+      <div style="position: absolute; left: 96px; top: 66px; width: 13px; height: 8px; border-radius: 50%; background: {{look.eyes}};"></div>
+      <div style="position: absolute; left: 131px; top: 66px; width: 13px; height: 8px; border-radius: 50%; background: {{look.eyes}};"></div>
+      <div style="position: absolute; left: 104px; top: 100px; width: 32px; height: 4px; border-radius: 2px; background: rgba(110,56,46,0.75);"></div>
+      <div style="position: absolute; left: 66px; top: 6px; width: 108px; height: 50px; border-radius: 54px 54px 16px 16px; background: {{look.hair}};"></div>
+      <sc-if value="{{look.hat}}" hint-placeholder-val="{{false}}">
+        <div style="position: absolute; left: 58px; top: -4px; width: 124px; height: 34px; border-radius: 60px 60px 8px 8px; background: {{look.hatC}}; border: 1.5px dashed rgba(255,255,255,0.35);"></div>
+      </sc-if>
+      </sc-if>
+    </div>
+    <span style="position: absolute; left: {{fig.noteX}}; top: {{fig.noteY}}; font-size: 10px; color: rgba(244,235,220,0.42);">The 3-D figure is drawn here</span>
+  </sc-if>
+
+  <!-- ============ APPEARANCE ============ -->
+  <sc-if value="{{isAppearance}}" hint-placeholder-val="{{false}}">
+    <sc-for list="{{handles}}" as="p" hint-placeholder-count="9">
+      <div style="position: absolute; left: {{p.x}}; top: {{p.y}}; width: {{p.w}}; height: 34px; display: flex; flex-direction: {{p.dir}}; align-items: center; gap: 0;">
+        <button aria-pressed="{{p.on}}" onClick="{{p.pick}}" style="height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid {{p.edge}}; background: {{p.bg}}; display: flex; align-items: center; gap: 8px; white-space: nowrap; cursor: pointer;">
+          <span style="width: 10px; height: 10px; border-radius: 50%; background: {{p.dot}}; box-shadow: 0 0 0 1px rgba(0,0,0,0.6);"></span>
+          <span style="font-size: 12.5px; font-weight: 700;">{{p.label}}</span>
+          <span style="font-size: 11px; color: #A89A82;">{{p.sub}}</span>
+        </button>
+        <span aria-hidden="true" style="flex: 1; height: 1px; background: {{p.line}};"></span>
+        <span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid {{p.line}};"></span>
+      </div>
+    </sc-for>
+
+    <section aria-label="{{part.label}}" style="position: absolute; left: {{part.x}}; top: {{part.y}}; width: 262px; box-sizing: border-box; padding: 16px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(20,16,12,0.94); backdrop-filter: blur(14px); box-shadow: 0 18px 50px rgba(0,0,0,0.55); display: flex; flex-direction: column; gap: 14px;">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 700;">{{part.label}}</h2>
+      <sc-if value="{{part.hasStyle}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="flex: 1; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">STYLE</span>
+          <button aria-label="Previous style" onClick="{{part.prev}}" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+          <span style="min-width: 62px; text-align: center; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;">{{part.styleText}}</span>
+          <button aria-label="Next style" onClick="{{part.next}}" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+        </div>
+      </sc-if>
+      <sc-if value="{{part.hasColour}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">COLOUR · {{part.colourName}}</span>
+          <div role="radiogroup" aria-label="Colours" style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px;">
+            <sc-for list="{{part.swatches}}" as="w" hint-placeholder-count="8">
+              <button role="radio" aria-checked="{{w.on}}" aria-label="{{w.name}}" title="{{w.name}}" onClick="{{w.pick}}" style="width: 25px; height: 25px; padding: 0; border-radius: 50%; border: 2px solid {{w.ring}}; background: {{w.c}}; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.35); cursor: pointer;"></button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{part.hasShade}}" hint-placeholder-val="{{true}}">
+        <label style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="display: flex; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span style="flex: 1;">SHADE</span><span style="letter-spacing: 0; font-weight: 600; font-variant-numeric: tabular-nums;">{{part.shade}}%</span></span>
+          <span style="height: 6px; border-radius: 3px; background: {{part.shadeBar}};"></span>
+          <input type="range" min="0" max="100" value="{{part.shade}}" onInput="{{part.onShade}}" aria-label="Shade" style="margin: -2px 0 0;">
+        </label>
+      </sc-if>
+    </section>
+
+    <div style="position: absolute; left: 600px; top: 748px; width: 240px; display: flex; justify-content: center; gap: 8px;">
+      <sc-for list="{{viewBtns}}" as="b" hint-placeholder-count="4">
+        <button aria-label="{{b.label}}" title="{{b.label}}" onClick="{{b.go}}" style="width: 34px; height: 34px; padding: 0; border-radius: 50%; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{b.d}}"></path></svg></button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- ============ TOWN ============ -->
+  <sc-if value="{{isTown}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 104px; top: 216px; width: 560px; height: 560px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.35); background: #1E2B2E; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+      <svg width="560" height="560" viewBox="0 0 556 556" aria-hidden="true" style="position: absolute; left: 0; top: 0;">
+        <path d="M150 120 C200 60 330 70 400 110 C450 90 520 130 515 200 C540 260 520 340 540 400 C545 470 500 530 420 535 C360 545 300 520 250 535 C190 548 130 520 110 470 C80 430 60 360 90 300 C70 250 100 190 150 120 Z" fill="#3B4730"></path>
+        <path d="M210 180 C260 150 330 160 360 200 C390 250 350 300 300 300 C250 310 200 270 210 180 Z" fill="#46553A"></path>
+        <path d="M330 360 C380 340 450 360 470 410 C480 460 430 490 380 480 C330 470 300 400 330 360 Z" fill="#4B4A33"></path>
+        <path d="M30 150 C55 130 110 140 160 160 C175 185 140 205 100 200 C60 205 25 185 30 150 Z" fill="#3B4730"></path>
+        <path d="M70 40 C100 20 140 30 150 55 C140 80 100 80 75 70 Z" fill="#3B4730"></path>
+        <path d="M370 30 C395 20 430 30 425 55 C410 75 375 70 368 52 Z" fill="#3B4730"></path>
+        <path d="M10 505 C25 490 60 495 60 520 C55 545 20 548 10 530 Z" fill="#3B4730"></path>
+        <path d="M0 139 H556 M0 278 H556 M0 417 H556 M139 0 V556 M278 0 V556 M417 0 V556" stroke="rgba(255,255,255,0.05)" stroke-width="1"></path>
+        <path d="{{network}}" fill="none" stroke="rgba(224,176,104,0.45)" stroke-width="1.4" stroke-dasharray="3 6"></path>
+      </svg>
+      <sc-for list="{{towns}}" as="t" hint-placeholder-count="4">
+        <button role="radio" aria-checked="{{t.on}}" onClick="{{t.pick}}" style="position: absolute; left: {{t.x}}; top: {{t.y}}; height: 30px; padding: 0 12px 0 8px; border-radius: 999px; border: 1px solid {{t.edge}}; background: {{t.bg}}; display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: {{t.fg}}; white-space: nowrap; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.5);">
+          <span style="width: 10px; height: 10px; border-radius: 50%; background: {{t.dot}}; box-shadow: 0 0 0 3px {{t.halo}};"></span>{{t.name}}
+        </button>
+      </sc-for>
+      <span style="position: absolute; left: 12px; bottom: 10px; font-size: 9.5px; color: rgba(244,235,220,0.45);">Placeholder land: the real map is the game's own image</span>
+    </div>
+
+    <section aria-label="{{town.name}}" style="position: absolute; left: 720px; top: 216px; width: 656px; height: 560px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(20,16,12,0.94); overflow: hidden; display: flex; flex-direction: column;">
+      <div aria-hidden="true" style="position: relative; height: 250px; flex: none; background: {{town.sky}}; overflow: hidden;">
+        <div style="position: absolute; left: {{town.sunX}}; top: 70px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(255,226,170,0.75), rgba(255,226,170,0) 70%);"></div>
+        <svg width="656" height="250" viewBox="0 0 656 250" style="position: absolute; left: 0; top: 0;">
+          <path d="{{town.far}}" fill="rgba(20,16,12,0.45)"></path>
+          <path d="{{town.near}}" fill="rgba(20,16,12,0.92)"></path>
+        </svg>
+        <span style="position: absolute; right: 12px; bottom: 10px; font-size: 9.5px; color: rgba(244,235,220,0.5);">A view of the town from the game goes here</span>
+      </div>
+      <div style="padding: 24px 28px; display: flex; flex-direction: column; gap: 12px; flex: 1;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <h2 style="margin: 0; font-size: 34px; line-height: 1; font-weight: 700;">{{town.name}}</h2>
+          <span style="height: 24px; padding: 0 10px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; color: #E9D3AE;">{{town.home}}</span>
+        </div>
+        <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #E9D3AE;">{{town.text}}</p>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.5; color: #A89A82;">{{town.link}}</p>
+        <span style="flex: 1;"></span>
+        <div role="radiogroup" aria-label="Starting town" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;">
+          <sc-for list="{{towns}}" as="t" hint-placeholder-count="4">
+            <button role="radio" aria-checked="{{t.on}}" onClick="{{t.pick}}" style="height: 38px; border-radius: 4px; border: 1px solid {{t.edge}}; background: {{t.tab}}; font-size: 12.5px; font-weight: 600; cursor: pointer;">{{t.name}}</button>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+
+  <!-- ============ NAME ============ -->
+  <sc-if value="{{isName}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 64px; top: 250px; width: 860px; display: flex; flex-direction: column; gap: 18px;">
+      <label style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">NAME</span>
+        <input type="text" value="{{charName}}" onInput="{{typeName}}" maxlength="32" placeholder="Type a name" aria-describedby="cj-name-rule" style="width: 100%; box-sizing: border-box; height: 110px; padding: 0; border: 0; border-bottom: 2px solid {{nameEdge}}; background: transparent; color: #F4EBDC; font-family: Inter, system-ui, sans-serif; font-size: 84px; font-weight: 700; letter-spacing: -0.03em; outline: none;">
+      </label>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span id="cj-name-rule" style="flex: 1; font-size: 12px; color: {{ruleC}};">{{ruleText}}</span>
+        <span style="font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; color: #A89A82;">{{nameCount}} / 32</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px;">
+        <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C; margin-right: 6px;">{{suggestLabel}}</span>
+        <sc-for list="{{suggest}}" as="n" hint-placeholder-count="6">
+          <button onClick="{{n.pick}}" style="height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.3); font-size: 12.5px; font-weight: 600; cursor: pointer;">{{n.label}}</button>
+        </sc-for>
+      </div>
+      <p style="margin: 26px 0 0; font-size: 26px; line-height: 1.45; font-weight: 500; color: #E9D3AE;">
+        <sc-for list="{{story}}" as="w" hint-placeholder-count="9">
+          <sc-if value="{{w.link}}" hint-placeholder-val="{{false}}"><button title="{{w.title}}" onClick="{{w.go}}" style="padding: 0; border: 0; border-bottom: 1.5px dotted rgba(224,176,104,0.7); background: transparent; font-size: 26px; font-weight: 700; color: #F4EBDC; cursor: pointer;">{{w.t}}</button></sc-if><sc-if value="{{w.plain}}" hint-placeholder-val="{{true}}"><span>{{w.t}}</span></sc-if>
+        </sc-for>
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: #A89A82;">
+        <span>{{factAttrs}}</span>
+        <span>{{factVitals}}</span>
+        <span>{{factSkills}}</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ progress, back, next ============ -->
+  <button onClick="{{back}}" disabled="{{backOff}}" style="position: absolute; left: 64px; top: 812px; height: 44px; padding: 0 18px 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>Back
+  </button>
+
+  <nav aria-label="Steps" style="position: absolute; left: 50%; top: 806px; transform: translateX(-50%); width: 780px; height: 64px;">
+    <span aria-hidden="true" style="position: absolute; left: 60px; right: 60px; top: 10px; height: 1px; background: rgba(201,160,98,0.3);"></span>
+    <span aria-hidden="true" style="position: absolute; left: 60px; top: 10px; width: {{doneW}}; height: 1px; background: #E0B068;"></span>
+    <ol style="list-style: none; margin: 0; padding: 0; position: absolute; left: 0; right: 0; top: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));">
+      <sc-for list="{{dots}}" as="d" hint-placeholder-count="6">
+        <li style="display: flex; justify-content: center;">
+          <sc-if value="{{d.live}}" hint-placeholder-val="{{true}}">
+            <button aria-current="{{d.current}}" onClick="{{d.go}}" style="padding: 0; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;">
+              <span style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;"><span style="width: {{d.size}}; height: {{d.size}}; box-sizing: border-box; border-radius: 50%; border: 2px solid {{d.ring}}; background: {{d.fill}}; box-shadow: {{d.halo}};"></span></span>
+              <span style="font-size: 11.5px; font-weight: 700; color: {{d.fg}};">{{d.name}}</span>
+              <span style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; color: #A89A82;">{{d.choice}}</span>
+            </button>
+          </sc-if>
+          <sc-if value="{{d.skipped}}" hint-placeholder-val="{{false}}">
+            <span title="Olthoi skip this step" style="display: flex; flex-direction: column; align-items: center; gap: 6px; opacity: 0.55;">
+              <span style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;"><span style="width: 10px; height: 2px; border-radius: 1px; background: #A89A82;"></span></span>
+              <span style="font-size: 11.5px; font-weight: 600; color: #A89A82; text-decoration: line-through;">{{d.name}}</span>
+              <span style="font-size: 10.5px; color: #A89A82;">Not for Olthoi</span>
+            </span>
+          </sc-if>
+        </li>
+      </sc-for>
+    </ol>
+  </nav>
+
+  <button onClick="{{next}}" style="position: absolute; right: 64px; top: 812px; height: 44px; padding: 0 14px 0 20px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer;">
+    {{nextLabel}}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A140D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+  </button>
+
+  <!-- ============ questions ============ -->
+  <sc-if value="{{dlgOn}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">
+      <div role="alertdialog" aria-label="{{dlg.title}}" style="width: 420px; box-sizing: border-box; padding: 18px; border-radius: 6px; border: 1px solid {{dlg.edge}}; background: rgba(24,19,14,0.97); box-shadow: 0 24px 60px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="width: 30px; height: 30px; flex: none; border-radius: 50%; background: {{dlg.iconBg}}; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{dlg.iconFg}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{dlg.icon}}"></path></svg></span>
+          <h2 style="margin: 0; font-size: 15px; font-weight: 700;">{{dlg.title}}</h2>
+        </div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #E9D3AE;">{{dlg.text}}</p>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+          <sc-if value="{{dlg.hasNo}}" hint-placeholder-val="{{true}}">
+            <button onClick="{{dlg.no}}" style="height: 36px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12.5px; font-weight: 600; cursor: pointer;">{{dlg.noLabel}} <span style="font-size: 10.5px; color: #A89A82;">Esc</span></button>
+          </sc-if>
+          <button onClick="{{dlg.yes}}" style="height: 36px; padding: 0 16px; border-radius: 4px; border: 1px solid {{dlg.yesEdge}}; background: {{dlg.yesBg}}; color: {{dlg.yesFg}}; font-size: 12.5px; font-weight: 700; cursor: pointer;">{{dlg.yesLabel}} <span style="font-size: 10.5px; opacity: 0.7;">Enter</span></button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"step":{"editor":"enum","options":["heritage","profession","skills","appearance","town","name"],"default":"heritage"},"heritage":{"editor":"enum","options":["aluvian","gharundim","sho","viamontian","umbraen","penumbraen","gearknight","undead","empyrean","tumerok","lugian","olthoi-soldier","olthoi-spitter"],"default":"aluvian"},"charName":{"editor":"text","default":""},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const P = this.props || {};
+    const set = (o) => this.setState(o);
+    const GOLD = '#E0B068', LG = '#E9D3AE', TXT = '#F4EBDC', MUT = '#A89A82', LAB = '#C8B89C', RED = '#FF6B70';
+    const SOFT = 'rgba(201,160,98,0.3)';
+
+    // ---------- heritage ----------
+    const HER = [
+      ['aluvian', 'Aluvian', ['Bow', 'Dagger'], 'Isparians of hill and farmland, steady and practical.', '#4E6A5A', '#1E2A24', 'human'],
+      ['gharundim', "Gharu'ndim", ['Magic', 'Staff'], 'Isparians of the desert, keepers of old learning.', '#8A6A3A', '#2E2414', 'human'],
+      ['sho', 'Sho', ['Bow', 'Unarmed'], 'Isparians of the east, disciplined and quick.', '#3F6E66', '#16282A', 'human'],
+      ['viamontian', 'Viamontian', ['Crossbow', 'Sword'], 'Isparians from a cold kingdom of nobles and steel.', '#6E3440', '#24141A', 'human'],
+      ['umbraen', 'Umbraen', ['Crossbow', 'Unarmed'], 'Shadows that float, wreathed in smoke from the waist down.', '#3E2E5A', '#120E1E', 'float'],
+      ['penumbraen', 'Penumbraen', ['Crossbow', 'Unarmed'], 'Shadows turned towards the light, crowned in smoke.', '#4A4A66', '#16161F', 'crown'],
+      ['gearknight', 'Gear Knight', ['Crossbow', 'Mace'], 'Knights in bodies of metal. No face and no clothes: you pick the body.', '#4A6470', '#141E24', 'gear'],
+      ['undead', 'Undead', ['Thrown', 'Axe'], 'The risen dead, skeleton or flesh, with a burning skull.', '#5F6A4A', '#1A1E14', 'skull'],
+      ['empyrean', 'Empyrean', ['Magic', 'Sword'], 'An old people who float, with eyes that glow.', '#8A7C58', '#2A2618', 'float'],
+      ['tumerok', 'Aun Tumerok', ['Thrown', 'Spear'], 'Tall, proud warriors of the Aun.', '#7A4A30', '#261810', 'human'],
+      ['lugian', 'Lugian', ['Thrown', 'Axe'], 'Huge and very strong. Few doorways suit them.', '#6A5A48', '#201A14', 'tall'],
+      ['olthoi-soldier', 'Olthoi Soldier', null, 'Fights with claws and pincers.', '#7A6230', '#201808', 'olthoi'],
+      ['olthoi-spitter', 'Olthoi Spitter', null, 'Spits acid from glands in its body.', '#4E6E2E', '#141E0C', 'olthoi']
+    ];
+    const herKey = st.her || P.heritage || 'aluvian';
+    const herRow = HER.find((h) => h[0] === herKey) || HER[0];
+    const herName = herRow[1];
+    const olthoi = herRow[6] === 'olthoi';
+    const gearKnight = herKey === 'gearknight';
+    const gender = st.gender || 'female';
+    const SHAPE = {
+      human: ['130px', '250px', '64px 64px 18px 18px', '58px'],
+      crown: ['130px', '250px', '64px 64px 18px 18px', '58px'],
+      skull: ['124px', '252px', '62px 62px 16px 16px', '56px'],
+      float: ['130px', '228px', '64px 64px 60px 60px', '52px'],
+      gear: ['144px', '252px', '20px 20px 10px 10px', '56px'],
+      tall: ['178px', '290px', '80px 80px 20px 20px', '28px'],
+      olthoi: ['260px', '150px', '120px 120px 50px 50px', '160px']
+    };
+    const hers = HER.map(([key, name, m, line, from, to, kind], i) => {
+      const on = key === herKey;
+      const sh = SHAPE[kind];
+      const chips = m ? m.map((x) => ({ label: x + ' mastery', edge: 'rgba(201,160,98,0.5)', fg: LG }))
+        : [{ label: 'Always a player killer', edge: 'rgba(255,107,112,0.6)', fg: '#FF9A9E' }, { label: 'Gains no experience', edge: 'rgba(201,160,98,0.5)', fg: LG }];
+      return {
+        key, name, on, off: !on, line, chips,
+        num: String(i + 1).padStart(2, '0'),
+        bg: 'linear-gradient(180deg, ' + from + 'AA 0%, ' + to + 'CC 70%, rgba(10,8,6,0.9) 100%)',
+        bgOn: 'linear-gradient(180deg, ' + from + ' 0%, ' + to + ' 62%, rgba(14,11,8,0.98) 100%)',
+        sw: sh[0], sh: sh[1], sr: sh[2], sTop: sh[3],
+        sFill: kind === 'gear' ? 'rgba(160,190,200,0.08)' : 'rgba(255,255,255,0.04)',
+        crown: kind === 'crown' || kind === 'skull' || key === 'umbraen',
+        crownC: kind === 'skull' ? 'rgba(255,140,60,0.55)' : 'rgba(170,150,220,0.5)',
+        cTop: (parseInt(sh[3], 10) - 18) + 'px',
+        mini: kind === 'olthoi' ? '22px' : kind === 'tall' ? '46px' : '38px',
+        pick: () => set({ her: key })
+      };
+    });
+    const genders = [['female', 'Female'], ['male', 'Male']].map(([k, label]) => {
+      const on = k === gender;
+      return { label, on, bg: on ? 'rgba(224,176,104,0.9)' : 'transparent', fg: on ? '#1A140D' : TXT, pick: () => set({ gender: k }) };
+    });
+
+    // ---------- steps ----------
+    const SKIP = { profession: 1, skills: 1, town: 1 };
+    const STEPS = [
+      ['heritage', 'Heritage', 'Who are you?', 'Your heritage sets your look and the two masteries you start with. Every heritage can learn every skill.'],
+      ['profession', 'Profession', 'How do you fight?', 'Start from a profession, then shape it. Your six attributes share 330 points.'],
+      ['skills', 'Skills', 'What have you learned?', 'Spend 50 credits on skills. Credits you keep go with you into the game.'],
+      ['appearance', 'Look', 'How do you look?', 'Pick a part on the figure, then its style and colour.'],
+      ['town', 'Town', 'Where does it begin?', 'Any heritage may start in any town, and the four are linked from the first day.'],
+      ['name', 'Name', 'What is your name?', 'Up to 32 letters. Spaces, apostrophes and hyphens are fine.']
+    ];
+    let step = st.step || P.step || 'heritage';
+    if (olthoi && SKIP[step]) step = 'heritage';
+    const live = STEPS.filter((s) => !(olthoi && SKIP[s[0]]));
+    const li = Math.max(0, live.findIndex((s) => s[0] === step));
+    const curRow = STEPS.find((s) => s[0] === step);
+    const cur = { q: curRow[2], sub: olthoi && step === 'heritage' ? 'Olthoi have no profession, skills or starting town to choose: the journey is three steps.' : curRow[3] };
+    const go = (k) => set({ step: k, dlg: '' });
+
+    // ---------- profession + attributes ----------
+    const ANAMES = ['Strength', 'Endurance', 'Coordination', 'Quickness', 'Focus', 'Self'];
+    const TPL = [
+      ['custom', 'Custom', 'Set everything yourself.', null, null],
+      ['bowhunter', 'Bow Hunter', 'Bows and crossbows, from range.', [30, 40, 100, 100, 30, 30], { missile: 's', missiled: 't', meleed: 't', healing: 't', run: 't', arcane: 't' }],
+      ['lifecaster', 'Life Caster', 'Heals, protects and drains.', [30, 40, 30, 30, 100, 100], { lifemagic: 's', creature: 't', manaconv: 't', magicd: 't', arcane: 't' }],
+      ['warmage', 'War Mage', 'Battle magic. Few hit harder.', [50, 40, 10, 30, 100, 100], { warmagic: 's', manaconv: 's', lifemagic: 't', arcane: 't' }],
+      ['wayfarer', 'Wayfarer', 'A bit of everything, made to roam.', [40, 40, 60, 60, 70, 60], { light: 't', meleed: 't', healing: 't', lockpick: 't', cooking: 't', fletching: 't', arcane: 't', jump: 't' }],
+      ['soldier', 'Soldier', 'Heavy weapons and a shield.', [100, 100, 40, 40, 20, 30], { heavy: 's', meleed: 's', healing: 't', shield: 't' }],
+      ['swashbuckler', 'Swashbuckler', 'Quick blades, quicker feet.', [60, 50, 100, 70, 30, 20], { finesse: 's', meleed: 's', missiled: 't', run: 't', arcane: 't' }]
+    ];
+    const tplKey = st.tpl || 'warmage';
+    const tplRow = TPL.find((t) => t[0] === tplKey);
+    const tplBase = tplRow[3] || (st.customFrom || [50, 40, 10, 30, 100, 100]);
+    const attrs = st.attrs || tplBase.slice();
+    const TOTAL = 330;
+    const spent = attrs.reduce((a, b) => a + b, 0);
+    const left = TOTAL - spent;
+    const locks = st.locks || [false, false, false, false, false, false];
+    const changed = tplRow[3] ? attrs.some((v, i) => v !== tplRow[3][i]) : false;
+    const setAttr = (i, raw) => {
+      if (locks[i]) return;
+      let v = Math.max(10, Math.min(100, raw));
+      const a = attrs.slice();
+      const need = v - a[i];
+      if (need > 0) {
+        let take = need - (TOTAL - a.reduce((x, y) => x + y, 0));
+        if (take > 0) {
+          const order = [0, 1, 2, 3, 4, 5].filter((j) => j !== i && !locks[j]).sort((p, q) => a[q] - a[p]);
+          for (const j of order) { if (take <= 0) break; const d = Math.min(a[j] - 10, take); a[j] -= d; take -= d; }
+          if (take > 0) v -= take;
+        }
+      }
+      a[i] = v;
+      set({ attrs: a });
+    };
+    const tpls = TPL.map(([key, name, line, a, sk]) => {
+      const on = key === tplKey;
+      return {
+        name, line, on, changed: on && changed,
+        edge: on ? GOLD : SOFT, bg: on ? 'rgba(224,176,104,0.14)' : 'rgba(20,16,12,0.7)',
+        pick: () => set({ tpl: key, attrs: a ? a.slice() : attrs.slice(), customFrom: a ? undefined : attrs.slice(), sk: sk ? Object.assign({}, sk) : (st.sk || TPL[3][4]) })
+      };
+    });
+    const tplNote = changed ? 'Changed from ' + tplRow[1] + '. Change a profession too much and you start as Custom, with the title Adventurer.' : '';
+
+    const C = 210, R = 170;
+    const pt = (i, v) => { const ang = (-90 + 60 * i) * Math.PI / 180; const r = R * v / 100; return [C + r * Math.cos(ang), C + r * Math.sin(ang)]; };
+    const poly = (vals) => vals.map((v, i) => pt(i, v).map((n) => n.toFixed(1)).join(',')).join(' ');
+    const ring = (v) => poly([v, v, v, v, v, v]);
+    const spokes = [0, 1, 2, 3, 4, 5].map((i) => { const p = pt(i, 100); return 'M' + C + ' ' + C + ' L' + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+    const vdots = attrs.map((v, i) => { const p = pt(i, v); return 'M' + (p[0] - 6).toFixed(1) + ' ' + p[1].toFixed(1) + ' a6 6 0 1 0 12 0 a6 6 0 1 0 -12 0'; }).join(' ');
+    const ticks = [];
+    for (let i = 0; i < 6; i++) {
+      for (let v = 10; v <= 100; v += 10) {
+        if (v === attrs[i]) continue;
+        const p = pt(i, v);
+        ticks.push({ x: (p[0] - 8).toFixed(1) + 'px', y: (p[1] - 8).toFixed(1) + 'px', label: 'Set ' + ANAMES[i] + ' to ' + v, off: locks[i], pick: () => setAttr(i, v) });
+      }
+    }
+    const axes = ANAMES.map((name, i) => {
+      const p = pt(i, 122);
+      return { name, val: attrs[i], fg: locks[i] ? MUT : TXT, x: (p[0] - 60).toFixed(1) + 'px', y: (p[1] - 19).toFixed(1) + 'px' };
+    });
+    const LOCK = 'M6 11h12v9H6zM8.5 11V7.5a3.5 3.5 0 0 1 7 0V11';
+    const OPEN = 'M6 11h12v9H6zM8.5 11V7.5a3.5 3.5 0 0 1 6.6-1.6';
+    const attrRows = ANAMES.map((name, i) => ({
+      name, val: attrs[i], locked: locks[i],
+      lockLabel: (locks[i] ? 'Unlock ' : 'Lock ') + name, lockD: locks[i] ? LOCK : OPEN, lockC: locks[i] ? GOLD : MUT,
+      pct: attrs[i] + '%', bar: locks[i] ? 'rgba(168,154,130,0.6)' : GOLD,
+      down: () => setAttr(i, attrs[i] - 1), up: () => setAttr(i, attrs[i] + 1),
+      downOff: locks[i] || attrs[i] <= 10, upOff: locks[i] || attrs[i] >= 100,
+      downLabel: 'Lower ' + name, upLabel: 'Raise ' + name,
+      lock: () => { const l = locks.slice(); l[i] = !l[i]; set({ locks: l }); }
+    }));
+    const CIRC = 2 * Math.PI * 52;
+    const ringDash = (CIRC * spent / TOTAL).toFixed(1) + ' ' + CIRC.toFixed(1);
+    const vitals = [
+      ['Health', Math.round(attrs[1] / 2), 'Half your Endurance', '#E06A6A'],
+      ['Stamina', attrs[1], 'Your Endurance', '#E0B068'],
+      ['Mana', attrs[5], 'Your Self', '#6FA0E0']
+    ].map(([name, val, from, c]) => ({ name, val, from, c }));
+
+    // ---------- skills ----------
+    const f = (fn) => fn;
+    const SK = [
+      ['warmagic', 'War Magic', f((a) => (a[4] + a[5]) / 4), '(Focus + Self) / 4', 16, 12, false, 'Attack with bolts, streaks and arcs of battle magic.'],
+      ['lifemagic', 'Life Magic', f((a) => (a[4] + a[5]) / 4), '(Focus + Self) / 4', 12, 8, false, 'Heal, protect and drain the living.'],
+      ['creature', 'Creature Enchantment', f((a) => (a[4] + a[5]) / 4), '(Focus + Self) / 4', 8, 8, false, 'Raise your own attributes and skills, or lower a foe’s.'],
+      ['item', 'Item Enchantment', f((a) => (a[4] + a[5]) / 4), '(Focus + Self) / 4', 8, 8, false, 'Strengthen armour and weapons.'],
+      ['void', 'Void Magic', f((a) => (a[4] + a[5]) / 4), '(Focus + Self) / 4', 16, 12, false, 'Rot and corrupt with magic of the void.'],
+      ['manaconv', 'Mana Conversion', f((a) => (a[4] + a[5]) / 6), '(Focus + Self) / 6', 6, 4, false, 'Spend less mana on each spell.'],
+      ['summoning', 'Summoning', f((a) => (a[1] + a[5]) / 3), '(Endurance + Self) / 3', 8, 4, false, 'Call creatures to fight beside you.'],
+      ['lockpick', 'Lockpick', f((a) => (a[2] + a[4]) / 3), '(Coordination + Focus) / 3', 6, 4, false, 'Open locked chests and doors.'],
+      ['alchemy', 'Alchemy', f((a) => (a[2] + a[4]) / 3), '(Coordination + Focus) / 3', 6, 6, false, 'Brew potions and oils.'],
+      ['arcane', 'Arcane Lore', f((a) => a[4] / 3), 'Focus / 3', 0, 2, true, 'Understand magic items and their spells.'],
+      ['meleed', 'Melee Defense', f((a) => (a[2] + a[3]) / 3), '(Coordination + Quickness) / 3', 10, 10, true, 'Dodge and parry blows.'],
+      ['missiled', 'Missile Defense', f((a) => (a[2] + a[3]) / 5), '(Coordination + Quickness) / 5', 6, 4, true, 'Dodge arrows, bolts and thrown weapons.'],
+      ['magicd', 'Magic Defense', f((a) => (a[4] + a[5]) / 7), '(Focus + Self) / 7', 12, 8, true, 'Resist spells cast on you.'],
+      ['heavy', 'Heavy Weapons', f((a) => (a[0] + a[2]) / 3), '(Strength + Coordination) / 3', 6, 6, true, 'Axes, maces, swords and spears with weight behind them.'],
+      ['light', 'Light Weapons', f((a) => (a[0] + a[2]) / 3), '(Strength + Coordination) / 3', 4, 4, true, 'Daggers, light swords and clubs.'],
+      ['finesse', 'Finesse Weapons', f((a) => (a[2] + a[3]) / 3), '(Coordination + Quickness) / 3', 4, 4, true, 'Quick, precise blades.'],
+      ['twohand', 'Two Handed Combat', f((a) => (a[0] + a[2]) / 3), '(Strength + Coordination) / 3', 8, 8, true, 'Great swords and other two-handed weapons.'],
+      ['missile', 'Missile Weapons', f((a) => a[2] / 2), 'Coordination / 2', 6, 6, true, 'Bows, crossbows and thrown weapons.'],
+      ['shield', 'Shield', f((a) => (a[0] + a[2]) / 2), '(Strength + Coordination) / 2', 2, 2, true, 'Block with a shield.'],
+      ['healing', 'Healing', f((a) => (a[4] + a[2]) / 3), '(Focus + Coordination) / 3', 6, 4, true, 'Use healing kits on yourself and others.'],
+      ['run', 'Run', f((a) => a[3]), 'Quickness', 4, 4, true, 'Run faster.'],
+      ['jump', 'Jump', f((a) => (a[0] + a[2]) / 2), '(Strength + Coordination) / 2', 4, 4, true, 'Jump higher and farther.'],
+      ['cooking', 'Cooking', f((a) => (a[2] + a[4]) / 3), '(Coordination + Focus) / 3', 4, 4, true, 'Cook food that restores you.'],
+      ['fletching', 'Fletching', f((a) => (a[2] + a[4]) / 3), '(Coordination + Focus) / 3', 4, 4, true, 'Make arrows and bolts.']
+    ];
+    const sk = st.sk || Object.assign({}, (tplRow[4] || TPL[3][4]));
+    const level = (k) => sk[k] || 'u';
+    let used = 0, specUsed = 0;
+    SK.forEach((s) => { const l = level(s[0]); if (l === 't') used += s[4]; if (l === 's') { used += s[4] + s[5]; specUsed += s[4] + s[5]; } });
+    const credLeft = 50 - used;
+    const score = (s) => { const base = Math.round(s[2](attrs)); const l = level(s[0]); if (l === 's') return base + 10; if (l === 't') return base + 5; return s[6] ? base : null; };
+    const selKey = st.sel || 'meleed';
+    const setLevel = (k, l) => { const n = Object.assign({}, sk); if (l === 'u') delete n[k]; else n[k] = l; set({ sk: n }); };
+    const chip = (s) => {
+      const on = s[0] === selKey; const sc = score(s);
+      return { name: s[1], score: sc === null ? '' : sc, on, edge: on ? GOLD : SOFT, bg: on ? 'rgba(224,176,104,0.16)' : 'rgba(0,0,0,0.3)', fg: sc === null ? '#C8B89C' : TXT, pick: () => set({ sel: s[0] }) };
+    };
+    const specS = SK.filter((s) => level(s[0]) === 's');
+    const trainS = SK.filter((s) => level(s[0]) === 't');
+    const useS = SK.filter((s) => level(s[0]) === 'u' && s[6]);
+    const noS = SK.filter((s) => level(s[0]) === 'u' && !s[6]);
+    const sum = (arr, fn) => arr.reduce((a, s) => a + fn(s), 0);
+    const trays = [
+      { title: 'Specialized', meta: sum(specS, (s) => s[4] + s[5]) + ' credits', edge: 'rgba(224,176,104,0.6)', groups: [{ hasLabel: false, label: '', chips: specS.map(chip) }], empty: !specS.length, emptyText: 'Specialize a trained skill for +10.' },
+      { title: 'Trained', meta: sum(trainS, (s) => s[4]) + ' credits', edge: 'rgba(201,160,98,0.4)', groups: [{ hasLabel: false, label: '', chips: trainS.map(chip) }], empty: !trainS.length, emptyText: 'Nothing trained yet.' },
+      { title: 'Untrained', meta: 'free', edge: 'rgba(201,160,98,0.22)', groups: [{ hasLabel: true, label: 'USABLE UNTRAINED', chips: useS.map(chip) }, { hasLabel: true, label: 'NEEDS TRAINING TO USE', chips: noS.map(chip) }], empty: false, emptyText: '' }
+    ];
+    const S = SK.find((s) => s[0] === selKey);
+    const sl = level(S[0]);
+    const selScore = score(S);
+    const base = Math.round(S[2](attrs));
+    const moves = [];
+    let why = '';
+    const mv = (label, cost, off, fnc, main) => ({ label, cost, off, go: fnc, edge: main ? GOLD : 'rgba(201,160,98,0.45)', bg: main ? 'rgba(224,176,104,0.9)' : 'transparent', fg: main ? '#1A140D' : TXT });
+    let preview = { show: false, text: 'Pick a skill to see what it costs', delta: '', c: MUT };
+    if (sl === 'u') {
+      const ok = credLeft >= S[4];
+      moves.push(mv('Train', S[4] + ' credits', !ok, () => { if (ok) setLevel(S[0], 't'); }, true));
+      if (!ok) why = 'Needs ' + S[4] + ', you have ' + credLeft + '. Lower another skill first.';
+      preview = ok ? { show: true, text: 'Train ' + S[1] + ': ' + credLeft + ' → ' + (credLeft - S[4]), delta: '−' + S[4], c: GOLD } : { show: true, text: 'Train ' + S[1] + ' needs ' + S[4], delta: 'short ' + (S[4] - credLeft), c: RED };
+    } else if (sl === 't') {
+      const ok = credLeft >= S[5] && specUsed + S[4] + S[5] <= 70;
+      moves.push(mv('Specialize', S[5] + ' more', !ok, () => { if (ok) setLevel(S[0], 's'); }, true));
+      moves.push(mv('Untrain', 'get ' + S[4] + ' back', false, () => setLevel(S[0], 'u'), false));
+      if (!ok) why = specUsed + S[4] + S[5] > 70 ? 'Specialized skills may use 70 credits at most.' : 'Needs ' + S[5] + ' more, you have ' + credLeft + '.';
+      preview = ok ? { show: true, text: 'Specialize ' + S[1] + ': ' + credLeft + ' → ' + (credLeft - S[5]), delta: '−' + S[5], c: GOLD } : { show: true, text: 'Specialize ' + S[1] + ' needs ' + S[5], delta: 'short ' + Math.max(0, S[5] - credLeft), c: RED };
+    } else {
+      moves.push(mv('Lower to trained', 'get ' + S[5] + ' back', false, () => setLevel(S[0], 't'), false));
+      preview = { show: true, text: 'Lower ' + S[1] + ': ' + credLeft + ' → ' + (credLeft + S[5]), delta: '+' + S[5], c: '#8FD39A' };
+    }
+    const sel = {
+      name: S[1], group: sl === 's' ? 'SPECIALIZED' : sl === 't' ? 'TRAINED' : (S[6] ? 'UNTRAINED · USABLE' : 'UNTRAINED · NEEDS TRAINING'),
+      score: selScore === null ? '—' : selScore,
+      scoreNote: selScore === null ? 'Cannot be used until trained. Trained it starts at ' + (base + 5) + '.' : (sl === 's' ? base + ' from attributes, +10 specialized' : sl === 't' ? base + ' from attributes, +5 trained' : 'from your attributes'),
+      formula: S[3], desc: S[7], moves, hasWhy: !!why, why
+    };
+    const specLine = 'Specialized: ' + specUsed + ' of 70 credits';
+
+    // ---------- appearance ----------
+    const HAIR = [['Black', '#1C1612'], ['Dark brown', '#3B2618'], ['Brown', '#6A4426'], ['Auburn', '#8A3B1E'], ['Copper', '#B4652E'], ['Blond', '#C9A35A'], ['Ash', '#B8B0A0'], ['White', '#E6E1D6']];
+    const EYES = [['Brown', '#5A3A22'], ['Hazel', '#7A6A35'], ['Green', '#3E7A4A'], ['Blue', '#3D6BA8'], ['Grey', '#7E8A94'], ['Amber', '#B07A2A'], ['Violet', '#6A4A8A'], ['Black', '#1A1612']];
+    const DYES = [['Undyed', '#8C7A5E'], ['Deep red', '#7A2A26'], ['Forest', '#355A34'], ['Navy', '#2A3A5E'], ['Black', '#1E1A18'], ['Copper', '#9A5A2E'], ['Ivory', '#D8CFBC'], ['Plum', '#4E3460']];
+    const METAL = [['Steel', '#7E8C94'], ['Bronze', '#9A6A34'], ['Verdigris', '#4E8A7A'], ['Iron', '#4A4A4E'], ['Gold', '#C9A04A'], ['Copper', '#B0603A'], ['Silver', '#C6CCD2'], ['Blued', '#3E5A7A']];
+    const CHITIN = [['Amber', '#8A6A2A'], ['Ochre', '#A07A30'], ['Rust', '#8A4A2A'], ['Moss', '#5A6A2E'], ['Acid', '#6E8A2A'], ['Ash', '#6A665A'], ['Umber', '#4A3A24'], ['Bone', '#BDB59A']];
+    const PARTS = olthoi
+      ? [['body', 'Carapace', 'L', 1, 4, CHITIN, false, 420], ['plates', 'Head', 'R', 1, 3, CHITIN, false, 330]]
+      : gearKnight
+      ? [['body', 'Body', 'L', 4, 8, METAL, false, 260], ['plates', 'Plates', 'R', 2, 6, METAL, false, 380]]
+      : [['hair', 'Hair', 'L', 4, 12, HAIR, true, 196], ['eyes', 'Eyes', 'L', 2, 8, EYES, false, 248], ['nose', 'Nose', 'L', 3, 6, null, false, 300], ['mouth', 'Mouth', 'L', 1, 6, null, false, 352], ['skin', 'Skin', 'L', 0, 0, null, true, 420],
+         ['headgear', 'Headgear', 'R', 1, 6, DYES, false, 190], ['shirt', 'Shirt', 'R', 3, 8, DYES, false, 360], ['trousers', 'Trousers', 'R', 2, 6, DYES, false, 540], ['footwear', 'Footwear', 'R', 2, 5, DYES, false, 690]];
+    const DEFC = { hair: 4, eyes: 3, headgear: 0, shirt: 3, trousers: 4, footwear: 4, body: 0, plates: 1 };
+    const partKey = st.part && PARTS.find((p) => p[0] === st.part) ? st.part : PARTS[0][0];
+    const styleOf = (p) => Number((st.styles || {})[p[0]] || p[3] || 1);
+    const colOf = (p) => { const v = (st.cols || {})[p[0]]; return v === undefined ? (DEFC[p[0]] || 0) : v; };
+    const shadeOf = (k) => { const v = (st.shades || {})[k]; return v === undefined ? (k === 'skin' ? 40 : 55) : v; };
+    const skinC = (() => { const s = shadeOf('skin') / 100; const a = [242, 214, 188], b = [96, 60, 40]; const m = a.map((x, i) => Math.round(x + (b[i] - x) * s)); return 'rgb(' + m.join(',') + ')'; })();
+    const pc = (k) => { const p = PARTS.find((q) => q[0] === k); return p && p[5] ? p[5][colOf(p)][1] : null; };
+    const look = olthoi
+      ? { bug: true, human: false, hair: pc('plates'), skin: '#000', eyes: '#000', shirt: pc('body'), trousers: '#000', feet: '#000', hat: false, hatC: '#000' }
+      : gearKnight
+      ? { bug: false, human: true, hair: pc('plates'), skin: pc('body'), eyes: '#9FE0FF', shirt: pc('body'), trousers: pc('body'), feet: pc('plates'), hat: false, hatC: '#000' }
+      : { bug: false, human: true, hair: pc('hair'), skin: skinC, eyes: pc('eyes'), shirt: pc('shirt'), trousers: pc('trousers'), feet: pc('footwear'), hat: styleOf(PARTS[5]) > 1, hatC: pc('headgear') };
+    const handles = PARTS.map((p) => {
+      const on = p[0] === partKey;
+      const left = p[2] === 'L';
+      const sub = p[4] ? 'style ' + styleOf(p) + (p[5] ? ' · ' + p[5][colOf(p)][0].toLowerCase() : '') : shadeOf('skin') + '% shade';
+      return {
+        label: p[1], sub, on, dir: left ? 'row' : 'row-reverse',
+        x: left ? '360px' : '830px', w: left ? '290px' : '250px', y: (p[7] - 17) + 'px',
+        edge: on ? GOLD : 'rgba(201,160,98,0.45)', bg: on ? 'rgba(224,176,104,0.18)' : 'rgba(20,16,12,0.8)',
+        dot: p[5] ? p[5][colOf(p)][1] : (p[0] === 'skin' ? skinC : 'rgba(233,211,174,0.5)'),
+        line: on ? GOLD : 'rgba(201,160,98,0.35)',
+        pick: () => set({ part: p[0] })
+      };
+    });
+    const P0 = PARTS.find((p) => p[0] === partKey);
+    const pLeft = P0[2] === 'L';
+    const n = P0[4];
+    const curStyle = styleOf(P0);
+    const stepStyle = (d) => { const s = Object.assign({}, st.styles || {}); s[P0[0]] = ((curStyle - 1 + d + n) % n) + 1; set({ styles: s, touched: true }); };
+    const sh = shadeOf(P0[0]);
+    const part = {
+      label: P0[1], x: pLeft ? '64px' : '1114px', y: Math.max(224, Math.min(500, P0[7] - 40)) + 'px',
+      hasStyle: n > 0, styleText: curStyle + ' of ' + n,
+      prev: () => stepStyle(-1), next: () => stepStyle(1),
+      hasColour: !!P0[5], colourName: P0[5] ? P0[5][colOf(P0)][0].toUpperCase() : '',
+      swatches: (P0[5] || []).map(([name, c], i) => ({ name, c, on: i === colOf(P0), ring: i === colOf(P0) ? GOLD : 'rgba(0,0,0,0.5)', pick: () => { const s = Object.assign({}, st.cols || {}); s[P0[0]] = i; set({ cols: s, touched: true }); } })),
+      hasShade: P0[6], shade: sh,
+      shadeBar: P0[0] === 'skin' ? 'linear-gradient(90deg, rgb(242,214,188), rgb(96,60,40))' : 'linear-gradient(90deg, rgba(255,255,255,0.5), ' + (P0[5] ? P0[5][colOf(P0)][1] : '#888') + ', #000)',
+      onShade: (e) => { const s = Object.assign({}, st.shades || {}); s[P0[0]] = Number(e && e.target ? e.target.value : sh); set({ shades: s, touched: true }); }
+    };
+    const turn = st.turn || 0;
+    const zoom = st.zoom || 1;
+    const viewBtns = [
+      ['Turn left', 'M3 12a9 9 0 1 0 3-6.7M3 4v5h5', () => set({ turn: (turn + 315) % 360 })],
+      ['Zoom out', 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3M8 11h6', () => set({ zoom: Math.max(1, zoom - 0.15) })],
+      ['Zoom in', 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3M8 11h6M11 8v6', () => set({ zoom: Math.min(1.6, zoom + 0.15) })],
+      ['Turn right', 'M21 12a9 9 0 1 1-3-6.7M21 4v5h-5', () => set({ turn: (turn + 45) % 360 })]
+    ].map(([label, d, g]) => ({ label, d, go: g }));
+
+    // ---------- town ----------
+    const MS = 560 / 256;
+    const TOWNS = [
+      ['holtburg', 'Holtburg', 168.5, 81, 'Home of the Aluvians', 'A walled market town among green hills and farms, busy with new arrivals.', 'linear-gradient(180deg, #9CB8C8 0%, #D9D6B8 60%, #8A9A6A 100%)', '72%',
+        'M0 170 C80 140 160 150 240 130 C320 112 420 140 520 124 C580 116 630 130 656 126 V250 H0 Z',
+        'M0 210 C60 200 110 204 150 196 L150 150 L162 140 L174 150 L174 192 L250 188 L250 166 L300 166 L300 186 C380 180 470 196 560 186 C610 182 640 190 656 188 V250 H0 Z'],
+      ['shoushi', 'Shoushi', 216.5, 174, 'Home of the Sho', 'A garden town of curved roofs and bamboo, quiet by day and lantern-lit at night.', 'linear-gradient(180deg, #C9A8B0 0%, #E8CDB0 55%, #7A8A62 100%)', '20%',
+        'M0 160 C100 120 200 150 300 118 C380 96 470 130 560 112 C610 104 640 114 656 112 V250 H0 Z',
+        'M0 214 L200 214 L200 186 L176 186 L214 162 L192 162 L230 140 L268 162 L246 162 L284 186 L260 186 L260 214 L420 214 L420 196 L400 196 L440 178 L480 196 L460 196 L460 214 L656 214 V250 H0 Z'],
+      ['yaraq', 'Yaraq', 124.5, 159, "Home of the Gharu'ndim", 'A desert town of domes and shaded courts at the edge of the sands.', 'linear-gradient(180deg, #E6B878 0%, #F2D9A6 55%, #C49A5A 100%)', '58%',
+        'M0 190 C120 170 220 186 340 168 C440 154 560 176 656 166 V250 H0 Z',
+        'M0 222 L120 222 L120 196 C120 176 168 176 168 196 L168 222 L300 222 L300 184 L312 172 L324 184 L324 222 L400 222 L400 200 C400 186 436 186 436 200 L436 222 L656 222 V250 H0 Z'],
+      ['sanamar', 'Sanamar', 52.5, 44.5, 'Home of the Viamontians', 'A cold northern town of grey stone and high walls under snowy peaks.', 'linear-gradient(180deg, #8A9AB0 0%, #C6CED8 60%, #6A7480 100%)', '34%',
+        'M0 180 L90 96 L160 150 L250 70 L340 150 L420 104 L520 160 L600 120 L656 150 V250 H0 Z',
+        'M0 218 L180 218 L180 160 L196 148 L212 160 L212 218 L300 218 L300 176 L360 176 L360 158 L376 146 L392 158 L392 218 L656 218 V250 H0 Z']
+    ];
+    const townKey = st.town || 'holtburg';
+    const towns = TOWNS.map((t) => {
+      const on = t[0] === townKey;
+      return {
+        name: t[1], on, x: (t[2] * MS - 14).toFixed(1) + 'px', y: (t[3] * MS - 15).toFixed(1) + 'px',
+        edge: on ? GOLD : 'rgba(201,160,98,0.5)', bg: on ? 'rgba(224,176,104,0.95)' : 'rgba(20,16,12,0.88)', fg: on ? '#1A140D' : TXT,
+        dot: on ? '#1A140D' : GOLD, halo: on ? 'rgba(26,20,13,0.25)' : 'rgba(224,176,104,0.25)',
+        tab: on ? 'rgba(224,176,104,0.16)' : 'rgba(0,0,0,0.3)',
+        pick: () => set({ town: t[0] })
+      };
+    });
+    const tc = (t) => (t[2] * 556 / 256).toFixed(1) + ' ' + (t[3] * 556 / 256).toFixed(1);
+    const network = 'M' + tc(TOWNS[3]) + ' L' + tc(TOWNS[0]) + ' L' + tc(TOWNS[1]) + ' L' + tc(TOWNS[2]) + ' Z M' + tc(TOWNS[3]) + ' L' + tc(TOWNS[2]) + ' M' + tc(TOWNS[0]) + ' L' + tc(TOWNS[2]);
+    const T = TOWNS.find((t) => t[0] === townKey);
+    const others = TOWNS.filter((t) => t !== T).map((t) => t[1]);
+    const town = { name: T[1], home: T[4], text: T[5], sky: T[6], sunX: T[7], far: T[8], near: T[9], link: 'Linked to ' + others[0] + ', ' + others[1] + ' and ' + others[2] + ' by the town network, so you can travel between them from the start.' };
+
+    // ---------- name ----------
+    const rawName = st.name !== undefined ? st.name : (P.charName || '');
+    const badChar = /[^A-Za-z '\-]/.test(rawName);
+    const nameLen = rawName.length;
+    const NAMES = {
+      female: ['Aerin Vale', 'Mirelle', 'Elsbeth Hale', 'Tessaly', 'Isolde Marr', 'Rowan'],
+      male: ['Corwin Ashe', 'Brannoch', 'Edric Vale', 'Tomas Reed', 'Aldous', 'Gareth Holt']
+    };
+    const suggest = NAMES[gender].map((label) => ({ label, pick: () => set({ name: label }) }));
+    const profName = changed ? 'Custom' : tplRow[1];
+    const story = [];
+    const pushW = (t, k, title) => story.push(k ? { t, link: true, plain: false, title, go: () => go(k) } : { t, link: false, plain: true, title: '', go: null });
+    pushW(rawName || 'Someone', 'name', 'Change the name');
+    pushW(', a ', null);
+    pushW(gender, 'heritage', 'Change gender or heritage');
+    pushW(' ', null);
+    pushW(herName, 'heritage', 'Change heritage');
+    if (olthoi) {
+      pushW(', crawls out into Dereth.', null);
+    } else {
+      pushW(' ', null);
+      pushW(profName, 'profession', 'Change profession');
+      pushW(', steps into ', null);
+      pushW(T[1], 'town', 'Change starting town');
+      pushW('.', null);
+    }
+    const factAttrs = olthoi ? 'Olthoi start with set attributes and skills.' : ANAMES.map((nm, i) => nm + ' ' + attrs[i]).join(' · ');
+    const factVitals = olthoi ? 'Always a player killer. Gains no experience.' : 'Health ' + vitals[0].val + ' · Stamina ' + vitals[1].val + ' · Mana ' + vitals[2].val + ' · ' + credLeft + ' skill credits kept for later';
+    const factSkills = olthoi ? '' : 'Specialized: ' + (specS.map((s) => s[1] + ' ' + score(s)).join(', ') || 'none') + ' · Trained: ' + (trainS.map((s) => s[1] + ' ' + score(s)).join(', ') || 'none');
+
+    // ---------- progress ----------
+    const choice = {
+      heritage: herName + ', ' + gender,
+      profession: profName,
+      skills: credLeft + ' credits left',
+      appearance: st.touched ? 'Your own' : 'As rolled',
+      town: T[1],
+      name: rawName || 'Not yet'
+    };
+    const liveIdx = (k) => live.findIndex((s) => s[0] === k);
+    const dots = STEPS.map(([key, name]) => {
+      const skipped = olthoi && !!SKIP[key];
+      const i = liveIdx(key);
+      const done = !skipped && i < li;
+      const current = key === step;
+      return {
+        name, skipped, live: !skipped, current: current ? 'step' : 'false', choice: choice[key],
+        size: current ? '18px' : '12px',
+        ring: current || done ? GOLD : 'rgba(201,160,98,0.5)',
+        fill: done ? GOLD : current ? '#1A140D' : 'rgba(20,16,12,0.9)',
+        halo: current ? '0 0 0 5px rgba(224,176,104,0.18)' : 'none',
+        fg: current ? TXT : done ? LG : MUT,
+        go: () => go(key)
+      };
+    });
+    const lastLiveFrac = (() => { const k = STEPS.findIndex((s) => s[0] === step); return k / 5; })();
+    const doneW = (660 * lastLiveFrac).toFixed(0) + 'px';
+    const nextRow = live[li + 1];
+    const isLast = !nextRow;
+
+    // ---------- questions ----------
+    const ICON_Q = 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5h.01';
+    const ICON_W = 'M12 3 2 20h20zM12 10v4M12 17h.01';
+    const DLG = {
+      exit: ['Leave character creation?', 'Are you sure you want to exit character creation? Nothing is saved.', 'Stay', 'Leave', true, ICON_W],
+      roll: ['Roll everything?', 'This picks a new heritage, profession, skills, look and town at random. What you chose is lost.', 'Cancel', 'Roll everything', false, ICON_Q],
+      points: ['Points left to spend', 'You have ' + left + ' attribute points left. Spend them before you go on.', '', 'Back to attributes', false, ICON_W],
+      noname: ['Your character needs a name', 'Type a name before you finish.', '', 'OK', false, ICON_W],
+      wait: ['Creating ' + (rawName || 'your character'), 'Asking the server to make your character…', '', 'OK', false, ICON_Q]
+    };
+    const dk = st.dlg || '';
+    const d = DLG[dk] || DLG.exit;
+    const dlg = {
+      title: d[0], text: d[1], hasNo: !!d[2], noLabel: d[2], yesLabel: d[3],
+      edge: d[4] ? 'rgba(255,107,112,0.6)' : 'rgba(201,160,98,0.8)',
+      iconBg: d[4] ? 'rgba(255,107,112,0.16)' : 'rgba(224,176,104,0.16)', iconFg: d[4] ? RED : GOLD, icon: d[5],
+      yesEdge: d[4] ? RED : GOLD, yesBg: d[4] ? 'rgba(255,107,112,0.9)' : 'rgba(224,176,104,0.9)', yesFg: '#1A140D',
+      no: () => set({ dlg: '' }),
+      yes: () => {
+        if (dk === 'roll') { const r = HER[Math.floor(Math.random() * 11)][0]; const tp = TPL[1 + Math.floor(Math.random() * 6)]; set({ dlg: '', her: r, tpl: tp[0], attrs: tp[3].slice(), sk: Object.assign({}, tp[4]), town: TOWNS[Math.floor(Math.random() * 4)][0], gender: Math.random() < 0.5 ? 'female' : 'male', step: 'heritage' }); }
+        else if (dk === 'points') set({ dlg: '', step: 'profession' });
+        else if (dk === 'exit') set({ dlg: '', step: 'heritage' });
+        else set({ dlg: '' });
+      }
+    };
+
+    const next = () => {
+      if (step === 'profession' && left > 0) { set({ dlg: 'points' }); return; }
+      if (isLast) { set({ dlg: rawName.trim() ? 'wait' : 'noname' }); return; }
+      go(nextRow[0]);
+    };
+    const back = () => { if (li > 0) go(live[li - 1][0]); };
+    const rollStep = () => {
+      if (step === 'heritage') set({ her: HER[Math.floor(Math.random() * 13)][0] });
+      else if (step === 'profession') { const tp = TPL[1 + Math.floor(Math.random() * 6)]; set({ tpl: tp[0], attrs: tp[3].slice(), sk: Object.assign({}, tp[4]) }); }
+      else if (step === 'town') set({ town: TOWNS[Math.floor(Math.random() * 4)][0] });
+      else if (step === 'name') set({ name: NAMES[gender][Math.floor(Math.random() * 6)] });
+      else if (step === 'appearance') { const s = {}, c = {}; PARTS.forEach((p) => { if (p[4]) s[p[0]] = 1 + Math.floor(Math.random() * p[4]); if (p[5]) c[p[0]] = Math.floor(Math.random() * p[5].length); }); set({ styles: s, cols: c, touched: true }); }
+    };
+
+    // ---------- scene ----------
+    const BG = {
+      heritage: ['linear-gradient(180deg, #0D0B10 0%, #18151C 46%, #2A2219 100%)', 'radial-gradient(ellipse at 28% 105%, rgba(224,176,104,0.2), rgba(0,0,0,0) 55%)'],
+      profession: ['linear-gradient(180deg, #0B0C12 0%, #12131A 60%, #1A1712 100%)', 'radial-gradient(circle at 314px 554px, rgba(224,176,104,0.16), rgba(0,0,0,0) 360px)'],
+      skills: ['linear-gradient(180deg, #100D0A 0%, #17120D 60%, #1F1810 100%)', 'radial-gradient(ellipse at 88% 10%, rgba(224,176,104,0.16), rgba(0,0,0,0) 40%)'],
+      appearance: ['linear-gradient(180deg, #0C0A09 0%, #15110D 100%)', 'radial-gradient(ellipse at 50% 0%, rgba(255,230,190,0.14), rgba(0,0,0,0) 55%)'],
+      town: ['linear-gradient(180deg, #0B1112 0%, #121A1A 60%, #1A1A14 100%)', 'radial-gradient(ellipse at 30% 50%, rgba(120,170,160,0.12), rgba(0,0,0,0) 55%)'],
+      name: ['linear-gradient(180deg, #120E16 0%, #261C24 38%, #5E4030 70%, #22180F 100%)', 'radial-gradient(ellipse at 76% 72%, rgba(255,196,120,0.32), rgba(0,0,0,0) 45%)']
+    };
+    const isName = step === 'name';
+    const flip = turn > 90 && turn < 270 ? -1 : 1;
+    const fig = isName
+      ? { x: '1010px', y: '210px', scale: 0.92, flip, spotX: '810px', floorX: '980px', floorY: '732px', noteX: '1040px', noteY: '190px' }
+      : { x: '600px', y: '160px', scale: zoom.toFixed(2), flip, spotX: '400px', floorX: '570px', floorY: '716px', noteX: '1180px', noteY: '92px' };
+
+    return {
+      bg: BG[step][0], glow: BG[step][1], showHills: step === 'heritage' || step === 'name',
+      stepLabel: 'STEP ' + (li + 1) + ' OF ' + live.length + ' · ' + curRow[1].toUpperCase(),
+      cur, headW: step === 'skills' ? '780px' : step === 'appearance' ? '520px' : '760px',
+      isHeritage: step === 'heritage', isProfession: step === 'profession', isSkills: step === 'skills',
+      isAppearance: step === 'appearance', isTown: step === 'town', isName,
+      showFigure: step === 'appearance' || isName,
+      hers, genders,
+      tpls, tplNoteOn: !!tplNote, tplNote,
+      ring1: ring(25), ring2: ring(50), ring3: ring(75), ring4: ring(100), spokes, vdots,
+      tplPts: poly(tplBase), attrPts: poly(attrs), ticks, axes, attrRows,
+      ringDash, left, leftC: left === 0 ? TXT : left > 0 ? GOLD : RED,
+      spentLine: spent + ' of ' + TOTAL + ' points spent. Each attribute runs from 10 to 100.',
+      vitals,
+      credLeft, purseEdge: credLeft > 0 ? GOLD : 'rgba(201,160,98,0.5)', preview, specLine, trays, sel,
+      fig, look, handles, part, viewBtns,
+      towns, town, network,
+      charName: rawName, typeName: (e) => set({ name: String(e && e.target ? e.target.value : '').slice(0, 32) }),
+      nameCount: nameLen, nameEdge: badChar ? RED : GOLD,
+      ruleText: badChar ? 'Only letters, spaces, apostrophes and hyphens.' : 'Letters, spaces, apostrophes and hyphens. The server says if the name is taken.',
+      ruleC: badChar ? '#FF8A8E' : MUT,
+      suggestLabel: 'TRY A ' + herName.toUpperCase() + ' NAME', suggest, story,
+      factAttrs, factVitals, factSkills,
+      dots: dots, doneW,
+      backOff: li === 0, back, next,
+      nextLabel: isLast ? 'Finish' : 'Next: ' + nextRow[1],
+      rollStep, rollOff: step === 'skills',
+      askRoll: () => set({ dlg: 'roll' }), askExit: () => set({ dlg: 'exit' }),
+      dlgOn: !!dk, dlg
+    };
+  }
+}
+</script>
+</body>
+</html>

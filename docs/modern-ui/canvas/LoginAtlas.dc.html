@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Login: Atlas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{opacity:0.45;cursor:default}
+@keyframes at-ping{0%{transform:scale(0.6);opacity:0.9}100%{transform:scale(2.4);opacity:0}}
+@keyframes at-spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: radial-gradient(ellipse 900px 700px at 40% 50%, #12222A, #0A1216 70%, #070C0F 100%);">
+
+  <!-- the map: flies to the picked character's last place -->
+  <div style="position: absolute; left: 0; top: 0; width: 1440px; height: 900px; transform: translate({{view.tx}}px, {{view.ty}}px) scale({{view.s}}); transform-origin: 0 0; transition: transform 0.9s cubic-bezier(.4,.1,.2,1);">
+    <svg aria-hidden="true" width="1440" height="900" viewBox="0 0 1440 900" style="position: absolute; left: 0; top: 0; overflow: visible;">
+      <defs>
+        <pattern id="at-grid" width="80" height="80" patternUnits="userSpaceOnUse"><path d="M80 0H0V80" fill="none" stroke="rgba(201,160,98,0.06)" stroke-width="1"></path></pattern>
+        <linearGradient id="at-land" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#32291C"></stop><stop offset="1" stop-color="#231C13"></stop></linearGradient>
+      </defs>
+      <rect x="-1200" y="-1200" width="3840" height="3300" fill="url(#at-grid)"></rect>
+      <!-- shallows -->
+      <path d="M150 300 C180 190 300 120 430 140 C520 100 640 120 720 170 C820 160 900 230 930 320 C980 400 960 500 900 560 C860 640 780 700 680 720 C590 760 470 740 400 700 C300 690 220 620 190 540 C130 470 120 380 150 300 Z" fill="none" stroke="rgba(120,170,170,0.07)" stroke-width="26" opacity="{{landFill}}"></path>
+      <!-- land -->
+      <path d="M150 300 C180 190 300 120 430 140 C520 100 640 120 720 170 C820 160 900 230 930 320 C980 400 960 500 900 560 C860 640 780 700 680 720 C590 760 470 740 400 700 C300 690 220 620 190 540 C130 470 120 380 150 300 Z" fill="url(#at-land)" fill-opacity="{{landFill}}" stroke="rgba(224,176,104,0.7)" stroke-width="1.5" stroke-dasharray="3200" stroke-dashoffset="{{drawOff}}"></path>
+      <path d="M960 150 C1000 130 1050 150 1040 190 C1030 222 980 222 960 200 C948 186 948 162 960 150 Z" fill="url(#at-land)" fill-opacity="{{landFill}}" stroke="rgba(224,176,104,0.55)" stroke-width="1.2"></path>
+      <path d="M110 640 C140 608 206 616 210 656 C206 700 150 704 122 684 C104 670 100 652 110 640 Z" fill="url(#at-land)" fill-opacity="{{landFill}}" stroke="rgba(224,176,104,0.55)" stroke-width="1.2"></path>
+      <path d="M1000 600 C1030 590 1060 606 1054 630 C1046 652 1012 650 1000 634 C994 624 994 608 1000 600 Z" fill="url(#at-land)" fill-opacity="{{landFill}}" stroke="rgba(224,176,104,0.45)" stroke-width="1.2"></path>
+      <g opacity="{{landFill}}">
+        <!-- borders between the lands -->
+        <g fill="none" stroke="rgba(224,176,104,0.22)" stroke-width="1" stroke-dasharray="4 6">
+          <path d="M430 140 C440 260 420 380 470 470 C510 560 600 600 680 720"></path>
+          <path d="M150 420 C260 440 360 430 470 470"></path>
+          <path d="M470 470 C600 430 760 400 930 360"></path>
+        </g>
+        <!-- rivers -->
+        <g fill="none" stroke="rgba(120,180,200,0.35)" stroke-width="1.4" stroke-linecap="round">
+          <path d="M600 160 C580 260 640 330 620 420 C610 470 640 500 660 520"></path>
+          <path d="M250 240 C280 300 260 360 300 420"></path>
+        </g>
+        <!-- hills -->
+        <g fill="none" stroke="rgba(233,211,174,0.35)" stroke-width="1.2" stroke-linejoin="round">
+          <path d="M520 300 l9 -13 l9 13 M538 300 l9 -13 l9 13 M556 300 l9 -13 l9 13"></path>
+          <path d="M360 520 l9 -13 l9 13 M378 520 l9 -13 l9 13"></path>
+          <path d="M780 330 l9 -13 l9 13 M798 330 l9 -13 l9 13 M816 330 l9 -13 l9 13 M834 330 l9 -13 l9 13"></path>
+          <path d="M640 620 l9 -13 l9 13 M658 620 l9 -13 l9 13"></path>
+        </g>
+        <!-- land names -->
+        <g font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="3" fill="rgba(233,211,174,0.28)">
+          <text x="560" y="210">ALUVIAN LANDS</text>
+          <text x="240" y="400">THE DESERT</text>
+          <text x="690" y="500">SHO LANDS</text>
+          <text x="280" y="190">VIAMONTIAN</text>
+        </g>
+      </g>
+    </svg>
+
+    <!-- starting towns, faint -->
+    <sc-for list="{{towns}}" as="t" hint-placeholder-count="4">
+      <span aria-hidden="true" style="position: absolute; left: {{t.x}}px; top: {{t.y}}px; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 6px; opacity: {{t.op}};">
+        <span style="width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid #E9D3AE; background: #0A1216;"></span>
+        <span style="position: absolute; left: 12px; white-space: nowrap; font-size: 10.5px; font-style: italic; color: #E9D3AE;">{{t.name}}</span>
+      </span>
+    </sc-for>
+
+    <!-- characters' pins -->
+    <sc-if value="{{showPins}}" hint-placeholder-val="{{true}}">
+      <sc-for list="{{pins}}" as="p" hint-placeholder-count="4">
+        <button aria-label="{{p.name}}, last in {{p.place}}" onClick="{{p.pick}}" style="position: absolute; left: {{p.x}}px; top: {{p.y}}px; width: 0; height: 0; padding: 0; border: 0; background: transparent; cursor: pointer;">
+          <sc-if value="{{p.on}}" hint-placeholder-val="{{false}}">
+            <span aria-hidden="true" style="position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid {{p.color}}; animation: at-ping 1.8s ease-out infinite;"></span>
+          </sc-if>
+          <span aria-hidden="true" style="position: absolute; left: -{{p.r}}px; top: -{{p.r}}px; width: {{p.d}}px; height: {{p.d}}px; box-sizing: border-box; border-radius: 50%; border: 2px solid #1A140D; background: {{p.color}}; box-shadow: 0 0 12px {{p.color}};"></span>
+          <span style="position: absolute; left: 12px; top: -8px; white-space: nowrap; font-size: 11px; font-weight: 700; color: {{p.labelColor}}; text-shadow: 0 1px 4px rgba(0,0,0,0.9);">{{p.name}}</span>
+        </button>
+      </sc-for>
+    </sc-if>
+  </div>
+
+  <!-- compass, fixed -->
+  <svg aria-hidden="true" width="60" height="60" viewBox="0 0 60 60" style="position: absolute; left: 32px; bottom: 32px;">
+    <circle cx="30" cy="30" r="26" fill="none" stroke="rgba(201,160,98,0.35)"></circle>
+    <path d="M30 8 L35 30 L30 52 L25 30 Z" fill="rgba(224,176,104,0.25)" stroke="rgba(224,176,104,0.7)" stroke-linejoin="round"></path>
+    <text x="30" y="6" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" font-weight="700" fill="#E9D3AE">N</text>
+  </svg>
+
+  <!-- side panel -->
+  <sc-if value="{{showPanel}}" hint-placeholder-val="{{true}}">
+    <aside aria-label="Characters" style="position: absolute; right: 24px; top: 24px; bottom: 24px; width: 360px; box-sizing: border-box; padding: 20px 16px 16px; display: flex; flex-direction: column; gap: 4px; border-radius: 6px; background: rgba(20,16,12,0.94); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); box-shadow: 0 18px 50px rgba(0,0,0,0.55);">
+      <div style="padding: 0 6px 14px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid rgba(201,160,98,0.35); margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h1 style="margin: 0; font-size: 20px; font-weight: 700;">Leafcull</h1>
+          <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #C8B89C;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #7FD08A;"></span>312 online</span>
+        </div>
+        <span style="font-size: 11.5px; color: #A89A82;">ashfall · 5 of 11 slots</span>
+      </div>
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+        <button aria-pressed="{{r.on}}" onClick="{{r.pick}}" onDoubleClick="{{r.enter}}" style="min-height: 52px; padding: 6px 10px; border-radius: 4px; border: 1px solid {{r.edge}}; background: {{r.bg}}; display: flex; align-items: center; gap: 10px; text-align: left; cursor: pointer;">
+          <span aria-hidden="true" style="width: 10px; height: 10px; flex: none; border-radius: 50%; box-sizing: border-box; border: {{r.dotBorder}}; background: {{r.dot}};"></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 13.5px; font-weight: 600; color: {{r.nameColor}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.name}}</span>
+            <span style="font-size: 11px; color: {{r.subColor}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.sub}}</span>
+          </span>
+          <span style="font-size: 11.5px; font-weight: 700; color: {{r.rightColor}}; font-variant-numeric: tabular-nums;">{{r.right}}</span>
+        </button>
+      </sc-for>
+      <button style="margin-top: 6px; min-height: 48px; padding: 0 12px; border-radius: 4px; border: 1px dashed rgba(201,160,98,0.6); background: rgba(224,176,104,0.05); display: flex; align-items: center; gap: 10px; cursor: pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        <span style="flex: 1; text-align: left; font-size: 13px; font-weight: 600;">Create character</span>
+        <span style="font-size: 11px; color: #A89A82;">6 free</span>
+      </button>
+      <span style="flex: 1;"></span>
+      <p style="margin: 0 0 10px; padding: 0 6px; font-size: 10.5px; line-height: 1.5; color: #A89A82;"><span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span> Places and levels are remembered from your last visit on this computer.</p>
+      <div style="display: flex; align-items: center; gap: 4px; padding: 10px 6px 0; border-top: 1px solid rgba(201,160,98,0.2);">
+        <span style="flex: 1; font-size: 10.5px; color: rgba(200,184,156,0.7);">OpenAC 0.2.14</span>
+        <button style="height: 30px; padding: 0 10px; border-radius: 4px; border: 0; background: transparent; font-size: 12px; color: #C8B89C; cursor: pointer;">Credits</button>
+        <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.4); background: transparent; font-size: 12px; font-weight: 600; cursor: pointer;">Exit</button>
+      </div>
+    </aside>
+  </sc-if>
+
+  <!-- the picked character's card, beside its pin -->
+  <sc-if value="{{showCard}}" hint-placeholder-val="{{true}}">
+    <section aria-label="{{cur.name}}" style="position: absolute; left: {{cur.cardX}}px; top: {{cur.cardY}}px; width: 330px; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 12px; border-radius: 6px; background: rgba(20,16,12,0.94); backdrop-filter: blur(14px); border: 1px solid {{cur.edge}}; box-shadow: 0 18px 50px rgba(0,0,0,0.55);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <sc-if value="{{cur.known}}" hint-placeholder-val="{{true}}">
+          <span title="Level {{cur.level}}" style="min-width: 58px; height: 50px; padding: 0 10px; box-sizing: border-box; flex: none; border-radius: 6px; border: 1px solid {{cur.edge}}; background: linear-gradient(180deg, rgba(224,176,104,0.18), rgba(0,0,0,0.3)); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <span style="font-size: 8px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">LEVEL</span>
+            <span style="font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; color: {{cur.nameColor}};">{{cur.level}}</span>
+          </span>
+        </sc-if>
+        <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+          <span style="font-size: 18px; font-weight: 700; color: {{cur.nameColor}};">{{cur.name}}</span>
+          <span style="font-size: 12px; color: #C8B89C;">{{cur.who}}</span>
+        </span>
+      </div>
+      <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #E9D3AE;">{{cur.where}}</p>
+      <sc-if value="{{cur.canEnter}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; gap: 8px;">
+          <button onClick="{{enter}}" style="flex: 1; height: 46px; border-radius: 5px; border: 1px solid #E0B068; background: rgba(224,176,104,0.92); color: #1A140D; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;">Enter world<span style="height: 20px; padding: 0 7px; border-radius: 4px; border: 1px solid rgba(26,20,13,0.35); font-size: 10.5px; display: flex; align-items: center;">Enter</span></button>
+          <button aria-label="Delete {{cur.name}}" title="Delete" onClick="{{askDelete}}" style="width: 46px; height: 46px; padding: 0; border-radius: 5px; border: 1px solid rgba(201,160,98,0.45); background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button>
+        </div>
+      </sc-if>
+      <sc-if value="{{cur.pending}}" hint-placeholder-val="{{false}}">
+        <button style="height: 46px; border-radius: 5px; border: 1px solid #E0B068; background: rgba(224,176,104,0.92); color: #1A140D; font-size: 15px; font-weight: 700; cursor: pointer;">Restore</button>
+      </sc-if>
+      <sc-if value="{{entering}}" hint-placeholder-val="{{false}}">
+        <span role="status" style="height: 46px; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 14px; font-weight: 600; color: #E9D3AE;"><span style="width: 18px; height: 18px; box-sizing: border-box; border-radius: 50%; border: 2.5px solid rgba(224,176,104,0.25); border-top-color: #E0B068; animation: at-spin 0.9s linear infinite;"></span>Entering world…</span>
+      </sc-if>
+    </section>
+  </sc-if>
+
+  <!-- connecting: the map draws itself in -->
+  <sc-if value="{{connecting}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 0; right: 0; top: 70px; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.24em; color: #C8B89C;">CONNECTING TO</span>
+      <span style="font-size: 36px; font-weight: 700;">Leafcull</span>
+    </div>
+    <div role="status" aria-label="Connecting" style="position: absolute; left: 50%; bottom: 48px; transform: translateX(-50%); width: 820px; box-sizing: border-box; padding: 14px 14px 14px 20px; border-radius: 6px; background: rgba(20,16,12,0.94); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <sc-for list="{{meters}}" as="m" hint-placeholder-count="2">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+            <span style="display: flex; font-size: 12px;"><span style="flex: 1; font-weight: 600;">{{m.label}}</span><span style="color: {{m.statusColor}};">{{m.status}}</span></span>
+            <span style="height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12); overflow: hidden;"><span style="display: block; height: 100%; width: {{m.pct}}; background: {{m.fill}};"></span></span>
+          </div>
+        </sc-for>
+        <button style="height: 36px; padding: 0 18px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: transparent; font-size: 12.5px; font-weight: 600; cursor: pointer;">Cancel</button>
+      </div>
+      <sc-if value="{{failed}}" hint-placeholder-val="{{false}}">
+        <p role="alert" style="margin: 0; padding: 10px 12px; border-radius: 4px; border: 1px solid rgba(255,107,112,0.55); background: rgba(80,20,20,0.5); font-size: 12.5px; color: #FFD0D2;">Could not connect to Leafcull. The server did not answer.</p>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- empty account -->
+  <sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+    <section aria-label="Welcome" style="position: absolute; left: 1040px; top: 250px; width: 360px; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 12px; border-radius: 6px; background: rgba(20,16,12,0.94); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); box-shadow: 0 18px 50px rgba(0,0,0,0.55);">
+      <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.24em; color: #C8B89C;">WELCOME TO</span>
+      <h1 style="margin: -6px 0 0; font-size: 34px; font-weight: 700;">Leafcull</h1>
+      <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #E9D3AE;">You have no characters on this world yet. You pick one of the four starting towns while you make one.</p>
+      <button style="margin-top: 8px; height: 52px; border-radius: 5px; border: 1px solid #E0B068; background: rgba(224,176,104,0.92); color: #1A140D; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1A140D" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Create a character</button>
+      <span style="font-size: 11.5px; color: #A89A82; text-align: center;">11 slots free · ashfall</span>
+    </section>
+    <div style="position: absolute; right: 40px; bottom: 30px; display: flex; align-items: center; gap: 4px;">
+      <span style="margin-right: 10px; font-size: 10.5px; color: rgba(200,184,156,0.7);">OpenAC 0.2.14</span>
+      <button style="height: 30px; padding: 0 10px; border-radius: 4px; border: 0; background: transparent; font-size: 12px; color: #C8B89C; cursor: pointer;">Credits</button>
+      <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.4); background: transparent; font-size: 12px; font-weight: 600; cursor: pointer;">Exit</button>
+    </div>
+  </sc-if>
+
+  <!-- delete: type the word -->
+  <sc-if value="{{deleting}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;">
+      <div role="dialog" aria-label="Delete {{cur.name}}" style="width: 440px; box-sizing: border-box; background: rgba(24,19,14,0.97); backdrop-filter: blur(14px); border: 1px solid rgba(229,72,77,0.7); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.6);">
+        <div style="padding: 16px 18px 0; display: flex; align-items: center; gap: 10px;">
+          <span style="width: 30px; height: 30px; flex: none; border-radius: 50%; background: rgba(229,72,77,0.16); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF8A8E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></span>
+          <h2 style="flex: 1; margin: 0; font-size: 15px; font-weight: 700;">Delete {{cur.name}}?</h2>
+        </div>
+        <div style="padding: 12px 18px 0; display: flex; flex-direction: column; gap: 12px;">
+          <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #E9D3AE;">For about an hour you can still restore it from this screen. A restored character loses its allegiance, and the restore fails if someone takes the name first.</p>
+          <label style="display: flex; flex-direction: column; gap: 5px; font-size: 11px; color: #C8B89C;">Type DELETE to confirm
+            <input value="{{typed}}" onChange="{{type}}" autocomplete="off" style="height: 36px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0.08em;">
+          </label>
+        </div>
+        <div style="padding: 16px 18px; display: flex; align-items: center; gap: 8px;">
+          <span style="flex: 1;"></span>
+          <button onClick="{{cancelDelete}}" style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer;">Cancel<span style="font-size: 10px; color: #A89A82;">Esc</span></button>
+          <button disabled="{{delOff}}" style="height: 34px; padding: 0 16px; border-radius: 4px; border: 1px solid #E5484D; background: rgba(229,72,77,0.9); color: #FFFFFF; font-size: 12.5px; font-weight: 700; cursor: pointer;">Delete</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screen":{"editor":"enum","options":["choose","connecting","failed","delete","empty"],"default":"choose"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const screen = this.props.screen || 'choose';
+    const GOLD = '#E0B068', RED = '#FF6B70';
+    const R = [
+      { id: 'aerin', name: 'Aerin Vale', level: '4,783', who: 'Female Aluvian', place: 'Ayan Baqur', when: 'yesterday', x: 300, y: 300 },
+      { id: 'bran', name: 'Brannoch Stoneheart', level: '312', who: 'Male Lugian', place: 'Mayoi', when: '3 days ago', x: 860, y: 470 },
+      { id: 'ki', name: 'Ki Sora', level: '1,026', who: 'Female Sho', place: 'Shoushi', when: '2 weeks ago', x: 762, y: 584 },
+      { id: 'quill', name: 'Quill', unknown: true },
+      { id: 'mule', name: 'Old Mule', level: '58', who: 'Male Gharu’ndim', place: 'Yaraq', when: '5 months ago', pending: true, x: 520, y: 662 }
+    ];
+    const choose = screen === 'choose' || screen === 'delete';
+    const sel = st.sel || (screen === 'delete' ? 'bran' : 'aerin');
+    const c = R.find((r) => r.id === sel) || R[0];
+    const F = { x: 440, y: 470 }, S = 1.5;
+    const view = choose && !c.unknown
+      ? { s: S, tx: Math.round(F.x - S * c.x), ty: Math.round(F.y - S * c.y) }
+      : { s: 1, tx: 30, ty: 20 };
+    const pick = (id) => () => this.setState({ sel: id, entering: false });
+    const pins = R.filter((r) => !r.unknown).map((r) => {
+      const on = choose && r.id === sel;
+      const col = r.pending ? RED : GOLD;
+      return { name: r.name, place: r.place, x: r.x, y: r.y, on, color: col, labelColor: on ? '#FFFFFF' : (r.pending ? '#FF8A8E' : '#E9D3AE'), r: on ? 8 : 6, d: on ? 16 : 12, pick: pick(r.id) };
+    });
+    const rows = R.map((r) => {
+      const on = r.id === sel;
+      return {
+        name: r.name, on,
+        sub: r.unknown ? 'Not played on this computer yet' : r.pending ? 'Deleted · last in ' + r.place : r.place + ' · ' + r.when,
+        right: r.pending ? '47:12' : (r.unknown ? '' : 'Lv ' + r.level),
+        rightColor: r.pending ? '#FF8A8E' : '#C8B89C',
+        nameColor: r.pending ? '#FF8A8E' : '#F4EBDC',
+        subColor: r.pending ? 'rgba(255,138,142,0.75)' : '#A89A82',
+        dot: r.unknown ? 'transparent' : (r.pending ? RED : GOLD),
+        dotBorder: r.unknown ? '1.5px dashed #A89A82' : '0',
+        edge: on ? GOLD : 'rgba(201,160,98,0)',
+        bg: on ? 'rgba(224,176,104,0.14)' : 'rgba(0,0,0,0)',
+        pick: pick(r.id),
+        enter: () => { if (!r.pending) this.setState({ sel: r.id, entering: true }); }
+      };
+    });
+    const entering = !!st.entering;
+    const cur = {
+      name: c.name, level: c.level || '',
+      known: !c.unknown,
+      who: c.unknown ? 'Name only' : c.who,
+      where: c.unknown ? 'Quill has not been played on this computer, so there is no place to show yet. Enter the world and it will be remembered.' : c.pending ? 'Deleted. Last in ' + c.place + ', ' + c.when + '. You can restore it for 47:12 more; it comes back without its allegiance, and only if the name is still free.' : 'Last in ' + c.place + ', ' + c.when + '.',
+      nameColor: c.pending ? '#FF8A8E' : '#F4EBDC',
+      edge: c.pending ? 'rgba(255,107,112,0.7)' : 'rgba(201,160,98,0.8)',
+      canEnter: !c.pending && !entering,
+      pending: !!c.pending,
+      cardX: c.unknown ? 330 : F.x + 10,
+      cardY: c.unknown ? 380 : F.y + 36
+    };
+    const failed = screen === 'failed';
+    const connecting = screen === 'connecting' || failed;
+    const empty = screen === 'empty';
+    const meters = [
+      { label: 'Connection', status: failed ? 'Failed' : 'Connecting', statusColor: failed ? '#FF8A8E' : '#E9D3AE', pct: failed ? '38%' : '64%', fill: failed ? RED : GOLD },
+      { label: 'Data', status: failed ? 'Waiting' : 'Checking for data updates', statusColor: '#A89A82', pct: failed ? '0%' : '22%', fill: '#E9D3AE' }
+    ];
+    const TOWNS = [['Holtburg', 700, 232], ['Shoushi', 762, 584], ['Yaraq', 520, 662], ['Sanamar', 330, 168]];
+    const towns = TOWNS.map(([name, x, y]) => ({ name, x, y, op: empty ? 1 : connecting ? 0.25 : 0.45 }));
+    const deleting = screen === 'delete' ? st.deleting !== false : !!st.deleting;
+    const typed = st.typed !== undefined ? st.typed : 'DELE';
+    return {
+      view, pins, rows, cur, meters, towns, typed,
+      landFill: connecting ? 0.25 : 1,
+      drawOff: connecting ? 1200 : 0,
+      showPins: choose, showPanel: choose, showCard: choose,
+      entering: choose && entering,
+      connecting, failed, empty,
+      deleting: choose && deleting,
+      delOff: typed !== 'DELETE',
+      enter: () => this.setState({ entering: true }),
+      askDelete: () => this.setState({ deleting: true, typed: '' }),
+      cancelDelete: () => this.setState({ deleting: false }),
+      type: (e) => this.setState({ typed: e.target.value })
+    };
+  }
+}
+</script>
+</body>
+</html>

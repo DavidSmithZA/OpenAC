@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Login: Lineup</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{opacity:0.45;cursor:default}
+@keyframes ln-spin{to{transform:rotate(360deg)}}
+@keyframes ln-pulse{0%,100%{opacity:0.6}50%{opacity:1}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: radial-gradient(ellipse 900px 380px at 50% 70%, rgba(224,176,104,0.16), rgba(0,0,0,0) 70%), linear-gradient(180deg, #0A090C 0%, #141117 48%, #201913 66%, #0D0A08 100%);">
+
+  <!-- the hall: horizon line, stage floor, perspective lines -->
+  <div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 590px; height: 1px; background: linear-gradient(90deg, rgba(224,176,104,0), rgba(224,176,104,0.55), rgba(224,176,104,0));"></div>
+  <div aria-hidden="true" style="position: absolute; left: 150px; top: 560px; width: 1140px; height: 190px; border-radius: 50%; border: 1px solid rgba(201,160,98,0.28); background: radial-gradient(closest-side, rgba(224,176,104,0.10), rgba(224,176,104,0));"></div>
+  <svg aria-hidden="true" width="1440" height="900" viewBox="0 0 1440 900" style="position: absolute; left: 0; top: 0;">
+    <g stroke="rgba(201,160,98,0.10)" stroke-width="1" fill="none">
+      <path d="M720 590 L-200 900"></path><path d="M720 590 L160 900"></path><path d="M720 590 L520 900"></path>
+      <path d="M720 590 L920 900"></path><path d="M720 590 L1280 900"></path><path d="M720 590 L1640 900"></path>
+    </g>
+  </svg>
+
+  <!-- top: world -->
+  <div style="position: absolute; left: 0; right: 0; top: 24px; display: flex; justify-content: center;">
+    <div style="height: 34px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.4); background: rgba(20,16,12,0.6); backdrop-filter: blur(10px); display: flex; align-items: center; gap: 12px; font-size: 12.5px;">
+      <span style="font-weight: 700; font-size: 13.5px;">Leafcull</span>
+      <span style="display: flex; align-items: center; gap: 6px; color: #C8B89C;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #7FD08A;"></span>312 online</span>
+      <span style="width: 1px; height: 14px; background: rgba(201,160,98,0.35);"></span>
+      <span style="color: #C8B89C;">ashfall</span>
+      <sc-if value="{{showRow}}" hint-placeholder-val="{{true}}"><span style="color: #A89A82; font-variant-numeric: tabular-nums;">5 of 11 slots</span></sc-if>
+    </div>
+  </div>
+  <div style="position: absolute; right: 28px; top: 24px; display: flex; gap: 4px;">
+    <button style="height: 34px; padding: 0 12px; border-radius: 4px; border: 0; background: transparent; font-size: 12.5px; color: #C8B89C; cursor: pointer;">Credits</button>
+    <button style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.4); background: rgba(20,16,12,0.5); font-size: 12.5px; font-weight: 600; cursor: pointer;">Exit</button>
+  </div>
+  <span style="position: absolute; left: 28px; bottom: 22px; font-size: 10.5px; color: rgba(200,184,156,0.7);">OpenAC 0.2.14</span>
+
+  <!-- the lineup -->
+  <sc-if value="{{showRow}}" hint-placeholder-val="{{true}}">
+    <div aria-hidden="true" style="position: absolute; left: {{spotX}}px; top: 0; width: 320px; height: 700px; background: linear-gradient(180deg, rgba(255,226,170,0), rgba(255,226,170,0.13) 70%, rgba(255,226,170,0.04)); clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%); transition: left 0.4s ease;"></div>
+    <div aria-hidden="true" style="position: absolute; left: {{floorX}}px; top: 636px; width: 220px; height: 50px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,214,150,0.45), rgba(255,214,150,0)); transition: left 0.4s ease;"></div>
+
+    <div role="radiogroup" aria-label="Characters" style="position: absolute; left: 210px; top: 200px; width: 1020px; height: 430px; display: flex; align-items: flex-end;">
+      <sc-for list="{{figs}}" as="f" hint-placeholder-count="5">
+        <button role="radio" aria-checked="{{f.on}}" aria-label="{{f.name}}" onClick="{{f.pick}}" onDoubleClick="{{f.enter}}" style="width: 170px; height: 430px; padding: 0; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer;">
+          <span style="display: flex; flex-direction: column; align-items: center; transform: translateY({{f.dy}}px) scale({{f.sc}}); transform-origin: 50% 100%; opacity: {{f.op}}; transition: transform 0.4s ease, opacity 0.4s ease;">
+            <sc-if value="{{f.person}}" hint-placeholder-val="{{true}}">
+              <span style="width: {{f.head}}px; height: {{f.head}}px; border-radius: 50%; border: 1.5px dashed {{f.line}}; background: {{f.fill}};"></span>
+              <span style="width: {{f.bw}}px; height: {{f.bh}}px; margin-top: 5px; border-radius: 48px 48px 12px 12px; border: 1.5px dashed {{f.line}}; background: {{f.fill}};"></span>
+            </sc-if>
+            <sc-if value="{{f.hood}}" hint-placeholder-val="{{false}}">
+              <span style="width: 100px; height: 316px; box-sizing: border-box; padding-top: 44px; border-radius: 50px 50px 12px 12px / 96px 96px 12px 12px; border: 1.5px dashed {{f.line}}; background: rgba(0,0,0,0.5); display: flex; justify-content: center;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(244,235,220,0.55)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.6V15M12 18h.01"></path></svg>
+              </span>
+            </sc-if>
+          </span>
+        </button>
+      </sc-for>
+      <button aria-label="Create character, 6 free slots" style="width: 170px; height: 430px; padding: 0; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer;">
+        <span style="width: 100px; height: 304px; box-sizing: border-box; border-radius: 50px 50px 12px 12px; border: 1.5px dashed rgba(224,176,104,0.4); background: rgba(224,176,104,0.03); display: flex; align-items: center; justify-content: center;">
+          <span style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(224,176,104,0.7); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span>
+        </span>
+      </button>
+    </div>
+
+    <!-- name plates -->
+    <div style="position: absolute; left: 210px; top: 700px; width: 1020px; display: flex;">
+      <sc-for list="{{figs}}" as="f" hint-placeholder-count="5">
+        <div style="width: 170px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;">
+          <span style="font-size: 13.5px; font-weight: {{f.weight}}; color: {{f.nameColor}};">{{f.name}}</span>
+          <sc-if value="{{f.pending}}" hint-placeholder-val="{{false}}">
+            <span title="Time left to restore" style="display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: #FF8A8E; font-variant-numeric: tabular-nums;">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(255,107,112,0.25)" stroke-width="3"></circle><circle cx="12" cy="12" r="9" fill="none" stroke="#FF6B70" stroke-width="3" stroke-dasharray="44.5 56.5" stroke-linecap="round" transform="rotate(-90 12 12)"></circle></svg>
+              47:12
+            </span>
+          </sc-if>
+          <sc-if value="{{f.notPending}}" hint-placeholder-val="{{true}}">
+            <span style="font-size: 11px; color: {{f.subColor}}; font-variant-numeric: tabular-nums;">{{f.sub}}</span>
+          </sc-if>
+        </div>
+      </sc-for>
+      <div style="width: 170px; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+        <span style="font-size: 13.5px; font-weight: 600; color: #E0B068;">Create character</span>
+        <span style="font-size: 11px; color: #A89A82;">6 free slots</span>
+      </div>
+    </div>
+
+    <!-- the lit one -->
+    <div style="position: absolute; left: 0; right: 0; top: 784px; display: flex; justify-content: center;">
+      <div style="height: 64px; padding: 0 8px 0 22px; box-sizing: border-box; border-radius: 6px; border: 1px solid rgba(201,160,98,0.5); background: rgba(20,16,12,0.86); backdrop-filter: blur(14px); display: flex; align-items: center; gap: 18px;">
+        <span style="display: flex; flex-direction: column; gap: 3px; min-width: 260px;">
+          <span style="font-size: 16px; font-weight: 700; color: {{cur.nameColor}};">{{cur.name}}</span>
+          <span style="font-size: 11.5px; color: #C8B89C;">{{cur.meta}}</span>
+        </span>
+        <sc-if value="{{cur.canEnter}}" hint-placeholder-val="{{true}}">
+          <button onClick="{{enter}}" style="height: 48px; padding: 0 26px; border-radius: 5px; border: 1px solid #E0B068; background: rgba(224,176,104,0.92); color: #1A140D; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 12px; cursor: pointer;">Enter world<span style="height: 20px; padding: 0 7px; border-radius: 4px; border: 1px solid rgba(26,20,13,0.35); font-size: 10.5px; display: flex; align-items: center;">Enter</span></button>
+          <button aria-label="Delete {{cur.name}}" title="Delete" onClick="{{askDelete}}" style="width: 48px; height: 48px; padding: 0; border-radius: 5px; border: 1px solid rgba(201,160,98,0.45); background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></button>
+        </sc-if>
+        <sc-if value="{{cur.pending}}" hint-placeholder-val="{{false}}">
+          <span style="max-width: 250px; font-size: 11px; line-height: 1.4; color: #E9D3AE;">Comes back without its allegiance, and only if the name is still free.</span>
+          <button style="height: 48px; padding: 0 26px; border-radius: 5px; border: 1px solid #E0B068; background: rgba(224,176,104,0.92); color: #1A140D; font-size: 15px; font-weight: 700; cursor: pointer;">Restore</button>
+        </sc-if>
+        <sc-if value="{{entering}}" hint-placeholder-val="{{false}}">
+          <span role="status" style="height: 48px; padding: 0 20px; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; color: #E9D3AE;"><span style="width: 18px; height: 18px; box-sizing: border-box; border-radius: 50%; border: 2.5px solid rgba(224,176,104,0.25); border-top-color: #E0B068; animation: ln-spin 0.9s linear infinite;"></span>Entering world…</span>
+        </sc-if>
+      </div>
+    </div>
+    <p style="position: absolute; right: 28px; bottom: 18px; margin: 0; max-width: 300px; text-align: right; font-size: 10.5px; line-height: 1.5; color: #A89A82;"><span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span> Looks and levels are remembered from your last visit on this computer.</p>
+  </sc-if>
+
+  <!-- connecting: the portal charges -->
+  <sc-if value="{{connecting}}" hint-placeholder-val="{{false}}">
+    <div aria-hidden="true" style="position: absolute; left: 560px; top: 210px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(closest-side, rgba(170,130,255,0.55), rgba(110,70,200,0.25) 60%, rgba(60,30,120,0) 100%); filter: blur(2px);"></div>
+    <div aria-hidden="true" style="position: absolute; left: 580px; top: 230px; width: 280px; height: 280px; border-radius: 50%; background: conic-gradient(from 0deg, rgba(190,160,255,0), rgba(190,160,255,0.45), rgba(255,206,150,0.25), rgba(190,160,255,0), rgba(190,160,255,0.4), rgba(190,160,255,0)); animation: ln-spin 7s linear infinite; mask: radial-gradient(closest-side, #000 60%, transparent 100%); -webkit-mask: radial-gradient(closest-side, #000 60%, transparent 100%);"></div>
+    <svg role="img" aria-label="Connection {{m1pct}}, data {{m2pct}}" width="480" height="480" viewBox="0 0 480 480" style="position: absolute; left: 480px; top: 130px;">
+      <circle cx="240" cy="240" r="200" fill="none" stroke="rgba(224,176,104,0.16)" stroke-width="4"></circle>
+      <circle cx="240" cy="240" r="200" fill="none" stroke="{{m1color}}" stroke-width="4" stroke-linecap="round" stroke-dasharray="{{m1dash}}" transform="rotate(-90 240 240)" style="filter: drop-shadow(0 0 6px rgba(224,176,104,0.8));"></circle>
+      <circle cx="240" cy="240" r="184" fill="none" stroke="rgba(233,211,174,0.12)" stroke-width="2"></circle>
+      <circle cx="240" cy="240" r="184" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-dasharray="{{m2dash}}" transform="rotate(-90 240 240)"></circle>
+    </svg>
+    <div style="position: absolute; left: 480px; top: 300px; width: 480px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;">
+      <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.24em; color: #E9D3AE;">CONNECTING TO</span>
+      <span style="font-size: 40px; font-weight: 700; text-shadow: 0 2px 16px rgba(60,20,120,0.8);">Leafcull</span>
+    </div>
+    <div style="position: absolute; left: 0; right: 0; top: 650px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <span style="display: flex; align-items: center; gap: 10px; font-size: 12.5px;"><span style="width: 18px; height: 4px; border-radius: 2px; background: {{m1color}};"></span><span style="font-weight: 600;">Connection</span><span style="color: {{m1statusColor}};">{{m1status}}</span></span>
+      <span style="display: flex; align-items: center; gap: 10px; font-size: 12.5px;"><span style="width: 18px; height: 2px; border-radius: 1px; background: #E9D3AE;"></span><span style="font-weight: 600;">Data</span><span style="color: #A89A82;">{{m2status}}</span></span>
+      <sc-if value="{{failed}}" hint-placeholder-val="{{false}}">
+        <p role="alert" style="margin: 6px 0 0; max-width: 420px; padding: 10px 14px; border-radius: 5px; border: 1px solid rgba(255,107,112,0.55); background: rgba(80,20,20,0.5); font-size: 12.5px; line-height: 1.5; color: #FFD0D2; text-align: center;">Could not connect to Leafcull. The server did not answer.</p>
+      </sc-if>
+      <button style="margin-top: 14px; height: 38px; padding: 0 22px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(20,16,12,0.6); font-size: 13px; font-weight: 600; cursor: pointer;">Cancel</button>
+    </div>
+  </sc-if>
+
+  <!-- empty account: the stage waits -->
+  <sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 0; right: 0; top: 104px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;">
+      <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.24em; color: #C8B89C;">WELCOME TO LEAFCULL</span>
+      <h1 style="margin: 0; font-size: 40px; font-weight: 700;">The stage is yours</h1>
+      <p style="margin: 0; font-size: 14px; color: #C8B89C;">No characters on this world yet. Your account has 11 slots.</p>
+    </div>
+    <div aria-hidden="true" style="position: absolute; left: 560px; top: 0; width: 320px; height: 700px; background: linear-gradient(180deg, rgba(255,226,170,0), rgba(255,226,170,0.14) 70%, rgba(255,226,170,0.04)); clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);"></div>
+    <div aria-hidden="true" style="position: absolute; left: 210px; top: 300px; width: 1020px; height: 330px; display: flex; align-items: flex-end; justify-content: space-between;">
+      <span style="width: 90px; height: 270px; border-radius: 45px 45px 12px 12px; border: 1.5px dashed rgba(224,176,104,0.14);"></span>
+      <span style="width: 90px; height: 280px; border-radius: 45px 45px 12px 12px; border: 1.5px dashed rgba(224,176,104,0.18);"></span>
+      <span style="width: 100px; height: 304px; border-radius: 50px 50px 12px 12px; border: 1.5px dashed rgba(224,176,104,0.7); background: rgba(224,176,104,0.06); animation: ln-pulse 3s ease-in-out infinite;"></span>
+      <span style="width: 90px; height: 280px; border-radius: 45px 45px 12px 12px; border: 1.5px dashed rgba(224,176,104,0.18);"></span>
+      <span style="width: 90px; height: 270px; border-radius: 45px 45px 12px 12px; border: 1.5px dashed rgba(224,176,104,0.14);"></span>
+    </div>
+    <div style="position: absolute; left: 0; right: 0; top: 700px; display: flex; justify-content: center;">
+      <button style="height: 60px; padding: 0 34px; border-radius: 6px; border: 1px solid #E0B068; background: rgba(224,176,104,0.92); color: #1A140D; font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 12px; cursor: pointer; box-shadow: 0 10px 34px rgba(224,176,104,0.3);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A140D" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Create your first character</button>
+    </div>
+  </sc-if>
+
+  <!-- delete: type the word -->
+  <sc-if value="{{deleting}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;">
+      <div role="dialog" aria-label="Delete {{cur.name}}" style="width: 440px; box-sizing: border-box; background: rgba(24,19,14,0.97); backdrop-filter: blur(14px); border: 1px solid rgba(229,72,77,0.7); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.6);">
+        <div style="padding: 16px 18px 0; display: flex; align-items: center; gap: 10px;">
+          <span style="width: 30px; height: 30px; flex: none; border-radius: 50%; background: rgba(229,72,77,0.16); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF8A8E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg></span>
+          <h2 style="flex: 1; margin: 0; font-size: 15px; font-weight: 700;">Delete {{cur.name}}?</h2>
+        </div>
+        <div style="padding: 12px 18px 0; display: flex; flex-direction: column; gap: 12px;">
+          <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #E9D3AE;">For about an hour you can still restore it from this screen. A restored character loses its allegiance, and the restore fails if someone takes the name first.</p>
+          <label style="display: flex; flex-direction: column; gap: 5px; font-size: 11px; color: #C8B89C;">Type DELETE to confirm
+            <input value="{{typed}}" onChange="{{type}}" autocomplete="off" style="height: 36px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0.08em;">
+          </label>
+        </div>
+        <div style="padding: 16px 18px; display: flex; align-items: center; gap: 8px;">
+          <span style="flex: 1;"></span>
+          <button onClick="{{cancelDelete}}" style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer;">Cancel<span style="font-size: 10px; color: #A89A82;">Esc</span></button>
+          <button disabled="{{delOff}}" style="height: 34px; padding: 0 16px; border-radius: 4px; border: 1px solid #E5484D; background: rgba(229,72,77,0.9); color: #FFFFFF; font-size: 12.5px; font-weight: 700; cursor: pointer;">Delete</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screen":{"editor":"enum","options":["choose","connecting","failed","delete","empty"],"default":"choose"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const screen = this.props.screen || 'choose';
+    const R = [
+      { id: 'aerin', name: 'Aerin Vale', level: '4,783', who: 'Female Aluvian', place: 'Ayan Baqur', when: 'yesterday', head: 50, bw: 92, bh: 252, fill: 'rgba(224,176,104,0.10)' },
+      { id: 'bran', name: 'Brannoch Stoneheart', level: '312', who: 'Male Lugian', place: 'Mayoi', when: '3 days ago', head: 60, bw: 134, bh: 300, fill: 'rgba(150,226,214,0.08)' },
+      { id: 'ki', name: 'Ki Sora', level: '1,026', who: 'Female Sho', place: 'Shoushi', when: '2 weeks ago', head: 46, bw: 84, bh: 232, fill: 'rgba(255,164,196,0.08)' },
+      { id: 'quill', name: 'Quill', unknown: true },
+      { id: 'mule', name: 'Old Mule', level: '58', who: 'Male Gharu’ndim', place: 'Yaraq', when: '5 months ago', pending: true, head: 50, bw: 96, bh: 246, fill: 'rgba(255,255,255,0.03)' }
+    ];
+    const sel = st.sel || (screen === 'delete' ? 'bran' : 'aerin');
+    const idx = Math.max(0, R.findIndex((r) => r.id === sel));
+    const c = R[idx];
+    const figs = R.map((r, i) => {
+      const on = i === idx;
+      return {
+        name: r.name, on,
+        person: !r.unknown, hood: !!r.unknown, pending: !!r.pending, notPending: !r.pending,
+        head: r.head || 50, bw: r.bw || 90, bh: r.bh || 250, fill: r.fill || 'transparent',
+        line: on ? 'rgba(255,240,214,0.85)' : 'rgba(255,255,255,0.45)',
+        dy: on ? 30 : 0, sc: on ? 1.14 : 1,
+        op: r.pending ? (on ? 0.6 : 0.3) : (on ? 1 : 0.55),
+        weight: on ? 700 : 600,
+        nameColor: r.pending ? '#FF8A8E' : (on ? '#E0B068' : '#F4EBDC'),
+        sub: r.unknown ? 'Not played here yet' : 'Level ' + r.level,
+        subColor: '#A89A82',
+        pick: () => this.setState({ sel: r.id, entering: false }),
+        enter: () => { if (!r.pending) this.setState({ sel: r.id, entering: true }); }
+      };
+    });
+    const entering = !!st.entering;
+    const cur = {
+      name: c.name,
+      nameColor: c.pending ? '#FF8A8E' : '#F4EBDC',
+      meta: c.unknown ? 'Not played on this computer yet' : c.pending ? 'Deleted · 47:12 left to restore' : 'Level ' + c.level + ' · ' + c.who + ' · last in ' + c.place + ', ' + c.when,
+      canEnter: !c.pending && !entering,
+      pending: !!c.pending
+    };
+    const failed = screen === 'failed';
+    const C1 = 2 * Math.PI * 200, C2 = 2 * Math.PI * 184;
+    const p1 = failed ? 0.38 : 0.64, p2 = failed ? 0 : 0.22;
+    const showRow = screen === 'choose' || screen === 'delete';
+    const deleting = screen === 'delete' ? st.deleting !== false : !!st.deleting;
+    const typed = st.typed !== undefined ? st.typed : 'DELE';
+    return {
+      figs, cur, typed,
+      spotX: 210 + 170 * idx + 85 - 160,
+      floorX: 210 + 170 * idx + 85 - 110,
+      showRow, entering: showRow && entering,
+      connecting: screen === 'connecting' || failed, failed,
+      empty: screen === 'empty',
+      deleting: showRow && deleting,
+      delOff: typed !== 'DELETE',
+      m1dash: (C1 * p1).toFixed(0) + ' ' + C1.toFixed(0),
+      m2dash: (C2 * p2).toFixed(0) + ' ' + C2.toFixed(0),
+      m1pct: Math.round(p1 * 100) + '%', m2pct: Math.round(p2 * 100) + '%',
+      m1color: failed ? '#FF6B70' : '#E0B068',
+      m1status: failed ? 'Failed' : 'Connecting',
+      m1statusColor: failed ? '#FF8A8E' : '#E9D3AE',
+      m2status: failed ? 'Waiting' : 'Checking for data updates',
+      enter: () => this.setState({ entering: true }),
+      askDelete: () => this.setState({ deleting: true, typed: '' }),
+      cancelDelete: () => this.setState({ deleting: false }),
+      type: (e) => this.setState({ typed: e.target.value })
+    };
+  }
+}
+</script>
+</body>
+</html>
