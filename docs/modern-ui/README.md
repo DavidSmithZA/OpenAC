@@ -245,9 +245,54 @@ This folder holds the design only. There is no code yet.
 - No action buttons: the chat name menu and right-clicking a player
   cover Tell, Trade and the rest.
 
+## Social
+
+- One window, 792 x 600, opened with O. Tabs: Allegiance, Fellowship,
+  Friends, Ignored (retail's four pages, squelch included).
+- Allegiance: the allegiance's name and member count, how many follow
+  you, Allegiance chat and Hometown buttons, and the message of the day
+  with who set it. A Monarch › Patron › You strip, then your vassals with
+  the experience each passed up. Clicking anyone shows level, rank,
+  heritage, loyalty and leadership, experience passed up, and Tell,
+  Invite, Add friend. Release (a vassal) and Break allegiance (your
+  patron) ask first and say that the person's own followers go with
+  them. "Ignore allegiance requests" sits in the bottom bar.
+- With no allegiance: a short explanation and "Swear allegiance to X",
+  which uses your selection; they are asked to accept.
+- Manage allegiance (OPENAC), for the monarch only: rename, message of
+  the day, appoint or remove officers (Speaker, Seneschal, Castellan)
+  and rename the offices, lock with one approved name, ban or lift a
+  ban, gag or remove someone from allegiance chat. Retail has these as
+  @ commands only. The server answers officer and ban lists in chat, so
+  the view links to "List them in chat" rather than keeping lists.
+  Officers keep using @ commands. Both may change at implementation
+  (the client cannot tell who is an officer today).
+- Fellowship: name, who leads, members of 9, how experience is shared,
+  Open/Closed and Locked chips. Each fellow's level, share, health,
+  stamina, mana, and whether they share loot. People who left a locked
+  fellowship and can rejoin are listed. Your settings: share my loot,
+  ignore requests, accept automatically, show fellows on screen
+  (OPENAC). Members see Recruit (the selected player) and Leave; the
+  leader also gets Make leader, Dismiss, Open or Close recruiting, and
+  Disband.
+- With no fellowship: Start a fellowship (name, share experience, which
+  cannot change later), and how joining works.
+- Fellows on screen (OPENAC, on by default): small frames under the
+  buffs with name, level and the three vitals; a fellow low on health is
+  edged red; clicking one selects them (for healing). Retail only streams
+  fellows' vitals while the Fellowship page is open, so this keeps that
+  stream on.
+- Friends: online first, then offline, with tags such as Patron,
+  Fellowship, Monarch, Vassal. The selected friend gets Tell, Invite,
+  Remove. Add by name (50 at most) and Appear offline.
+- Ignored: ignore a character or a whole account (50 at most). Each row
+  shows what is hidden and a menu to change it (everything, speech,
+  tells, emotes, spell words, allegiance and fellowship chat, combat
+  messages). An Everyone row covers the server's global squelch.
+
 ## Still to design
 
-Social (allegiance, fellowship, friends), map, journal and quests,
+Map, journal and quests,
 pop-up dialogs, login and character creation. After that, a check of
 every retail panel in `crates/ac-ui/src/panels` against this design.
 
