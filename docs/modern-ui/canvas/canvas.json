@@ -842,6 +842,83 @@
       "h": 600,
       "page": "social",
       "title": "No allegiance yet"
+    },
+    "Map.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "map",
+      "title": "Full-screen map (M): you, your house, towns, pins; click a town",
+      "is_interactive": true
+    },
+    "MapSearch.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "map",
+      "title": "Find a town or pin: matches lit, the place shown",
+      "is_interactive": true
+    },
+    "MapPin.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "map",
+      "title": "Right-click to pin a spot"
+    },
+    "MapUnderground.dc.html": {
+      "x": 0,
+      "y": 1020,
+      "w": 1440,
+      "h": 900,
+      "page": "map",
+      "title": "Underground: no place on the world map"
+    },
+    "MapCompact.dc.html": {
+      "x": 1520,
+      "y": 1020,
+      "w": 1280,
+      "h": 720,
+      "page": "map",
+      "title": "Smaller screen (1280 x 720): the side column becomes a drawer, the basics move onto the map",
+      "is_interactive": true
+    },
+    "House.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 900,
+      "h": 600,
+      "page": "house",
+      "title": "House window (H): maintenance paid, who may come in",
+      "is_interactive": true
+    },
+    "HouseDue.dc.html": {
+      "x": 2500,
+      "y": 0,
+      "w": 900,
+      "h": 600,
+      "page": "house",
+      "title": "Maintenance not paid: warning in the window, red dot on the House button",
+      "is_interactive": true
+    },
+    "HouseNone.dc.html": {
+      "x": 3480,
+      "y": 0,
+      "w": 900,
+      "h": 600,
+      "page": "house",
+      "title": "No house: when you may buy, free houses on the map"
+    },
+    "HouseInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "house",
+      "title": "House open over the HUD (its own button, bottom right, marked)"
     }
   },
   "createdOnFiles": {
@@ -851,7 +928,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "social"
+    "page": "map"
   },
   "notes": {
     "t1": {
@@ -958,6 +1035,22 @@
       "x": 0,
       "y": -300,
       "page": "social"
+    },
+    "t14": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Map (full screen)",
+      "x": 0,
+      "y": -300,
+      "page": "map"
+    },
+    "t15": {
+      "kind": "title1",
+      "maxW": 4380,
+      "text": "House (its own window)",
+      "x": 0,
+      "y": -300,
+      "page": "house"
     }
   },
   "order": [
@@ -1058,7 +1151,16 @@
     "SocialFellowNone.dc.html",
     "SocialFriends.dc.html",
     "SocialIgnored.dc.html",
-    "SocialNone.dc.html"
+    "SocialNone.dc.html",
+    "Map.dc.html",
+    "MapSearch.dc.html",
+    "MapPin.dc.html",
+    "MapUnderground.dc.html",
+    "MapCompact.dc.html",
+    "House.dc.html",
+    "HouseDue.dc.html",
+    "HouseNone.dc.html",
+    "HouseInGame.dc.html"
   ],
   "pages": [
     {
@@ -1108,6 +1210,14 @@
     {
       "id": "social",
       "name": "Social"
+    },
+    {
+      "id": "map",
+      "name": "Map"
+    },
+    {
+      "id": "house",
+      "name": "House"
     },
     {
       "id": "r1",

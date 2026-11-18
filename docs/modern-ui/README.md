@@ -290,9 +290,58 @@ This folder holds the design only. There is no code yet.
   tells, emotes, spell words, allegiance and fellowship chat, combat
   messages). An Everyone row covers the server's global squelch.
 
+## Map
+
+- Full screen, opened with M (Esc or M closes it). Retail's map and
+  house share one panel; here they are split, as retail's key map
+  already has a separate action for each.
+- Top bar: title, your health, stamina and mana (the rest of the HUD
+  and the world are hidden), a button that folds the side column, and
+  Esc.
+- The map square fills the height. On it: your arrow, your house, a dot
+  for each of retail's 53 towns with names for the larger ones (zoom in
+  for the rest), and a tooltip on each. Click a town for a card with its
+  coordinates, how far and which way it is from you, Copy coordinates
+  and Link in chat. Zoom, centre on you, and the coordinates under the
+  cursor.
+- Side column: where you are (coordinates, the nearest town and its
+  direction, facing), the Dereth date and time; Find a place (OPENAC):
+  the nearest towns, or what you search for, pins included; and
+  switches for town names, your house, your pins, plugin markers and
+  houses for sale.
+- OPENAC additions: pins (right-click the map, name the spot; saved per
+  character on your own computer), plugin markers, and houses for sale
+  (asks the server for free cottages, as `@hslist` does, and marks
+  them).
+- Underground: the map dims, a hollow arrow marks where you were last
+  outside, and a note says the dungeon has no place on the world map.
+- Smaller screens: the side column becomes a drawer from the top bar,
+  and your coordinates and the date move onto the map.
+- The land on the canvas is a placeholder; the client draws the game's
+  own map image.
+
+## House
+
+- Its own 900 x 600 window, opened with H (rebindable) or the House
+  button on the panel strip, which gets a red dot when maintenance is
+  due.
+- Left: the house type, where it is and Show on map (opens the map on
+  it); bought, this period ends, next due; each maintenance item with a
+  bar; a green "paid for this period, cannot pay early" note or a red
+  warning that the house and its contents will be lost; the rule for
+  buying another.
+- Right, Who may come in (OPENAC; retail has these as `@house`
+  commands): open house, allegiance may enter, allegiance may use
+  storage, the guest list with a storage tick each, add a guest, Send
+  visitors out, Abandon house (asks first).
+- No house: when you may buy another, and buttons that show free
+  cottages, villas or mansions on the map.
+- Buying and paying maintenance happen in the house's own window (with
+  the pop-up dialogs, still to design).
+
 ## Still to design
 
-Map, journal and quests,
+Journal and quests,
 pop-up dialogs, login and character creation. After that, a check of
 every retail panel in `crates/ac-ui/src/panels` against this design.
 

@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>House window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{opacity:0.45;cursor:default}
+</style>
+</helmet>
+<div style="width: 900px; height: 600px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.92); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 20px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5"></path></svg>
+    <h1 style="margin: 0; font-size: 15px; font-weight: 600;">House</h1>
+    <span style="font-size: 11px; color: #A89A82;">H</span>
+    <span style="flex: 1;"></span>
+    <button aria-label="Close" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <sc-if value="{{isHouseOwned}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 20px; top: 72px; width: 420px; bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="width: 44px; height: 44px; flex: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: linear-gradient(160deg, rgba(224,176,104,0.2), rgba(0,0,0,0.5)); display: flex; align-items: center; justify-content: center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5"></path></svg>
+        </span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+          <h2 style="margin: 0; font-size: 16px; font-weight: 700;">Cottage</h2>
+          <span style="font-size: 11.5px; color: #C8B89C; font-variant-numeric: tabular-nums;">East of Arwic · {{houseCoords}}</span>
+        </span>
+        <button title="Opens the map on your house" style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Show on map</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column;">
+        <sc-for list="{{houseRows}}" as="r" hint-placeholder-count="3">
+          <div style="height: 26px; display: flex; align-items: center; font-size: 12.5px;">
+            <span style="flex: 1; color: #E9D3AE;">{{r.k}}</span>
+            <span style="font-weight: 700; color: {{r.c}}; font-variant-numeric: tabular-nums;">{{r.v}}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>MAINTENANCE</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span><span>{{periodNote}}</span></div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <sc-for list="{{rent}}" as="p" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; font-size: 12.5px;">
+              <span style="flex: 1; font-weight: 600;">{{p.name}}</span>
+              <span style="font-weight: 700; color: {{p.c}}; font-variant-numeric: tabular-nums;">{{p.text}}</span>
+            </div>
+            <span style="height: 4px; border-radius: 2px; background: rgba(0,0,0,0.5); overflow: hidden;"><span style="display: block; width: {{p.pct}}; height: 100%; background: {{p.c}};"></span></span>
+          </div>
+        </sc-for>
+      </div>
+      <div role="status" style="padding: 10px 12px; border-radius: 4px; border: 1px solid {{rentNote.edge}}; background: {{rentNote.bg}}; display: flex; gap: 10px; align-items: flex-start;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{rentNote.fg}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px;"><path d="{{rentNote.icon}}"></path></svg>
+        <span style="font-size: 12px; line-height: 1.5; color: {{rentNote.text}};">{{rentNote.msg}}</span>
+      </div>
+      <span style="flex: 1;"></span>
+      <span style="font-size: 11px; line-height: 1.5; color: #A89A82;">You may buy another house as soon as you abandon this one. Pay maintenance at the house itself.</span>
+    </div>
+
+    <!-- access -->
+    <div style="position: absolute; left: 460px; right: 20px; top: 72px; bottom: 20px; box-sizing: border-box; padding: 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="flex: 1; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">WHO MAY COME IN</span>
+        <span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span>
+      </div>
+      <sc-for list="{{access}}" as="a" hint-placeholder-count="3">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button role="switch" aria-checked="{{a.on}}" aria-label="{{a.label}}" onClick="{{a.flip}}" style="width: 38px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: {{a.track}}; position: relative; cursor: pointer; flex: none;"><span style="position: absolute; top: 3px; left: {{a.knobX}}; width: 14px; height: 14px; border-radius: 50%; background: {{a.knob}};"></span></button>
+          <span style="display: flex; flex-direction: column; gap: 1px;">
+            <span style="font-size: 12.5px; font-weight: 600;">{{a.label}}</span>
+            <span style="font-size: 10.5px; color: #A89A82;">{{a.note}}</span>
+          </span>
+        </div>
+      </sc-for>
+      <div style="display: flex; align-items: center; gap: 8px; padding-top: 4px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>GUESTS · 3</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span><span>STORAGE</span></div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{guests}}" as="g" hint-placeholder-count="3">
+          <div style="height: 34px; padding: 0 4px 0 10px; border-radius: 4px; background: rgba(0,0,0,0.22); display: flex; align-items: center; gap: 10px;">
+            <span style="flex: 1; font-size: 12.5px; font-weight: 600;">{{g.name}}</span>
+            <button role="checkbox" aria-checked="{{g.store}}" aria-label="{{g.name}} may use storage" onClick="{{g.flip}}" style="width: 18px; height: 18px; padding: 0; box-sizing: border-box; border-radius: 3px; border: 1.5px solid {{g.edge}}; background: {{g.bg}}; color: #1A140D; font-size: 11px; font-weight: 800; line-height: 14px; cursor: pointer;">{{g.mark}}</button>
+            <button aria-label="Remove {{g.name}}" style="width: 28px; height: 28px; padding: 0; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <label style="flex: 1; height: 30px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center;">
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Guest's name</span>
+          <input placeholder="Add a guest by name" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12px;">
+        </label>
+        <button disabled="{{always}}" style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Add</button>
+      </div>
+      <span style="flex: 1;"></span>
+      <div style="display: flex; gap: 6px;">
+        <button title="Sends out everyone who is not on your guest list" style="flex: 1; height: 32px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Send visitors out</button>
+        <button style="flex: 1; height: 32px; border-radius: 4px; border: 1px solid rgba(255,138,142,0.5); background: rgba(229,72,77,0.10); color: #FF8A8E; font-size: 12px; font-weight: 600; cursor: pointer;">Abandon house…</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isHouseNone}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 0; right: 0; top: 52px; bottom: 0; display: flex; align-items: center; justify-content: center;">
+      <div style="width: 460px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5"></path></svg>
+        <h2 style="margin: 0; font-size: 16px; font-weight: 700;">You don't own a house</h2>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: #C8B89C;">You may buy another landscape house on 2 December 2026 at 19:41. Apartments are not limited.</p>
+        <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 12px; color: #E9D3AE;">Show free houses on the map:</span>
+          <span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button style="height: 32px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Cottages</button>
+          <button style="height: 32px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Villas</button>
+          <button style="height: 32px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Mansions</button>
+        </div>
+        <span style="font-size: 11px; color: #A89A82;">Apartments have no place on the map; the server says how many are free.</span>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"house":{"editor":"enum","options":["paid","due","none"],"default":"paid"},"$preview":{"width":900,"height":600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const TXT = '#F4EBDC', MUTED = '#C8B89C', GOLD = '#E0B068', UP = '#7FD08A', DOWN = '#FF8A8E';
+    const houseMode = this.props.house || 'paid';
+    const flag = (k, d) => (st[k] !== undefined ? st[k] : d);
+    const sw = (key, def, label, extra) => {
+      const on = flag(key, def);
+      return Object.assign({ label, on, track: on ? 'rgba(224,176,104,0.9)' : 'rgba(255,255,255,0.14)', knob: on ? '#1A140D' : MUTED, knobX: on ? '21px' : '3px', flip: () => this.setState({ [key]: !on }) }, extra || {});
+    };
+    const fmt = (n, pos, neg) => Math.abs(n).toFixed(1) + (n >= 0 ? pos : neg);
+    const hx = 218, hy = 82;
+    const houseCoords = fmt((255 - hy) * 0.8 - 101.95, 'N', 'S') + ', ' + fmt(hx * 0.8 - 101.95, 'E', 'W');
+    // house
+    const due = houseMode === 'due';
+    const rentItems = due
+      ? [['Pyreals', 50000, 50000], ['Mana Scarab', 3, 5], ['Pearl', 0, 2]]
+      : [['Pyreals', 50000, 50000], ['Mana Scarab', 5, 5], ['Pearl', 2, 2]];
+    const rent = rentItems.map(([name, paid, num]) => {
+      const full = paid >= num;
+      return { name: num > 1 && name !== 'Pyreals' ? num + ' × ' + name : name === 'Pyreals' ? num.toLocaleString('en-US') + ' pyreals' : name,
+        text: full ? 'Paid' : paid + ' of ' + num, pct: Math.round((paid / num) * 100) + '%', c: full ? UP : due ? DOWN : GOLD };
+    });
+    const rentNote = due ? {
+      edge: 'rgba(229,72,77,0.6)', bg: 'rgba(229,72,77,0.10)', fg: DOWN, text: '#F4EBDC', icon: 'M12 3 2 20h20zM12 10v4M12 17h.01',
+      msg: 'Maintenance for the last 30-day period is not paid. Pay it by 2 December 2026, 19:41, or you lose the house and everything in it.'
+    } : {
+      edge: 'rgba(127,208,138,0.45)', bg: 'rgba(127,208,138,0.08)', fg: UP, text: '#E9D3AE', icon: 'M5 12l5 5L20 7',
+      msg: 'Paid for this period. The next period cannot be paid early.'
+    };
+    const houseRows = [
+      { k: 'Bought', v: '2 September 2026, 19:41', c: TXT },
+      { k: 'This period ends', v: '2 December 2026, 19:41', c: due ? DOWN : TXT },
+      { k: 'Next due', v: '2 December 2026, 19:41', c: TXT }
+    ];
+    const access = [
+      sw('hOpen', false, 'Open house', { note: 'Anyone may come in' }),
+      sw('hAlleg', true, 'Your allegiance may come in', { note: 'Everyone in House of Arwic' }),
+      sw('hAllegStore', false, 'Your allegiance may use storage', { note: 'Chests in the house' })
+    ];
+    const guests = [['Mira', true], ['Osk', false], ['Hask', true]].map(([name, def]) => {
+      const on = flag('g_' + name, def);
+      return { name, store: on, mark: on ? '✓' : '', edge: on ? GOLD : 'rgba(201,160,98,0.6)', bg: on ? GOLD : 'transparent', flip: () => this.setState({ ['g_' + name]: !on }) };
+    });
+
+    return {
+      always: true, houseCoords,
+      isHouseOwned: houseMode !== 'none', isHouseNone: houseMode === 'none',
+      houseRows, rent, rentNote, periodNote: due ? 'NOT PAID' : 'PAID', access, guests
+    };
+  }
+}
+</script>
+</body>
+</html>

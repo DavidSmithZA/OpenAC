@@ -140,15 +140,16 @@ button{font:inherit;color:inherit}
 
   <!-- panel strip, bottom right -->
   <nav aria-label="Panels" style="position: absolute; right: 16px; bottom: 14px; display: flex; gap: 2px; padding: 4px; border-radius: 8px; border: 1px solid {{t.trim}}; background: rgba(0,0,0,0.5);">
-    <sc-for list="{{panels}}" as="p" hint-placeholder-count="7">
-      <button aria-label="{{p.label}}" title="{{p.label}} ({{p.key}})" style="width: 36px; height: 36px; padding: 0; border: 0; border-radius: 6px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+    <sc-for list="{{panels}}" as="p" hint-placeholder-count="8">
+      <button aria-label="{{p.label}}" title="{{p.label}} ({{p.key}})" style="width: 36px; height: 36px; padding: 0; border: 0; border-radius: 6px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{t.icon}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.d}}"></path></svg>
+        <sc-if value="{{p.warn}}" hint-placeholder-val="{{false}}"><span title="Maintenance is due" style="position: absolute; right: 5px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: #FF5A5F; box-shadow: 0 0 0 2px rgba(0,0,0,0.6);"></span></sc-if>
       </button>
     </sc-for>
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"trim":{"editor":"enum","options":["neutral","bronze"],"default":"neutral"},"bars":{"editor":"enum","options":["stacked","none"],"default":"stacked"},"chat":{"editor":"enum","options":["shown","none"],"default":"shown"},"accent":{"editor":"color","default":"","options":["#7CC4FF","#D9A75B","#8BE38F","#C9A2FF"]},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"trim":{"editor":"enum","options":["neutral","bronze"],"default":"neutral"},"bars":{"editor":"enum","options":["stacked","none"],"default":"stacked"},"chat":{"editor":"enum","options":["shown","none"],"default":"shown"},"accent":{"editor":"color","default":"","options":["#7CC4FF","#D9A75B","#8BE38F","#C9A2FF"]},"housedue":{"editor":"enum","options":["no","yes"],"default":"no"},"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
   renderVals() {
     const bronze = (this.props.trim ?? 'neutral') === 'bronze';
@@ -173,6 +174,7 @@ class Component extends DCLogic {
       book: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5',
       user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
       map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14',
+      house: 'M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5',
       users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7',
       scroll: 'M6 3h12v14a4 4 0 0 1-4 4H6M6 3a3 3 0 0 0-3 3v2h3M10 8h5M10 12h5',
       gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1'
@@ -216,7 +218,8 @@ class Component extends DCLogic {
       panels: [
         { label: 'Character', key: 'C', d: P.user }, { label: 'Inventory', key: 'I', d: P.bag },
         { label: 'Spellbook', key: 'K', d: P.book }, { label: 'Quests', key: 'J', d: P.scroll },
-        { label: 'Map', key: 'M', d: P.map }, { label: 'Social', key: 'O', d: P.users },
+        { label: 'Map', key: 'M', d: P.map }, { label: 'House', key: 'H', d: P.house, warn: (this.props.housedue ?? 'no') === 'yes' },
+        { label: 'Social', key: 'O', d: P.users },
         { label: 'Options', key: 'Esc', d: P.gear }
       ]
     };
