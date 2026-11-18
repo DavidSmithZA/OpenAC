@@ -339,10 +339,41 @@ This folder holds the design only. There is no code yet.
 - Buying and paying maintenance happen in the house's own window (with
   the pop-up dialogs, still to design).
 
+## Journal
+
+- One 900 x 600 window, opened with J (the panel strip button is now
+  called Journal). Tabs: Quests and Notes; retail's separate page list
+  is folded into the Notes tab.
+- Quests: grouped as In progress, Waiting to repeat, Can be started and
+  Done, with a search (OPENAC). The selected quest shows its status,
+  description and the server's progress line (the server sends only a
+  count; a total shows only when the quest's own text has one), time
+  left on a timed quest or when a done one repeats, and who gives it,
+  the quest area and who takes it back, each with coordinates and a Map
+  button ("Indoors" when there are none). Abandon asks first; a done
+  quest says Remove from list instead.
+- Quests on screen (OPENAC): a "Show on screen" switch per quest; the
+  shown ones sit in a small panel the player moves anywhere in Edit
+  layout, and clicking one opens it in the journal. The built-in quest
+  system is limited, so this stays light.
+- Notes: your pages (searchable; label and any running countdown on
+  each), New page; the page with first, previous, next and last, a
+  label (16 characters), title (32) and notes (2,048) with counters; a
+  recorded place (Record where I am, Map); a countdown in days, hours
+  and minutes with Start and Stop, one running at a time as in retail;
+  Delete page. Kept on the player's computer, one journal per
+  character.
+
+## Book reader
+
+- Retail's in-game book window: the book's title, previous and next,
+  and a menu of every page the book can hold with who wrote each.
+  Another writer's page is read-only; a blank page or your own is a
+  field you type in, saved when you turn the page or close the book.
+
 ## Still to design
 
-Journal and quests,
-pop-up dialogs, login and character creation. After that, a check of
+Pop-up dialogs, login and character creation. After that, a check of
 every retail panel in `crates/ac-ui/src/panels` against this design.
 
 Open question: at a server's level cap, does the XP bar say "Max level"

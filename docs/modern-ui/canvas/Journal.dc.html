@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Journal window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{opacity:0.45;cursor:default}
+.jn-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,160,98,0.7) transparent}
+.jn-scroll::-webkit-scrollbar{width:5px}
+.jn-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
+</style>
+</helmet>
+<div style="width: 900px; height: 600px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.92); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 20px; box-sizing: border-box; background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v14a4 4 0 0 1-4 4H6M6 3a3 3 0 0 0-3 3v2h3M10 8h5M10 12h5"></path></svg>
+    <h1 style="margin: 0; font-size: 15px; font-weight: 600;">Journal</h1>
+    <span style="font-size: 11px; color: #A89A82;">J</span>
+    <span style="flex: 1;"></span>
+    <button aria-label="Close" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- tabs -->
+  <div role="tablist" aria-label="Journal" style="position: absolute; left: 0; right: 0; top: 52px; height: 40px; display: flex; gap: 4px; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35);">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+      <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="height: 40px; padding: 0 12px; border: 0; border-bottom: 2px solid {{t.line}}; background: transparent; color: {{t.fg}}; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; cursor: pointer;">
+        {{t.label}}
+        <span style="height: 18px; padding: 0 6px; border-radius: 999px; background: rgba(201,160,98,0.16); color: #E9D3AE; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; font-variant-numeric: tabular-nums;">{{t.count}}</span>
+      </button>
+    </sc-for>
+  </div>
+
+  <!-- ============ QUESTS ============ -->
+  <sc-if value="{{isQuests}}" hint-placeholder-val="{{true}}">
+    <!-- list -->
+    <div style="position: absolute; left: 20px; top: 104px; width: 320px; bottom: 20px; display: flex; flex-direction: column; gap: 8px;">
+      <label style="height: 32px; flex: none; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 8px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+        <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Find a quest</span>
+        <input placeholder="Find a quest" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12.5px;">
+        <span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span>
+      </label>
+      <div class="jn-scroll" style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;">
+        <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+          <div style="height: 26px; flex: none; display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>{{g.title}}</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span></div>
+          <sc-for list="{{g.rows}}" as="q" hint-placeholder-count="2">
+            <button onClick="{{q.pick}}" aria-pressed="{{q.on}}" style="flex: none; min-height: 44px; margin-bottom: 2px; padding: 5px 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid {{q.edge}}; background: {{q.bg}}; display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: left;">
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 12.5px; font-weight: 600; color: {{q.nameColor}};">{{q.name}}</span>
+                <span style="font-size: 10.5px; color: {{q.subColor}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{q.sub}}</span>
+              </span>
+              <sc-if value="{{q.tracked}}" hint-placeholder-val="{{false}}">
+                <svg role="img" aria-label="Shown on screen" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6"></path></svg>
+              </sc-if>
+            </button>
+          </sc-for>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- detail -->
+    <section aria-label="{{q.name}}" style="position: absolute; left: 356px; right: 20px; top: 104px; bottom: 20px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.28); display: flex; flex-direction: column;">
+      <div style="flex: none; padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid rgba(201,160,98,0.2);">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <h2 style="flex: 1; margin: 0; font-size: 16px; font-weight: 700; line-height: 1.3;">{{q.name}}</h2>
+          <span style="flex: none; height: 22px; padding: 0 9px; border-radius: 999px; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: {{q.statusFg}}; border: 1px solid {{q.statusEdge}};"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{q.statusFg}};"></span>{{q.status}}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button role="switch" aria-checked="{{track.on}}" aria-label="Show on screen" onClick="{{track.flip}}" style="width: 34px; height: 18px; padding: 0; border: 0; border-radius: 999px; background: {{track.track}}; position: relative; cursor: pointer; flex: none;"><span style="position: absolute; top: 3px; left: {{track.knobX}}; width: 12px; height: 12px; border-radius: 50%; background: {{track.knob}};"></span></button>
+          <span style="font-size: 12px; color: #E9D3AE;">Show on screen</span>
+          <span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span>
+        </div>
+      </div>
+      <div class="jn-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 12px;">
+        <p style="margin: 10px 0 0; font-size: 12.5px; line-height: 1.6; color: #E9D3AE;">{{q.desc}}</p>
+        <sc-if value="{{q.hasProgress}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; align-items: center; gap: 8px; padding: 14px 0 4px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>PROGRESS</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span></div>
+          <p style="margin: 2px 0 0; font-size: 12.5px; font-weight: 600;">{{q.progress}}</p>
+        </sc-if>
+        <sc-if value="{{q.hasTime}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; align-items: center; gap: 8px; padding: 14px 0 4px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>TIME</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span></div>
+          <div style="height: 26px; display: flex; align-items: center; font-size: 12.5px;">
+            <span style="flex: 1; color: #E9D3AE;">{{q.timeLabel}}</span>
+            <span style="font-weight: 700; color: {{q.timeColor}}; font-variant-numeric: tabular-nums;">{{q.time}}</span>
+          </div>
+        </sc-if>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 14px 0 4px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>WHO AND WHERE</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span></div>
+        <sc-for list="{{q.places}}" as="pl" hint-placeholder-count="3">
+          <div style="min-height: 40px; display: flex; align-items: center; gap: 10px;">
+            <span style="width: 86px; flex: none; font-size: 11px; color: #C8B89C;">{{pl.role}}</span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+              <span style="font-size: 12.5px; font-weight: 600;">{{pl.who}}</span>
+              <span style="font-size: 11px; color: #A89A82; font-variant-numeric: tabular-nums;">{{pl.where}}</span>
+            </span>
+            <sc-if value="{{pl.onMap}}" hint-placeholder-val="{{true}}">
+              <button title="Opens the map with this place marked" style="height: 26px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"></path></svg>Map
+              </button>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="flex: none; height: 56px; padding: 0 16px; border-top: 1px solid rgba(201,160,98,0.2); display: flex; align-items: center; gap: 10px;">
+        <span style="flex: 1; font-size: 11px; color: #A89A82;">{{q.footNote}}</span>
+        <button onClick="{{askAbandon}}" style="height: 32px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(255,138,142,0.5); background: rgba(229,72,77,0.10); color: #FF8A8E; font-size: 12px; font-weight: 600; cursor: pointer;">{{q.abandon}}</button>
+      </div>
+    </section>
+
+    <sc-if value="{{confirmAbandon}}" hint-placeholder-val="{{false}}">
+      <div style="position: absolute; inset: 0; background: rgba(10,8,6,0.6); display: flex; align-items: center; justify-content: center;">
+        <div role="alertdialog" aria-label="Abandon {{q.name}}?" style="width: 380px; box-sizing: border-box; padding: 18px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.99); box-shadow: 0 16px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px;">
+          <h2 style="margin: 0; font-size: 15px; font-weight: 700;">Abandon {{q.name}}?</h2>
+          <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: #E9D3AE;">Your progress on it is lost. You can take it up again from {{q.giver}}.</p>
+          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+            <button onClick="{{closeOver}}" style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12px; font-weight: 600; cursor: pointer;">Keep it</button>
+            <button style="height: 34px; padding: 0 16px; border-radius: 4px; border: 1px solid #E5484D; background: rgba(229,72,77,0.9); color: #FFFFFF; font-size: 12px; font-weight: 700; cursor: pointer;">Abandon</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <!-- ============ NOTES ============ -->
+  <sc-if value="{{isNotes}}" hint-placeholder-val="{{false}}">
+    <!-- pages -->
+    <div style="position: absolute; left: 20px; top: 104px; width: 280px; bottom: 20px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; gap: 6px; flex: none;">
+        <label style="flex: 1; height: 32px; box-sizing: border-box; padding: 0 6px 0 10px; border-radius: 4px; border: 1px solid {{searchEdge}}; background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 8px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Search your pages</span>
+          <input placeholder="Search your pages" value="{{search}}" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12.5px;">
+          <sc-if value="{{hasSearch}}" hint-placeholder-val="{{false}}">
+            <button aria-label="Clear the search" style="width: 22px; height: 22px; padding: 0; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+          </sc-if>
+        </label>
+        <button title="Add a page at the end" style="height: 32px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New
+        </button>
+      </div>
+      <div class="jn-scroll" style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{pages}}" as="p" hint-placeholder-count="5">
+          <button onClick="{{p.pick}}" aria-pressed="{{p.on}}" style="flex: none; min-height: 46px; padding: 5px 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid {{p.edge}}; background: {{p.bg}}; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+            <span style="width: 18px; flex: none; font-size: 11px; color: #A89A82; font-variant-numeric: tabular-nums;">{{p.num}}</span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+              <span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{p.title}}</span>
+              <span style="display: flex; gap: 6px; align-items: center;">
+                <sc-if value="{{p.hasLabel}}" hint-placeholder-val="{{true}}"><span style="height: 16px; padding: 0 6px; border-radius: 3px; border: 1px solid rgba(201,160,98,0.35); font-size: 10px; font-weight: 600; color: #C8B89C; display: flex; align-items: center;">{{p.label}}</span></sc-if>
+                <sc-if value="{{p.running}}" hint-placeholder-val="{{false}}"><span style="font-size: 10.5px; font-weight: 700; color: #E0B068; font-variant-numeric: tabular-nums;">{{p.left}} left</span></sc-if>
+              </span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+      <span style="flex: none; font-size: 10.5px; line-height: 1.4; color: #A89A82;">Kept on this computer, one journal per character.</span>
+    </div>
+
+    <!-- the page -->
+    <section aria-label="Page {{pg.num}}" style="position: absolute; left: 316px; right: 20px; top: 104px; bottom: 20px; box-sizing: border-box; padding: 14px 16px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 4px;">
+        <button aria-label="First page" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 6l-6 6 6 6M7 6v12"></path></svg></button>
+        <button aria-label="Previous page" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+        <span style="font-size: 12px; color: #C8B89C; font-variant-numeric: tabular-nums; padding: 0 4px;">Page {{pg.num}} of 5</span>
+        <button aria-label="Next page" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+        <button aria-label="Last page" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 6l6 6-6 6M17 6v12"></path></svg></button>
+        <span style="flex: 1;"></span>
+        <button style="height: 28px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(255,138,142,0.45); background: transparent; color: #FF8A8E; font-size: 11.5px; font-weight: 600; cursor: pointer;">Delete page…</button>
+      </div>
+      <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px;">
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #C8B89C;">
+          <span style="display: flex;"><span style="flex: 1;">Label</span><span style="color: #A89A82; font-variant-numeric: tabular-nums;">{{pg.labelCount}}/16</span></span>
+          <input value="{{pg.label}}" maxlength="16" style="height: 32px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 12.5px;">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #C8B89C;">
+          <span style="display: flex;"><span style="flex: 1;">Title</span><span style="color: #A89A82; font-variant-numeric: tabular-nums;">{{pg.titleCount}}/32</span></span>
+          <input value="{{pg.title}}" maxlength="32" style="height: 32px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 13px; font-weight: 600;">
+        </label>
+      </div>
+      <label style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #C8B89C;">
+        <span style="display: flex;"><span style="flex: 1;">Notes</span><span style="color: #A89A82; font-variant-numeric: tabular-nums;">{{pg.notesCount}} / 2,048</span></span>
+        <textarea maxlength="2048" style="flex: 1; min-height: 0; box-sizing: border-box; padding: 10px 12px; resize: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 13px; line-height: 1.6;">{{pg.notes}}</textarea>
+      </label>
+
+      <!-- place and countdown -->
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px;">
+        <div style="padding: 10px 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.25); display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">PLACE</span>
+          <span style="font-size: 13px; font-weight: 700; color: {{pg.placeColor}}; font-variant-numeric: tabular-nums;">{{pg.place}}</span>
+          <div style="display: flex; gap: 6px;">
+            <button style="height: 28px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Record where I am</button>
+            <button disabled="{{pg.noPlace}}" style="height: 28px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Map</button>
+          </div>
+        </div>
+        <div style="padding: 10px 12px; border-radius: 4px; border: 1px solid {{pg.timerEdge}}; background: {{pg.timerBg}}; display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">COUNTDOWN</span>
+          <sc-if value="{{pg.running}}" hint-placeholder-val="{{false}}">
+            <span style="font-size: 18px; font-weight: 700; color: #E0B068; font-variant-numeric: tabular-nums;">{{pg.left}}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Stop</button>
+              <span style="font-size: 10.5px; color: #A89A82;">started from 2 h 0 m</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{pg.notRunning}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <sc-for list="{{units}}" as="u" hint-placeholder-count="3">
+                <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: #C8B89C;">
+                  <input value="{{u.v}}" aria-label="{{u.name}}" inputmode="numeric" style="width: 34px; height: 28px; box-sizing: border-box; padding: 0 6px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums;">{{u.unit}}
+                </label>
+              </sc-for>
+              <span style="flex: 1;"></span>
+              <button disabled="{{otherRunning}}" title="{{startTip}}" style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Start</button>
+            </div>
+            <span style="font-size: 10.5px; color: #A89A82;">{{startTip}}</span>
+          </sc-if>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tab":{"editor":"enum","options":["quests","notes"],"default":"quests"},"quest":{"editor":"enum","options":["drudge","lugian","shipment","golem","ramp","tusker"],"default":"drudge"},"page":{"editor":"enum","options":["1","2","3","4","5"],"default":"1"},"overlay":{"editor":"enum","options":["","abandon"],"default":""},"$preview":{"width":900,"height":600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const TXT = '#F4EBDC', MUTED = '#C8B89C', DIM = '#A89A82', GOLD = '#E0B068', UP = '#7FD08A', BLUE = '#8FB8FF';
+    const tab = st.tab || this.props.tab || 'quests';
+    const overlay = st.overlay !== undefined ? st.overlay : (this.props.overlay || '');
+    const flag = (k, d) => (st[k] !== undefined ? st[k] : d);
+    const pickEdge = (on) => ({ edge: on ? GOLD : 'rgba(201,160,98,0.18)', bg: on ? 'rgba(224,176,104,0.12)' : 'rgba(0,0,0,0.22)' });
+
+    // ---- quests
+    const W = (role, who, where, onMap) => ({ role, who, where, onMap: onMap !== false });
+    const Q = {
+      drudge: { name: 'Drudge Raiders of Holtburg', state: 'active',
+        desc: 'Drudges have been raiding the farms north-west of Holtburg. Captain Aldric wants their camp broken up: slay the raiders and bring back their totem.',
+        progress: 'You have slain 8 Drudge Raiders.', sub: '8 slain',
+        places: [W('Given by', 'Captain Aldric', 'Holtburg · 37.3N, 32.9E'), W('Quest area', 'Raider camp', '39.8N, 30.4E'), W('Turn in to', 'Captain Aldric', 'Holtburg · 37.3N, 32.9E')], giver: 'Captain Aldric' },
+      lugian: { name: 'Lugian Ridge Patrol', state: 'active',
+        desc: 'Light the warning beacons along the ridge so the watch can see Lugian war parties coming.',
+        progress: 'You have lit 3 of the 5 beacons.', sub: '3 of the 5 beacons lit',
+        places: [W('Given by', 'Warden Hesk', 'Stonehold · 61.7N, 20.0W'), W('Quest area', 'The ridge', '57.2N, 17.5W'), W('Turn in to', 'Warden Hesk', 'Stonehold · 61.7N, 20.0W')], giver: 'Warden Hesk' },
+      shipment: { name: 'The Lost Shipment', state: 'active', timed: true,
+        desc: 'A shipment of mana charges went missing on the road to Cragstone. Find it before the thieves sell it on.',
+        progress: '', sub: 'Started · 1h 42m left',
+        places: [W('Given by', 'Trader Moreth', 'Arwic · 28.5N, 53.7E'), W('Quest area', 'Thieves’ cellar', 'Indoors', false), W('Turn in to', 'Quartermaster Ilsa', 'Cragstone · 21.3N, 45.7E')], giver: 'Trader Moreth' },
+      golem: { name: 'Hearts of the Golems', state: 'waiting',
+        desc: 'The mages of Rithwic pay for golem hearts. They want more once their stock runs low.',
+        progress: '', sub: 'Done · again in 14h 05m',
+        places: [W('Given by', 'Archmage Velan', 'Rithwic · 7.7N, 56.1E'), W('Quest area', 'Golem pass', '12.4N, 61.0E'), W('Turn in to', 'Archmage Velan', 'Rithwic · 7.7N, 56.1E')], giver: 'Archmage Velan' },
+      ramp: { name: 'The Ramp Watch', state: 'available',
+        desc: 'The watch on the old ramp needs another blade. Speak to Sergeant Bree to sign on.',
+        progress: '', sub: 'Can be started',
+        places: [W('Given by', 'Sergeant Bree', 'Arwic · 28.5N, 53.7E'), W('Quest area', 'The old ramp', '31.0N, 49.8E'), W('Turn in to', 'Sergeant Bree', 'Arwic · 28.5N, 53.7E')], giver: 'Sergeant Bree' },
+      tusker: { name: 'Tusker Tusks', state: 'done',
+        desc: 'Bring the tusks of Tusker Guards to the carver in Eastham.',
+        progress: '', sub: 'Done',
+        places: [W('Given by', 'Carver Joss', 'Eastham · 14.1N, 60.9E'), W('Turn in to', 'Carver Joss', 'Eastham · 14.1N, 60.9E')], giver: 'Carver Joss' }
+    };
+    const STATUS = {
+      active: { status: 'In progress', fg: GOLD, edge: 'rgba(224,176,104,0.6)' },
+      waiting: { status: 'Waiting to repeat', fg: BLUE, edge: 'rgba(143,184,255,0.5)' },
+      available: { status: 'Can be started', fg: UP, edge: 'rgba(127,208,138,0.5)' },
+      done: { status: 'Done', fg: MUTED, edge: 'rgba(201,160,98,0.35)' }
+    };
+    const selQ = st.q || this.props.quest || 'drudge';
+    const trackedDefault = { drudge: true, shipment: true };
+    const isTracked = (k) => flag('tr_' + k, !!trackedDefault[k]);
+    const row = (k) => {
+      const c = Q[k], on = k === selQ;
+      return Object.assign({ name: c.name, sub: c.sub, on, tracked: isTracked(k), nameColor: c.state === 'done' ? MUTED : TXT, subColor: c.timed ? GOLD : DIM, pick: () => this.setState({ q: k, overlay: '' }) }, pickEdge(on));
+    };
+    const groups = [
+      { title: 'IN PROGRESS · 3', rows: ['drudge', 'lugian', 'shipment'].map(row) },
+      { title: 'WAITING TO REPEAT · 1', rows: ['golem'].map(row) },
+      { title: 'CAN BE STARTED · 1', rows: ['ramp'].map(row) },
+      { title: 'DONE · 1', rows: ['tusker'].map(row) }
+    ];
+    const c = Q[selQ] || Q.drudge;
+    const s = STATUS[c.state];
+    const q = {
+      name: c.name, desc: c.desc, status: s.status, statusFg: s.fg, statusEdge: s.edge,
+      hasProgress: !!c.progress, progress: c.progress,
+      hasTime: !!c.timed || c.state === 'waiting',
+      timeLabel: c.timed ? 'Time left to finish' : 'Can be done again in',
+      time: c.timed ? '1h 42m' : '14h 05m', timeColor: c.timed ? GOLD : BLUE,
+      places: c.places, giver: c.giver,
+      abandon: c.state === 'active' || c.state === 'available' ? 'Abandon quest' : 'Remove from list',
+      footNote: c.state === 'waiting' ? 'Removing it stops the countdown here; the server still knows when it repeats.' : c.state === 'done' ? '' : 'The quest leaves the list once the server confirms.'
+    };
+    const trackOn = isTracked(selQ);
+    const track = { on: trackOn, track: trackOn ? 'rgba(224,176,104,0.9)' : 'rgba(255,255,255,0.14)', knob: trackOn ? '#1A140D' : MUTED, knobX: trackOn ? '19px' : '3px', flip: () => this.setState({ ['tr_' + selQ]: !trackOn }) };
+
+    // ---- notes
+    const PAGES = [
+      { label: 'Hunting', title: 'Drudge camp north-west of Holtburg', notes: 'Raiders spawn around the big tent, three or four at a time.\nTotem drops from the chieftain only.\nBring frost: they are weak to it.', place: '39.8N, 30.4E' },
+      { label: 'Spawns', title: 'Golem boss respawn', notes: 'Boss is back two hours after a kill.\nLast kill 19:40. Camp at the pass entrance, not inside.', place: '12.4N, 61.0E', running: true, left: '1:12:40' },
+      { label: 'Shopping', title: 'Spell components to buy', notes: 'Prismatic tapers: 300\nPlatinum scarabs: 50\nWormwood: 40 (Arwic vendor is cheapest)', place: '' },
+      { label: '', title: 'Mana forge run', notes: 'Friday, meet at the Arwic lifestone an hour before.\nBring 5 mana charges each.', place: '28.5N, 53.7E' },
+      { label: 'Allegiance', title: 'Who needs what', notes: 'Hask: Major Coordination.\nWren: any level 30 sword.\nPell: bring to the Holtburg drudges this week.', place: '' }
+    ];
+    const search = this.props.page === '2' && !st.pg ? 'golem' : '';
+    const selP = Number(st.pg || this.props.page || 1);
+    const pages = PAGES.map((p, i) => {
+      const on = i + 1 === selP;
+      const hit = !search || (p.label + p.title + p.notes).toLowerCase().includes(search);
+      return hit ? Object.assign({ num: i + 1, title: p.title, label: p.label, hasLabel: !!p.label, running: !!p.running, left: p.left || '', on, pick: () => this.setState({ pg: String(i + 1) }) }, pickEdge(on)) : null;
+    }).filter(Boolean);
+    const P = PAGES[selP - 1] || PAGES[0];
+    const running = !!P.running;
+    const pg = {
+      num: selP, label: P.label, title: P.title, notes: P.notes,
+      labelCount: P.label.length, titleCount: P.title.length, notesCount: P.notes.length.toLocaleString('en-US'),
+      place: P.place || 'No place recorded', placeColor: P.place ? TXT : DIM, noPlace: !P.place,
+      running, notRunning: !running, left: running ? P.left + ' left' : '',
+      timerEdge: running ? 'rgba(224,176,104,0.6)' : 'rgba(201,160,98,0.25)', timerBg: running ? 'rgba(224,176,104,0.08)' : 'transparent'
+    };
+    const otherRunning = !running && PAGES.some((p) => p.running);
+    const units = [{ name: 'Days', unit: 'd', v: '' }, { name: 'Hours', unit: 'h', v: '' }, { name: 'Minutes', unit: 'm', v: '' }];
+
+    const tabs = [['quests', 'Quests', '6'], ['notes', 'Notes', '5']].map(([key, label, count]) => {
+      const on = key === tab;
+      return { label, count, on, line: on ? GOLD : 'transparent', fg: on ? TXT : MUTED, pick: () => this.setState({ tab: key, overlay: '' }) };
+    });
+    return {
+      always: true, tabs,
+      isQuests: tab === 'quests', isNotes: tab === 'notes',
+      groups, q, track,
+      askAbandon: () => this.setState({ overlay: 'abandon' }), closeOver: () => this.setState({ overlay: '' }),
+      confirmAbandon: tab === 'quests' && overlay === 'abandon',
+      pages, pg, units, otherRunning,
+      startTip: otherRunning ? 'One countdown runs at a time: page 2’s is running.' : 'Set a length, then Start.',
+      search, hasSearch: !!search, searchEdge: search ? GOLD : 'rgba(201,160,98,0.45)'
+    };
+  }
+}
+</script>
+</body>
+</html>

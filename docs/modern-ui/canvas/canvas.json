@@ -919,6 +919,85 @@
       "h": 900,
       "page": "house",
       "title": "House open over the HUD (its own button, bottom right, marked)"
+    },
+    "JournalInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "journal",
+      "title": "Journal open over the bronze HUD"
+    },
+    "Journal.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 900,
+      "h": 600,
+      "page": "journal",
+      "title": "Quests: grouped by state; who and where, each on the map",
+      "is_interactive": true
+    },
+    "JournalAbandon.dc.html": {
+      "x": 2500,
+      "y": 0,
+      "w": 900,
+      "h": 600,
+      "page": "journal",
+      "title": "Abandon a quest: asked first"
+    },
+    "JournalNotes.dc.html": {
+      "x": 1520,
+      "y": 720,
+      "w": 900,
+      "h": 600,
+      "page": "journal",
+      "title": "Notes: your own pages, a place and a countdown each",
+      "is_interactive": true
+    },
+    "JournalNotesRunning.dc.html": {
+      "x": 2500,
+      "y": 720,
+      "w": 900,
+      "h": 600,
+      "page": "journal",
+      "title": "Searching pages; a countdown running",
+      "is_interactive": true
+    },
+    "QuestsHud.dc.html": {
+      "x": 0,
+      "y": 1020,
+      "w": 1440,
+      "h": 900,
+      "page": "journal",
+      "title": "Quests on screen: a panel you move anywhere (Edit layout); click one to open it",
+      "is_interactive": true
+    },
+    "Book.dc.html": {
+      "x": 1520,
+      "y": 1440,
+      "w": 560,
+      "h": 620,
+      "page": "journal",
+      "title": "Book: reading someone else\u2019s page",
+      "is_interactive": true
+    },
+    "BookWrite.dc.html": {
+      "x": 2160,
+      "y": 1440,
+      "w": 560,
+      "h": 620,
+      "page": "journal",
+      "title": "Book: a blank page you can write on",
+      "is_interactive": true
+    },
+    "BookMenu.dc.html": {
+      "x": 2800,
+      "y": 1440,
+      "w": 560,
+      "h": 620,
+      "page": "journal",
+      "title": "Book: every page it can hold, and who wrote each",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -928,7 +1007,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "map"
+    "page": "journal"
   },
   "notes": {
     "t1": {
@@ -1051,6 +1130,14 @@
       "x": 0,
       "y": -300,
       "page": "house"
+    },
+    "t16": {
+      "kind": "title1",
+      "maxW": 3400,
+      "text": "Journal: quests, notes, books",
+      "x": 0,
+      "y": -300,
+      "page": "journal"
     }
   },
   "order": [
@@ -1160,7 +1247,16 @@
     "House.dc.html",
     "HouseDue.dc.html",
     "HouseNone.dc.html",
-    "HouseInGame.dc.html"
+    "HouseInGame.dc.html",
+    "JournalInGame.dc.html",
+    "Journal.dc.html",
+    "JournalAbandon.dc.html",
+    "JournalNotes.dc.html",
+    "JournalNotesRunning.dc.html",
+    "QuestsHud.dc.html",
+    "Book.dc.html",
+    "BookWrite.dc.html",
+    "BookMenu.dc.html"
   ],
   "pages": [
     {
@@ -1218,6 +1314,10 @@
     {
       "id": "house",
       "name": "House"
+    },
+    {
+      "id": "journal",
+      "name": "Journal"
     },
     {
       "id": "r1",
