@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Barber window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+input[type=range]{accent-color:#E0B068}
+</style>
+</helmet>
+<div style="width: 760px; height: 560px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.94); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 20px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a3 3 0 1 0 0-.01M6 18a3 3 0 1 0 0-.01M8.5 7.5 20 18M8.5 16.5 20 6"></path></svg>
+    <h1 style="margin: 0; font-size: 15px; font-weight: 600;">Barber</h1>
+    <span style="font-size: 11px; color: #A89A82;">Female Aluvian</span>
+    <span style="flex: 1;"></span>
+    <button aria-label="Cancel and close" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- preview -->
+  <div style="position: absolute; left: 20px; top: 72px; width: 320px; bottom: 84px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: radial-gradient(circle at 50% 40%, rgba(224,176,104,0.12), rgba(0,0,0,0.35) 70%); overflow: hidden;">
+    <div aria-hidden="true" style="position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center;">
+      <div style="width: 120px; height: 34px; border-radius: 60px 60px 12px 12px; background: {{hairColor}}; opacity: 0.9;"></div>
+      <div style="width: 104px; height: 128px; margin-top: -20px; border-radius: 50px 50px 46px 46px; background: {{skinColor}}; border: 1.5px dashed rgba(255,255,255,0.35); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;">
+        <div style="display: flex; gap: 26px;"><span style="width: 12px; height: 8px; border-radius: 50%; background: {{eyeColor}};"></span><span style="width: 12px; height: 8px; border-radius: 50%; background: {{eyeColor}};"></span></div>
+        <span style="width: 34px; height: 4px; border-radius: 2px; background: rgba(120,60,50,0.7);"></span>
+      </div>
+      <div style="width: 200px; height: 90px; margin-top: 10px; border-radius: 90px 90px 0 0; border: 1.5px dashed rgba(255,255,255,0.3); border-bottom: 0;"></div>
+    </div>
+    <span style="position: absolute; left: 12px; top: 10px; font-size: 10px; color: rgba(244,235,220,0.5);">The 3-D figure is drawn here</span>
+    <div style="position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; gap: 8px;">
+      <button aria-label="Turn left" style="width: 34px; height: 34px; padding: 0; border-radius: 50%; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"></path></svg></button>
+      <button title="Hold to see your look as it was" style="height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.45); font-size: 11.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer;">Hold for before
+        <span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span>
+      </button>
+      <button aria-label="Turn right" style="width: 34px; height: 34px; padding: 0; border-radius: 50%; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"></path></svg></button>
+    </div>
+  </div>
+
+  <!-- parts -->
+  <div style="position: absolute; left: 356px; right: 20px; top: 72px; bottom: 84px; display: flex; flex-direction: column; gap: 14px;">
+    <div role="tablist" aria-label="Part" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;">
+      <sc-for list="{{parts}}" as="p" hint-placeholder-count="5">
+        <button role="tab" aria-selected="{{p.on}}" onClick="{{p.pick}}" style="height: 54px; border-radius: 4px; border: 1px solid {{p.edge}}; background: {{p.bg}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer;">
+          <span style="font-size: 12.5px; font-weight: 600;">{{p.label}}</span>
+          <span style="font-size: 10px; color: #A89A82;">{{p.sub}}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{hasStyle}}" hint-placeholder-val="{{true}}">
+      <section aria-label="Style" style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="flex: 1; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">STYLE</span>
+          <button aria-label="Previous style" style="width: 26px; height: 26px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+          <span style="min-width: 64px; text-align: center; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;">{{styleText}}</span>
+          <button aria-label="Next style" style="width: 26px; height: 26px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+        </div>
+        <div role="radiogroup" aria-label="Styles" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+          <sc-for list="{{styles}}" as="s" hint-placeholder-count="12">
+            <button role="radio" aria-checked="{{s.on}}" onClick="{{s.pick}}" style="height: 34px; border-radius: 4px; border: 1px solid {{s.edge}}; background: {{s.bg}}; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer;">{{s.n}}</button>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{hasColour}}" hint-placeholder-val="{{true}}">
+      <section aria-label="Colour" style="display: flex; flex-direction: column; gap: 8px;">
+        <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">COLOUR</span>
+        <div role="radiogroup" aria-label="Colours" style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <sc-for list="{{swatches}}" as="w" hint-placeholder-count="8">
+            <button role="radio" aria-checked="{{w.on}}" aria-label="{{w.name}}" title="{{w.name}}" onClick="{{w.pick}}" style="width: 34px; height: 34px; padding: 0; border-radius: 50%; border: 2px solid {{w.ring}}; background: {{w.c}}; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.35); cursor: pointer;"></button>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{hasShade}}" hint-placeholder-val="{{true}}">
+      <label style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="display: flex; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span style="flex: 1;">SHADE</span><span style="letter-spacing: 0; font-weight: 600; font-variant-numeric: tabular-nums;">{{shade}}%</span></span>
+        <span style="height: 8px; border-radius: 4px; background: linear-gradient(90deg, {{shadeFrom}}, {{shadeTo}});"></span>
+        <input type="range" min="0" max="100" value="{{shade}}" aria-label="Shade" style="margin: -2px 0 0;">
+      </label>
+    </sc-if>
+
+    <sc-if value="{{noColour}}" hint-placeholder-val="{{false}}">
+      <p style="margin: 0; font-size: 11.5px; color: #A89A82;">{{noColourText}}</p>
+    </sc-if>
+  </div>
+
+  <!-- bottom bar -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 68px; box-sizing: border-box; padding: 0 20px; border-top: 1px solid rgba(201,160,98,0.35); display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2);">
+    <span style="flex: 1; font-size: 11.5px; color: #C8B89C;">Changed: hair style, hair colour</span>
+    <button style="height: 38px; padding: 0 16px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12.5px; font-weight: 600; cursor: pointer;">Cancel</button>
+    <button style="height: 38px; padding: 0 20px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 13px; font-weight: 700; cursor: pointer;">Accept</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"part":{"editor":"enum","options":["hair","eyes","nose","mouth","skin"],"default":"hair"},"$preview":{"width":760,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const GOLD = '#E0B068';
+    const part = st.part || this.props.part || 'hair';
+    const COUNT = { hair: 12, eyes: 8, nose: 6, mouth: 6 };
+    const DEF = { hair: 4, eyes: 2, nose: 3, mouth: 1 };
+    const style = Number(st['s_' + part] || DEF[part] || 1);
+    const HAIR = [['Black', '#1C1612'], ['Dark brown', '#3B2618'], ['Brown', '#6A4426'], ['Auburn', '#8A3B1E'], ['Copper', '#B4652E'], ['Blond', '#C9A35A'], ['Ash', '#B8B0A0'], ['White', '#E6E1D6']];
+    const EYES = [['Brown', '#5A3A22'], ['Hazel', '#7A6A35'], ['Green', '#3E7A4A'], ['Blue', '#3D6BA8'], ['Grey', '#7E8A94']];
+    const hairPick = Number(st.hairC !== undefined ? st.hairC : 4);
+    const eyePick = Number(st.eyeC !== undefined ? st.eyeC : 3);
+    const parts = [['hair', 'Hair', 'style ' + (st.s_hair || 4) + ' · ' + HAIR[hairPick][0].toLowerCase()], ['eyes', 'Eyes', EYES[eyePick][0].toLowerCase()], ['nose', 'Nose', 'style ' + (st.s_nose || 3)], ['mouth', 'Mouth', 'style ' + (st.s_mouth || 1)], ['skin', 'Skin', 'shade']].map(([key, label, sub]) => {
+      const on = key === part;
+      return { label, sub, on, edge: on ? GOLD : 'rgba(201,160,98,0.3)', bg: on ? 'rgba(224,176,104,0.14)' : 'rgba(0,0,0,0.25)', pick: () => this.setState({ part: key }) };
+    });
+    const hasStyle = part !== 'skin';
+    const styles = [];
+    for (let n = 1; n <= (COUNT[part] || 0); n++) {
+      const on = n === style;
+      styles.push({ n, on, edge: on ? GOLD : 'rgba(201,160,98,0.3)', bg: on ? 'rgba(224,176,104,0.18)' : 'rgba(0,0,0,0.25)', pick: () => this.setState({ ['s_' + part]: n }) });
+    }
+    const list = part === 'hair' ? HAIR : part === 'eyes' ? EYES : [];
+    const pick = part === 'hair' ? hairPick : eyePick;
+    const swatches = list.map(([name, c], i) => ({ name, c, on: i === pick, ring: i === pick ? GOLD : 'rgba(0,0,0,0.5)', pick: () => this.setState({ [part === 'hair' ? 'hairC' : 'eyeC']: i }) }));
+    const hasColour = swatches.length > 0;
+    const hasShade = part === 'hair' || part === 'skin';
+    const skinShade = Number(st.skinShade || 40);
+    return {
+      parts, hasStyle, styles, styleText: hasStyle ? style + ' of ' + COUNT[part] : '',
+      hasColour, swatches, hasShade,
+      shade: part === 'skin' ? skinShade : 55,
+      shadeFrom: part === 'skin' ? '#F1D3B8' : '#2A1A10', shadeTo: part === 'skin' ? '#6B4630' : HAIR[hairPick][1],
+      noColour: part === 'nose' || part === 'mouth', noColourText: 'This part has a style only; its colour follows your skin.',
+      hairColor: HAIR[hairPick][1], eyeColor: EYES[eyePick][1], skinColor: 'rgba(214,170,135,0.55)'
+    };
+  }
+}
+</script>
+</body>
+</html>

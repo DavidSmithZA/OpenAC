@@ -1058,6 +1058,76 @@
       "page": "dialogs",
       "title": "Paying someone else\u2019s house: asked first",
       "is_interactive": true
+    },
+    "LootInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "misc",
+      "title": "Looting a corpse over the bronze HUD"
+    },
+    "Loot.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 400,
+      "h": 470,
+      "page": "misc",
+      "title": "Corpse: pick an item for Inspect and Loot, double-click to loot, or drag to a pack",
+      "is_interactive": true
+    },
+    "LootChest.dc.html": {
+      "x": 2000,
+      "y": 0,
+      "w": 400,
+      "h": 520,
+      "page": "misc",
+      "title": "Chest: the packs inside, and putting something in",
+      "is_interactive": true
+    },
+    "Barber.dc.html": {
+      "x": 1520,
+      "y": 640,
+      "w": 760,
+      "h": 560,
+      "page": "misc",
+      "title": "Barber: hair (style and colour), turn the figure",
+      "is_interactive": true
+    },
+    "BarberSkin.dc.html": {
+      "x": 2360,
+      "y": 640,
+      "w": 760,
+      "h": 560,
+      "page": "misc",
+      "title": "Barber: skin has a shade only",
+      "is_interactive": true
+    },
+    "Chess.dc.html": {
+      "x": 1520,
+      "y": 1320,
+      "w": 800,
+      "h": 560,
+      "page": "misc",
+      "title": "Chess: your side at the bottom, where a piece can go",
+      "is_interactive": true
+    },
+    "ChessResign.dc.html": {
+      "x": 2400,
+      "y": 1320,
+      "w": 800,
+      "h": 560,
+      "page": "misc",
+      "title": "Resign: asked first",
+      "is_interactive": true
+    },
+    "LootMenu.dc.html": {
+      "x": 2480,
+      "y": 0,
+      "w": 400,
+      "h": 470,
+      "page": "misc",
+      "title": "Right-click: Inspect, Loot, or loot straight into a chosen pack"
     }
   },
   "createdOnFiles": {
@@ -1067,7 +1137,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "dialogs"
+    "page": "misc"
   },
   "notes": {
     "t1": {
@@ -1206,6 +1276,14 @@
       "x": 0,
       "y": -300,
       "page": "dialogs"
+    },
+    "t18": {
+      "kind": "title1",
+      "maxW": 3200,
+      "text": "Loot, barber, chess",
+      "x": 0,
+      "y": -300,
+      "page": "misc"
     }
   },
   "order": [
@@ -1331,7 +1409,15 @@
     "DialogSheet.dc.html",
     "Slumlord.dc.html",
     "SlumlordPay.dc.html",
-    "SlumlordOther.dc.html"
+    "SlumlordOther.dc.html",
+    "LootInGame.dc.html",
+    "Loot.dc.html",
+    "LootChest.dc.html",
+    "Barber.dc.html",
+    "BarberSkin.dc.html",
+    "Chess.dc.html",
+    "ChessResign.dc.html",
+    "LootMenu.dc.html"
   ],
   "pages": [
     {
@@ -1397,6 +1483,10 @@
     {
       "id": "dialogs",
       "name": "Dialogs"
+    },
+    {
+      "id": "misc",
+      "name": "Loot, barber, chess"
     },
     {
       "id": "r1",

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Loot window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{opacity:0.45;cursor:default}
+</style>
+</helmet>
+<div style="width: 400px; height: {{H}}; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.94); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden; display: flex; flex-direction: column;">
+
+  <!-- header -->
+  <div style="flex: none; height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 14px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <span style="width: 34px; height: 34px; flex: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: linear-gradient(160deg, {{c.tint}}33, rgba(0,0,0,0.5)); display: flex; align-items: center; justify-content: center;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{c.tint}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.icon}}"></path></svg>
+    </span>
+    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+      <h1 style="margin: 0; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{c.name}}</h1>
+      <span style="font-size: 11px; color: #C8B89C; font-variant-numeric: tabular-nums;">{{c.sub}}</span>
+    </span>
+    <button aria-label="Close" title="Close (walking away closes it too)" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- packs inside -->
+  <sc-if value="{{hasPacks}}" hint-placeholder-val="{{false}}">
+    <div role="tablist" aria-label="Packs inside" style="flex: none; padding: 8px 12px 0; display: flex; gap: 4px; flex-wrap: wrap;">
+      <sc-for list="{{packs}}" as="p" hint-placeholder-count="3">
+        <button role="tab" aria-selected="{{p.on}}" onClick="{{p.pick}}" style="height: 28px; padding: 0 10px; border-radius: 4px; border: 1px solid {{p.edge}}; background: {{p.bg}}; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2"></path></svg>
+          {{p.label}}<span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">{{p.count}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- items -->
+  <div style="flex: 1; min-height: 0; padding: 8px 8px 4px; display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+    <sc-for list="{{items}}" as="it" hint-placeholder-count="6">
+      <div style="flex: none; height: 44px; padding: 0 6px; border-radius: 4px; border: 1px solid {{it.edge}}; background: {{it.bg}}; display: flex; align-items: center; gap: 10px; opacity: {{it.op}};">
+        <button onClick="{{it.pick}}" title="Double-click to loot it, drag it to a pack, or right-click for more" style="flex: 1; min-width: 0; height: 42px; padding: 0; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+        <span style="width: 32px; height: 32px; flex: none; border-radius: 4px; background: {{it.tile}}; display: flex; align-items: center; justify-content: center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{it.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{it.d}}"></path></svg>
+        </span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 12.5px; font-weight: 600; color: {{it.nameColor}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{it.name}}</span>
+          <span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">{{it.sub}}</span>
+        </span>
+        </button>
+        <sc-if value="{{it.on}}" hint-placeholder-val="{{false}}">
+          <button aria-label="Inspect {{it.name}}" title="Inspect (or right-click)" style="width: 28px; height: 28px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg></button>
+          <button style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Loot</button>
+        </sc-if>
+        <sc-if value="{{it.moving}}" hint-placeholder-val="{{false}}">
+          <span style="font-size: 11px; color: #E0B068;">Looting…</span>
+        </sc-if>
+      </div>
+    </sc-for>
+    <sc-if value="{{canDrop}}" hint-placeholder-val="{{false}}">
+      <div style="flex: none; margin-top: 4px; height: 52px; border-radius: 4px; border: 1.5px dashed {{dropEdge}}; background: {{dropBg}}; display: flex; align-items: center; justify-content: center; font-size: 12px; color: {{dropFg}};">{{dropText}}</div>
+    </sc-if>
+  </div>
+
+  <!-- foot -->
+  <div style="flex: none; height: 56px; padding: 0 12px; border-top: 1px solid rgba(201,160,98,0.3); display: flex; align-items: center; gap: 10px;">
+    <span style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+      <span style="font-size: 10.5px; color: #C8B89C; font-variant-numeric: tabular-nums;">{{burdenText}}</span>
+      <span style="height: 4px; border-radius: 2px; background: rgba(0,0,0,0.5); overflow: hidden; display: flex;"><span style="width: 61%; background: #C8B89C;"></span><span style="width: {{burdenAdd}}; background: #E0B068;"></span></span>
+    </span>
+    <button title="Loots everything in the open pack into your packs, main pack first" style="height: 32px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+      Loot all
+      <span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span>
+    </button>
+  </div>
+
+  <!-- right-click menu on an item -->
+  <sc-if value="{{menuOpen}}" hint-placeholder-val="{{false}}">
+    <div role="menu" aria-label="Short Sword" style="position: absolute; left: 150px; top: 176px; width: 230px; box-sizing: border-box; padding: 4px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.99); box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column;">
+      <button role="menuitem" style="height: 30px; padding: 0 10px; border: 0; border-radius: 4px; background: rgba(224,176,104,0.14); display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>Inspect
+      </button>
+      <button role="menuitem" style="height: 30px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg><span style="flex: 1;">Loot</span><span style="font-size: 10.5px; color: #A89A82;">double-click</span>
+      </button>
+      <span style="height: 1px; margin: 4px 6px; background: rgba(201,160,98,0.25);"></span>
+      <span style="padding: 4px 10px 2px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">LOOT INTO</span>
+      <sc-for list="{{packTargets}}" as="t" hint-placeholder-count="5">
+        <button role="menuitem" disabled="{{t.full}}" style="height: 30px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; gap: 10px; font-size: 12.5px; cursor: pointer; text-align: left;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2"></path></svg>
+          <span style="flex: 1;">{{t.name}}</span>
+          <span style="font-size: 10.5px; color: {{t.fg}}; font-variant-numeric: tabular-nums;">{{t.free}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":"enum","options":["corpse","chest"],"default":"corpse"},"menu":{"editor":"enum","options":["no","yes"],"default":"no"},"$preview":{"width":400,"height":470}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const kind = this.props.kind || 'corpse';
+    const GOLD = '#E0B068', TXT = '#F4EBDC';
+    const tile = (c) => 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.5))';
+    const P = {
+      coin: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9h4.5a1.5 1.5 0 0 1 0 3H10a1.5 1.5 0 0 0 0 3H15M12 7v10',
+      sword: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      ring: 'M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM9 3h6l-3 6z',
+      scroll: 'M6 3h12v14a4 4 0 0 1-4 4H6M6 3a3 3 0 0 0-3 3v2h3M10 8h5M10 12h5',
+      gem: 'M6 3h12l4 6-10 12L2 9zM2 9h20M12 21 8 9l4-6 4 6z',
+      totem: 'M9 3h6v4H9zM8 7h8v6H8zM9 13h6v8H9zM6 9h2M16 9h2',
+      kit: 'M4 7h16v12H4zM9 7V5h6v2M12 10v6M9 13h6',
+      bag: 'M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2',
+      skull: 'M12 3a7 7 0 0 0-7 7v4l2 2v3h10v-3l2-2v-4a7 7 0 0 0-7-7zM9 12h.01M15 12h.01',
+      chest: 'M3 9h18v11H3zM3 9l2-5h14l2 5M10 13h4v3h-4z'
+    };
+    const I = (key, name, sub, d, color, quest) => ({ key, name, sub, d, color, quest });
+    let c, packs = [], items, canDrop = false, H = 470;
+    if (kind === 'corpse') {
+      c = { name: 'Corpse of Drudge Ravener', sub: '7 items', icon: P.skull, tint: '#FF9A6B' };
+      items = [
+        I('pyr', 'Pyreals', '212 · burden 0', P.coin, GOLD),
+        I('totem', 'Drudge Raider Totem', 'quest item · burden 50', P.totem, '#F2D29A', true),
+        I('sword', 'Short Sword', 'value 1,240 · burden 180', P.sword, '#B8C2CC'),
+        I('ring', 'Gold Ring', 'value 860 · burden 20', P.ring, GOLD),
+        I('scroll', 'Scroll of Frost Bolt IV', 'value 300 · burden 5', P.scroll, '#8FB8FF'),
+        I('gem', 'Bloodstone', 'value 200 · burden 10', P.gem, '#FF8A8E'),
+        I('kit', 'Healing Kit', 'value 75 · burden 40', P.kit, '#7FD08A')
+      ];
+    } else {
+      H = 520;
+      c = { name: 'Chest', sub: 'in your cottage · 12 of 120 items', icon: P.chest, tint: GOLD };
+      const pk = st.pack || 'main';
+      packs = [['main', 'Chest', '6'], ['pack', 'Pack', '4'], ['pouch', 'Pouch', '2']].map(([key, label, count]) => {
+        const on = key === pk;
+        return { label, count, on, edge: on ? GOLD : 'rgba(201,160,98,0.3)', bg: on ? 'rgba(224,176,104,0.14)' : 'rgba(0,0,0,0.25)', pick: () => this.setState({ pack: key }) };
+      });
+      items = [
+        I('sal', 'Salvaged Granite', 'workmanship 8 · burden 100', 'M4 18l4-10 6 2 6 8z', '#B8B0A4'),
+        I('sal2', 'Salvaged Iron', 'workmanship 6 · burden 100', 'M4 18l4-10 6 2 6 8z', '#9AA4AE'),
+        I('scar', 'Mana Scarab', '×14 · burden 70', 'M12 4c3 0 5 3 5 7s-2 9-5 9-5-5-5-9 2-7 5-7zM12 4v16', '#8FB8FF'),
+        I('pearl', 'Pearl', '×2 · burden 4', 'M12 19a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', '#E8E2D6'),
+        I('book', 'On the Habits of Drudges', 'book · burden 20', 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5', '#E9D3AE'),
+        I('bag', 'Pack', 'pack · 4 items inside', P.bag, '#C8B89C')
+      ];
+      canDrop = true;
+    }
+    const sel = st.sel !== undefined ? st.sel : (kind === 'corpse' ? 'sword' : '');
+    const taking = kind === 'corpse' ? 'pyr' : '';
+    const list = items.map((it) => {
+      const on = it.key === sel;
+      return { name: it.name, sub: it.sub, d: it.d, color: it.color, tile: tile(it.color),
+        nameColor: it.quest ? '#F2D29A' : TXT, on, moving: it.key === taking, op: it.key === taking ? '0.55' : '1',
+        edge: on ? GOLD : 'transparent', bg: on ? 'rgba(224,176,104,0.12)' : 'rgba(0,0,0,0.2)',
+        pick: () => this.setState({ sel: on ? '' : it.key }) };
+    });
+    const dragging = kind === 'chest';
+    return {
+      c, H: H + 'px', items: list, packs, hasPacks: packs.length > 0, canDrop,
+      dropText: dragging ? 'Let go to put Salvaged Steel in the chest' : 'Drop items here to put them in',
+      dropEdge: dragging ? GOLD : 'rgba(201,160,98,0.45)', dropBg: dragging ? 'rgba(224,176,104,0.10)' : 'transparent', dropFg: dragging ? '#F2D29A' : '#A89A82',
+      burdenText: kind === 'corpse' ? 'Your burden 61%, 64% with everything here' : 'Your burden 61%, 75% with everything here',
+      burdenAdd: kind === 'corpse' ? '3%' : '14%',
+      menuOpen: this.props.menu === 'yes' && kind === 'corpse',
+      packTargets: [['Main pack', 34], ['Pack 1', 8], ['Pack 2', 0], ['Pack 3', 24], ['Pack 4', 15]].map(([name, free]) => ({ name, free: free ? free + ' free' : 'full', full: !free, fg: free ? '#A89A82' : '#FF8A8E' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

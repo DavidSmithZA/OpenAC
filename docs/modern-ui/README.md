@@ -401,10 +401,41 @@ This folder holds the design only. There is no code yet.
 - Maintenance tab: paid so far plus what is on the row; partial payments
   allowed. Paying someone else's house asks first.
 
+## Loot
+
+- One 400-wide window for corpses, chests and packs on the ground
+  (retail's outside-container window). Header: what it is and how many
+  items (a chest also its capacity). It closes when you walk away.
+- Items are rows (icon, name, value, burden; quest items tinted gold).
+  Select one for Inspect and Loot buttons; double-click loots; drag to
+  any pack. A row being moved says "Looting…".
+- Right-click an item: Inspect, Loot, and Loot into a chosen pack (main
+  pack and each side pack with its free slots; full ones greyed).
+- A chest shows the packs inside it as tabs and a drop zone for putting
+  things in.
+- Foot: your burden now and with everything looted, and Loot all
+  (OPENAC: main pack first).
+
+## Barber
+
+- 760 x 560: the figure on the left with turn buttons and Hold for
+  before (OPENAC: your old look while held). Part tabs Hair, Eyes, Nose,
+  Mouth, Skin; each with a style stepper and numbered picks, colour
+  swatches for hair and eyes, a shade slider for hair and skin. A line
+  lists what changed; Cancel and Accept. The heritage's one option
+  shows when the heritage has it.
+
+## Chess
+
+- 800 x 560: the board from your side (Black's view when only
+  watching), the last move marked. Players with whose move it is, a
+  status line, Offer stalemate, and Resign (asks first).
+- OPENAC helpers: picking up a piece shows where it can go (dots) and
+  what it can take (ring), and a move list.
+
 ## Still to design
 
-Loot (corpses and chests), barber, chess, then login and character
-creation. After that, a check of
+Login and character creation. After that, a check of
 every retail panel in `crates/ac-ui/src/panels` against this design.
 
 Open question: at a server's level cap, does the XP bar say "Max level"
