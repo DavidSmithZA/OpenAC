@@ -488,6 +488,94 @@
       "page": "vendor",
       "title": "Small screens, selling: packs drop-down, what she buys behind the info button",
       "is_interactive": true
+    },
+    "TradeInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "trade",
+      "title": "Trade open over the bronze HUD"
+    },
+    "Trade.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 900,
+      "h": 560,
+      "page": "trade",
+      "title": "Osk accepted: your accept completes it",
+      "is_interactive": true
+    },
+    "TradeOpen.dc.html": {
+      "x": 2500,
+      "y": 0,
+      "w": 900,
+      "h": 560,
+      "page": "trade",
+      "title": "Offering: nobody has accepted yet",
+      "is_interactive": true
+    },
+    "TradeWaiting.dc.html": {
+      "x": 1520,
+      "y": 680,
+      "w": 900,
+      "h": 560,
+      "page": "trade",
+      "title": "You accepted: waiting for Osk, or withdraw",
+      "is_interactive": true
+    },
+    "TradeChanged.dc.html": {
+      "x": 2500,
+      "y": 680,
+      "w": 900,
+      "h": 560,
+      "page": "trade",
+      "title": "Changed after you accepted: acceptance taken back, new item marked",
+      "is_interactive": true
+    },
+    "TradePick.dc.html": {
+      "x": 1520,
+      "y": 1360,
+      "w": 900,
+      "h": 560,
+      "page": "trade",
+      "title": "Add from your packs without opening the inventory",
+      "is_interactive": true
+    },
+    "TradeInspect.dc.html": {
+      "x": 2500,
+      "y": 1360,
+      "w": 900,
+      "h": 560,
+      "page": "trade",
+      "title": "Inspect what they offer before you accept",
+      "is_interactive": true
+    },
+    "TradeFailed.dc.html": {
+      "x": 1520,
+      "y": 2040,
+      "w": 900,
+      "h": 560,
+      "page": "trade",
+      "title": "The trade did not go through, and why"
+    },
+    "TradeCompact.dc.html": {
+      "x": 2500,
+      "y": 2040,
+      "w": 792,
+      "h": 560,
+      "page": "trade",
+      "title": "Small screens (792 wide): same two columns, hints dropped",
+      "is_interactive": true
+    },
+    "TradeCompactInspect.dc.html": {
+      "x": 3372,
+      "y": 2040,
+      "w": 792,
+      "h": 560,
+      "page": "trade",
+      "title": "Small screens: inspecting what they offer",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -497,7 +585,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "vendor"
+    "page": "trade"
   },
   "notes": {
     "t1": {
@@ -572,6 +660,14 @@
       "x": 0,
       "y": -300,
       "page": "vendor"
+    },
+    "t10": {
+      "kind": "title1",
+      "maxW": 4164,
+      "text": "Trade (bronze)",
+      "x": 0,
+      "y": -300,
+      "page": "trade"
     }
   },
   "order": [
@@ -631,7 +727,17 @@
     "VendorTokens.dc.html",
     "VendorLeave.dc.html",
     "VendorCompact.dc.html",
-    "VendorCompactSell.dc.html"
+    "VendorCompactSell.dc.html",
+    "TradeInGame.dc.html",
+    "Trade.dc.html",
+    "TradeOpen.dc.html",
+    "TradeWaiting.dc.html",
+    "TradeChanged.dc.html",
+    "TradePick.dc.html",
+    "TradeInspect.dc.html",
+    "TradeFailed.dc.html",
+    "TradeCompact.dc.html",
+    "TradeCompactInspect.dc.html"
   ],
   "pages": [
     {
@@ -665,6 +771,10 @@
     {
       "id": "vendor",
       "name": "Vendor"
+    },
+    {
+      "id": "trade",
+      "name": "Trade"
     },
     {
       "id": "r1",

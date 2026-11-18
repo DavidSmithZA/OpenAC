@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trade window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: {{rootW}}; height: 560px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.92); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 16px 0 20px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10h11l-3-3M17 14H6l3 3"></path></svg>
+    <h1 style="margin: 0; font-size: 15px; font-weight: 600;">Trade with Osk</h1>
+    <span role="status" style="height: 22px; padding: 0 9px; border-radius: 999px; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: {{status.fg}}; background: {{status.bg}}; border: 1px solid {{status.edge}};">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: {{status.fg}};"></span>{{status.text}}
+    </span>
+    <span style="flex: 1;"></span>
+    <sc-if value="{{showHint}}" hint-placeholder-val="{{true}}"><span style="font-size: 11px; color: #A89A82;">Right-click or click any item to inspect it</span></sc-if>
+    <button aria-label="End the trade" title="End the trade" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- banner: the trade changed, or failed -->
+  <sc-if value="{{hasBanner}}" hint-placeholder-val="{{false}}">
+    <div role="alert" style="position: absolute; left: 20px; right: 20px; top: 64px; height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 4px; border: 1px solid {{banner.edge}}; background: {{banner.bg}}; display: flex; align-items: center; gap: 10px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{banner.fg}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"></path></svg>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 1px;">
+        <span style="font-size: 12px; font-weight: 700;">{{banner.title}}</span>
+        <span style="font-size: 11px; color: #E9D3AE;">{{banner.text}}</span>
+      </span>
+    </div>
+  </sc-if>
+
+  <!-- the two sides -->
+  <div style="position: absolute; left: 20px; right: 20px; top: {{colTop}}; height: {{colH}}; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;">
+    <sc-for list="{{sides}}" as="s" hint-placeholder-count="2">
+      <section aria-label="{{s.title}}" style="min-height: 0; box-sizing: border-box; border-radius: 4px; border: 1px solid {{s.edge}}; background: rgba(0,0,0,0.28); display: flex; flex-direction: column;">
+        <div style="height: 48px; flex: none; padding: 0 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(201,160,98,0.2);">
+          <span style="width: 28px; height: 28px; border-radius: 50%; background: rgba(224,176,104,0.18); border: 1px solid rgba(201,160,98,0.6); color: #E0B068; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{s.initial}}</span>
+          <h2 style="margin: 0; flex: 1; font-size: 13px; font-weight: 600;">{{s.title}}</h2>
+          <span style="height: 22px; padding: 0 8px; border-radius: 999px; display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: {{s.accFg}}; background: {{s.accBg}};">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="{{s.accFg}}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.accIcon}}"></path></svg>{{s.accText}}
+          </span>
+        </div>
+        <div style="flex: 1; min-height: 0; overflow: hidden; padding: 8px; display: flex; flex-direction: column; gap: 2px;">
+          <sc-for list="{{s.items}}" as="it" hint-placeholder-count="2">
+            <button aria-label="Inspect {{it.name}}" onClick="{{it.pick}}" style="min-height: 46px; padding: 0 10px 0 6px; border-radius: 4px; border: 1px solid {{it.edge}}; background: {{it.bg}}; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+              <span style="width: 34px; height: 34px; flex: none; border-radius: 4px; background: {{it.tile}}; display: flex; align-items: center; justify-content: center;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{it.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{it.d}}"></path></svg>
+              </span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{it.name}}</span>
+                <span style="font-size: 10.5px; color: #C8B89C;">{{it.sub}}</span>
+              </span>
+              <sc-if value="{{it.isNew}}" hint-placeholder-val="{{false}}">
+                <span style="height: 18px; padding: 0 6px; border-radius: 3px; background: #E0B068; color: #1A140D; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; display: flex; align-items: center;">NEW</span>
+              </sc-if>
+              <span style="width: 80px; text-align: right; display: flex; flex-direction: column; gap: 1px;">
+                <span style="font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;">{{it.value}}</span>
+                <span style="font-size: 10px; color: #A89A82;">{{it.valueSub}}</span>
+              </span>
+            </button>
+          </sc-for>
+          <sc-if value="{{s.mine}}" hint-placeholder-val="{{false}}">
+            <div style="margin-top: 4px; min-height: 64px; border-radius: 4px; border: 1.5px dashed rgba(201,160,98,0.45); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; color: #C8B89C;">
+              <span>Drag items here from your packs</span>
+              <button onClick="{{openPicker}}" style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add from packs
+              </button>
+            </div>
+          </sc-if>
+          <sc-if value="{{s.empty}}" hint-placeholder-val="{{false}}">
+            <div style="flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #A89A82;">Osk has not offered anything yet.</div>
+          </sc-if>
+        </div>
+        <div style="flex: none; padding: 10px 12px; border-top: 1px solid rgba(201,160,98,0.2); display: flex; justify-content: space-between; font-size: 11px; color: #C8B89C; font-variant-numeric: tabular-nums;">
+          <span>{{s.count}}</span><span style="font-weight: 700; color: #F4EBDC;">{{s.total}}</span>
+        </div>
+      </section>
+    </sc-for>
+  </div>
+
+  <!-- bottom bar -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 72px; box-sizing: border-box; padding: 0 20px; border-top: 1px solid rgba(201,160,98,0.35); display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.2);">
+    <button title="Takes everything off both sides; you both offer again" style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Clear both sides</button>
+    <sc-if value="{{showHint}}" hint-placeholder-val="{{true}}"><span style="font-size: 11px; line-height: 1.4; color: #A89A82; max-width: 250px;">Anything that changes takes back both acceptances.</span></sc-if>
+    <span style="flex: 1;"></span>
+    <sc-if value="{{waiting}}" hint-placeholder-val="{{false}}">
+      <span style="font-size: 12px; color: #C8B89C;">Waiting for Osk to accept…</span>
+      <button onClick="{{withdraw}}" style="height: 40px; padding: 0 16px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 13px; font-weight: 600; cursor: pointer;">Withdraw acceptance</button>
+    </sc-if>
+    <sc-if value="{{canAccept}}" hint-placeholder-val="{{true}}">
+      <span style="font-size: 12px; color: {{acceptHintColor}};">{{acceptHint}}</span>
+      <button onClick="{{accept}}" style="height: 40px; padding: 0 22px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1A140D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>Accept trade
+      </button>
+    </sc-if>
+  </div>
+
+  <!-- add from packs -->
+  <sc-if value="{{isPick}}" hint-placeholder-val="{{false}}">
+    <div role="dialog" aria-label="Add from your packs" style="position: absolute; left: 60px; top: 150px; width: 380px; box-sizing: border-box; padding: 12px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.98); box-shadow: 0 16px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 13px; font-weight: 700; flex: 1;">Add from your packs</span>
+        <button aria-label="Close" onClick="{{closeOver}}" style="width: 24px; height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+      </div>
+      <label style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+        <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Search your packs</span>
+        <input placeholder="Search your packs" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12px;">
+      </label>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{packItems}}" as="p" hint-placeholder-count="6">
+          <div style="min-height: 40px; padding: 0 6px; border-radius: 4px; display: flex; align-items: center; gap: 10px; opacity: {{p.op}};">
+            <span style="width: 28px; height: 28px; flex: none; border-radius: 4px; background: {{p.tile}}; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{p.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.d}}"></path></svg></span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+              <span style="font-size: 12px; font-weight: 600;">{{p.name}}</span>
+              <span style="font-size: 10.5px; color: {{p.subColor}};">{{p.sub}}</span>
+            </span>
+            <button disabled="{{p.off}}" style="height: 26px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">{{p.action}}</button>
+          </div>
+        </sc-for>
+      </div>
+      <span style="font-size: 10.5px; color: #A89A82;">Stacks ask how many. Things you wear or wield are not listed.</span>
+    </div>
+  </sc-if>
+
+  <!-- inspect one of their items -->
+  <sc-if value="{{isInspect}}" hint-placeholder-val="{{false}}">
+    <div role="dialog" aria-label="Silver Ring" style="position: absolute; left: {{inspectLeft}}; top: 118px; width: 330px; box-sizing: border-box; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.98); box-shadow: 0 16px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column;">
+      <div style="padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid rgba(201,160,98,0.2);">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="width: 48px; height: 48px; flex: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: linear-gradient(160deg, #E0B06833, rgba(0,0,0,0.55)); display: flex; align-items: center; justify-content: center;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM9 3h6l-3 6z"></path></svg>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+            <h3 style="margin: 0; font-size: 14px; font-weight: 600;">Silver Ring</h3>
+            <span style="font-size: 11px; color: #C8B89C;">Jewelry · offered by Osk</span>
+          </div>
+          <button aria-label="Close" onClick="{{closeOver}}" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 3px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;">
+          <sc-for list="{{facts}}" as="f" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column; gap: 1px; padding: 5px 8px; border-radius: 4px; background: rgba(255,255,255,0.04);">
+              <span style="font-size: 10px; color: #C8B89C;">{{f.k}}</span>
+              <span style="font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;">{{f.v}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="padding: 10px 14px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">SPELLS</span>
+        <div style="display: flex; justify-content: space-between; font-size: 12px;"><span style="color: #7FB2FF; font-weight: 600;">Major Coordination</span><span style="color: #C8B89C;">cantrip</span></div>
+        <span style="font-size: 10.5px; line-height: 1.45; color: #A89A82; margin-top: 4px;">Value is what a vendor would pay at most, not what players ask.</span>
+      </div>
+      <div style="padding: 10px 14px 14px; border-top: 1px solid rgba(201,160,98,0.2); display: flex; justify-content: flex-end;">
+        <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Full appraisal</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["open","theyAccepted","youAccepted","changed","pick","inspect","failed"],"default":"theyAccepted"},"size":{"editor":"enum","options":["wide","compact"],"default":"wide"},"$preview":{"width":900,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const state = this.props.state ?? 'theyAccepted';
+    const view = st.view !== undefined ? st.view : (state === 'pick' || state === 'inspect' ? state : '');
+    const base = { open: [false, false], theyAccepted: [false, true], youAccepted: [true, false], changed: [false, false], pick: [false, false], inspect: [false, true], failed: [false, false] }[state];
+    const you = st.you !== undefined ? st.you : base[0];
+    const them = base[1];
+    const TXT = '#F4EBDC', MUTED = '#C8B89C', GOLD = '#E0B068', OK = '#7FD08A', BAD = '#FF8A8E';
+    const P = {
+      note: 'M3 7h18v10H3zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 10v4M18 10v4',
+      coin: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15 9h-4.5a1.5 1.5 0 0 0 0 3h3a1.5 1.5 0 0 1 0 3H9M12 7v2M12 15v2',
+      ring: 'M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM9 3h6l-3 6z',
+      gem: 'M6 3h12l4 6-10 12L2 9zM2 9h20M9 3l3 18 3-18',
+      sword: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      stone: 'M12 3l7 5-2 11H7L5 8z',
+      check: 'M5 12l5 5L20 7', dot: 'M12 12h.01'
+    };
+    const tile = (c) => 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.5))';
+    const sel = view === 'inspect';
+    const I = (name, sub, value, valueSub, d, color, o) => {
+      o = o || {};
+      const on = !!o.sel && sel;
+      return { name, sub, value, valueSub, d, color, tile: tile(color), isNew: !!o.isNew,
+        edge: on ? GOLD : (o.isNew ? 'rgba(224,176,104,0.7)' : 'transparent'),
+        bg: on ? 'rgba(224,176,104,0.14)' : (o.isNew ? 'rgba(224,176,104,0.10)' : 'transparent'),
+        pick: o.inspect ? () => this.setState({ view: 'inspect' }) : null };
+    };
+    const mine = [
+      I('Trade Note (20,000)', 'Trade note · 2 in stack', '40,000p', 'exact', P.note, OK),
+      I('Pyreals', 'Coins · 2,500', '2,500p', 'exact', P.coin, GOLD)
+    ];
+    const theirs = [
+      I('Silver Ring', 'Jewelry · Major Coordination · workmanship 6', '6,000p', 'vendor value', P.ring, GOLD, { inspect: true, sel: true })
+    ];
+    if (state === 'changed') theirs.push(I('Amber', 'Gem · 4 in stack', '360p', 'vendor value', P.gem, '#E7C27A', { isNew: true, inspect: true }));
+    const acc = (on) => on
+      ? { accText: 'Accepted', accFg: OK, accBg: 'rgba(127,208,138,0.14)', accIcon: P.check }
+      : { accText: 'Not yet', accFg: MUTED, accBg: 'rgba(255,255,255,0.06)', accIcon: P.dot };
+    const sides = [
+      Object.assign({ title: 'You offer', initial: 'K', items: mine, mine: true, empty: false, count: '2 items', total: '42,500p', edge: you ? 'rgba(127,208,138,0.6)' : 'rgba(201,160,98,0.35)' }, acc(you)),
+      Object.assign({ title: 'Osk offers', initial: 'O', items: theirs, mine: false, empty: theirs.length === 0, count: theirs.length + (theirs.length === 1 ? ' item' : ' items'), total: state === 'changed' ? 'vendor value 6,360p' : 'vendor value 6,000p', edge: them ? 'rgba(127,208,138,0.6)' : 'rgba(201,160,98,0.35)' }, acc(them))
+    ];
+
+    let status;
+    if (state === 'failed') status = { text: 'Did not go through', fg: BAD, bg: 'rgba(255,107,112,0.12)', edge: 'rgba(255,138,142,0.5)' };
+    else if (you && them) status = { text: 'Both accepted', fg: OK, bg: 'rgba(127,208,138,0.12)', edge: 'rgba(127,208,138,0.5)' };
+    else if (you) status = { text: 'You accepted', fg: OK, bg: 'rgba(127,208,138,0.12)', edge: 'rgba(127,208,138,0.5)' };
+    else if (them) status = { text: 'Osk accepted', fg: OK, bg: 'rgba(127,208,138,0.12)', edge: 'rgba(127,208,138,0.5)' };
+    else status = { text: 'Offering', fg: GOLD, bg: 'rgba(224,176,104,0.12)', edge: 'rgba(224,176,104,0.5)' };
+
+    let banner = null;
+    if (state === 'changed') banner = { title: 'Osk changed the trade after you accepted, so your acceptance was taken back.', text: 'New since you accepted: Amber ×4. Look again before you accept.', fg: GOLD, edge: 'rgba(224,176,104,0.7)', bg: 'rgba(224,176,104,0.12)' };
+    if (state === 'failed') banner = { title: 'The trade did not go through.', text: 'Osk does not have room for 2 more items. Both acceptances were taken back.', fg: BAD, edge: 'rgba(255,138,142,0.6)', bg: 'rgba(255,107,112,0.10)' };
+
+    const X = (name, sub, d, color, action, off, subColor) => ({ name, sub, d, color, tile: tile(color), action, off: !!off, op: off ? '0.5' : '1', subColor: subColor || MUTED });
+    const packItems = [
+      X('Trade Note (20,000)', 'Main pack · 3, 2 already offered', P.note, OK, 'Add 1'),
+      X('Pyreals', 'Main pack · 9,900 left', P.coin, GOLD, 'Add…'),
+      X('Gold Ring', 'Pack 2', P.ring, GOLD, 'Add'),
+      X('Amber', 'Pack 2 · 4 in stack', P.gem, '#E7C27A', 'Add…'),
+      X('Major Mana Stone', 'Main pack', P.stone, '#6EA8FF', 'Add'),
+      X('Ancient Heirloom Sword', 'Attuned: it cannot be given away', P.sword, '#FF9A6B', 'Add', true, '#FFB3B6')
+    ];
+
+    const compact = (this.props.size ?? 'wide') === 'compact';
+    return {
+      rootW: compact ? '792px' : '900px', showHint: !compact, inspectLeft: compact ? '440px' : '470px',
+      status, sides,
+      hasBanner: !!banner, banner: banner || { title: '', text: '', fg: GOLD, edge: 'transparent', bg: 'transparent' },
+      colTop: banner ? '120px' : '68px', colH: banner ? '356px' : '408px',
+      waiting: you && !them, canAccept: !you,
+      acceptHint: them ? 'Osk accepted. Your accept completes the trade.' : 'Osk has not accepted yet.',
+      acceptHintColor: them ? OK : MUTED,
+      accept: () => this.setState({ you: true }), withdraw: () => this.setState({ you: false }),
+      isPick: view === 'pick', isInspect: view === 'inspect',
+      openPicker: () => this.setState({ view: 'pick' }), closeOver: () => this.setState({ view: '' }),
+      packItems,
+      facts: [{ k: 'Value', v: '6,000p' }, { k: 'Workmanship', v: '6' }, { k: 'Burden', v: '30' }]
+    };
+  }
+}
+</script>
+</body>
+</html>

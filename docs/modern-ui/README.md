@@ -162,9 +162,40 @@ This folder holds the design only. There is no code yet.
   column becomes a drop-down above the list, and what the vendor buys
   moves behind an info button.
 
+## Trade
+
+- Starting a trade works as in retail: double-click a player, or drag
+  an item onto them when "Drag item on player opens secure trade" is on
+  (otherwise the drag gives the item, if they accept gifts). The window
+  opens straight away for both of you, with no prompt.
+- Two columns, You offer | the other player offers. Each has an
+  Accepted / Not yet chip, its items (name, type, stack, value) and a
+  total. A side's border turns green when it has accepted. The header
+  carries a status: Offering, Osk accepted, You accepted, Both
+  accepted, Did not go through.
+- Accept trade; once you have accepted, Withdraw acceptance while you
+  wait. When the other side has already accepted, a hint says your
+  accept completes the trade.
+- The game cannot take back a single item, so there is no remove
+  button on an item: Clear both sides empties both, and you offer again.
+  Any change takes back both acceptances.
+- Changed after you accepted: a banner says your acceptance was taken
+  back, and items new since then are marked NEW.
+- Add from packs picks items without opening the inventory. Stacks ask
+  how many; worn and wielded things are not listed; attuned items are
+  greyed ("cannot be given away"). Dragging from the inventory works too.
+- Click (or right-click) any item on either side to inspect it: value,
+  workmanship, burden, spells, and a link to the full appraisal. Value
+  is the vendor value, not what players ask.
+- Value totals are not in retail and are kept, tagged OPENAC: exact for
+  pyreals and trade notes, vendor value for items.
+- A failed trade shows the server's reason in a banner.
+- Small screens: the window narrows to 792 px with the same two
+  columns; the hint lines go.
+
 ## Still to design
 
-Trade, salvage, appraising other players and creatures, social (allegiance,
+Salvage, appraising other players and creatures, social (allegiance,
 fellowship, friends), map, journal and quests, pop-up dialogs, login and
 character creation. After that, a check of every retail panel in
 `crates/ac-ui/src/panels` against this design.
