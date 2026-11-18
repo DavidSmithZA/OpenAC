@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Every dialog kind</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1400px; box-sizing: border-box; padding: 48px 40px; background: #2A3322; font-family: Inter, system-ui, sans-serif;">
+  <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 48px 40px;">
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">Crafting: the server’s chance, and what you combined</span>
+      <dc-import name="Dialog" kind="craft" hint-size="420px,280px"></dc-import>
+    </div>
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">Someone swears allegiance to you</span>
+      <dc-import name="Dialog" kind="swear" hint-size="420px,280px"></dc-import>
+    </div>
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">Fellowship invitation</span>
+      <dc-import name="Dialog" kind="fellow" hint-size="420px,280px"></dc-import>
+    </div>
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">Several waiting: answered one at a time</span>
+      <dc-import name="Dialog" kind="queued" hint-size="420px,280px"></dc-import>
+    </div>
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">Changing a skill</span>
+      <dc-import name="Dialog" kind="skill" hint-size="420px,280px"></dc-import>
+    </div>
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">Changing an attribute</span>
+      <dc-import name="Dialog" kind="attribute" hint-size="420px,280px"></dc-import>
+    </div>
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">Augmentation: permanent, so the yes is red</span>
+      <dc-import name="Dialog" kind="aug" hint-size="420px,280px"></dc-import>
+    </div>
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">A plain question from someone you spoke to</span>
+      <dc-import name="Dialog" kind="yesno" hint-size="420px,280px"></dc-import>
+    </div>
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">A message with OK</span>
+      <dc-import name="Dialog" kind="message" hint-size="420px,280px"></dc-import>
+    </div>
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">Please wait: no buttons, closes itself</span>
+      <dc-import name="Dialog" kind="wait" hint-size="420px,280px"></dc-import>
+    </div>
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">A question with a typed answer</span>
+      <dc-import name="Dialog" kind="text" hint-size="420px,280px"></dc-import>
+    </div>
+    <div style="width: 440px; display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; color: #C8B89C;">A question with a choice</span>
+      <dc-import name="Dialog" kind="menu" hint-size="420px,280px"></dc-import>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>House sale window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{opacity:0.45;cursor:default}
+</style>
+</helmet>
+<div style="width: 640px; height: 560px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.94); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden; display: flex; flex-direction: column;">
+
+  <!-- header -->
+  <div style="flex: none; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 20px; box-sizing: border-box; background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5"></path></svg>
+    <h1 style="margin: 0; font-size: 15px; font-weight: 600;">Cottage</h1>
+    <span style="height: 22px; padding: 0 9px; border-radius: 999px; display: flex; align-items: center; font-size: 11px; font-weight: 700; color: {{h.ownerFg}}; border: 1px solid {{h.ownerEdge}};">{{h.owner}}</span>
+    <span style="flex: 1;"></span>
+    <button aria-label="Close" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- tabs -->
+  <div role="tablist" aria-label="House" style="flex: none; height: 40px; display: flex; gap: 4px; padding: 0 16px; border-bottom: 1px solid rgba(201,160,98,0.35);">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+      <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="height: 40px; padding: 0 12px; border: 0; border-bottom: 2px solid {{t.line}}; background: transparent; color: {{t.fg}}; font-size: 12.5px; font-weight: 600; cursor: pointer;">{{t.label}}</button>
+    </sc-for>
+  </div>
+
+  <div style="flex: 1; min-height: 0; padding: 12px 20px 0; display: flex; flex-direction: column; gap: 4px;">
+    <!-- who may buy / this period -->
+    <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>{{h.rulesTitle}}</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span></div>
+    <sc-for list="{{h.rules}}" as="r" hint-placeholder-count="3">
+      <div style="height: 24px; display: flex; align-items: center; gap: 8px; font-size: 12.5px;">
+        <span style="flex: 1; color: #E9D3AE;">{{r.k}}</span>
+        <span style="font-weight: 700; color: {{r.c}}; font-variant-numeric: tabular-nums;">{{r.v}}</span>
+        <span style="width: 12px; font-size: 11px; font-weight: 700; color: {{r.c}};">{{r.mark}}</span>
+      </div>
+    </sc-for>
+
+    <!-- payment rows -->
+    <div style="display: flex; align-items: center; gap: 8px; padding: 12px 0 4px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>{{h.payTitle}}</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span><span>{{h.payRight}}</span></div>
+    <sc-for list="{{rows}}" as="p" hint-placeholder-count="3">
+      <div style="min-height: 52px; margin-bottom: 4px; padding: 6px 10px; box-sizing: border-box; border-radius: 4px; border: 1px dashed {{p.edge}}; background: {{p.bg}}; display: flex; align-items: center; gap: 10px;">
+        <span style="width: 34px; height: 34px; flex: none; border-radius: 4px; background: {{p.tile}}; display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{p.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.d}}"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+          <span style="display: flex; align-items: baseline; gap: 8px;">
+            <span style="font-size: 12.5px; font-weight: 600;">{{p.name}}</span>
+            <span style="font-size: 11px; color: #A89A82;">{{p.carry}}</span>
+          </span>
+          <span style="height: 4px; border-radius: 2px; background: rgba(0,0,0,0.5); overflow: hidden;"><span style="display: block; width: {{p.pct}}; height: 100%; background: {{p.barColor}};"></span></span>
+        </span>
+        <span style="width: 96px; text-align: right; font-size: 12px; font-weight: 700; color: {{p.statusColor}}; font-variant-numeric: tabular-nums;">{{p.status}}</span>
+        <button disabled="{{p.full}}" title="Put what you carry on this row" style="height: 28px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Add</button>
+      </div>
+    </sc-for>
+    <span style="font-size: 11px; line-height: 1.5; color: #A89A82;">{{h.hint}}</span>
+  </div>
+
+  <!-- bottom bar -->
+  <div style="flex: none; height: 64px; padding: 0 20px; border-top: 1px solid rgba(201,160,98,0.35); display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2);">
+    <span style="flex: 1; font-size: 11.5px; line-height: 1.45; color: #C8B89C;">{{h.foot}}</span>
+    <button disabled="{{h.cannot}}" onClick="{{ask}}" style="height: 40px; padding: 0 20px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 13px; font-weight: 700; cursor: pointer;">{{h.action}}</button>
+  </div>
+
+  <!-- asked first -->
+  <sc-if value="{{confirming}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; background: rgba(10,8,6,0.6); display: flex; align-items: center; justify-content: center;">
+      <div role="alertdialog" aria-label="{{h.askTitle}}" style="width: 400px; box-sizing: border-box; padding: 18px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.99); box-shadow: 0 16px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px;">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700;">{{h.askTitle}}</h2>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: #E9D3AE;">{{h.askText}}</p>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+          <button onClick="{{closeAsk}}" style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12px; font-weight: 600; cursor: pointer;">Not now</button>
+          <button style="height: 34px; padding: 0 16px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">{{h.action}}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"page":{"editor":"enum","options":["buy","pay"],"default":"buy"},"confirm":{"editor":"enum","options":["no","yes"],"default":"no"},"owner":{"editor":"enum","options":["you","other"],"default":"you"},"$preview":{"width":640,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const TXT = '#F4EBDC', MUTED = '#C8B89C', GOLD = '#E0B068', UP = '#7FD08A', DOWN = '#FF8A8E';
+    const page = st.page || this.props.page || 'buy';
+    const confirming = st.ask !== undefined ? st.ask : this.props.confirm === 'yes';
+    const ownedBySomeoneElse = this.props.owner === 'other';
+    const tile = (c) => 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.5))';
+    const ICON = { coin: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9h4.5a1.5 1.5 0 0 1 0 3H10a1.5 1.5 0 0 0 0 3H15M12 7v10', scarab: 'M12 4c3 0 5 3 5 7s-2 9-5 9-5-5-5-9 2-7 5-7zM12 4v16M7 10H4M17 10h3M7 15H4M17 15h3', pearl: 'M12 19a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM10 9.5a2 2 0 0 1 2-1.5' };
+    const R = (name, icon, color, need, staged, carry, paid) => {
+      const have = paid !== undefined ? paid + staged : staged;
+      const full = have >= need;
+      const n = (v) => v.toLocaleString('en-US');
+      return { name, d: ICON[icon], color, tile: tile(color), full,
+        carry: 'you carry ' + n(carry),
+        status: full ? (paid !== undefined && paid >= need ? 'Paid' : 'Ready') : n(have) + ' of ' + n(need),
+        statusColor: full ? UP : have > 0 ? GOLD : MUTED,
+        pct: Math.min(100, Math.round(have / need * 100)) + '%', barColor: full ? UP : GOLD,
+        edge: full ? 'rgba(127,208,138,0.5)' : 'rgba(201,160,98,0.45)', bg: full ? 'rgba(127,208,138,0.06)' : 'rgba(0,0,0,0.22)' };
+    };
+    let h, rows;
+    if (page === 'buy') {
+      rows = [R('Pyreals', 'coin', GOLD, 250000, 250000, 312400), R('Mana Scarab', 'scarab', '#8FB8FF', 10, 10, 14), R('Pearl', 'pearl', '#E8E2D6', 4, 2, 2)];
+      const ready = rows.every((r) => r.full);
+      h = { owner: 'For sale', ownerFg: UP, ownerEdge: 'rgba(127,208,138,0.5)',
+        rulesTitle: 'WHO MAY BUY IT',
+        rules: [
+          { k: 'Level 20 or higher', v: 'you: 126', c: UP, mark: '✓' },
+          { k: 'Allegiance rank', v: 'any', c: TXT, mark: '' },
+          { k: 'You may buy a landscape house', v: 'yes', c: UP, mark: '✓' }
+        ],
+        payTitle: 'PRICE', payRight: 'DRAG ITEMS ONTO A ROW',
+        hint: 'Click an item on a row to take it off again. Maintenance afterwards: 50,000 pyreals, 5 Mana Scarabs and 2 Pearls every 30 days.',
+        foot: ready ? 'Everything is on the rows.' : 'Pearl: you carry 2 of the 4 needed.',
+        cannot: !ready, action: 'Buy the cottage',
+        askTitle: 'Buy this cottage?', askText: 'The items on the rows are handed over. You cannot buy another landscape house for 30 days; apartments are not limited.' };
+    } else {
+      rows = [R('Pyreals', 'coin', GOLD, 50000, 0, 312400, 50000), R('Mana Scarab', 'scarab', '#8FB8FF', 5, 2, 14, 3), R('Pearl', 'pearl', '#E8E2D6', 2, 0, 2, 0)];
+      const ready = rows.slice(0, 2).every((r) => r.full);
+      h = ownedBySomeoneElse
+        ? { owner: 'Owned by Mira', ownerFg: GOLD, ownerEdge: 'rgba(224,176,104,0.6)' }
+        : { owner: 'Yours', ownerFg: GOLD, ownerEdge: 'rgba(224,176,104,0.6)' };
+      Object.assign(h, {
+        rulesTitle: 'THIS PERIOD',
+        rules: [
+          { k: 'Ends', v: '2 December 2026, 19:41', c: TXT, mark: '' },
+          { k: 'Paid so far', v: '1 of 3', c: GOLD, mark: '' }
+        ],
+        payTitle: 'MAINTENANCE', payRight: 'PAID + ON THE ROW',
+        hint: 'What is already paid stays paid. Pay part now and the rest later in the period.',
+        foot: ready ? 'Mana Scarabs complete with what is on the row. Pearls still needed.' : '',
+        cannot: false, action: 'Pay what is on the rows',
+        askTitle: 'Pay Mira’s maintenance?', askText: 'This house belongs to Mira. What you hand over pays Mira’s maintenance and does not come back.'
+      });
+    }
+    const ask = () => { if (page === 'pay' && !ownedBySomeoneElse) return; this.setState({ ask: true }); };
+    const tabs = [['buy', 'Buy'], ['pay', 'Maintenance']].map(([key, label]) => {
+      const on = key === page;
+      return { label, on, line: on ? GOLD : 'transparent', fg: on ? TXT : MUTED, pick: () => this.setState({ page: key, ask: false }) };
+    });
+    return { h, rows, tabs, confirming, ask, closeAsk: () => this.setState({ ask: false }) };
+  }
+}
+</script>
+</body>
+</html>

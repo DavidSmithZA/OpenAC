@@ -998,6 +998,66 @@
       "page": "journal",
       "title": "Book: every page it can hold, and who wrote each",
       "is_interactive": true
+    },
+    "DialogInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "dialogs",
+      "title": "A question from the server: centred, the world dims a little"
+    },
+    "DialogInvites.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "dialogs",
+      "title": "Invitations as cards under the target: play goes on"
+    },
+    "Dialog.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 440,
+      "h": 320,
+      "page": "dialogs",
+      "title": "One dialog (kind is a property)"
+    },
+    "DialogSheet.dc.html": {
+      "x": 0,
+      "y": 1020,
+      "w": 1440,
+      "h": 1400,
+      "page": "dialogs",
+      "title": "Every kind: the server\u2019s seven questions, message, wait, typed answer, choice",
+      "is_interactive": true
+    },
+    "Slumlord.dc.html": {
+      "x": 1520,
+      "y": 1020,
+      "w": 640,
+      "h": 560,
+      "page": "dialogs",
+      "title": "House sale window: Buy (who may buy, price rows to drop items on)",
+      "is_interactive": true
+    },
+    "SlumlordPay.dc.html": {
+      "x": 2240,
+      "y": 1020,
+      "w": 640,
+      "h": 560,
+      "page": "dialogs",
+      "title": "Maintenance: paid so far plus what is on the row",
+      "is_interactive": true
+    },
+    "SlumlordOther.dc.html": {
+      "x": 2960,
+      "y": 1020,
+      "w": 640,
+      "h": 560,
+      "page": "dialogs",
+      "title": "Paying someone else\u2019s house: asked first",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -1007,7 +1067,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "journal"
+    "page": "dialogs"
   },
   "notes": {
     "t1": {
@@ -1138,6 +1198,14 @@
       "x": 0,
       "y": -300,
       "page": "journal"
+    },
+    "t17": {
+      "kind": "title1",
+      "maxW": 3600,
+      "text": "Dialogs and the house sale window",
+      "x": 0,
+      "y": -300,
+      "page": "dialogs"
     }
   },
   "order": [
@@ -1256,7 +1324,14 @@
     "QuestsHud.dc.html",
     "Book.dc.html",
     "BookWrite.dc.html",
-    "BookMenu.dc.html"
+    "BookMenu.dc.html",
+    "DialogInGame.dc.html",
+    "DialogInvites.dc.html",
+    "Dialog.dc.html",
+    "DialogSheet.dc.html",
+    "Slumlord.dc.html",
+    "SlumlordPay.dc.html",
+    "SlumlordOther.dc.html"
   ],
   "pages": [
     {
@@ -1318,6 +1393,10 @@
     {
       "id": "journal",
       "name": "Journal"
+    },
+    {
+      "id": "dialogs",
+      "name": "Dialogs"
     },
     {
       "id": "r1",

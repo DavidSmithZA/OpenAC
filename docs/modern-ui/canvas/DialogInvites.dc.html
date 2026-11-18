@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Invitations that do not stop play</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC;">
+  <div style="position: absolute; left: 0; top: 0;">
+    <dc-import name="Horizon" trim="bronze" hint-size="1440px,900px"></dc-import>
+  </div>
+  <!-- invitations: under the target, the game keeps going -->
+  <div style="position: absolute; left: 530px; top: 104px; display: flex; flex-direction: column; gap: 8px;">
+    <div role="alertdialog" aria-label="Fellowship invitation" style="width: 380px; box-sizing: border-box; padding: 12px 14px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.94); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px;">
+      <span style="width: 30px; height: 30px; flex: none; border-radius: 50%; background: rgba(127,208,138,0.16); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7FD08A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7"></path></svg></span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 12.5px; font-weight: 700;">Fellowship invitation</span>
+        <span style="font-size: 11.5px; line-height: 1.4; color: #E9D3AE;">Mira invites you to join Ramp Runners.</span>
+      </span>
+      <button style="height: 30px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12px; font-weight: 600; cursor: pointer;">Decline</button>
+      <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Join</button>
+    </div>
+    <div role="alertdialog" aria-label="Allegiance request" style="width: 380px; box-sizing: border-box; padding: 12px 14px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.94); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px;">
+      <span style="width: 30px; height: 30px; flex: none; border-radius: 50%; background: rgba(224,176,104,0.16); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path></svg></span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 12.5px; font-weight: 700;">Allegiance request</span>
+        <span style="font-size: 11.5px; line-height: 1.4; color: #E9D3AE;">Lysse wishes to swear allegiance to you.</span>
+      </span>
+      <button style="height: 30px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12px; font-weight: 600; cursor: pointer;">Decline</button>
+      <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Accept</button>
+    </div>
+    <span style="align-self: center; font-size: 11px; color: #E9D3AE; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">Keep playing: these wait for an answer, and say so in chat</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

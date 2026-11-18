@@ -371,9 +371,40 @@ This folder holds the design only. There is no code yet.
   Another writer's page is read-only; a blank page or your own is a
   field you type in, saved when you turn the page or close the book.
 
+## Dialogs
+
+- One card style for retail's five dialog kinds (yes/no, message with
+  OK, please-wait with no buttons, yes/no with a typed answer, yes/no
+  with a choice) and the server's seven questions (someone swears to
+  you, fellowship invitation, crafting, change a skill, change an
+  attribute, augmentation, a plain yes/no).
+- A card: icon and title for the kind, the server's words as sent,
+  buttons named for what they do (Apply, Join, Untrain) with Enter and
+  Esc shown. Permanent or destructive answers (crafting that can destroy
+  the item, augmentation) have a red yes. Questions still queue one at a
+  time; the card shows "1 of 3" and how many wait.
+- Crafting also shows the two items combined, tool to target (the
+  client knows them); the chance stays in the server's text, not parsed.
+- Questions sit in the centre and dim the world slightly.
+- Invitations (OPENAC, kept): swear and fellowship requests are small
+  cards under the target with Decline and Accept or Join; play goes on
+  and chat notes them. Retail makes them modal.
+
+## House sale window
+
+- Retail's slumlord window, 640 x 560. Buy tab: who may buy it (level,
+  allegiance rank, whether you may buy a landscape house now), each
+  ticked against you; one price row per item showing what you carry and
+  what is on the row; drag items on or press Add, click one to take it
+  off. Buy is off until everything is there and asks first (30 days
+  before another landscape house).
+- Maintenance tab: paid so far plus what is on the row; partial payments
+  allowed. Paying someone else's house asks first.
+
 ## Still to design
 
-Pop-up dialogs, login and character creation. After that, a check of
+Loot (corpses and chests), barber, chess, then login and character
+creation. After that, a check of
 every retail panel in `crates/ac-ui/src/panels` against this design.
 
 Open question: at a server's level cap, does the XP bar say "Max level"
