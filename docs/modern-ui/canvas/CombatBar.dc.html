@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Combat strip</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+@keyframes cb-swingA{0%{opacity:0.9}100%{opacity:0}}
+@keyframes cb-swingB{0%{opacity:0.9}100%{opacity:0}}
+@keyframes cb-full{0%,100%{box-shadow:0 0 0 0 rgba(255,214,140,0)}50%{box-shadow:0 0 9px 2px rgba(255,214,140,0.75)}}
+</style>
+</helmet>
+<div style="box-sizing: border-box; width: {{rootW}}; padding: {{pad}}; background: {{backdrop}}; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; display: flex; justify-content: center;">
+  <div role="toolbar" aria-label="{{stripLabel}}" style="height: 30px; box-sizing: border-box; padding: 0 12px 0 4px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.8); background: rgba(0,0,0,0.55); display: flex; align-items: center; gap: 10px; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
+
+    <!-- combat mode -->
+    <button title="{{modeTitle}}" style="height: 24px; padding: 0 10px 0 8px; border-radius: 999px; border: 0; background: rgba(224,176,104,0.12); display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{modeIcon}}"></path></svg>
+      {{modeLabel}}
+    </button>
+
+    <!-- attack height: hold to charge, let go to attack -->
+    <sc-if value="{{hasHeights}}" hint-placeholder-val="{{true}}">
+      <div role="group" aria-label="Attack height" style="display: flex; gap: 1px;">
+        <sc-for list="{{heights}}" as="h" hint-placeholder-count="3">
+          <button aria-label="{{h.label}}" aria-pressed="{{h.on}}" title="{{h.title}}" onMouseDown="{{h.down}}" onMouseUp="{{release}}" onMouseLeave="{{release}}" style="height: 22px; padding: 0 8px 0 6px; border-radius: 999px; border: 0; background: {{h.bg}}; color: {{h.fg}}; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{h.d}}"></path></svg>{{h.word}}
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- power (melee) / accuracy (missile): the notch is your setting, the fill rises while you hold -->
+    <button aria-label="{{meterLabel}}" title="{{meterTitle}}" onClick="{{setPower}}" style="width: 170px; height: 14px; padding: 0; border: 0; background: transparent; cursor: pointer; position: relative;">
+      <span style="position: absolute; left: 0; right: 0; top: 3px; height: 8px; border-radius: 4px; background: rgba(0,0,0,0.6); border: 1px solid rgba(201,160,98,0.35); box-sizing: border-box; overflow: hidden; animation: {{fullAnim}};">
+        <span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{fillW}}; background: {{fillBg}}; transition: width 0.05s linear;"></span>
+        <span style="position: absolute; inset: 0; background: #FFF4DC; opacity: 0; animation: {{swingAnim}};"></span>
+      </span>
+      <sc-if value="{{hasNotch}}" hint-placeholder-val="{{true}}">
+        <span style="position: absolute; top: 1px; bottom: 1px; left: {{notchAt}}; width: 2px; margin-left: -1px; border-radius: 1px; background: #FFE2A8; box-shadow: 0 0 0 1px rgba(0,0,0,0.55);"></span>
+      </sc-if>
+    </button>
+    <span style="font-size: 10.5px; font-weight: 600; color: #A89A82;">{{word}}</span>
+
+    <!-- ammunition (missile): a quiet count; it only speaks up when low or out -->
+    <sc-if value="{{hasAmmo}}" hint-placeholder-val="{{false}}">
+      <span title="{{ammoTitle}}" style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: {{ammoWeight}}; color: {{ammoFg}}; font-variant-numeric: tabular-nums;">
+        <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Ammunition:</span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 21V8l2-5 2 5v13M15 21V8l2-5 2 5v13"></path></svg>
+        {{ammoText}}
+      </span>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"bare":{"editor":"enum","options":["no","yes"],"default":"no"},"kind":{"editor":"enum","options":["melee","missile","jump"],"default":"melee"},"charge":{"editor":"range","min":0,"max":100,"step":1,"default":0},"ammo":{"editor":"int","default":214},"ammoName":{"editor":"text","default":"Deadly Arrows"},"$preview":{"width":600,"height":74}}'>
+class Component extends DCLogic {
+  componentWillUnmount() { if (this._timer) clearInterval(this._timer); }
+  renderVals() {
+    const st = this.state || {};
+    const kind = this.props.kind ?? 'melee';
+    const bare = (this.props.bare ?? 'no') === 'yes';
+    const missile = kind === 'missile', jump = kind === 'jump';
+    const GOLD = '#E0B068';
+    const height = st.height || 'mid';
+    const desired = st.desired ?? 62;
+    const charge = st.charge !== undefined ? st.charge : Number(this.props.charge ?? 0);
+    const ammo = Number(this.props.ammo ?? 214);
+    const ammoName = this.props.ammoName || 'Deadly Arrows';
+    const noAmmo = missile && ammo <= 0;
+    const startCharge = () => {
+      if (this._timer) clearInterval(this._timer);
+      this.setState({ charge: 0 });
+      this._timer = setInterval(() => {
+        const c = Math.min(100, ((this.state || {}).charge || 0) + 4);
+        this.setState({ charge: c });
+      }, 40);
+    };
+    const release = () => {
+      if (!this._timer) return;
+      clearInterval(this._timer); this._timer = null;
+      this.setState({ swing: ((this.state || {}).swing || 0) + 1 });
+      setTimeout(() => this.setState({ charge: 0 }), 260);
+    };
+    const H = (key, label, d) => {
+      const on = key === height;
+      return { label, d, on, word: label.split(' ')[0] === 'Medium' ? 'Mid' : label.split(' ')[0], title: label + ' · hold to charge, let go to attack',
+        bg: on ? 'rgba(224,176,104,0.85)' : 'transparent', fg: on ? '#1A140D' : '#C8B89C',
+        down: () => { this.setState({ height: key }); if (!noAmmo) startCharge(); } };
+    };
+    const heights = [H('high', 'High attack', 'M6 15l6-6 6 6'), H('mid', 'Medium attack', 'M5 12h14'), H('low', 'Low attack', 'M6 9l6 6 6-6')];
+    const full = charge >= 100;
+    const swing = st.swing || 0;
+    const setPower = (e) => {
+      if (jump) return;
+      const r = e.currentTarget.getBoundingClientRect();
+      this.setState({ desired: Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * 100) });
+    };
+    const modeLabel = jump ? 'Jump' : missile ? 'Missile' : 'Melee';
+    const word = jump ? '' : missile ? 'Accuracy' : 'Power';
+    return {
+      rootW: bare ? 'auto' : '600px', pad: bare ? '0' : '22px 20px',
+      backdrop: bare ? 'transparent' : 'linear-gradient(180deg, #4F6A7A, #2E3F22)',
+      stripLabel: modeLabel + ' attack', modeLabel,
+      modeIcon: jump ? 'M12 19V5M5 12l7-7 7 7' : missile ? 'M3 21 17 7M17 7h-5M17 7v5M14 3c4 1 6 3 7 7' : 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      modeTitle: jump ? 'Charging a jump' : 'Combat mode (` switches): click for Peace, Melee, Missile or Magic',
+      hasHeights: !jump, heights, release,
+      meterLabel: jump ? 'Jump charge' : word + ' setting, ' + desired + '%',
+      meterTitle: jump ? 'Hold the jump key to charge, let go to jump' : 'Left is faster, right is stronger. Click to set it; holding an attack fills the bar.',
+      setPower, hasNotch: !jump, notchAt: desired + '%', word,
+      fillW: charge + '%',
+      fillBg: full ? 'linear-gradient(90deg, #E0B068, #FFE2A8)' : 'linear-gradient(90deg, rgba(224,176,104,0.5), #E0B068)',
+      fullAnim: full ? 'cb-full 0.7s ease-in-out infinite' : 'none',
+      swingAnim: swing ? 'cb-swing' + (swing % 2 ? 'A' : 'B') + ' 0.3s ease-out both' : 'none',
+      hasAmmo: missile,
+      ammoText: noAmmo ? 'No ammo' : ammo.toLocaleString('en-US'),
+      ammoTitle: noAmmo ? 'Nothing in your ammunition slot' : ammoName + ' in your ammunition slot' + (ammo < 20 ? ', running low' : ''),
+      ammoFg: noAmmo ? '#FF8A8E' : ammo < 20 ? '#FFC870' : '#A89A82',
+      ammoWeight: noAmmo || ammo < 20 ? '700' : '600'
+    };
+  }
+}
+</script>
+</body>
+</html>

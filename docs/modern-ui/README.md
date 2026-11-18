@@ -438,8 +438,8 @@ This folder holds the design only. There is no code yet.
 - Buffs easily run past 40, so the HUD shows no icon per effect. Top
   left are up to three small counts:
   - Helpful: how many, and the time left on the next to end. It turns
-    amber when one ends within 5 minutes (5 minutes is the default and
-    can be changed in Options).
+    amber when one ends within 5 minutes (the default; Options ›
+    Interface › Vitals and effects).
   - Harmful: how many, and the time left on the first to end, in red.
   - Vitae: the percentage, shown only after a death.
 - Hovering the helpful or harmful count opens a small pane that lists
@@ -464,6 +464,48 @@ This folder holds the design only. There is no code yet.
     who cast it.
 - Times follow retail: m:ss, h:mm:ss from an hour, and the "show spell
   durations" option still hides them.
+
+## Combat strip
+
+- In Melee and Missile mode the combat mode button above the shortcut
+  bars grows into one slim strip (Magic and Peace keep the small
+  button). It holds, left to right:
+  - the mode (Melee or Missile); click for Peace, Melee, Missile or
+    Magic, and ` still switches;
+  - High, Mid and Low: hold one to charge, let go to attack;
+  - the meter: left is faster, right is stronger. A notch marks your
+    setting (click the meter to move it); holding an attack fills the
+    bar, which glows when full and flashes when you let go. The word
+    after it says Power in Melee and Accuracy in Missile;
+  - in Missile, a quiet ammunition count with a plain icon. It is not
+    tied to arrows: hovering names what is in the ammunition slot
+    (arrows, bolts, darts). It turns amber under 20 and says "No ammo"
+    in red when the slot is empty.
+- Repeat attacks, Auto target and Keep in view are not on the strip;
+  they live in Options › Gameplay › Combat.
+- Charging a jump shows the same meter, alone, only while the jump key
+  is held, in any mode.
+- With the player's own bar layout, the strip sits above the bars.
+
+## Vitals
+
+- The three bars stay top centre and now move:
+  - Damage: the bar drops at once, the lost part flashes white, then a
+    pale ghost of it drains away after a short beat.
+  - Healing: a bright edge jumps to the new value and the bar fills up
+    behind it with a glint.
+  - A number (−212 red, +85 green) falls off the bar only when the
+    change is at least 5% of the bar, so small hits and regeneration
+    stay quiet. Your own spell casting drains the mana bar with no
+    number.
+  - Under 25% health the health bar pulses red and the screen edge
+    glows red (on by default).
+  - A spell that needs more mana than you have shakes the mana bar and
+    marks what it needs. Out of stamina, the stamina bar blinks amber.
+- Options › Interface › Vitals and effects (all OPENAC): animate the
+  bars (on), damage and healing numbers (over 5% of the bar), low health
+  warning (25%), screen edge glow (on), and the warning before a helpful
+  effect ends (5 minutes).
 
 ## Still to design
 

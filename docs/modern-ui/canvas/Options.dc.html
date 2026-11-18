@@ -199,10 +199,17 @@ class Component extends DCLogic {
           ]),
           group('HUD', [
             tog('Coordinates on radar', 'Shows your map coordinates under the radar.', true, { crumb: '' }),
-            tog('Show spell durations', 'Time left under each buff and debuff.', true),
+            tog('Show spell durations', 'Time left on helpful and harmful effects.', true),
             tog('Vivid targeting indicator', 'A brighter marker on your current target.', true),
             tog('Tooltips', 'Explain buttons and items when you hover over them.', true)
           ], true),
+          group('VITALS AND EFFECTS', [
+            tog('Animate the vital bars', 'Losses flash and drain away, gains fill in behind a bright edge.', true, OA),
+            sel('Damage and healing numbers', 'A number falls off the bar for changes at least this big. Small hits and regeneration stay quiet.', 'Over 5% of the bar', OA),
+            sel('Low health warning', 'The health bar pulses below this.', '25%', OA),
+            tog('Glow the screen edge at low health', 'A soft red pulse around the edge of the screen.', true, OA),
+            sel('Warn before a helpful effect ends', 'Its count turns amber this long before.', '5 minutes', OA)
+          ]),
           group('WORLD EFFECTS', [
             tog('Most weather effects', 'Rain, snow and lightning.', true),
             tog('Distance fog', 'Haze that hides the far landscape.', true),
@@ -221,6 +228,7 @@ class Component extends DCLogic {
           group('COMBAT', [
             tog('Auto target', 'Pick the nearest enemy when you attack with nothing selected.', true),
             tog('Repeat attacks', 'Keep attacking until you stop or your target dies.', true),
+            tog('Keep in view', 'Turn the camera to keep your target on screen.', false),
             tog('Charge attacks', 'Hold the attack key to build up power.', false),
             tog('Lead moving targets', 'Aim missiles where a moving target will be.', true),
             tog('Fast missiles', 'Skip the draw animation where the server allows.', true),

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Combat strip, try it</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 900px; height: 380px; box-sizing: border-box; padding: 20px 28px; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: linear-gradient(180deg, #4F6A7A 0%, #3F5A3A 55%, #2E3F22 100%); display: flex; flex-direction: column; gap: 12px;">
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #E9D3AE; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">MELEE · HOLD AN ARROW (HIGH, MID, LOW) TO CHARGE, LET GO TO ATTACK · CLICK THE BAR TO SET YOUR POWER</span>
+    <dc-import name="CombatBar" bare="yes" kind="melee" hint-size="420px,30px"></dc-import>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #E9D3AE; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">MISSILE · ACCURACY INSTEAD OF POWER, AMMO AS A QUIET COUNT (HOVER FOR WHAT IT IS)</span>
+    <dc-import name="CombatBar" bare="yes" kind="missile" ammo="214" ammo-name="Deadly Arrows" hint-size="480px,30px"></dc-import>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #E9D3AE; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">MISSILE · RUNNING LOW (UNDER 20): THE COUNT TURNS AMBER</span>
+    <dc-import name="CombatBar" bare="yes" kind="missile" ammo="12" ammo-name="Greater Atlatl Darts" hint-size="480px,30px"></dc-import>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #E9D3AE; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">MISSILE · NOTHING IN THE AMMUNITION SLOT</span>
+    <dc-import name="CombatBar" bare="yes" kind="missile" ammo="0" hint-size="480px,30px"></dc-import>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #E9D3AE; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">CHARGING A JUMP (ANY MODE) · ONLY WHILE THE JUMP KEY IS HELD</span>
+    <dc-import name="CombatBar" bare="yes" kind="jump" charge="55" hint-size="280px,30px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":900,"height":380}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

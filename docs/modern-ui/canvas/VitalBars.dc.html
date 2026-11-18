@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vital bars</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+@keyframes vb-popA{0%{opacity:0;transform:translate(-50%,-4px) scale(1.25)}12%{opacity:1;transform:translate(-50%,0) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,14px) scale(0.95)}}
+@keyframes vb-popB{0%{opacity:0;transform:translate(-50%,-4px) scale(1.25)}12%{opacity:1;transform:translate(-50%,0) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,14px) scale(0.95)}}
+@keyframes vb-flashA{0%{opacity:0.95}100%{opacity:0}}
+@keyframes vb-flashB{0%{opacity:0.95}100%{opacity:0}}
+@keyframes vb-shakeA{0%,100%{transform:translateX(0)}15%{transform:translateX(-5px)}35%{transform:translateX(5px)}55%{transform:translateX(-3px)}75%{transform:translateX(2px)}}
+@keyframes vb-shakeB{0%,100%{transform:translateX(0)}15%{transform:translateX(-5px)}35%{transform:translateX(5px)}55%{transform:translateX(-3px)}75%{transform:translateX(2px)}}
+@keyframes vb-low{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,0),0 1px 4px rgba(0,0,0,0.35)}50%{box-shadow:0 0 14px 3px rgba(229,72,77,0.9),0 1px 4px rgba(0,0,0,0.35)}}
+@keyframes vb-tired{0%,100%{border-color:rgba(255,181,71,0.95)}50%{border-color:rgba(255,181,71,0.15)}}
+@keyframes vb-sheen{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+</style>
+</helmet>
+<div style="box-sizing: border-box; width: {{rootW}}; padding: {{pad}}; background: {{backdrop}}; font-family: Inter, system-ui, sans-serif;">
+  <div style="display: flex; gap: 10px;">
+    <sc-for list="{{bars}}" as="v" hint-placeholder-count="3">
+      <div role="meter" aria-label="{{v.name}}" aria-valuenow="{{v.cur}}" aria-valuemin="0" aria-valuemax="{{v.max}}" style="width: 230px; height: 18px; position: relative; box-sizing: border-box; border-radius: {{radius}}; border: 1px solid {{v.edge}}; background: rgba(0,0,0,0.5); box-shadow: 0 1px 4px rgba(0,0,0,0.35); animation: {{v.frameAnim}};">
+        <div style="position: absolute; inset: 0; overflow: hidden; border-radius: inherit;">
+          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{v.ghost}}; background: {{v.ghostColor}}; transition: {{v.ghostTr}};"></div>
+          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{v.fill}}; background: {{v.color}}; transition: {{v.mainTr}}; overflow: hidden;">
+            <sc-if value="{{v.sheen}}" hint-placeholder-val="{{false}}">
+              <div style="position: absolute; top: 0; bottom: 0; width: 40px; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.35), rgba(255,255,255,0)); animation: vb-sheen 0.9s ease-out 1;"></div>
+            </sc-if>
+          </div>
+          <div style="position: absolute; top: 0; bottom: 0; left: {{v.flashLeft}}; width: {{v.flashW}}; background: #FFFFFF; opacity: {{v.flashOp}}; animation: {{v.flashAnim}};"></div>
+          <div style="position: absolute; left: 0; right: 0; top: 0; height: 50%; background: rgba(255,255,255,0.10);"></div>
+          <sc-if value="{{v.notch}}" hint-placeholder-val="{{false}}">
+            <div style="position: absolute; top: -1px; bottom: -1px; left: {{v.notchAt}}; width: 2px; background: #FF6B70; box-shadow: 0 0 4px #FF6B70;"></div>
+          </sc-if>
+        </div>
+        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.9);">
+          <span>{{v.label}}</span><span style="font-weight: 600; letter-spacing: 0.02em; font-variant-numeric: tabular-nums;">{{v.val}}</span>
+        </div>
+        <span aria-hidden="true" style="position: absolute; left: {{v.popLeft}}; top: 21px; transform: translateX(-50%); font-size: 14px; font-weight: 800; color: {{v.popColor}}; font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.6); opacity: {{v.popOp}}; animation: {{v.popAnim}}; pointer-events: none;">{{v.pop}}</span>
+        <sc-if value="{{v.note}}" hint-placeholder-val="{{false}}">
+          <span style="position: absolute; left: 50%; top: 22px; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: {{v.noteColor}}; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,0.95);">{{v.noteText}}</span>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"bare":{"editor":"enum","options":["no","yes"],"default":"no"},"trim":{"editor":"enum","options":["neutral","bronze"],"default":"bronze"},"moment":{"editor":"enum","options":["none","hit","heal","low","nomana","tired"],"default":"hit"},"live":{"editor":null},"threshold":{"editor":"int","default":5},"$preview":{"width":770,"height":90}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const bare = (this.props.bare ?? 'no') === 'yes';
+    const bronze = (this.props.trim ?? 'bronze') === 'bronze';
+    const trim = bronze ? 'rgba(201,160,98,0.8)' : 'rgba(255,255,255,0.22)';
+    const MAX = { hp: 450, st: 410, mp: 620 };
+    const META = {
+      hp: { label: 'HEALTH', name: 'Health', color: '#B8323A', hit: 'rgba(255,190,170,0.7)', lead: 'rgba(255,150,150,0.75)' },
+      st: { label: 'STAMINA', name: 'Stamina', color: '#B88A1E', hit: 'rgba(255,225,150,0.7)', lead: 'rgba(255,215,120,0.75)' },
+      mp: { label: 'MANA', name: 'Mana', color: '#2F64C2', hit: 'rgba(170,200,255,0.7)', lead: 'rgba(140,185,255,0.8)' }
+    };
+    // values and the last change on each bar: live (from a lab) or a frozen moment
+    let cur = { hp: 412, st: 298, mp: 361 }, ev = {}, frozen = true;
+    const live = this.props.live;
+    if (live) {
+      frozen = false;
+      cur = { hp: live.hp, st: live.st, mp: live.mp };
+      ev = live.ev || {};
+    } else {
+      const m = this.props.moment ?? 'hit';
+      if (m === 'hit') { cur.hp = 200; ev.hp = { kind: 'hit', from: 412, to: 200, amount: 212 }; }
+      if (m === 'heal') { cur.hp = 285; ev.hp = { kind: 'heal', from: 200, to: 285, amount: 85 }; }
+      if (m === 'low') { cur.hp = 88; cur.st = 104; }
+      if (m === 'nomana') { cur.mp = 46; ev.mp = { kind: 'nomana', need: 80 }; }
+      if (m === 'tired') { cur.st = 0; ev.st = { kind: 'spend', from: 38, to: 0 }; }
+    }
+    // numbers only for changes of at least this share of the bar (Options › Interface, default 5%)
+    const threshold = Number(this.props.threshold ?? 5);
+    const big = (e, max) => e.amount / max * 100 >= threshold;
+    const pct = (v, max) => Math.max(0, Math.min(100, v / max * 100)).toFixed(1) + '%';
+    const bars = ['hp', 'st', 'mp'].map((k) => {
+      const m = META[k], max = MAX[k], v = cur[k], e = ev[k];
+      const ab = e && e.seq !== undefined ? (e.seq % 2 ? 'A' : 'B') : 'A';
+      const out = {
+        name: m.name, label: m.label, color: m.color, cur: v, max,
+        val: Math.round(v) + ' / ' + max, fill: pct(v, max), ghost: pct(v, max), ghostColor: 'transparent',
+        mainTr: 'width 0.15s ease-out', ghostTr: 'width 0.15s ease-out',
+        flashLeft: '0%', flashW: '0%', flashOp: '0', flashAnim: 'none',
+        pop: '', popLeft: '50%', popColor: '#FFFFFF', popOp: '0', popAnim: 'none',
+        edge: trim, frameAnim: 'none', notch: false, notchAt: '0%', note: false, noteText: '', noteColor: '#FFFFFF', sheen: false
+      };
+      if (e && (e.kind === 'hit' || e.kind === 'spend')) {
+        // the loss: the bar drops at once, a pale ghost of the lost part drains after a beat
+        out.ghostColor = m.hit;
+        out.mainTr = 'width 0.12s ease-out';
+        out.ghostTr = 'width 0.55s cubic-bezier(.3,.7,.4,1) 0.45s';
+        if (frozen) out.ghost = pct(e.from, max);
+        if (e.kind === 'hit') {
+          out.flashLeft = pct(e.to, max);
+          out.flashW = pct(e.from - e.to, max);
+          out.flashOp = frozen ? '0.55' : '0';
+          out.flashAnim = frozen ? 'none' : 'vb-flash' + ab + ' 0.35s ease-out both';
+          if (big(e, max)) {
+            out.pop = '−' + e.amount; out.popColor = '#FF6B70'; out.popLeft = pct(e.to, max);
+            out.popOp = frozen ? '1' : '0';
+            out.popAnim = frozen ? 'none' : 'vb-pop' + ab + ' 1.2s ease-out both';
+          }
+        }
+      }
+      if (e && e.kind === 'heal') {
+        // the gain: a bright leading edge jumps to the new value, the bar fills up behind it
+        out.ghostColor = m.lead;
+        out.ghostTr = 'width 0.12s ease-out';
+        out.mainTr = 'width 0.6s cubic-bezier(.3,.7,.4,1) 0.15s';
+        if (frozen) { out.fill = pct(e.from, max); out.ghost = pct(e.to, max); }
+        if (big(e, max)) {
+          out.sheen = !frozen;
+          out.pop = '+' + e.amount; out.popColor = '#7FE08A'; out.popLeft = pct(e.to, max);
+          out.popOp = frozen ? '1' : '0';
+          out.popAnim = frozen ? 'none' : 'vb-pop' + ab + ' 1.2s ease-out both';
+        }
+      }
+      if (e && e.kind === 'nomana') {
+        // a spell that needs more than you have: the bar shakes and marks what it needs
+        out.notch = true; out.notchAt = pct(e.need, max);
+        out.edge = '#FF6B70';
+        out.frameAnim = frozen ? 'none' : 'vb-shake' + ab + ' 0.4s ease-out';
+        out.note = true; out.noteText = 'Needs ' + e.need + ' mana'; out.noteColor = '#FF9A9D';
+      }
+      if (k === 'hp' && v / max < 0.25) {
+        out.edge = '#E5484D';
+        out.frameAnim = 'vb-low 1.1s ease-in-out infinite';
+      }
+      if (k === 'st' && v <= 0) {
+        out.frameAnim = 'vb-tired 0.8s ease-in-out infinite';
+        out.edge = 'rgba(255,181,71,0.95)';
+        out.note = true; out.noteText = 'Out of stamina'; out.noteColor = '#FFC870';
+      }
+      return out;
+    });
+    return {
+      bars, radius: bronze ? '3px' : '4px',
+      rootW: bare ? '710px' : '770px', pad: bare ? '0' : '18px 30px 54px',
+      backdrop: bare ? 'transparent' : 'linear-gradient(180deg, #4F6A7A, #2E3F22)'
+    };
+  }
+}
+</script>
+</body>
+</html>

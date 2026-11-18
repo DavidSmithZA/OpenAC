@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vitals, try the animations</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+@keyframes vl-edge{0%,100%{opacity:0.35}50%{opacity:1}}
+</style>
+</helmet>
+<div style="width: 900px; height: 380px; position: relative; box-sizing: border-box; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: linear-gradient(180deg, #8FB3C9 0%, #C9D9C4 30%, #6F8A55 52%, #2E3F22 100%);">
+  <sc-if value="{{low}}" hint-placeholder-val="{{false}}">
+    <div aria-hidden="true" style="position: absolute; inset: 0; box-shadow: inset 0 0 90px 10px rgba(200,30,40,0.55); animation: vl-edge 1.1s ease-in-out infinite; pointer-events: none;"></div>
+  </sc-if>
+  <div style="position: absolute; left: 50%; top: 18px; transform: translateX(-50%);">
+    <dc-import name="VitalBars" bare="yes" trim="bronze" live="{{live}}" hint-size="710px,18px"></dc-import>
+  </div>
+
+  <div style="position: absolute; left: 24px; right: 24px; bottom: 20px; box-sizing: border-box; padding: 14px 16px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(20,16,12,0.9); display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">TRY IT</span>
+      <span style="font-size: 11px; color: #A89A82;">Each button changes the bars above the way the game would.</span>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+      <sc-for list="{{actions}}" as="a" hint-placeholder-count="8">
+        <button onClick="{{a.go}}" style="height: 32px; padding: 0 12px; border-radius: 4px; border: 1px solid {{a.edge}}; background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: {{a.dot}};"></span>{{a.label}}
+        </button>
+      </sc-for>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 20px; font-size: 11px; line-height: 1.45; color: #C8B89C;">
+      <span><b style="color: #F4EBDC;">Damage:</b> the bar drops at once, the lost part flashes, then drains away pale; a number falls off the bar when the hit is at least 5% of it (Options).</span>
+      <span><b style="color: #F4EBDC;">Healing:</b> a bright edge jumps to the new value and the bar fills up behind it, with a glint.</span>
+      <span><b style="color: #F4EBDC;">Under 25% health:</b> the bar pulses red; the screen edge glows too (OPENAC, on by default).</span>
+      <span><b style="color: #F4EBDC;">Not enough mana:</b> the bar shakes and marks what the spell needs. Your own casting only drains, no number.</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":900,"height":380}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const MAX = { hp: 450, st: 410, mp: 620 };
+    const v = { hp: st.hp ?? 412, st: st.st ?? 298, mp: st.mp ?? 361 };
+    const ev = st.ev || {};
+    const seq = st.seq || 0;
+    const change = (bar, kind, delta) => {
+      const from = v[bar];
+      const to = Math.max(0, Math.min(MAX[bar], from + delta));
+      if (to === from && kind !== 'nomana') return;
+      const n = seq + 1;
+      this.setState({ [bar]: to, seq: n, ev: Object.assign({}, ev, { [bar]: { kind, from, to, amount: Math.abs(to - from), seq: n } }) });
+    };
+    const A = (label, dot, go) => ({ label, dot, edge: 'rgba(201,160,98,0.55)', go });
+    const actions = [
+      A('Small hit (−12, no number)', '#E5484D', () => change('hp', 'hit', -12)),
+      A('Take a hit (−120)', '#E5484D', () => change('hp', 'hit', -120)),
+      A('Big hit (−260)', '#E5484D', () => change('hp', 'hit', -260)),
+      A('Health potion (+85)', '#7FE08A', () => change('hp', 'heal', 85)),
+      A('Heal Self (+190)', '#7FE08A', () => change('hp', 'heal', 190)),
+      A('Cast a spell (−60 mana)', '#6EA8FF', () => change('mp', 'spend', -60)),
+      A('Mana drained (−110)', '#6EA8FF', () => change('mp', 'hit', -110)),
+      A('Spell needs more mana', '#6EA8FF', () => { const n = seq + 1; this.setState({ seq: n, ev: Object.assign({}, ev, { mp: { kind: 'nomana', need: v.mp + 40, seq: n } }) }); }),
+      A('Run until tired', '#E8C547', () => change('st', 'spend', -v.st)),
+      A('Stamina elixir (+150)', '#E8C547', () => change('st', 'heal', 150)),
+      A('Reset', '#A89A82', () => this.setState({ hp: 412, st: 298, mp: 361, ev: {}, seq: seq + 1 }))
+    ];
+    return { actions, live: { hp: v.hp, st: v.st, mp: v.mp, ev }, low: v.hp / MAX.hp < 0.25 };
+  }
+}
+</script>
+</body>
+</html>

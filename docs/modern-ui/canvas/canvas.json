@@ -1162,6 +1162,65 @@
       "page": "effects",
       "title": "Effects window, Harmful: vitae and what is on you, ending first",
       "is_interactive": true
+    },
+    "CombatInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "combat",
+      "title": "Melee: the mode pill grows into the combat strip; charging a Mid attack; a hit drains the health bar"
+    },
+    "CombatMissile.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "combat",
+      "title": "Missile: accuracy fully charged, arrows left; a heal fills the health bar"
+    },
+    "CombatLowHealth.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "combat",
+      "title": "Under 25% health: the bar pulses, the screen edge glows (option)"
+    },
+    "CombatLab.dc.html": {
+      "x": 0,
+      "y": 1020,
+      "w": 900,
+      "h": 380,
+      "page": "combat",
+      "title": "Combat strip: hold High, Mid or Low to charge, click the bar to set power",
+      "is_interactive": true
+    },
+    "VitalsLab.dc.html": {
+      "x": 980,
+      "y": 1020,
+      "w": 900,
+      "h": 380,
+      "page": "combat",
+      "title": "Vitals: press the buttons to see damage, healing, mana and stamina",
+      "is_interactive": true
+    },
+    "CombatBar.dc.html": {
+      "x": 0,
+      "y": 1520,
+      "w": 600,
+      "h": 74,
+      "page": "combat",
+      "title": "Part: the combat strip (melee, missile, jump)",
+      "is_interactive": true
+    },
+    "VitalBars.dc.html": {
+      "x": 900,
+      "y": 1520,
+      "w": 770,
+      "h": 90,
+      "page": "combat",
+      "title": "Part: the vital bars (moment is a property)"
     }
   },
   "createdOnFiles": {
@@ -1171,7 +1230,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "effects"
+    "page": "combat"
   },
   "notes": {
     "t1": {
@@ -1326,6 +1385,14 @@
       "x": 0,
       "y": -300,
       "page": "effects"
+    },
+    "t20": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Combat strip and living vitals",
+      "x": 0,
+      "y": -300,
+      "page": "combat"
     }
   },
   "order": [
@@ -1463,7 +1530,14 @@
     "EffectsHover.dc.html",
     "EffectsInGame.dc.html",
     "Effects.dc.html",
-    "EffectsHarmful.dc.html"
+    "EffectsHarmful.dc.html",
+    "CombatInGame.dc.html",
+    "CombatMissile.dc.html",
+    "CombatLowHealth.dc.html",
+    "CombatLab.dc.html",
+    "VitalsLab.dc.html",
+    "CombatBar.dc.html",
+    "VitalBars.dc.html"
   ],
   "pages": [
     {
@@ -1537,6 +1611,10 @@
     {
       "id": "effects",
       "name": "Effects on you"
+    },
+    {
+      "id": "combat",
+      "name": "Combat and vitals"
     },
     {
       "id": "r1",
