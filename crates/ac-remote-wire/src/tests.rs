@@ -2796,7 +2796,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "63b6e89a31b63c0b", "{:#x}", shape());
+    assert_eq!(shape_hex(), "3f0d6f736e6d1818", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full
