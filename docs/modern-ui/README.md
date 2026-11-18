@@ -133,12 +133,41 @@ This folder holds the design only. There is no code yet.
   four windows, per-window opacity. In Options they carry the OPENAC
   tag.
 
+## Vendor
+
+- One window with two tabs, Buy and Sell, in place of retail's three
+  pages. Each tab shows how many things wait on its list. The purse
+  sits in the header.
+- Buy: the categories this shop stocks (with counts) | the goods as
+  rows, each with its price, stock left ("Unlimited", "1 left") and how
+  many are already on your list | the selected item (quantity, Max,
+  cost, Buy now, Add to list) above the To buy list (total, your
+  pyreals now and after, Buy all).
+- Sell: your own items are listed in the window, so the inventory need
+  not be open (dragging from it still works). Each shows what the
+  vendor pays. Items the vendor will not take stay listed, greyed, with
+  retail's reason ("too valuable to sell here", "has no value"). The To
+  sell list shows what you receive. Selling part of a stack splits it
+  off first.
+- Dropping a refused item on the sell list shows the reason and the
+  vendor's limit in place.
+- Spell components: when you carry less than your restock amounts
+  (Spellbook › Components), a banner offers to add what is missing to
+  the buy list. It only fills the list; you still press Buy.
+- A shop that takes another currency prices everything in it and shows
+  that currency in the purse, with your pyreals beside it.
+- Leaving with anything on either list asks first, and says nothing is
+  bought or sold if you leave.
+- Small screens: the window narrows to 792 px. The category or pack
+  column becomes a drop-down above the list, and what the vendor buys
+  moves behind an info button.
+
 ## Still to design
 
-Vendor, trade, salvage, appraising other players and creatures, social
-(allegiance, fellowship, friends), map, journal and quests, pop-up
-dialogs, login and character creation. After that, a check
-of every retail panel in `crates/ac-ui/src/panels` against this design.
+Trade, salvage, appraising other players and creatures, social (allegiance,
+fellowship, friends), map, journal and quests, pop-up dialogs, login and
+character creation. After that, a check of every retail panel in
+`crates/ac-ui/src/panels` against this design.
 
 Open question: at a server's level cap, does the XP bar say "Max level"
 or keep counting total XP?

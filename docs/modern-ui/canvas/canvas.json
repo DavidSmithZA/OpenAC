@@ -410,6 +410,84 @@
       "h": 300,
       "page": "chat",
       "title": "Popped-out window: Trade watch, talks on Trade"
+    },
+    "VendorInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "vendor",
+      "title": "Vendor open over the bronze HUD"
+    },
+    "Vendor.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1040,
+      "h": 640,
+      "page": "vendor",
+      "title": "Buy: goods by category, selected item, your buy list",
+      "is_interactive": true
+    },
+    "VendorSell.dc.html": {
+      "x": 2640,
+      "y": 0,
+      "w": 1040,
+      "h": 640,
+      "page": "vendor",
+      "title": "Sell: your own items, with what she pays or why she won't",
+      "is_interactive": true
+    },
+    "VendorComponents.dc.html": {
+      "x": 1520,
+      "y": 760,
+      "w": 1040,
+      "h": 640,
+      "page": "vendor",
+      "title": "Spell components: restock to your amounts in one go",
+      "is_interactive": true
+    },
+    "VendorRefused.dc.html": {
+      "x": 2640,
+      "y": 760,
+      "w": 1040,
+      "h": 640,
+      "page": "vendor",
+      "title": "Dropped on the sell list and refused, with the reason"
+    },
+    "VendorTokens.dc.html": {
+      "x": 1520,
+      "y": 1520,
+      "w": 1040,
+      "h": 640,
+      "page": "vendor",
+      "title": "A shop that takes another currency",
+      "is_interactive": true
+    },
+    "VendorLeave.dc.html": {
+      "x": 2640,
+      "y": 1520,
+      "w": 1040,
+      "h": 640,
+      "page": "vendor",
+      "title": "Leaving with lists unfinished: asks first"
+    },
+    "VendorCompact.dc.html": {
+      "x": 1520,
+      "y": 2280,
+      "w": 792,
+      "h": 640,
+      "page": "vendor",
+      "title": "Small screens (792 wide): categories become a drop-down",
+      "is_interactive": true
+    },
+    "VendorCompactSell.dc.html": {
+      "x": 2392,
+      "y": 2280,
+      "w": 792,
+      "h": 640,
+      "page": "vendor",
+      "title": "Small screens, selling: packs drop-down, what she buys behind the info button",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -419,7 +497,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "chat"
+    "page": "vendor"
   },
   "notes": {
     "t1": {
@@ -486,6 +564,14 @@
       "x": 0,
       "y": -300,
       "page": "chat"
+    },
+    "t9": {
+      "kind": "title1",
+      "maxW": 3680,
+      "text": "Vendor (bronze)",
+      "x": 0,
+      "y": -300,
+      "page": "vendor"
     }
   },
   "order": [
@@ -536,7 +622,16 @@
     "ChatSearch.dc.html",
     "ChatNewTab.dc.html",
     "ChatFloat.dc.html",
-    "ChatFloatTrade.dc.html"
+    "ChatFloatTrade.dc.html",
+    "VendorInGame.dc.html",
+    "Vendor.dc.html",
+    "VendorSell.dc.html",
+    "VendorComponents.dc.html",
+    "VendorRefused.dc.html",
+    "VendorTokens.dc.html",
+    "VendorLeave.dc.html",
+    "VendorCompact.dc.html",
+    "VendorCompactSell.dc.html"
   ],
   "pages": [
     {
@@ -566,6 +661,10 @@
     {
       "id": "chat",
       "name": "Chat"
+    },
+    {
+      "id": "vendor",
+      "name": "Vendor"
     },
     {
       "id": "r1",

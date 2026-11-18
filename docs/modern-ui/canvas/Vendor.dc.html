@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vendor window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+.vd-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,160,98,0.7) rgba(255,255,255,0.06)}
+.vd-scroll::-webkit-scrollbar{width:6px}
+.vd-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,0.06);border-radius:3px}
+.vd-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
+</style>
+</helmet>
+<div style="width: {{rootW}}; height: 640px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.92); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 16px 0 20px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0zM5 13v7h14v-7"></path></svg>
+    <div style="display: flex; flex-direction: column; gap: 1px;">
+      <h1 style="margin: 0; font-size: 15px; font-weight: 600; white-space: nowrap;">{{vendorName}}</h1>
+      <span style="font-size: 11px; color: #C8B89C; white-space: nowrap;">{{vendorSub}}</span>
+    </div>
+    <div role="tablist" aria-label="Buy or sell" style="display: flex; gap: 2px; margin-left: {{tabsGap}};">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+        <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="height: 32px; padding: 0 14px; display: flex; align-items: center; gap: 6px; border: 0; border-bottom: 2px solid {{t.line}}; background: transparent; color: {{t.fg}}; font-size: 12.5px; font-weight: 600; cursor: pointer;">
+          <span>{{t.label}}</span>
+          <sc-if value="{{t.hasN}}" hint-placeholder-val="{{false}}"><span style="min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{t.n}}</span></sc-if>
+        </button>
+      </sc-for>
+    </div>
+    <span style="flex: 1;"></span>
+    <div title="What you have" style="height: 30px; display: flex; align-items: center; gap: 7px; padding: 0 10px; border-radius: 4px; background: rgba(0,0,0,0.35); border: 1px solid rgba(201,160,98,0.35); font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{purseIcon}}"></path></svg>
+      <span>{{purse}}</span>
+      <sc-if value="{{hasPurse2}}" hint-placeholder-val="{{false}}"><span style="font-weight: 500; color: #C8B89C;">· {{purse2}}</span></sc-if>
+    </div>
+    <label style="display: flex; align-items: center; gap: 8px; width: {{searchW}}; height: 30px; padding: 0 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+      <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">{{searchLabel}}</span>
+      <input placeholder="{{searchLabel}}" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12px;">
+    </label>
+    <button aria-label="Leave the vendor" onClick="{{askLeave}}" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- left rail -->
+  <sc-if value="{{showRail}}" hint-placeholder-val="{{true}}">
+  <nav aria-label="{{railTitle}}" style="position: absolute; left: 20px; top: 72px; width: 180px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C; margin-bottom: 4px;">{{railTitle}}</span>
+      <sc-for list="{{rail}}" as="f" hint-placeholder-count="7">
+        <button aria-pressed="{{f.on}}" onClick="{{f.pick}}" style="height: 30px; padding: 0 8px; border-radius: 4px; border: 1px solid {{f.edge}}; background: {{f.bg}}; display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: left; font-size: 12px;">
+          <span style="flex: 1; font-weight: 600;">{{f.label}}</span>
+          <span style="font-size: 11px; color: #C8B89C; font-variant-numeric: tabular-nums;">{{f.n}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <sc-if value="{{isSell}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+          <span style="width: 30px; height: 16px; border-radius: 999px; background: rgba(255,255,255,0.14); position: relative; flex: none;"><span style="position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #C8B89C;"></span></span>
+          <input type="checkbox" style="position: absolute; opacity: 0; width: 1px; height: 1px;">
+          Only what she buys
+        </label>
+        <div style="display: flex; flex-direction: column; gap: 5px; padding: 10px; border-radius: 4px; background: rgba(255,255,255,0.04); font-size: 11px; line-height: 1.45; color: #C8B89C;">
+          <span style="font-weight: 700; color: #E9D3AE;">Ilsa buys</span>
+          <span>Food, gems, jewelry, keys and tools, mana stones, spell components, miscellaneous.</span>
+          <span>Up to 25,000p each. No magic items.</span>
+        </div>
+      </div>
+    </sc-if>
+  </nav>
+  </sc-if>
+
+  <!-- middle: goods / your items -->
+  <section aria-label="{{listTitle}}" style="position: absolute; left: {{midLeft}}; top: 72px; width: {{midW}}; height: 552px; display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <sc-if value="{{showRail}}" hint-placeholder-val="{{true}}">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600;">{{listTitle}}</h2>
+      </sc-if>
+      <sc-if value="{{compact}}" hint-placeholder-val="{{false}}">
+        <button aria-haspopup="menu" aria-label="{{railTitle}}: {{pickerValue}}" style="height: 28px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;"><span style="font-weight: 700;">{{pickerValue}}</span><span style="font-size: 11px; color: #C8B89C; font-variant-numeric: tabular-nums;">{{pickerN}}</span><span style="color: #C8B89C;">▾</span></button>
+        <sc-if value="{{isSell}}" hint-placeholder-val="{{false}}">
+          <button aria-label="What she buys" title="Ilsa buys food, gems, jewelry, keys and tools, mana stones, spell components and miscellaneous items, up to 25,000p each, no magic items." style="width: 28px; height: 28px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 8h.01"></path></svg></button>
+        </sc-if>
+      </sc-if>
+      <span style="font-size: 11px; color: #C8B89C;">{{listCount}}</span>
+      <span style="flex: 1;"></span>
+      <button style="height: 26px; padding: 0 8px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;"><span style="color: #C8B89C;">Sort</span><span style="font-weight: 600;">{{sortBy}}</span><span style="color: #C8B89C;">▾</span></button>
+    </div>
+
+    <sc-if value="{{showRestock}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 4px; border: 1px solid rgba(224,176,104,0.6); background: rgba(224,176,104,0.12);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 4v5h-5M20 12a8 8 0 0 1-14 5.3M4 20v-5h5"></path></svg>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 1px;">
+          <span style="font-size: 12px; font-weight: 700;">7 components are below your restock amounts</span>
+          <span style="font-size: 11px; color: #C8B89C;">6,000p for all. Amounts are set in Spellbook › Components.</span>
+        </div>
+        <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Add to list</button>
+      </div>
+    </sc-if>
+
+    <div class="vd-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 2px;">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+        <button aria-label="{{r.name}}" onClick="{{r.pick}}" style="min-height: 46px; padding: 0 10px 0 6px; border-radius: 4px; border: 1px solid {{r.edge}}; background: {{r.bg}}; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+          <span style="width: 34px; height: 34px; flex: none; border-radius: 4px; background: {{r.tile}}; opacity: {{r.op}}; display: flex; align-items: center; justify-content: center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{r.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.d}}"></path></svg>
+          </span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 12.5px; font-weight: 600; opacity: {{r.op}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.name}}</span>
+            <span style="font-size: 10.5px; color: {{r.subColor}};">{{r.sub}}</span>
+          </span>
+          <sc-if value="{{r.onList}}" hint-placeholder-val="{{false}}">
+            <span style="height: 18px; padding: 0 6px; border-radius: 3px; background: rgba(224,176,104,0.18); color: #E0B068; font-size: 10px; font-weight: 700; display: flex; align-items: center;">{{r.onListText}}</span>
+          </sc-if>
+          <span style="width: 86px; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; opacity: {{r.op}};">
+            <span style="font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums;">{{r.price}}</span>
+            <span style="font-size: 10px; color: #A89A82;">{{r.priceSub}}</span>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- right: selected + list -->
+  <aside aria-label="Selected and your list" style="position: absolute; left: {{asideLeft}}; top: 72px; width: {{asideW}}; height: 552px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="box-sizing: border-box; padding: 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.35); background: rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <div style="width: 48px; height: 48px; flex: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: {{sel.tile}}; display: flex; align-items: center; justify-content: center;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{{sel.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{sel.d}}"></path></svg>
+        </div>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+          <h3 style="margin: 0; font-size: 14px; font-weight: 600;">{{sel.name}}</h3>
+          <span style="font-size: 11px; color: #C8B89C;">{{sel.sub}}</span>
+        </div>
+        <button title="Full details" aria-label="Full details" style="width: 28px; height: 28px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 8h.01"></path></svg>
+        </button>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 11px; color: #C8B89C;">Quantity</span>
+        <div style="display: flex; align-items: center; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35);">
+          <button aria-label="One less" style="width: 28px; height: 28px; padding: 0; border: 0; background: transparent; font-size: 14px; cursor: pointer;">−</button>
+          <label style="display: flex;"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Quantity</span><input value="{{sel.qty}}" style="width: 44px; height: 28px; box-sizing: border-box; border: 0; border-left: 1px solid rgba(201,160,98,0.3); border-right: 1px solid rgba(201,160,98,0.3); background: transparent; color: #F4EBDC; font: inherit; font-size: 12.5px; font-weight: 700; text-align: center;"></label>
+          <button aria-label="One more" style="width: 28px; height: 28px; padding: 0; border: 0; background: transparent; font-size: 14px; cursor: pointer;">+</button>
+        </div>
+        <button style="height: 28px; padding: 0 8px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: transparent; color: #C8B89C; font-size: 11px; font-weight: 600; cursor: pointer;">{{sel.maxLabel}}</button>
+        <span style="flex: 1;"></span>
+        <span style="font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: {{sel.totalColor}};">{{sel.total}}</span>
+      </div>
+      <span style="font-size: 11px; color: {{sel.noteColor}}; margin-top: -4px;">{{sel.note}}</span>
+      <div style="display: flex; gap: 6px;">
+        <button style="flex: 1; height: 32px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">{{sel.primary}}</button>
+        <button style="flex: 1; height: 32px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Add to list</button>
+      </div>
+    </div>
+
+    <div style="flex: 1; min-height: 0; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.35); background: rgba(0,0,0,0.28); display: flex; flex-direction: column;">
+      <div style="padding: 10px 14px 6px; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">{{cartTitle}}</span>
+        <span style="font-size: 11px; color: #A89A82;">{{cartCount}}</span>
+        <span style="flex: 1;"></span>
+        <button style="height: 22px; padding: 0 6px; border: 0; border-radius: 3px; background: transparent; color: #C8B89C; font-size: 11px; font-weight: 600; cursor: pointer;">Clear</button>
+      </div>
+      <div class="vd-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 0 10px; display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{cart}}" as="c" hint-placeholder-count="3">
+          <div style="min-height: 34px; padding: 0 4px; display: flex; align-items: center; gap: 8px; border-radius: 3px; font-size: 12px;">
+            <span style="width: 24px; height: 24px; flex: none; border-radius: 4px; background: {{c.tile}}; display: flex; align-items: center; justify-content: center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{c.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.d}}"></path></svg></span>
+            <span style="flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{c.name}}</span>
+            <span style="font-size: 11px; color: #C8B89C; font-variant-numeric: tabular-nums;">×{{c.qty}}</span>
+            <span style="width: 70px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums;">{{c.price}}</span>
+            <button aria-label="Take {{c.name}} off the list" style="width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+          </div>
+        </sc-for>
+        <sc-if value="{{isRefused}}" hint-placeholder-val="{{false}}">
+          <div role="alert" style="margin-top: 4px; padding: 10px; border-radius: 4px; border: 2px dashed #FF8A8E; background: rgba(255,107,112,0.10); display: flex; align-items: center; gap: 10px;">
+            <span style="width: 32px; height: 32px; flex: none; border-radius: 4px; background: linear-gradient(160deg, #E0B06833, rgba(0,0,0,0.5)); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"></path></svg></span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 12px; font-weight: 700;">Ancient Heirloom Sword</span>
+              <span style="font-size: 11px; color: #FFB3B6;">That item is too valuable to sell here</span>
+              <span style="font-size: 10.5px; color: #A89A82;">Ilsa buys up to 25,000p. It is worth 61,000p.</span>
+            </span>
+          </div>
+        </sc-if>
+      </div>
+      <div style="padding: 10px 14px 14px; border-top: 1px solid rgba(201,160,98,0.2); display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span style="font-size: 12px; color: #C8B89C;">{{totalLabel}}</span>
+          <span style="font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; color: {{totalColor}};">{{total}}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #A89A82; font-variant-numeric: tabular-nums;">
+          <span>{{balanceNow}}</span><span>{{balanceAfter}}</span>
+        </div>
+        <button style="height: 34px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12.5px; font-weight: 700; cursor: pointer;">{{cartButton}}</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- leaving with lists still open -->
+  <sc-if value="{{isLeave}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; background: rgba(10,8,6,0.55); display: flex; align-items: center; justify-content: center;">
+      <div role="alertdialog" aria-label="Leave the vendor" style="width: 360px; box-sizing: border-box; padding: 18px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.98); box-shadow: 0 16px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 14px; font-weight: 700;">Leave Ilsa with your lists unfinished?</span>
+        <span style="font-size: 12px; line-height: 1.5; color: #E9D3AE;">3 things to buy and 3 to sell have not gone through. Nothing is bought or sold if you leave.</span>
+        <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px;">
+          <button onClick="{{stay}}" style="height: 32px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Stay</button>
+          <button onClick="{{stay}}" style="height: 32px; padding: 0 14px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Leave</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["buy","sell","components","refused","tokens","leave"],"default":"buy"},"size":{"editor":"enum","options":["wide","compact"],"default":"wide"},"$preview":{"width":1040,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const state = this.props.state ?? 'buy';
+    const tab = st.tab || (state === 'sell' || state === 'refused' ? 'sell' : 'buy');
+    const tokens = state === 'tokens';
+    const isSell = tab === 'sell';
+    const TXT = '#F4EBDC', MUTED = '#C8B89C', GOLD = '#E0B068', BAD = '#FFB3B6', OK = '#7FD08A';
+    const C = { life: '#7FD08A', food: '#E7C27A', gem: '#C9A2FF', jewel: '#E0B068', misc: '#B8C2CC', comp: '#B3AA9C', taper: '#FF8A8E', mana: '#6EA8FF', herb: '#7FD08A', tool: '#E9D3AE', arm: '#7FB2FF', cloth: '#C8B89C', weap: '#FF9A6B' };
+    const P = {
+      kit: 'M4 8h16v12H4zM9 8V5h6v3M12 11v6M9 14h6',
+      torch: 'M10 10h4l-1 11h-2zM12 3c2 2 2.5 4 0 7-2.5-3-2-5 0-7z',
+      key: 'M8 14a4 4 0 1 1 0-8 4 4 0 0 1 0 8zM11 10h10M18 10v4M21 10v3',
+      apple: 'M12 8c-3-3-8-1-8 4s4 9 8 8c4 1 8-3 8-8s-5-7-8-4zM12 8c0-2 1-4 3-5',
+      bread: 'M4 12a8 5 0 0 1 16 0v6H4zM8 10v3M12 9v4M16 10v3',
+      gem: 'M6 3h12l4 6-10 12L2 9zM2 9h20M9 3l3 18 3-18',
+      ring: 'M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM9 3h6l-3 6z',
+      stone: 'M12 3l7 5-2 11H7L5 8z',
+      taper: 'M10 8h4v13h-4zM12 3c1 1.5 1.5 2.5 0 4-1.5-1.5-1-2.5 0-4z',
+      peas: 'M8 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+      leaf: 'M5 21c0-9 5-15 15-16-1 10-7 15-15 16zM5 21l8-8',
+      charm: 'M12 3l3 5-3 13-3-13zM6 8h12',
+      robe: 'M8 3h8l4 6-3 2v10H7V11L4 9z',
+      bone: 'M7 7l10 10M5 9a2 2 0 1 1 2-4 2 2 0 1 1 2 4M19 15a2 2 0 1 1-2 4 2 2 0 1 1-2-4',
+      sword: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      helm: 'M4 15a8 8 0 0 1 16 0v4H4zM12 7v8M4 15h16',
+      coin: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15 9h-4.5a1.5 1.5 0 0 0 0 3h3a1.5 1.5 0 0 1 0 3H9M12 7v2M12 15v2',
+      token: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v8M8.5 10l7 4M15.5 10l-7 4'
+    };
+    const tile = (c) => 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.5))';
+    const fmt = (n) => n.toLocaleString('en-US');
+    const pp = (n) => fmt(n) + 'p';
+    const sel = st.sel;
+
+    // what the shop stocks
+    const goods = [
+      ['Adept Healing Kit', 'Miscellaneous', 600, 'Unlimited', P.kit, C.life],
+      ['Healing Kit', 'Miscellaneous', 95, 'Unlimited', P.kit, C.life],
+      ['Torch', 'Miscellaneous', 12, 'Unlimited', P.torch, C.food],
+      ['Lockpick', 'Keys, Tools', 50, 'Unlimited', P.key, C.tool],
+      ['Apple', 'Food', 4, 'Unlimited', P.apple, C.food, 10],
+      ['Bread', 'Food', 6, 'Unlimited', P.bread, C.food],
+      ['Amethyst', 'Gems', 250, '3 left', P.gem, C.gem],
+      ['Silver Ring', 'Jewelry', 480, '1 left', P.ring, C.jewel],
+      ['Mana Stone', 'Mana Stones', 40, 'Unlimited', P.stone, C.mana],
+      ['Prismatic Taper', 'Spell Components', 12, 'Unlimited', P.taper, C.taper, 100],
+      ['Platinum Scarab', 'Spell Components', 300, 'Unlimited', P.peas, C.comp],
+      ['Pyreal Scarab', 'Spell Components', 150, 'Unlimited', P.peas, C.comp],
+      ['Wormwood', 'Spell Components', 8, 'Unlimited', P.leaf, C.herb],
+      ['Hyssop', 'Spell Components', 8, 'Unlimited', P.leaf, C.herb]
+    ];
+    // restock view: carried / restock-to for each component
+    const restock = {
+      'Prismatic Taper': [310, 500], 'Platinum Scarab': [48, 50], 'Pyreal Scarab': [4, 20],
+      'Wormwood': [0, 30], 'Hyssop': [50, 30]
+    };
+    const tokenGoods = [
+      ['Pathwarden Robe', 'Clothing', 12, '1 left', P.robe, C.cloth],
+      ['Pathwarden Helm', 'Armor', 8, 'Unlimited', P.helm, C.arm],
+      ['Pathwarden Shield', 'Armor', 10, 'Unlimited', P.shield, C.arm],
+      ['Pathwarden Blade', 'Weapons', 20, 'Unlimited', P.sword, C.weap]
+    ];
+    // your items, as this shop sees them
+    const mine = [
+      ['Drudge Charm', 'Main pack', 120, 'Miscellaneous · 3 in stack', P.charm, C.misc, '', 3],
+      ['Gold Ring', 'Pack 2', 340, 'Jewelry', P.ring, C.jewel, '', 1],
+      ['Amber', 'Pack 2', 90, 'Gems · 4 in stack', P.gem, C.food, '', 4],
+      ['Agate', 'Pack 2', 110, 'Gems · 2 in stack', P.gem, C.gem],
+      ['Mana Stone', 'Main pack', 15, 'Mana stones · 12 in stack', P.stone, C.mana],
+      ['Old Bone', 'Main pack', 0, '', P.bone, C.misc, 'That item has no value and cannot be sold'],
+      ['Tattered Robe', 'Pack 1', 0, '', P.robe, C.cloth, 'You cannot sell that here'],
+      ['Ancient Heirloom Sword', 'Pack 1', 0, '', P.sword, C.weap, 'That item is too valuable to sell here']
+    ];
+
+    const defaultCat = state === 'components' ? 'Spell Components' : 'All goods';
+    const cat = st.cat || defaultCat;
+    const defaultPack = 'All packs';
+    const pack = st.pack || defaultPack;
+
+    let rows, rail, railTitle, listTitle, listCount, sortBy;
+    const list = tokens ? tokenGoods : goods;
+    const unit = (n) => tokens ? fmt(n) + (n === 1 ? ' token' : ' tokens') : pp(n);
+
+    if (!isSell) {
+      const cats = [];
+      list.forEach((g) => { if (cats.indexOf(g[1]) < 0) cats.push(g[1]); });
+      cats.sort();
+      rail = [['All goods', list.length]].concat(cats.map((c) => [c, list.filter((g) => g[1] === c).length])).map(([label, n]) => {
+        const on = label === cat;
+        return { label, n, on, edge: on ? GOLD : 'transparent', bg: on ? 'rgba(224,176,104,0.16)' : 'transparent', pick: () => this.setState({ cat: label, sel: undefined }) };
+      });
+      railTitle = 'WHAT SHE SELLS';
+      const shown = list.filter((g) => cat === 'All goods' || g[1] === cat);
+      const selName = sel || (state === 'components' ? 'Pyreal Scarab' : (tokens ? 'Pathwarden Helm' : 'Adept Healing Kit'));
+      rows = shown.map((g) => {
+        const on = g[0] === selName;
+        const rs = state === 'components' ? restock[g[0]] : null;
+        let sub = g[1] + ' · ' + g[3];
+        let subColor = MUTED;
+        if (rs) {
+          const need = rs[1] - rs[0];
+          sub = 'You carry ' + rs[0] + ' · restock to ' + rs[1];
+          if (need > 0) { sub += ' · need ' + need; subColor = rs[0] === 0 ? BAD : GOLD; }
+        }
+        return { name: g[0], sub, subColor, price: unit(g[2]), priceSub: 'each', d: g[4], color: g[5], tile: tile(g[5]), op: '1',
+          onList: !!g[6] && !tokens, onListText: 'On list ×' + (g[6] || ''),
+          edge: on ? GOLD : 'transparent', bg: on ? 'rgba(224,176,104,0.14)' : 'transparent',
+          pick: () => this.setState({ sel: g[0] }), raw: g };
+      });
+      listTitle = cat;
+      listCount = shown.length + (shown.length === 1 ? ' item' : ' items');
+      sortBy = 'Category';
+    } else {
+      const packs = ['All packs', 'Main pack', 'Pack 1', 'Pack 2'];
+      rail = packs.map((label) => {
+        const n = label === 'All packs' ? mine.length : mine.filter((m) => m[1] === label).length;
+        const on = label === pack;
+        return { label, n, on, edge: on ? GOLD : 'transparent', bg: on ? 'rgba(224,176,104,0.16)' : 'transparent', pick: () => this.setState({ pack: label, sel: undefined }) };
+      });
+      railTitle = 'YOUR PACKS';
+      const shown = mine.filter((m) => pack === 'All packs' || m[1] === pack);
+      const selName = sel || 'Agate';
+      rows = shown.map((m) => {
+        const no = !!m[6];
+        const on = m[0] === selName;
+        return { name: m[0], sub: no ? m[6] : m[1] + ' · ' + m[3], subColor: no ? BAD : MUTED,
+          price: no ? '—' : pp(m[2]), priceSub: no ? '' : 'she pays each', d: m[4], color: m[5], tile: tile(m[5]), op: no ? '0.45' : '1',
+          onList: !!m[7], onListText: 'Selling ×' + (m[7] || ''),
+          edge: on ? GOLD : 'transparent', bg: on ? 'rgba(224,176,104,0.14)' : 'transparent',
+          pick: () => this.setState({ sel: m[0] }), raw: m };
+      });
+      listTitle = pack === 'All packs' ? 'Everything you carry' : pack;
+      listCount = shown.filter((m) => !m[6]).length + ' she will buy · ' + shown.filter((m) => m[6]).length + ' she will not';
+      sortBy = 'Value';
+    }
+
+    // the selected card
+    const pick = rows.find((r) => r.edge === GOLD) || rows[0];
+    const g = pick.raw;
+    let selCard;
+    if (!isSell) {
+      const qty = state === 'components' ? 16 : (tokens ? 1 : 2);
+      const each = g[2];
+      const total = qty * each;
+      selCard = { name: g[0], sub: g[1] + ' · ' + unit(each) + ' each · ' + g[3].toLowerCase(), d: g[4], color: g[5], tile: tile(g[5]), qty,
+        total: unit(total), totalColor: TXT, primary: 'Buy now',
+        maxLabel: state === 'components' ? 'To restock' : 'Max',
+        note: tokens ? 'You have 38 Pathwarden Tokens.' : (state === 'components' ? 'Brings you to your restock amount of 20.' : 'Fits in your main pack. You have 52,400p.'),
+        noteColor: MUTED };
+    } else {
+      const no = !!g[6];
+      const stack = g[0] === 'Agate' ? 2 : 1;
+      selCard = { name: g[0], sub: no ? g[6] : g[1] + ' · ' + g[3], d: g[4], color: g[5], tile: tile(g[5]), qty: stack,
+        total: no ? '—' : pp(g[2] * stack), totalColor: no ? MUTED : OK, primary: 'Sell now', maxLabel: 'All',
+        note: no ? 'Ilsa will not take it.' : 'Part of a stack is split off before it is sold.', noteColor: no ? BAD : MUTED };
+    }
+
+    // the list
+    const cartRow = (name, qty, price, d, color) => ({ name, qty, price, d, color, tile: tile(color) });
+    let cart, cartTitle, cartCount, totalLabel, total, totalColor, balanceNow, balanceAfter, cartButton;
+    if (!isSell) {
+      if (tokens) {
+        cart = [cartRow('Pathwarden Helm', 1, '8 tokens', P.helm, C.arm), cartRow('Pathwarden Shield', 1, '10 tokens', P.shield, C.arm)];
+        total = '18 tokens'; balanceNow = 'You have 38 tokens'; balanceAfter = 'After: 20'; cartButton = 'Buy all · 18 tokens';
+      } else {
+        cart = [cartRow('Prismatic Taper', 100, '1,200p', P.taper, C.taper), cartRow('Apple', 10, '40p', P.apple, C.food), cartRow('Adept Healing Kit', 2, '1,200p', P.kit, C.life)];
+        total = '2,440p'; balanceNow = 'You have 52,400p'; balanceAfter = 'After: 49,960p'; cartButton = 'Buy all · 2,440p';
+      }
+      cartTitle = 'TO BUY'; cartCount = cart.length + ' items'; totalLabel = 'Total'; totalColor = TXT;
+    } else {
+      cart = [cartRow('Drudge Charm', 3, '360p', P.charm, C.misc), cartRow('Gold Ring', 1, '340p', P.ring, C.jewel), cartRow('Amber', 4, '360p', P.gem, C.food)];
+      cartTitle = 'TO SELL'; cartCount = cart.length + ' items'; totalLabel = 'You receive'; total = '1,060p'; totalColor = OK;
+      balanceNow = 'You have 52,400p'; balanceAfter = 'After: 53,460p'; cartButton = 'Sell all · 1,060p';
+    }
+
+    const tabs = [['buy', 'Buy', tokens ? 2 : 3], ['sell', 'Sell', 3]].map(([key, label, n]) => {
+      const on = key === tab;
+      return { label, n, hasN: n > 0, on, line: on ? GOLD : 'transparent', fg: on ? TXT : MUTED, pick: () => this.setState({ tab: key, sel: undefined }) };
+    });
+
+    const compact = (this.props.size ?? 'wide') === 'compact';
+    const railOn = rail.find((f) => f.on) || rail[0];
+    if (compact && isSell) {
+      const ok = rows.filter((r) => r.op === '1').length;
+      listCount = ok + ' of ' + rows.length + ' sellable';
+    }
+
+    return {
+      compact, showRail: !compact,
+      rootW: compact ? '792px' : '1040px',
+      midLeft: compact ? '20px' : '216px', midW: compact ? '428px' : '440px',
+      asideLeft: compact ? '464px' : '672px', asideW: compact ? '308px' : '348px',
+      searchW: compact ? '150px' : '200px', tabsGap: compact ? '4px' : '14px',
+      pickerValue: railOn.label, pickerN: railOn.n,
+      vendorName: tokens ? 'Pathwarden Quartermaster' : 'Ilsa Brenner',
+      vendorSub: tokens ? 'Takes Pathwarden Tokens, not pyreals' : 'Shopkeeper · Holtburg',
+      purse: tokens ? '38 Pathwarden Tokens' : '52,400p', purseIcon: tokens ? P.token : P.coin,
+      hasPurse2: tokens, purse2: '52,400p',
+      searchLabel: isSell ? 'Search your items' : 'Search goods',
+      tabs, rail, railTitle, isSell, rows, listTitle, listCount, sortBy,
+      showRestock: state === 'components' && !isSell && cat === 'Spell Components',
+      sel: selCard, cart, cartTitle, cartCount, totalLabel, total, totalColor, balanceNow, balanceAfter, cartButton,
+      isRefused: state === 'refused' && isSell,
+      isLeave: st.leave !== undefined ? st.leave : state === 'leave',
+      askLeave: () => this.setState({ leave: true }),
+      stay: () => this.setState({ leave: false })
+    };
+  }
+}
+</script>
+</body>
+</html>
