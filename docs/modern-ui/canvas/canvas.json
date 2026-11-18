@@ -576,6 +576,58 @@
       "page": "trade",
       "title": "Small screens: inspecting what they offer",
       "is_interactive": true
+    },
+    "SalvageInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "salvage",
+      "title": "Salvage open over the bronze HUD"
+    },
+    "Salvage.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 820,
+      "h": 540,
+      "page": "salvage",
+      "title": "Items staged, one bag per material, ask before anything with spells",
+      "is_interactive": true
+    },
+    "SalvageEmpty.dc.html": {
+      "x": 2420,
+      "y": 0,
+      "w": 820,
+      "h": 540,
+      "page": "salvage",
+      "title": "Just opened on an Ust: drop items, or add from packs",
+      "is_interactive": true
+    },
+    "SalvagePick.dc.html": {
+      "x": 1520,
+      "y": 660,
+      "w": 820,
+      "h": 540,
+      "page": "salvage",
+      "title": "Add from packs: only what can be salvaged, by material",
+      "is_interactive": true
+    },
+    "SalvageRefused.dc.html": {
+      "x": 2420,
+      "y": 660,
+      "w": 820,
+      "h": 540,
+      "page": "salvage",
+      "title": "Dropped and refused: retained items"
+    },
+    "SalvageDone.dc.html": {
+      "x": 1520,
+      "y": 1320,
+      "w": 820,
+      "h": 540,
+      "page": "salvage",
+      "title": "Done: the bags you got",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -585,7 +637,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "trade"
+    "page": "salvage"
   },
   "notes": {
     "t1": {
@@ -668,6 +720,14 @@
       "x": 0,
       "y": -300,
       "page": "trade"
+    },
+    "t11": {
+      "kind": "title1",
+      "maxW": 3240,
+      "text": "Salvage (bronze)",
+      "x": 0,
+      "y": -300,
+      "page": "salvage"
     }
   },
   "order": [
@@ -737,7 +797,13 @@
     "TradeInspect.dc.html",
     "TradeFailed.dc.html",
     "TradeCompact.dc.html",
-    "TradeCompactInspect.dc.html"
+    "TradeCompactInspect.dc.html",
+    "SalvageInGame.dc.html",
+    "Salvage.dc.html",
+    "SalvageEmpty.dc.html",
+    "SalvagePick.dc.html",
+    "SalvageRefused.dc.html",
+    "SalvageDone.dc.html"
   ],
   "pages": [
     {
@@ -775,6 +841,10 @@
     {
       "id": "trade",
       "name": "Trade"
+    },
+    {
+      "id": "salvage",
+      "name": "Salvage"
     },
     {
       "id": "r1",

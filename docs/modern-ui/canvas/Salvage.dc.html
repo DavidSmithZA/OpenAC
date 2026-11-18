@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Salvage window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 820px; height: 540px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.92); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 16px 0 20px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4l6 6-3 3-6-6zM11 7 3 15v6h6l8-8M3 21l6-6"></path></svg>
+    <div style="display: flex; flex-direction: column; gap: 1px;">
+      <h1 style="margin: 0; font-size: 15px; font-weight: 600;">Salvage</h1>
+      <span style="font-size: 11px; color: #C8B89C;">Using an Ust · your Salvaging skill is 312</span>
+    </div>
+    <span style="flex: 1;"></span>
+    <span style="font-size: 11px; color: #A89A82;">Right-click an item to inspect it</span>
+    <button aria-label="Close salvage" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- staging -->
+  <sc-if value="{{showStage}}" hint-placeholder-val="{{true}}">
+    <section aria-label="To salvage" style="position: absolute; left: 20px; top: 68px; width: 470px; height: 384px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600;">To salvage</h2>
+        <span style="font-size: 11px; color: #C8B89C;">{{stageCount}}</span>
+        <span style="flex: 1;"></span>
+        <button onClick="{{openPick}}" style="height: 28px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add from packs
+        </button>
+      </div>
+      <div style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{staged}}" as="it" hint-placeholder-count="5">
+          <div style="min-height: 46px; padding: 0 6px; border-radius: 4px; border: 1px solid {{it.edge}}; background: {{it.bg}}; display: flex; align-items: center; gap: 10px;">
+            <span style="width: 34px; height: 34px; flex: none; border-radius: 4px; background: {{it.tile}}; display: flex; align-items: center; justify-content: center;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{it.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{it.d}}"></path></svg>
+            </span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{it.name}}</span>
+              <span style="font-size: 10.5px; color: {{it.subColor}};">{{it.sub}}</span>
+            </span>
+            <span style="height: 20px; padding: 0 7px; border-radius: 3px; display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.06); font-size: 10.5px; font-weight: 700;">
+              <span style="width: 8px; height: 8px; border-radius: 2px; background: {{it.matColor}};"></span>{{it.mat}}
+            </span>
+            <span style="width: 36px; text-align: right; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums;" title="Workmanship">{{it.ws}}</span>
+            <button aria-label="Take {{it.name}} out" onClick="{{it.remove}}" title="Take it out (or double-click it)" style="width: 24px; height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+          </div>
+        </sc-for>
+        <div style="margin-top: 4px; min-height: {{dropH}}; border-radius: 4px; border: {{dropBorder}}; background: {{dropBg}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 8px; box-sizing: border-box; font-size: 11.5px; color: #C8B89C; text-align: center;">
+          <sc-if value="{{isRefused}}" hint-placeholder-val="{{false}}">
+            <span style="font-size: 12px; font-weight: 700; color: #F4EBDC;">Ancient Heirloom Sword</span>
+            <span style="color: #FFB3B6;">Retained items cannot be salvaged.</span>
+          </sc-if>
+          <sc-if value="{{showDropHint}}" hint-placeholder-val="{{true}}">
+            <span>{{dropText}}</span>
+            <span style="font-size: 10.5px; color: #A89A82;">A whole pack adds everything in it that can be salvaged.</span>
+          </sc-if>
+        </div>
+      </div>
+    </section>
+
+    <!-- what you get -->
+    <aside aria-label="What you get" style="position: absolute; left: 506px; top: 68px; width: 294px; height: 384px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.35); background: rgba(0,0,0,0.28); display: flex; flex-direction: column;">
+      <div style="padding: 12px 14px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">YOU GET ONE BAG PER MATERIAL</div>
+      <div style="flex: 1; min-height: 0; padding: 0 10px; display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{bags}}" as="b" hint-placeholder-count="4">
+          <div style="min-height: 40px; padding: 0 4px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(201,160,98,0.12);">
+            <span style="width: 26px; height: 26px; flex: none; border-radius: 4px; background: {{b.tile}}; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{b.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7zM9 8V6a3 3 0 0 1 6 0v2"></path></svg></span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 1px;">
+              <span style="font-size: 12px; font-weight: 600;">Salvaged {{b.mat}}</span>
+              <span style="font-size: 10.5px; color: #C8B89C;">{{b.sub}}</span>
+            </span>
+          </div>
+        </sc-for>
+        <sc-if value="{{noBags}}" hint-placeholder-val="{{false}}">
+          <span style="padding: 20px 6px; font-size: 12px; color: #A89A82; text-align: center;">Add items to see which bags you get.</span>
+        </sc-if>
+      </div>
+      <div style="padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid rgba(201,160,98,0.2);">
+        <span style="font-size: 10.5px; line-height: 1.45; color: #A89A82;">How much goes in each bag depends on your Salvaging skill and each item's workmanship.</span>
+      </div>
+    </aside>
+
+    <!-- bottom bar -->
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 72px; box-sizing: border-box; padding: 0 20px; border-top: 1px solid rgba(201,160,98,0.35); display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.2);">
+      <button onClick="{{clearAll}}" style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Clear</button>
+      <span style="font-size: 11px; color: #A89A82;">{{materialRule}}</span>
+      <span style="flex: 1;"></span>
+      <button disabled="{{noItems}}" onClick="{{salvage}}" style="height: 40px; padding: 0 22px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,{{goAlpha}}); color: #1A140D; font-size: 13px; font-weight: 700; cursor: pointer;">{{goLabel}}</button>
+    </div>
+  </sc-if>
+
+  <!-- results -->
+  <sc-if value="{{isDone}}" hint-placeholder-val="{{false}}">
+    <section aria-label="Salvaged" style="position: absolute; left: 20px; right: 20px; top: 68px; bottom: 88px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7FD08A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+        <h2 style="margin: 0; font-size: 14px; font-weight: 600;">Salvaged 5 items into 4 bags</h2>
+        <span style="font-size: 11px; color: #C8B89C;">The bags are in your main pack.</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+        <sc-for list="{{results}}" as="r" hint-placeholder-count="4">
+          <div style="padding: 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.35); background: rgba(0,0,0,0.28); display: flex; align-items: center; gap: 12px;">
+            <span style="width: 40px; height: 40px; flex: none; border-radius: 4px; background: {{r.tile}}; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{r.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7zM9 8V6a3 3 0 0 1 6 0v2"></path></svg></span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 13px; font-weight: 600;">Salvaged {{r.mat}}</span>
+              <span style="font-size: 11px; color: #C8B89C;">from {{r.from}}</span>
+            </span>
+            <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 1px;">
+              <span style="font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums;">{{r.units}}</span>
+              <span style="font-size: 10.5px; color: #C8B89C; font-variant-numeric: tabular-nums;">workmanship {{r.ws}}</span>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+      <span style="font-size: 11px; color: #A89A82;">The same lines are in chat.</span>
+    </section>
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 72px; box-sizing: border-box; padding: 0 20px; border-top: 1px solid rgba(201,160,98,0.35); display: flex; align-items: center; justify-content: flex-end; gap: 8px; background: rgba(0,0,0,0.2);">
+      <button style="height: 40px; padding: 0 16px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 13px; font-weight: 600; cursor: pointer;">Close</button>
+      <button onClick="{{again}}" style="height: 40px; padding: 0 22px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 13px; font-weight: 700; cursor: pointer;">Salvage more</button>
+    </div>
+  </sc-if>
+
+  <!-- add from packs -->
+  <sc-if value="{{isPick}}" hint-placeholder-val="{{false}}">
+    <div role="dialog" aria-label="Add from your packs" style="position: absolute; left: 110px; top: 100px; width: 400px; box-sizing: border-box; padding: 12px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.98); box-shadow: 0 16px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 13px; font-weight: 700; flex: 1;">Add from your packs</span>
+        <button aria-label="Close" onClick="{{closeOver}}" style="width: 24px; height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+      </div>
+      <div role="group" aria-label="Material" style="display: flex; flex-wrap: wrap; gap: 4px;">
+        <sc-for list="{{matChips}}" as="m" hint-placeholder-count="5">
+          <button aria-pressed="{{m.on}}" style="height: 24px; padding: 0 8px; border-radius: 999px; border: 1px solid {{m.edge}}; background: {{m.bg}}; display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; cursor: pointer;"><span style="width: 7px; height: 7px; border-radius: 2px; background: {{m.color}};"></span>{{m.label}}<span style="color: #C8B89C; font-weight: 500;">{{m.n}}</span></button>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{packItems}}" as="p" hint-placeholder-count="6">
+          <div style="min-height: 40px; padding: 0 6px; border-radius: 4px; display: flex; align-items: center; gap: 10px; opacity: {{p.op}};">
+            <span style="width: 28px; height: 28px; flex: none; border-radius: 4px; background: {{p.tile}}; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{p.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.d}}"></path></svg></span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+              <span style="font-size: 12px; font-weight: 600;">{{p.name}}</span>
+              <span style="font-size: 10.5px; color: {{p.subColor}};">{{p.sub}}</span>
+            </span>
+            <button disabled="{{p.off}}" style="height: 26px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">{{p.action}}</button>
+          </div>
+        </sc-for>
+      </div>
+      <span style="font-size: 10.5px; color: #A89A82;">Only things that can be salvaged are listed. Worn and wielded things are not.</span>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["staged","empty","pick","refused","done"],"default":"staged"},"$preview":{"width":820,"height":540}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const state = this.props.state ?? 'staged';
+    const view = st.view !== undefined ? st.view : state;
+    const removed = st.removed || {};
+    const MUTED = '#C8B89C', GOLD = '#E0B068';
+    const M = { Steel: '#B8C2CC', Granite: '#9A968C', Silk: '#E9D3AE', Silver: '#D8DEE6', Oak: '#B08050', Leather: '#C08A5A' };
+    const P = {
+      sword: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      mace: 'M14 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM11 11 3 19l2 2 8-8',
+      robe: 'M8 3h8l4 6-3 2v10H7V11L4 9z',
+      ring: 'M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM9 3h6l-3 6z',
+      bow: 'M6 3c8 4 8 14 0 18M6 3v18M6 12h14M17 9l3 3-3 3',
+      helm: 'M4 15a8 8 0 0 1 16 0v4H4zM12 7v8M4 15h16'
+    };
+    const tile = (c) => 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.5))';
+    const all = [
+      ['Steel Longsword', 'Steel', '6', 'Main pack · worth 1,240p', P.sword],
+      ['Steel Kite Shield', 'Steel', '5', 'Pack 1 · worth 980p', P.shield],
+      ['Granite Mace', 'Granite', '4', 'Pack 1 · worth 610p', P.mace],
+      ['Silk Robe', 'Silk', '5', 'Pack 2 · worth 720p', P.robe],
+      ['Silver Ring', 'Silver', '6', 'Pack 2 · worth 2,100p · Major Coordination', P.ring]
+    ];
+    const empty = view === 'empty' || st.cleared;
+    const list = empty ? [] : all.filter((a) => !removed[a[0]]);
+    const staged = list.map((a) => ({
+      name: a[0], mat: a[1], matColor: M[a[1]], ws: a[2], sub: a[3], subColor: a[5] ? GOLD : MUTED,
+      d: a[4], color: M[a[1]], tile: tile(M[a[1]]),
+      edge: a[5] ? 'rgba(224,176,104,0.6)' : 'transparent', bg: a[5] ? 'rgba(224,176,104,0.08)' : 'transparent',
+      remove: () => { const r = Object.assign({}, removed); r[a[0]] = true; this.setState({ removed: r }); }
+    }));
+    const byMat = {};
+    list.forEach((a) => { (byMat[a[1]] = byMat[a[1]] || []).push(+a[2]); });
+    const bags = Object.keys(byMat).map((mat) => {
+      const ws = byMat[mat]; const avg = ws.reduce((x, y) => x + y, 0) / ws.length;
+      return { mat, color: M[mat], tile: tile(M[mat]), sub: ws.length + (ws.length === 1 ? ' item' : ' items') + ' · workmanship ' + avg.toFixed(1) };
+    });
+    const n = list.length;
+    const refused = view === 'refused';
+
+    const C = (label, n2, color, on) => ({ label, n: n2, color, on: !!on, edge: on ? GOLD : 'rgba(201,160,98,0.35)', bg: on ? 'rgba(224,176,104,0.16)' : 'transparent' });
+    const matChips = [C('All', 9, GOLD, true), C('Steel', 3, M.Steel), C('Granite', 2, M.Granite), C('Oak', 2, M.Oak), C('Silk', 1, M.Silk), C('Leather', 1, M.Leather)];
+    const X = (name, sub, d, color, action, off, subColor) => ({ name, sub, d, color, tile: tile(color), action, off: !!off, op: off ? '0.5' : '1', subColor: subColor || MUTED });
+    const packItems = [
+      X('Steel Longsword', 'Steel · workmanship 6 · added', P.sword, M.Steel, 'Added', true),
+      X('Iron Helm', 'Steel · workmanship 3 · Pack 1', P.helm, M.Steel, 'Add'),
+      X('Oak Longbow', 'Oak · workmanship 4 · Pack 2', P.bow, M.Oak, 'Add'),
+      X('Oak Shortbow', 'Oak · workmanship 5 · Pack 2', P.bow, M.Oak, 'Add'),
+      X('Leather Cap', 'Leather · workmanship 2 · Main pack', P.helm, M.Leather, 'Add'),
+      X('Ancient Heirloom Sword', 'Retained: cannot be salvaged', P.sword, M.Steel, 'Add', true, '#FFB3B6')
+    ];
+
+    const results = [
+      { mat: 'Steel', from: '2 items', units: '64', ws: '5.50', color: M.Steel, tile: tile(M.Steel) },
+      { mat: 'Granite', from: '1 item', units: '22', ws: '4.00', color: M.Granite, tile: tile(M.Granite) },
+      { mat: 'Silk', from: '1 item', units: '31', ws: '5.00', color: M.Silk, tile: tile(M.Silk) },
+      { mat: 'Silver', from: '1 item', units: '35', ws: '6.00', color: M.Silver, tile: tile(M.Silver) }
+    ];
+
+    const isDone = view === 'done';
+    return {
+      showStage: !isDone, isDone,
+      staged, bags, noBags: bags.length === 0,
+      stageCount: n === 0 ? 'nothing yet' : n + (n === 1 ? ' item' : ' items'),
+      dropH: n === 0 ? '200px' : '74px',
+      dropBorder: refused ? '2px dashed #FF8A8E' : '1.5px dashed rgba(201,160,98,0.45)',
+      dropBg: refused ? 'rgba(255,107,112,0.10)' : 'transparent',
+      isRefused: refused, showDropHint: !refused,
+      dropText: n === 0 ? 'Drag items here from your packs, or use Add from packs' : 'Drag more items here',
+      materialRule: 'Several materials at once (Options › Gameplay)',
+      noItems: n === 0, goAlpha: n === 0 ? '0.35' : '0.9',
+      goLabel: n === 0 ? 'Salvage' : 'Salvage ' + n + (n === 1 ? ' item' : ' items'),
+      isPick: view === 'pick', results,
+      openPick: () => this.setState({ view: 'pick' }),
+      closeOver: () => this.setState({ view: 'staged' }),
+      clearAll: () => this.setState({ cleared: true, view: 'staged' }),
+      salvage: () => this.setState({ view: 'done' }),
+      again: () => this.setState({ view: 'staged', cleared: true, removed: {} })
+    };
+  }
+}
+</script>
+</body>
+</html>

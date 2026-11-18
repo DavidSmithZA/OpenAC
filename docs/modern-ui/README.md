@@ -193,9 +193,29 @@ This folder holds the design only. There is no code yet.
 - Small screens: the window narrows to 792 px with the same two
   columns; the hint lines go.
 
+## Salvage
+
+- Using a salvaging tool (an Ust) opens the window; the header shows
+  your Salvaging skill.
+- To salvage: each item with its material and workmanship. Take one out
+  with its x, by double-clicking, or by dragging it away. Drop items or
+  a whole pack (which adds everything in it that can be salvaged), or
+  use Add from packs: only salvageable things are listed, with material
+  chips to narrow it; retained items are greyed.
+- One bag per material: each bag shows how many items go into it and
+  their average workmanship. No amounts are shown in advance; they
+  depend on your skill and each item's workmanship.
+- The bottom bar says whether your options allow several materials at
+  once, with Clear and Salvage N items.
+- Nothing is asked before salvaging (no extra warning for items with
+  spells or high value), as in retail.
+- A refused drop shows the reason where it was dropped.
+- After salvaging, the window shows each bag you got, with its units
+  and workmanship, and Salvage more. The same lines go to chat.
+
 ## Still to design
 
-Salvage, appraising other players and creatures, social (allegiance,
+Appraising other players and creatures, social (allegiance,
 fellowship, friends), map, journal and quests, pop-up dialogs, login and
 character creation. After that, a check of every retail panel in
 `crates/ac-ui/src/panels` against this design.
