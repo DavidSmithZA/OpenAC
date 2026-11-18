@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tactical HUD</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FFB020}a:hover{color:#FFCB66}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #E8EAED; background: linear-gradient(180deg, #1C2636 0%, #3A4C63 38%, #6B7D8F 52%, #3B4733 53%, #232B1F 100%);">
+
+  <!-- menu bar -->
+  <nav aria-label="Panels" style="position: absolute; left: 0; right: 0; top: 0; height: 34px; display: flex; align-items: center; gap: 2px; padding: 0 12px; background: rgba(12,13,16,0.94); border-bottom: 1px solid #2A2F36; font-size: 13px;">
+    <span style="font-weight: 700; letter-spacing: 0.04em; margin-right: 14px; color: {{accent}};">OpenAC</span>
+    <sc-for list="{{menu}}" as="m" hint-placeholder-count="7">
+      <button style="height: 26px; padding: 0 10px; border: 0; border-radius: 3px; background: transparent; display: flex; align-items: center; gap: 6px; cursor: pointer;"><span>{{m.label}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8A929C; border: 1px solid #3A4048; border-radius: 3px; padding: 0 4px;">{{m.key}}</span></button>
+    </sc-for>
+    <span style="flex: 1;"></span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #B4BBC4;">42.1N 33.6E · Morntide · 38 ms</span>
+  </nav>
+
+  <!-- buffs list -->
+  <div style="position: absolute; left: 16px; top: 50px; width: 270px; background: rgba(12,13,16,0.9); border: 1px solid #2A2F36; border-radius: 4px; font-size: 12px;">
+    <div style="display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #2A2F36; font-weight: 600; letter-spacing: 0.06em; font-size: 11px; color: #B4BBC4;"><span>ACTIVE EFFECTS</span><span style="font-family: 'IBM Plex Mono', monospace;">23</span></div>
+    <sc-for list="{{buffs}}" as="b" hint-placeholder-count="6">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 5px 10px;">
+        <div style="width: 4px; height: 14px; border-radius: 1px; background: {{b.color}};"></div>
+        <span style="flex: 1;">{{b.name}}</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; color: {{b.tcolor}};">{{b.t}}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- target -->
+  <div style="position: absolute; left: 520px; top: 50px; width: 400px; padding: 8px 12px; box-sizing: border-box; background: rgba(12,13,16,0.9); border: 1px solid #2A2F36; border-radius: 4px; display: flex; flex-direction: column; gap: 6px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <span style="font-weight: 700; font-size: 14px; letter-spacing: 0.03em;">DRUDGE RAVENER</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #B4BBC4;">LV 60</span>
+      <span style="flex: 1;"></span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #FF7A7A;">68%</span>
+    </div>
+    <div style="height: 10px; background: #1E2228; position: relative;"><div style="width: 68%; height: 100%; background: #E5484D;"></div><div style="position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 38px, rgba(12,13,16,0.9) 38px 40px);"></div></div>
+    <div style="display: flex; gap: 6px; font-size: 11px;">
+      <span style="padding: 1px 6px; border-radius: 2px; background: #3A1F14; color: #FF9F7A;">Weak: fire</span>
+      <span style="padding: 1px 6px; border-radius: 2px; background: #1E2733; color: #9CC3FF;">Resists: cold</span>
+      <span style="padding: 1px 6px; border-radius: 2px; background: #2A2F36; color: #C9CFD6;">Vulnerability 5:12</span>
+    </div>
+  </div>
+
+  <!-- minimap -->
+  <div style="position: absolute; right: 16px; top: 50px; width: 220px; background: rgba(12,13,16,0.9); border: 1px solid #2A2F36; border-radius: 4px;">
+    <div style="height: 200px; position: relative; background: #1A2016; background-image: linear-gradient(#2A3324 1px, transparent 1px), linear-gradient(90deg, #2A3324 1px, transparent 1px); background-size: 25px 25px;">
+      <div style="position: absolute; left: 104px; top: 96px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 11px solid #E8EAED;"></div>
+      <div style="position: absolute; left: 140px; top: 62px; width: 8px; height: 8px; background: #E5484D;"></div>
+      <div style="position: absolute; left: 70px; top: 130px; width: 8px; height: 8px; background: #E5484D;"></div>
+      <div style="position: absolute; left: 150px; top: 150px; width: 8px; height: 8px; border-radius: 50%; background: #6BD47A;"></div>
+      <div style="position: absolute; left: 80px; top: 40px; width: 8px; height: 8px; background: {{accent}}; transform: rotate(45deg);"></div>
+      <div style="position: absolute; left: 8px; top: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;">N</div>
+    </div>
+    <div style="display: flex; justify-content: space-between; padding: 6px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #B4BBC4;"><span>Holtburg outskirts</span><span>2 hostile</span></div>
+  </div>
+
+  <!-- unit frame -->
+  <div style="position: absolute; left: 16px; bottom: 16px; width: 340px; padding: 12px; box-sizing: border-box; background: rgba(12,13,16,0.92); border: 1px solid #2A2F36; border-radius: 4px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <span style="font-weight: 700; font-size: 15px;">Aerin Vale</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{accent}};">LV 87</span>
+      <span style="flex: 1;"></span>
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 2px; background: {{accent}}; color: #14100A;">MAGIC</span>
+    </div>
+    <sc-for list="{{vitals}}" as="v" hint-placeholder-count="3">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: #B4BBC4;">{{v.label}}</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600;">{{v.cur}}<span style="color: #8A929C; font-size: 13px;"> / {{v.max}}</span></span>
+        </div>
+        <div style="height: 8px; background: #1E2228; position: relative;"><div style="width: {{v.pct}}; height: 100%; background: {{v.color}};"></div><div style="position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 29px, rgba(12,13,16,0.92) 29px 31px);"></div></div>
+      </div>
+    </sc-for>
+    <div style="display: flex; gap: 14px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #B4BBC4; border-top: 1px solid #2A2F36; padding-top: 8px;">
+      <span>BURDEN 61%</span><span>VITAE 95%</span><span>PY 48,210</span>
+    </div>
+  </div>
+
+  <!-- action bars + xp -->
+  <div style="position: absolute; left: 380px; bottom: 16px; width: 600px; display: flex; flex-direction: column; gap: 6px;">
+    <div style="display: flex; justify-content: flex-end; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: {{accent}};">+18,420 XP · Drudge Ravener</div>
+    <sc-for list="{{bars}}" as="bar" hint-placeholder-count="2">
+      <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; padding: 4px; background: rgba(12,13,16,0.92); border: 1px solid #2A2F36; border-radius: 4px;">
+        <sc-for list="{{bar.slots}}" as="s" hint-placeholder-count="12">
+          <button aria-label="{{s.label}}" style="height: 44px; border: 1px solid #2E343C; border-radius: 3px; background: #171A1F; position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+            <span style="position: absolute; left: 3px; top: 1px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8A929C;">{{s.key}}</span>
+            <span style="position: absolute; right: 3px; bottom: 1px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #E8EAED;">{{s.n}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-for>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 6px 8px; background: rgba(12,13,16,0.92); border: 1px solid #2A2F36; border-radius: 4px;">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600;">LV 87</span>
+      <div style="flex: 1; height: 8px; background: #1E2228; position: relative;"><div style="width: 64.2%; height: 100%; background: {{accent}};"></div><div style="position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(5% - 2px), rgba(12,13,16,0.92) calc(5% - 2px) 5%);"></div></div>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #B4BBC4;">64.2% · 1,204,880 to 88</span>
+    </div>
+  </div>
+
+  <!-- chat -->
+  <div style="position: absolute; right: 16px; bottom: 16px; width: 430px; height: 300px; display: flex; flex-direction: column; background: rgba(12,13,16,0.9); border: 1px solid #2A2F36; border-radius: 4px;">
+    <div role="tablist" aria-label="Chat channels" style="display: flex; border-bottom: 1px solid #2A2F36; padding: 0 6px;">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="6">
+        <button role="tab" style="padding: 8px 10px; border: 0; background: transparent; font-size: 12px; font-weight: 600; color: {{t.fg}}; border-bottom: 2px solid {{t.line}}; cursor: pointer;">{{t.label}}</button>
+      </sc-for>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; padding: 8px 10px; font-size: 12.5px; line-height: 1.45;">
+      <sc-for list="{{chat}}" as="c" hint-placeholder-count="8">
+        <div style="display: flex; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6E7680; padding-top: 1px;">{{c.ts}}</span><span><span style="color: {{c.color}}; font-weight: 600;">{{c.who}}</span> {{c.text}}</span></div>
+      </sc-for>
+    </div>
+    <label style="display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 34px; border-top: 1px solid #2A2F36; font-size: 12px;">
+      <span style="font-family: 'IBM Plex Mono', monospace; color: {{accent}};">/f</span>
+      <input aria-label="Chat message" placeholder="Fellowship" style="flex: 1; background: transparent; border: 0; outline: none; color: #E8EAED; font: inherit;">
+    </label>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FFB020","options":["#FFB020","#5FD3E0","#9DE06B","#FF6B6B"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#FFB020';
+    const P = {
+      bolt: 'M13 2 4 14h7l-1 8 9-12h-7z',
+      shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+      drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+      snow: 'M12 2v20M4 7l16 10M20 7 4 17',
+      star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+      eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
+      up: 'M12 19V5M5 12l7-7 7 7',
+      flame: 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1.5 1 3 2 3 4',
+      sword: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      empty: ''
+    };
+    const war = '#FF8A65', life = '#6BD47A', item = '#FFB020', creat = '#5FB4FF', dim = '#3A4048';
+    const s = (key, d, color, label, n) => ({ key, d, color, label, n: n || '' });
+    return {
+      accent,
+      menu: [
+        { label: 'Character', key: 'C' }, { label: 'Inventory', key: 'I' }, { label: 'Spells', key: 'K' },
+        { label: 'Quests', key: 'J' }, { label: 'Map', key: 'M' }, { label: 'Social', key: 'O' }, { label: 'Options', key: 'Esc' }
+      ],
+      buffs: [
+        { name: 'Armor Self VIII', t: '58:12', color: creat, tcolor: '#B4BBC4' },
+        { name: 'Regeneration Self VII', t: '57:40', color: life, tcolor: '#B4BBC4' },
+        { name: 'Focus Self VIII', t: '41:05', color: creat, tcolor: '#B4BBC4' },
+        { name: 'Blood Drinker (wand)', t: '1:58:00', color: item, tcolor: '#B4BBC4' },
+        { name: 'Mana Renewal VI', t: '14:22', color: life, tcolor: '#B4BBC4' },
+        { name: 'Frost Vulnerability', t: '0:22', color: '#E5484D', tcolor: '#FF7A7A' }
+      ],
+      vitals: [
+        { label: 'HEALTH', cur: '412', max: '450', pct: '92%', color: '#E5484D' },
+        { label: 'STAMINA', cur: '298', max: '410', pct: '73%', color: '#E8C547' },
+        { label: 'MANA', cur: '361', max: '620', pct: '58%', color: '#4C8DFF' }
+      ],
+      bars: [
+        { slots: [
+          s('1', P.flame, war, 'Flame Bolt'), s('2', P.bolt, war, 'Lightning Bolt'), s('3', P.snow, war, 'Frost Streak'),
+          s('4', P.flame, war, 'Flame Arc'), s('5', P.heart, life, 'Heal Self'), s('6', P.drop, life, 'Revitalize'),
+          s('7', P.drop, life, 'Stamina to Mana'), s('8', P.eye, creat, 'Vulnerability'), s('9', P.shield, creat, 'Imperil'),
+          s('0', P.star, item, 'Blood Drinker'), s('-', P.drop, '#E5484D', 'Health Potion', '14'), s('=', P.drop, '#4C8DFF', 'Mana Potion', '9')
+        ] },
+        { slots: [
+          s('⇧1', P.shield, creat, 'Armor Self'), s('⇧2', P.star, creat, 'Focus Self'), s('⇧3', P.star, creat, 'Willpower Self'),
+          s('⇧4', P.heart, life, 'Regeneration'), s('⇧5', P.drop, life, 'Mana Renewal'), s('⇧6', P.shield, item, 'Impenetrability'),
+          s('⇧7', P.sword, item, 'Blood Drinker'), s('⇧8', P.up, item, 'Lifestone Recall'), s('⇧9', P.up, item, 'Portal Recall'),
+          s('⇧0', P.empty, dim, 'Empty'), s('⇧-', P.empty, dim, 'Empty'), s('⇧=', P.empty, dim, 'Empty')
+        ] }
+      ],
+      tabs: [
+        { label: 'All', fg: '#E8EAED', line: accent }, { label: 'Combat', fg: '#8A929C', line: 'transparent' },
+        { label: 'General', fg: '#8A929C', line: 'transparent' }, { label: 'Trade', fg: '#8A929C', line: 'transparent' },
+        { label: 'Fellow', fg: '#8A929C', line: 'transparent' }, { label: 'Tells', fg: '#8A929C', line: 'transparent' }
+      ],
+      chat: [
+        { ts: '21:04', who: '[Fellow] Mira:', text: 'pulling the next room, stay on the ramp', color: '#6BD47A' },
+        { ts: '21:04', who: '[Trade] Osk:', text: 'WTB Major Coordination', color: '#FFB020' },
+        { ts: '21:05', who: 'You cast', text: 'Incantation of Flame Bolt', color: '#5FB4FF' },
+        { ts: '21:05', who: 'You hit', text: 'Drudge Ravener for 212 fire', color: '#FF8A65' },
+        { ts: '21:05', who: 'Drudge Ravener', text: 'misses you', color: '#8A929C' },
+        { ts: '21:05', who: 'You hit', text: 'Drudge Ravener for 188 fire (crit)', color: '#FF8A65' },
+        { ts: '21:06', who: '[Tell] Rook:', text: 'portal gem ready when you are', color: '#C9A2FF' },
+        { ts: '21:06', who: 'You gain', text: '18,420 experience', color: accent }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

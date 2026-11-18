@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Options panel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.op-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,160,98,0.7) rgba(255,255,255,0.06)}
+.op-scroll::-webkit-scrollbar{width:6px}
+.op-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,0.06);border-radius:3px}
+.op-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
+</style>
+</helmet>
+<div style="width: 1100px; height: 720px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.94); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 16px 0 20px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"></path></svg>
+    <h1 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.02em;">Options</h1>
+    <span style="flex: 1;"></span>
+    <label style="display: flex; align-items: center; gap: 8px; width: 300px; height: 30px; padding: 0 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid {{searchEdge}}; background: rgba(0,0,0,0.35);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+      <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Search all settings</span>
+      <input placeholder="Search all settings" value="{{query}}" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12px;">
+    </label>
+    <button aria-label="Close options" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- left nav -->
+  <nav aria-label="Option sections" style="position: absolute; left: 0; top: 52px; bottom: 0; width: 220px; box-sizing: border-box; padding: 14px 12px; border-right: 1px solid rgba(201,160,98,0.25); background: rgba(0,0,0,0.22); display: flex; flex-direction: column; gap: 2px;">
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="9">
+      <button aria-current="{{n.current}}" style="height: 36px; padding: 0 10px; border-radius: 4px; border: 1px solid {{n.edge}}; background: {{n.bg}}; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left; font-size: 13px; font-weight: 600; color: {{n.fg}};">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{n.ic}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{n.d}}"></path></svg>
+        <span style="flex: 1;">{{n.label}}</span>
+        <span style="font-size: 10.5px; font-weight: 600; color: #E0B068;">{{n.badge}}</span>
+      </button>
+    </sc-for>
+    <span style="flex: 1;"></span>
+    <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid rgba(201,160,98,0.25);">
+      <button style="height: 32px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Character select</button>
+      <button style="height: 32px; border-radius: 4px; border: 1px solid rgba(255,138,142,0.6); background: rgba(255,107,112,0.12); color: #FFB3B6; font-size: 12px; font-weight: 600; cursor: pointer;">Exit game</button>
+    </div>
+  </nav>
+
+  <!-- content -->
+  <main class="op-scroll" style="position: absolute; left: 220px; right: 0; top: 52px; bottom: 60px; overflow-y: auto; padding: 18px 28px 24px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px;">
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <h2 style="margin: 0; font-size: 18px; font-weight: 600;">{{title}}</h2>
+      <p style="margin: 0; font-size: 12px; color: #C8B89C;">{{intro}}</p>
+    </div>
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+      <section style="display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(201,160,98,0.25);">
+          <h3 style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #E9D3AE;">{{g.title}}</h3>
+          <sc-if value="{{g.server}}" hint-placeholder-val="{{false}}">
+            <span title="These follow your character to any computer" style="display: flex; align-items: center; gap: 4px; font-size: 10.5px; color: #C8B89C;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9a4.5 4.5 0 0 0 1 9z"></path></svg>
+              Saved on your character
+            </span>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{g.isMatrix}}" hint-placeholder-val="{{false}}">
+          <div style="display: grid; grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr)); align-items: center; font-size: 12px;">
+            <sc-for list="{{g.matrixHead}}" as="h" hint-placeholder-count="6">
+              <span style="padding: 10px 0 6px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #C8B89C; text-align: {{h.align}};">{{h.label}}</span>
+            </sc-for>
+            <sc-for list="{{g.matrixCells}}" as="c" hint-placeholder-count="48">
+              <span style="height: 34px; display: flex; align-items: center; justify-content: {{c.justify}}; border-top: 1px solid rgba(201,160,98,0.1);">
+                <sc-if value="{{c.isLabel}}" hint-placeholder-val="{{true}}"><span>{{c.label}}</span></sc-if>
+                <sc-if value="{{c.isBox}}" hint-placeholder-val="{{false}}">
+                  <span role="checkbox" aria-checked="{{c.on}}" aria-label="{{c.label}}" tabindex="0" style="width: 16px; height: 16px; box-sizing: border-box; border-radius: 3px; border: 1.5px solid {{c.edge}}; background: {{c.bg}}; color: #1A140D; font-size: 11px; font-weight: 800; line-height: 13px; text-align: center;">{{c.mark}}</span>
+                </sc-if>
+              </span>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="4">
+          <div style="display: flex; align-items: center; gap: 20px; min-height: 52px; padding: 8px 0; border-bottom: 1px solid rgba(201,160,98,0.1); position: relative;">
+            <span style="position: absolute; left: -14px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: {{r.dot}};"></span>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 13px; font-weight: 600; color: {{r.fg}};">{{r.label}}</span>
+                <sc-if value="{{r.openac}}" hint-placeholder-val="{{false}}">
+                  <span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span>
+                </sc-if>
+                <span style="font-size: 10.5px; color: #C8B89C;">{{r.crumb}}</span>
+              </div>
+              <span style="font-size: 11.5px; line-height: 1.45; color: #C8B89C;">{{r.desc}}</span>
+            </div>
+            <div style="width: 300px; flex: none; display: flex; justify-content: flex-end; align-items: center; gap: 6px; opacity: {{r.op}};">
+              <sc-if value="{{r.isToggle}}" hint-placeholder-val="{{false}}">
+                <button role="switch" aria-checked="{{r.on}}" aria-label="{{r.label}}" style="width: 38px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: {{r.track}}; position: relative; cursor: pointer;"><span style="position: absolute; top: 3px; left: {{r.knobX}}; width: 14px; height: 14px; border-radius: 50%; background: {{r.knob}};"></span></button>
+              </sc-if>
+              <sc-if value="{{r.isSlider}}" hint-placeholder-val="{{false}}">
+                <input type="range" aria-label="{{r.label}}" min="0" max="100" value="{{r.pct}}" style="width: 200px; accent-color: #E0B068;">
+                <span style="width: 60px; text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;">{{r.value}}</span>
+              </sc-if>
+              <sc-if value="{{r.isSelect}}" hint-placeholder-val="{{false}}">
+                <button aria-label="{{r.label}}: {{r.value}}" style="min-width: 180px; height: 30px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.5); background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; cursor: pointer;"><span>{{r.value}}</span><span style="color: #C8B89C;">▾</span></button>
+              </sc-if>
+              <sc-if value="{{r.isSegment}}" hint-placeholder-val="{{false}}">
+                <div role="radiogroup" aria-label="{{r.label}}" style="display: flex; border: 1px solid rgba(201,160,98,0.5); border-radius: 4px; overflow: hidden;">
+                  <sc-for list="{{r.options}}" as="o" hint-placeholder-count="3">
+                    <button role="radio" aria-checked="{{o.on}}" style="height: 30px; padding: 0 14px; border: 0; background: {{o.bg}}; color: {{o.fg}}; font-size: 12px; font-weight: 600; cursor: pointer;">{{o.label}}</button>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{r.isButton}}" hint-placeholder-val="{{false}}">
+                <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.5); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">{{r.value}}</button>
+              </sc-if>
+              <sc-if value="{{r.isKeys}}" hint-placeholder-val="{{false}}">
+                <sc-for list="{{r.keys}}" as="k" hint-placeholder-count="2">
+                  <button aria-label="{{r.label}} key: {{k.label}}" style="min-width: 70px; height: 28px; padding: 0 10px; border-radius: 4px; border: {{k.border}}; background: {{k.bg}}; color: {{k.fg}}; font-size: 11.5px; font-weight: 700; cursor: pointer;">{{k.label}}</button>
+                </sc-for>
+              </sc-if>
+            </div>
+          </div>
+          <sc-if value="{{r.hasWarn}}" hint-placeholder-val="{{false}}">
+            <div style="margin: 6px 0 4px; padding: 8px 10px; border-radius: 4px; border: 1px solid rgba(255,138,91,0.6); background: rgba(255,138,91,0.1); font-size: 11.5px; color: #FFC9A8;">{{r.warn}}</div>
+          </sc-if>
+        </sc-for>
+      </section>
+    </sc-for>
+  </main>
+
+  <!-- footer -->
+  <div style="position: absolute; left: 220px; right: 0; bottom: 0; height: 60px; display: flex; align-items: center; gap: 8px; padding: 0 20px 0 28px; box-sizing: border-box; border-top: 1px solid rgba(201,160,98,0.35); background: rgba(20,16,12,0.96);">
+    <span style="width: 6px; height: 6px; border-radius: 50%; background: {{changeDot}};"></span>
+    <span style="font-size: 12px; color: #C8B89C;">{{changeText}}</span>
+    <span style="flex: 1;"></span>
+    <button style="height: 32px; padding: 0 12px; border-radius: 4px; border: 0; background: transparent; color: #C8B89C; font-size: 12px; font-weight: 600; cursor: pointer;">Defaults</button>
+    <button style="height: 32px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.5); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Revert</button>
+    <button style="height: 32px; padding: 0 18px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Apply</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"section":{"editor":"enum","options":["interface","gameplay","social","chat","controls","graphics","sound","search"],"default":"interface"},"$preview":{"width":1100,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const section = this.props.section ?? 'interface';
+    const GOLD = '#E0B068', MUTED = '#C8B89C', TXT = '#F4EBDC';
+    const I = {
+      interface: 'M3 4h18v12H3zM8 20h8M12 16v4',
+      gameplay: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      social: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7',
+      chat: 'M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z',
+      controls: 'M3 7h18v10H3zM7 11h.01M11 11h.01M15 11h.01M7 14h10',
+      graphics: 'M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6',
+      sound: 'M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14',
+      camera: 'M3 7h4l2-3h6l2 3h4v13H3zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'
+    };
+    const sections = [['interface', 'Interface'], ['gameplay', 'Gameplay'], ['social', 'Social'], ['chat', 'Chat'], ['controls', 'Controls'], ['graphics', 'Graphics'], ['sound', 'Sound'], ['camera', 'Camera']];
+    const changedIn = { interface: '1' };
+    const nav = sections.map(([id, label]) => {
+      const cur = id === section;
+      return { label, d: I[id], current: cur ? 'page' : 'false', edge: cur ? GOLD : 'transparent', bg: cur ? 'rgba(224,176,104,0.16)' : 'transparent', fg: cur ? TXT : '#E9D3AE', ic: cur ? GOLD : MUTED, badge: changedIn[id] ? '●' : '' };
+    });
+
+    const base = (label, desc, extra) => Object.assign({ label, desc, crumb: '', openac: false, dot: 'transparent', fg: TXT, op: '1', isToggle: false, isSlider: false, isSelect: false, isSegment: false, isButton: false, isKeys: false, hasWarn: false, warn: '' }, extra || {});
+    const tog = (label, desc, on, extra) => base(label, desc, Object.assign({ isToggle: true, on: !!on, track: on ? 'rgba(224,176,104,0.9)' : 'rgba(255,255,255,0.14)', knob: on ? '#1A140D' : MUTED, knobX: on ? '21px' : '3px' }, extra || {}));
+    const sld = (label, desc, pct, value, extra) => base(label, desc, Object.assign({ isSlider: true, pct, value }, extra || {}));
+    const sel = (label, desc, value, extra) => base(label, desc, Object.assign({ isSelect: true, value }, extra || {}));
+    const seg = (label, desc, opts, pick, extra) => base(label, desc, Object.assign({ isSegment: true, options: opts.map((o) => ({ label: o, on: o === pick, bg: o === pick ? 'rgba(224,176,104,0.85)' : 'transparent', fg: o === pick ? '#1A140D' : '#E9D3AE' })) }, extra || {}));
+    const btn = (label, desc, value, extra) => base(label, desc, Object.assign({ isButton: true, value }, extra || {}));
+    const keys = (label, desc, ks, extra) => base(label, desc, Object.assign({ isKeys: true, keys: ks.map((k) => {
+      const rec = k === '…';
+      const none = k === '';
+      const clash = k.charAt(0) === '!';
+      if (clash) return { label: k.slice(1) + ' · in use', border: '2px solid #FF8A5B', bg: 'rgba(255,138,91,0.12)', fg: '#FFC9A8' };
+      return { label: rec ? 'Press a key…' : none ? 'Add key' : k, border: rec ? '2px solid ' + GOLD : '1px solid rgba(201,160,98,0.5)', bg: rec ? 'rgba(224,176,104,0.12)' : 'rgba(0,0,0,0.35)', fg: rec ? GOLD : none ? MUTED : TXT };
+    }) }, extra || {}));
+    const OA = { openac: true };
+    const group = (title, rows, server) => ({ title, rows, server: !!server, isMatrix: false, matrixHead: [], matrixCells: [] });
+
+    const content = {
+      interface: {
+        title: 'Interface', intro: 'How the game looks around the world: style, size, HUD and windows.',
+        groups: [
+          group('STYLE', [
+            seg('Interface', 'Switch between this interface and the original one. Each keeps its own layout, so you can go back and forth.', ['Modern', 'Retail'], 'Modern', OA),
+            seg('Trim', 'The edging on windows, bars and the radar.', ['Bronze', 'Neutral'], 'Bronze', OA),
+            sld('UI scale', 'Windows, text and controls together. The world is not scaled.', 55, '110%', Object.assign({ dot: GOLD }, OA)),
+            seg('Item details', 'Docked inside the inventory window, or as a card beside the item. Auto docks when there is room.', ['Auto', 'Docked', 'Pop-up'], 'Auto', OA)
+          ]),
+          group('SHORTCUT BARS', [
+            btn('Shortcut bars', 'Move, turn and resize your bars, and set the key for each slot.', 'Edit layout…', OA),
+            sel('Bar layout', 'Use a layout for this character only, or share one across characters.', 'Aerin Vale only', OA)
+          ]),
+          group('HUD', [
+            tog('Coordinates on radar', 'Shows your map coordinates under the radar.', true, { crumb: '' }),
+            tog('Show spell durations', 'Time left under each buff and debuff.', true),
+            tog('Vivid targeting indicator', 'A brighter marker on your current target.', true),
+            tog('Tooltips', 'Explain buttons and items when you hover over them.', true)
+          ], true),
+          group('WORLD EFFECTS', [
+            tog('Most weather effects', 'Rain, snow and lightning.', true),
+            tog('Distance fog', 'Haze that hides the far landscape.', true),
+            tog('Always daytime', 'Keep the sky at day.', false),
+            tog('House restriction effects', 'The glow around housing you may not enter.', true)
+          ], true),
+          group('CHAT TEXT', [
+            sel('Chat font', 'The typeface of chat windows.', 'Inter'),
+            sld('Chat text size', '', 40, '13 px')
+          ])
+        ]
+      },
+      gameplay: {
+        title: 'Gameplay', intro: 'How your character fights, moves and handles items.',
+        groups: [
+          group('COMBAT', [
+            tog('Auto target', 'Pick the nearest enemy when you attack with nothing selected.', true),
+            tog('Repeat attacks', 'Keep attacking until you stop or your target dies.', true),
+            tog('Charge attacks', 'Hold the attack key to build up power.', false),
+            tog('Lead moving targets', 'Aim missiles where a moving target will be.', true),
+            tog('Fast missiles', 'Skip the draw animation where the server allows.', true),
+            tog('Advanced combat controls', 'Separate attack height and power controls.', true),
+            tog('Run by default', 'Run without holding the run key.', true)
+          ], true),
+          group('ITEMS', [
+            tog('Salvage several items at once', 'Put more than one item in the salvage window.', true),
+            tog('New items go to the main pack', 'Instead of the first side pack with room.', false),
+            tog('Confirm using volatile rares', 'Ask before using a rare that is used up.', true),
+            tog('Show craft success chance', 'Ask with the chance before tinkering or crafting.', true)
+          ], true),
+          group('TRADING', [
+            tog('Let others give you items', '', true),
+            tog('Ignore trade requests', '', false),
+            tog('Dropping an item on a player opens trade', 'Instead of giving it.', true),
+            tog('Accept loot permits', 'Let fellows loot your kills when you allow it.', true)
+          ], true)
+        ]
+      },
+      chat: {
+        title: 'Chat', intro: 'Which channels you hear and what each chat tab shows.',
+        groups: [
+          group('CHANNELS YOU HEAR', [
+            tog('General', '', true), tog('Trade', '', true), tog('Looking for group', '', false),
+            tog('Roleplay', '', false), tog('Society', '', true), tog('Allegiance', '', true), tog('Player killer deaths', '', false)
+          ], true),
+          Object.assign(group('WHAT EACH TAB SHOWS', []), { isMatrix: true }),
+          group('BEHAVIOUR', [
+            tog('Timestamps', 'Show the time beside each line.', false),
+            tog('Stay in chat after sending', 'Keep typing without pressing Enter again.', false),
+            tog('Filter bad language', '', true),
+            sld('Chat background', 'How dark the shading behind chat is. Inactive tabs fade further.', 40, '40%')
+          ], true)
+        ]
+      },
+      controls: {
+        title: 'Controls', intro: 'Mouse, keyboard and every key binding. Click a key to change it.',
+        groups: [
+          group('MOUSE', [
+            tog('Modern mouse turning', 'Hold the right button and drag: the view and your character turn together.', true, OA),
+            tog('Both buttons run forward', 'Hold both mouse buttons to run.', true, OA),
+            sld('Mouse look speed', '', 45, '45'),
+            tog('Invert mouse look', 'Moving the mouse up looks down.', false)
+          ]),
+          group('MOVEMENT', [
+            keys('Forward', '', ['W', '↑']), keys('Backward', '', ['S', '↓']), keys('Turn left', '', ['A', '←']), keys('Turn right', '', ['D', '→']),
+            keys('Strafe left', '', ['Z', '']), keys('Jump', '', ['Space', '']), keys('Run or walk', '', ['!Shift', ''], { dot: GOLD, hasWarn: true, warn: 'Shift + number keys belong to your Main bar in Magic mode. Shift on its own still works for running. Keep it, or press another key.' }), keys('Walk backwards', '', ['…', ''])
+          ]),
+          group('COMBAT', [
+            keys('Peace or combat', '', ['`', '']), keys('Attack', '', ['Insert', '']), keys('Next target', '', ['Tab', '']), keys('Closest enemy', '', ['F', ''])
+          ]),
+          group('WINDOWS', [
+            keys('Inventory', '', ['I', 'F9']), keys('Spellbook', '', ['K', '']), keys('Character', '', ['C', '']), keys('Options', '', ['Esc', ''])
+          ])
+        ]
+      },
+      graphics: {
+        title: 'Graphics', intro: 'Screen, detail and the extra effects OpenAC can draw.',
+        groups: [
+          group('DISPLAY', [
+            sel('Resolution', '', '2560 × 1440'),
+            seg('Mode', '', ['Full screen', 'Window'], 'Full screen'),
+            tog('Sync to display', 'Stops tearing. Caps the frame rate at the display rate.', true),
+            sld('Brightness', '', 50, '50%')
+          ]),
+          group('QUALITY', [
+            seg('Preset', 'Sets everything below at once. Changing a setting makes it Custom.', ['Low', 'Medium', 'High', 'Ultra', 'Custom'], 'High', OA),
+            sel('Draw distance', 'How far the landscape reaches.', 'Far'),
+            sel('Landscape textures', '', 'High'),
+            sel('Texture filtering', '', '16×'),
+            sel('Atmospheric rendering', 'Light, shadows and air. Costs the most of any setting.', 'Medium', OA),
+            tog('Draw only the active window', 'Other OpenAC windows keep their chat and plugins but stop drawing the world.', false, OA)
+          ])
+        ]
+      },
+      social: {
+        title: 'Social', intro: 'Fellowships, allegiance and what other players can see about you.',
+        groups: [
+          group('FELLOWSHIP', [tog('Share experience', '', true), tog('Share loot', '', false), tog('Accept invitations automatically', 'From people you know.', false), tog('Ignore invitations', '', false)], true),
+          group('ALLEGIANCE', [tog('Ignore swear requests', '', false), tog('Logon notices', 'Tell me when allegiance members log on.', true)], true),
+          group('WHAT OTHERS SEE', [tog('Your helm', '', true), tog('Your cloak', '', true), tog('Date of birth', '', false), tog('Age', '', true), tog('Chess rank', '', true), tog('Fishing skill', '', false), tog('Number of deaths', '', false), tog('Number of titles', '', true)], true)
+        ]
+      },
+      sound: {
+        title: 'Sound', intro: '',
+        groups: [group('VOLUME', [sld('Effects', '', 80, '80%'), sld('Ambient', '', 50, '50%'), sld('Interface', '', 60, '60%'), tog('Mute when in the background', '', true)])]
+      }
+    };
+
+    // search
+    if (section === 'search') {
+      const s = (crumb, r) => Object.assign(r, { crumb });
+      content.search = {
+        title: '4 settings match “run”', intro: 'From every section. Change them here, or open the section.',
+        groups: [
+          group('GAMEPLAY', [s('Gameplay › Combat', tog('Run by default', 'Run without holding the run key.', true))], true),
+          group('CONTROLS', [
+            s('Controls › Mouse', tog('Both buttons run forward', 'Hold both mouse buttons to run.', true, OA)),
+            s('Controls › Movement', keys('Run or walk', '', ['Shift', ''])),
+            s('Controls › Movement', keys('Forward', 'Run forward.', ['W', '↑']))
+          ])
+        ]
+      };
+    }
+
+    const c = content[section] || content.interface;
+    // chat matrix
+    c.groups.forEach((g) => {
+      if (!g.isMatrix) return;
+      const cols = ['Main', 'Combat', 'Allegiance', 'Fellowship', 'General'];
+      g.matrixHead = [{ label: 'MESSAGE TYPE', align: 'left' }].concat(cols.map((label) => ({ label: label.toUpperCase(), align: 'center' })));
+      const rows = [['Game messages', [1, 0, 0, 0, 0]], ['Combat', [0, 1, 0, 0, 0]], ['Magic', [1, 1, 0, 0, 0]], ['Nearby speech', [1, 0, 0, 0, 0]], ['Tells', [1, 0, 0, 1, 0]], ['Allegiance', [1, 0, 1, 0, 0]], ['Fellowship', [1, 0, 0, 1, 0]], ['General and trade', [0, 0, 0, 0, 1]]];
+      g.matrixCells = [];
+      rows.forEach(([name, ons]) => {
+        g.matrixCells.push({ isLabel: true, isBox: false, label: name, justify: 'flex-start' });
+        ons.forEach((on, i) => g.matrixCells.push({ isLabel: false, isBox: true, on: !!on, label: name + ' in ' + cols[i], mark: on ? '✓' : '', edge: on ? GOLD : 'rgba(201,160,98,0.5)', bg: on ? GOLD : 'transparent', justify: 'center' }));
+      });
+    });
+
+    const changes = section === 'interface' ? 1 : section === 'controls' ? 1 : 0;
+    return {
+      nav, title: c.title, intro: c.intro, groups: c.groups,
+      query: section === 'search' ? 'run' : '',
+      searchEdge: section === 'search' ? GOLD : 'rgba(201,160,98,0.45)',
+      changeDot: changes ? GOLD : 'transparent',
+      changeText: changes ? '1 change, shown live. Apply keeps it, Revert undoes it.' : 'Changes show live. Apply keeps them.'
+    };
+  }
+}
+</script>
+</body>
+</html>

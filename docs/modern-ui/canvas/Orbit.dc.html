@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Orbit HUD</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#E3B25B}a:hover{color:#F2CD86}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: Sora, system-ui, sans-serif; color: #F3ECE0; background: linear-gradient(180deg, #1C2636 0%, #3A4C63 38%, #6B7D8F 52%, #3B4733 53%, #232B1F 100%);">
+
+  <!-- compass line -->
+  <div style="position: absolute; left: 520px; top: 18px; width: 400px; display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: rgba(243,236,224,0.7); text-shadow: 0 1px 4px rgba(0,0,0,0.9);">
+    <span>W</span><span>·</span><span>NW</span><span>·</span><span style="color: {{accent}}; font-size: 15px;">N</span><span>·</span><span>NE</span><span>·</span><span>E</span>
+  </div>
+
+  <!-- target -->
+  <div style="position: absolute; left: 600px; top: 50px; display: flex; align-items: center; gap: 12px; padding: 6px 18px 6px 6px; border-radius: 999px; background: rgba(20,16,12,0.6); backdrop-filter: blur(12px);">
+    <div style="width: 52px; height: 52px; border-radius: 50%; background: conic-gradient(#E5484D 0 68%, rgba(255,255,255,0.12) 68% 100%); display: flex; align-items: center; justify-content: center;">
+      <div style="width: 42px; height: 42px; border-radius: 50%; background: #2A231C; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;">68</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <span style="font-size: 14px; font-weight: 600;">Drudge Ravener</span>
+      <span style="font-size: 12px; color: #C8BCA8;">Level 60 · weak to fire</span>
+    </div>
+  </div>
+
+  <!-- radar -->
+  <div style="position: absolute; right: 28px; top: 24px; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(20,16,12,0.65) 0 60%, rgba(20,16,12,0.35) 100%);">
+    <div style="position: absolute; left: 64px; top: 62px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 11px solid #F3ECE0;"></div>
+    <div style="position: absolute; left: 92px; top: 40px; width: 8px; height: 8px; border-radius: 50%; background: #E5484D;"></div>
+    <div style="position: absolute; left: 36px; top: 92px; width: 7px; height: 7px; border-radius: 50%; background: #E5484D;"></div>
+    <div style="position: absolute; left: 98px; top: 100px; width: 7px; height: 7px; border-radius: 50%; background: #7FD08A;"></div>
+    <div style="position: absolute; left: 66px; top: 6px; font-size: 11px; font-weight: 700; color: {{accent}};">N</div>
+  </div>
+  <div style="position: absolute; right: 28px; top: 172px; width: 140px; text-align: center; font-size: 11px; color: #C8BCA8; text-shadow: 0 1px 4px rgba(0,0,0,0.9);">42.1N 33.6E</div>
+
+  <!-- chat, panel-less -->
+  <div style="position: absolute; left: 28px; bottom: 28px; width: 420px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.45; text-shadow: 0 1px 4px rgba(0,0,0,0.95);">
+    <sc-for list="{{chat}}" as="c" hint-placeholder-count="5">
+      <div style="opacity: {{c.op}};"><span style="color: {{c.color}}; font-weight: 600;">{{c.who}}</span> {{c.text}}</div>
+    </sc-for>
+    <label style="margin-top: 6px; display: flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 999px; background: rgba(20,16,12,0.5); font-size: 12px; text-shadow: none;">
+      <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Chat message</span>
+      <input placeholder="Enter to chat · / for channels" style="flex: 1; background: transparent; border: 0; outline: none; color: #F3ECE0; font: inherit;">
+    </label>
+  </div>
+
+  <!-- buffs: timer rings -->
+  <div style="position: absolute; left: 50%; bottom: 250px; transform: translateX(-50%); display: flex; gap: 8px;">
+    <sc-for list="{{buffs}}" as="b" hint-placeholder-count="6">
+      <div title="{{b.name}}" style="width: 32px; height: 32px; border-radius: 50%; background: {{b.ring}}; display: flex; align-items: center; justify-content: center;">
+        <div style="width: 26px; height: 26px; border-radius: 50%; background: #241E18; display: flex; align-items: center; justify-content: center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{b.color}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{b.d}}"></path></svg>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- XP gain -->
+  <div style="position: absolute; left: 846px; bottom: 214px; display: flex; flex-direction: column; gap: 2px; text-shadow: 0 1px 4px rgba(0,0,0,0.9);">
+    <span style="font-size: 20px; font-weight: 700; color: {{accent}};">+18,420</span>
+    <span style="font-size: 11px; color: #C8BCA8;">64% to level 88</span>
+  </div>
+
+  <!-- wings + hub -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 20px; display: flex; justify-content: center; align-items: flex-end; gap: 14px;">
+    <div style="display: flex; gap: 8px; align-items: flex-end;">
+      <sc-for list="{{left}}" as="s" hint-placeholder-count="5">
+        <button aria-label="{{s.label}}" style="width: 54px; height: 54px; margin-bottom: {{s.lift}}; border-radius: 50%; border: 1px solid rgba(243,236,224,0.14); background: rgba(20,16,12,0.62); backdrop-filter: blur(12px); position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+          <span style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 999px; background: #3A3026; color: #C8BCA8;">{{s.key}}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="width: 220px; height: 220px; position: relative; flex: none;">
+      <svg width="220" height="220" viewBox="0 0 220 220" aria-hidden="true" style="position: absolute; inset: 0;">
+        <circle cx="110" cy="110" r="104" fill="none" stroke="rgba(243,236,224,0.12)" stroke-width="3"></circle>
+        <circle cx="110" cy="110" r="104" fill="none" stroke="{{accent}}" stroke-width="3" stroke-linecap="round" stroke-dasharray="{{xpDash}}" transform="rotate(-90 110 110)"></circle>
+        <sc-for list="{{rings}}" as="r" hint-placeholder-count="3">
+          <circle cx="110" cy="110" r="{{r.r}}" fill="none" stroke="rgba(0,0,0,0.45)" stroke-width="9" stroke-linecap="round" stroke-dasharray="{{r.track}}" transform="rotate(135 110 110)"></circle>
+          <circle cx="110" cy="110" r="{{r.r}}" fill="none" stroke="{{r.color}}" stroke-width="9" stroke-linecap="round" stroke-dasharray="{{r.fill}}" transform="rotate(135 110 110)"></circle>
+        </sc-for>
+      </svg>
+      <div style="position: absolute; left: 54px; top: 54px; width: 112px; height: 112px; border-radius: 50%; background: rgba(20,16,12,0.78); backdrop-filter: blur(12px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;">
+        <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #C8BCA8;">LEVEL</span>
+        <span style="font-size: 34px; font-weight: 700; line-height: 1.1;">87</span>
+        <span style="font-size: 11px; font-weight: 600; color: {{accent}};">Magic</span>
+      </div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 4px; display: flex; justify-content: center; gap: 10px; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; text-shadow: 0 1px 4px rgba(0,0,0,0.95);">
+        <span style="color: #FF8A8E;">412</span><span style="color: #F2C94C;">298</span><span style="color: #7FB2FF;">361</span>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; align-items: flex-end;">
+      <sc-for list="{{right}}" as="s" hint-placeholder-count="5">
+        <button aria-label="{{s.label}}" style="width: 54px; height: 54px; margin-bottom: {{s.lift}}; border-radius: 50%; border: 1px solid rgba(243,236,224,0.14); background: rgba(20,16,12,0.62); backdrop-filter: blur(12px); position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+          <span style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 999px; background: #3A3026; color: #C8BCA8;">{{s.key}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- radial menu -->
+  <nav aria-label="Panels" style="position: absolute; right: 28px; bottom: 28px; width: 190px; height: 190px; border-radius: 50%; background: rgba(20,16,12,0.55); backdrop-filter: blur(12px);">
+    <sc-for list="{{wheel}}" as="w" hint-placeholder-count="7">
+      <button aria-label="{{w.label}}" style="position: absolute; left: {{w.x}}; top: {{w.y}}; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(243,236,224,0.08); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F3ECE0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{w.d}}"></path></svg>
+      </button>
+    </sc-for>
+    <div style="position: absolute; left: 65px; top: 77px; width: 60px; text-align: center; display: flex; flex-direction: column; gap: 1px;">
+      <span style="font-size: 12px; font-weight: 600;">Menu</span>
+      <span style="font-size: 10px; color: #C8BCA8;">hold Tab</span>
+    </div>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#E3B25B","options":["#E3B25B","#7FD08A","#7FB2FF","#E58BD2"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#E3B25B';
+    const P = {
+      bolt: 'M13 2 4 14h7l-1 8 9-12h-7z',
+      shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+      drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+      snow: 'M12 2v20M4 7l16 10M20 7 4 17',
+      star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+      eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
+      up: 'M12 19V5M5 12l7-7 7 7',
+      flame: 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1.5 1 3 2 3 4',
+      bag: 'M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2',
+      book: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5',
+      user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+      map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14',
+      users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7',
+      scroll: 'M6 3h12v14a4 4 0 0 1-4 4H6M6 3a3 3 0 0 0-3 3v2h3M10 8h5M10 12h5',
+      gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1'
+    };
+    const war = '#FF9A6B', life = '#7FD08A', item = accent, creat = '#7FB2FF';
+    const arc = (r, pct) => {
+      const c = 2 * Math.PI * r;
+      return { track: (0.75 * c).toFixed(1) + ' ' + c.toFixed(1), fill: (0.75 * c * pct).toFixed(1) + ' ' + c.toFixed(1) };
+    };
+    const xpC = 2 * Math.PI * 104;
+    const ring = (pct, color) => 'conic-gradient(' + color + ' 0 ' + pct + '%, rgba(255,255,255,0.12) ' + pct + '% 100%)';
+    const buff = (name, d, color, pct) => ({ name, d, color, ring: ring(pct, color) });
+    const wheel = [
+      { d: P.user, label: 'Character' }, { d: P.bag, label: 'Inventory' }, { d: P.book, label: 'Spellbook' },
+      { d: P.scroll, label: 'Quests' }, { d: P.map, label: 'Map' }, { d: P.users, label: 'Social' }, { d: P.gear, label: 'Options' }
+    ].map((w, i) => {
+      const a = -Math.PI / 2 + i * (2 * Math.PI / 7);
+      return { ...w, x: (95 + 70 * Math.cos(a) - 22).toFixed(0) + 'px', y: (95 + 70 * Math.sin(a) - 22).toFixed(0) + 'px' };
+    });
+    return {
+      accent,
+      xpDash: (xpC * 0.64).toFixed(1) + ' ' + xpC.toFixed(1),
+      rings: [
+        { r: 92, color: '#E5484D', ...arc(92, 0.92) },
+        { r: 79, color: '#F2C94C', ...arc(79, 0.73) },
+        { r: 66, color: '#4C8DFF', ...arc(66, 0.58) }
+      ],
+      buffs: [
+        buff('Armor Self', P.shield, creat, 95), buff('Regeneration', P.heart, life, 92),
+        buff('Focus Self', P.star, creat, 68), buff('Blood Drinker', P.eye, item, 98),
+        buff('Mana Renewal', P.drop, life, 24), buff('Frost Vulnerability', P.snow, '#E5484D', 8)
+      ],
+      left: [
+        { key: '1', d: P.flame, color: war, label: 'Flame Bolt', lift: '0px' },
+        { key: '2', d: P.bolt, color: war, label: 'Lightning Bolt', lift: '12px' },
+        { key: '3', d: P.snow, color: war, label: 'Frost Streak', lift: '24px' },
+        { key: '4', d: P.eye, color: creat, label: 'Vulnerability', lift: '34px' },
+        { key: '5', d: P.shield, color: creat, label: 'Armor Self', lift: '42px' }
+      ],
+      right: [
+        { key: '6', d: P.heart, color: life, label: 'Heal Self', lift: '42px' },
+        { key: '7', d: P.drop, color: life, label: 'Revitalize', lift: '34px' },
+        { key: '8', d: P.drop, color: '#E5484D', label: 'Health Potion', lift: '24px' },
+        { key: '9', d: P.drop, color: '#4C8DFF', label: 'Mana Potion', lift: '12px' },
+        { key: '0', d: P.up, color: item, label: 'Lifestone Recall', lift: '0px' }
+      ],
+      chat: [
+        { who: '[Fellow] Mira:', text: 'pulling the next room, stay on the ramp', color: '#7FD08A', op: '0.55' },
+        { who: '[Trade] Osk:', text: 'WTB Major Coordination', color: '#E3B25B', op: '0.7' },
+        { who: 'You hit', text: 'Drudge Ravener for 212 fire', color: '#FF9A6B', op: '0.85' },
+        { who: '[Tell] Rook:', text: 'portal gem ready when you are', color: '#E58BD2', op: '1' },
+        { who: 'You gain', text: '18,420 experience', color: accent, op: '1' }
+      ],
+      wheel
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spellbook panel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.sb-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,160,98,0.7) rgba(255,255,255,0.06)}
+.sb-scroll::-webkit-scrollbar{width:6px}
+.sb-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,0.06);border-radius:3px}
+.sb-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
+</style>
+</helmet>
+<div style="width: 940px; height: 640px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.92); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 16px 0 20px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5"></path></svg>
+    <h1 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.02em;">Spellbook</h1>
+    <div role="tablist" aria-label="Spellbook pages" style="display: flex; gap: 2px; margin-left: 8px;">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+        <button role="tab" aria-selected="{{t.on}}" style="height: 30px; padding: 0 12px; border: 0; border-bottom: 2px solid {{t.line}}; background: transparent; color: {{t.fg}}; font-size: 12px; font-weight: 600; cursor: pointer;">{{t.label}}</button>
+      </sc-for>
+    </div>
+    <span style="flex: 1;"></span>
+    <label style="display: flex; align-items: center; gap: 8px; width: 220px; height: 30px; padding: 0 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+      <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">{{searchLabel}}</span>
+      <input placeholder="{{searchLabel}}" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12px;">
+    </label>
+    <button aria-label="Close spellbook" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- left: filters -->
+  <nav aria-label="Filters" style="position: absolute; left: 24px; top: 68px; width: 176px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C; margin-bottom: 4px;">{{filterTitle}}</span>
+      <sc-for list="{{filters}}" as="f" hint-placeholder-count="6">
+        <button aria-pressed="{{f.on}}" style="height: 30px; padding: 0 8px; border-radius: 4px; border: 1px solid {{f.edge}}; background: {{f.bg}}; display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: left; font-size: 12px;">
+          <span style="width: 8px; height: 8px; border-radius: 2px; background: {{f.color}};"></span>
+          <span style="flex: 1; font-weight: 600;">{{f.label}}</span>
+          <span style="font-size: 11px; color: #C8B89C; font-variant-numeric: tabular-nums;">{{f.n}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <sc-if value="{{isSpells}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">LEVEL</span>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px;">
+          <sc-for list="{{levels}}" as="l" hint-placeholder-count="8">
+            <button aria-pressed="{{l.on}}" style="height: 26px; padding: 0; border-radius: 4px; border: 1px solid {{l.edge}}; background: {{l.bg}}; color: {{l.fg}}; font-size: 11px; font-weight: 700; cursor: pointer;">{{l.label}}</button>
+          </sc-for>
+        </div>
+        <label style="display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; cursor: pointer;">
+          <span style="width: 30px; height: 16px; border-radius: 999px; background: rgba(224,176,104,0.85); position: relative; flex: none;"><span style="position: absolute; right: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #1A140D;"></span></span>
+          <input type="checkbox" checked style="position: absolute; opacity: 0; width: 1px; height: 1px;">
+          Highest level only
+        </label>
+        <span style="font-size: 10.5px; line-height: 1.45; color: #C8B89C;">Hides lower levels of spells you know at a higher level.</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{isComponents}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 4px; background: rgba(255,255,255,0.04); font-size: 11px; line-height: 1.45; color: #C8B89C;">
+        <span style="font-weight: 700; color: #E9D3AE;">Restock amounts</span>
+        <span>Set how many of each component you want to carry. Component vendors offer to top you up to these amounts.</span>
+      </div>
+    </sc-if>
+  </nav>
+
+  <!-- middle: spell list -->
+  <sc-if value="{{isSpells}}" hint-placeholder-val="{{true}}">
+    <section aria-label="Spells" style="position: absolute; left: 220px; top: 68px; width: 376px; height: 556px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600;">All schools</h2>
+        <span style="font-size: 11px; color: #C8B89C;">164 shown of 412 learned</span>
+        <span style="flex: 1;"></span>
+        <button style="height: 26px; padding: 0 8px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;"><span style="color: #C8B89C;">Sort</span><span style="font-weight: 600;">School</span><span style="color: #C8B89C;">▾</span></button>
+      </div>
+      <div class="sb-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="14">
+          <sc-if value="{{r.head}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; align-items: center; gap: 6px; padding: 8px 0 4px;">
+              <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: {{r.color}};">{{r.title}}</span>
+              <span style="flex: 1; height: 1px; background: rgba(201,160,98,0.25);"></span>
+              <span style="font-size: 10.5px; color: #C8B89C;">{{r.n}}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{r.spell}}" hint-placeholder-val="{{true}}">
+            <button aria-label="{{r.name}}" style="height: 38px; padding: 0 8px 0 4px; border-radius: 4px; border: 1px solid {{r.edge}}; background: {{r.bg}}; opacity: {{r.op}}; display: flex; align-items: center; gap: 10px; cursor: grab; text-align: left;">
+              <span style="width: 30px; height: 30px; flex: none; border-radius: 4px; background: {{r.tile}}; display: flex; align-items: center; justify-content: center;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{r.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.d}}"></path></svg>
+              </span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+                <span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.name}}</span>
+                <span style="font-size: 10.5px; color: #C8B89C;">{{r.sub}}</span>
+              </span>
+              <span style="font-size: 10px; font-weight: 700; color: #E0B068; font-variant-numeric: tabular-nums;">{{r.bars}}</span>
+            </button>
+          </sc-if>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- right: details -->
+    <aside aria-label="Selected spell" style="position: absolute; left: 612px; top: 68px; width: 304px; height: 556px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.35); background: rgba(0,0,0,0.28); display: flex; flex-direction: column;">
+      <div style="padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid rgba(201,160,98,0.2);">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="width: 52px; height: 52px; flex: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: linear-gradient(160deg, #FF9A6B33, rgba(0,0,0,0.55)); display: flex; align-items: center; justify-content: center;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF9A6B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1.5 1 3 2 3 4"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <h3 style="margin: 0; font-size: 14px; font-weight: 600; line-height: 1.25;">Incantation of Flame Bolt</h3>
+            <span style="font-size: 11px; color: #C8B89C;">War Magic · Level VIII · bolt</span>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;">
+          <sc-for list="{{facts}}" as="f" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column; gap: 1px; padding: 5px 8px; border-radius: 4px; background: rgba(255,255,255,0.04);">
+              <span style="font-size: 10px; color: #C8B89C;">{{f.k}}</span>
+              <span style="font-size: 12px; font-weight: 600; color: {{f.c}}; font-variant-numeric: tabular-nums;">{{f.v}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div class="sb-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 10px 10px 10px 14px; display: flex; flex-direction: column; gap: 12px;">
+        <p style="margin: 0; font-size: 12px; line-height: 1.55; color: #E9D3AE;">Shoots a bolt of flame at the target, dealing fire damage on impact.</p>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">COMPONENTS</span>
+          <sc-for list="{{comps}}" as="c" hint-placeholder-count="5">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 1.5;">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: {{c.dot}};"></span>
+              <span style="flex: 1;">{{c.name}}</span>
+              <span style="color: #C8B89C; font-variant-numeric: tabular-nums;">×{{c.use}}</span>
+              <span style="width: 56px; text-align: right; font-weight: 600; color: {{c.c}}; font-variant-numeric: tabular-nums;">{{c.have}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">ON YOUR BARS</span>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; line-height: 1.5;"><span>Spells bar, slot 1</span><span style="font-weight: 600;">Magic: 1</span></div>
+        </div>
+      </div>
+      <div style="padding: 10px 14px 14px; border-top: 1px solid rgba(201,160,98,0.2); display: flex; gap: 6px;">
+        <button style="flex: 1; height: 32px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Cast</button>
+        <button aria-label="Add to a bar" title="Add to a bar, or drag the spell onto one" style="height: 32px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add to bar ▾
+        </button>
+        <button aria-label="Forget this spell" title="Forget this spell" style="width: 32px; height: 32px; padding: 0; border-radius: 4px; border: 1px solid {{forgetEdge}}; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF8A8E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"></path></svg>
+        </button>
+      </div>
+    </aside>
+  </sc-if>
+
+  <!-- components table -->
+  <sc-if value="{{isComponents}}" hint-placeholder-val="{{false}}">
+    <section aria-label="Components" style="position: absolute; left: 220px; top: 68px; width: 696px; height: 556px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600;">All components</h2>
+        <span style="font-size: 11px; color: #C8B89C;">3 below restock · 1 none left</span>
+      </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.6fr); gap: 0 12px; padding: 0 10px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: #C8B89C; border-bottom: 1px solid rgba(201,160,98,0.25);">
+        <span>COMPONENT</span><span>TYPE</span><span style="text-align: right;">CARRIED</span><span style="text-align: right;">RESTOCK TO</span><span>STOCK</span>
+      </div>
+      <div class="sb-scroll" style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;">
+        <sc-for list="{{compRows}}" as="c" hint-placeholder-count="12">
+          <div style="display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.6fr); gap: 0 12px; align-items: center; min-height: 36px; padding: 0 10px; border-bottom: 1px solid rgba(201,160,98,0.1); font-size: 12px;">
+            <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 24px; height: 24px; border-radius: 4px; background: {{c.tile}}; display: flex; align-items: center; justify-content: center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{c.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.d}}"></path></svg></span><span style="font-weight: 600;">{{c.name}}</span></span>
+            <span style="color: #C8B89C;">{{c.type}}</span>
+            <span style="text-align: right; font-weight: 600; color: {{c.haveColor}}; font-variant-numeric: tabular-nums;">{{c.have}}</span>
+            <span style="text-align: right;"><input aria-label="Restock {{c.name}} to" value="{{c.want}}" style="width: 56px; height: 24px; box-sizing: border-box; padding: 0 6px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 12px; text-align: right;"></span>
+            <span style="height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1);"><span style="display: block; width: {{c.pct}}; height: 100%; border-radius: 2px; background: {{c.bar}};"></span></span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-if>
+
+  <!-- forget: confirm -->
+  <sc-if value="{{isForget}}" hint-placeholder-val="{{false}}">
+    <div role="alertdialog" aria-label="Forget spell" style="position: absolute; left: 612px; top: 440px; width: 304px; box-sizing: border-box; padding: 14px; border-radius: 6px; border: 1px solid #FF8A8E; background: rgba(24,19,14,0.98); box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 13px; font-weight: 600;">Forget Incantation of Flame Bolt?</span>
+      <span style="font-size: 12px; line-height: 1.5; color: #E9D3AE;">It leaves your spellbook and the 1 bar slot it is on. To cast it again you need to learn it from a scroll.</span>
+      <div style="display: flex; justify-content: flex-end; gap: 6px;">
+        <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 0; background: transparent; color: #C8B89C; font-size: 12px; font-weight: 600; cursor: pointer;">Keep it</button>
+        <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid #FF8A8E; background: rgba(255,107,112,0.2); color: #FFB3B6; font-size: 12px; font-weight: 700; cursor: pointer;">Forget spell</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["spells","forget","components"],"default":"spells"},"$preview":{"width":940,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const state = this.props.state ?? 'spells';
+    const isComponents = state === 'components';
+    const MUTED = '#C8B89C', TXT = '#F4EBDC', OK = '#7FD08A', BAD = '#FF8A8E', GOLD = '#E0B068';
+    const S = { war: '#FF9A6B', life: '#7FD08A', creature: '#7FB2FF', item: '#E0B068', void: '#C9A2FF' };
+    const P = {
+      flame: 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1.5 1 3 2 3 4',
+      bolt: 'M13 2 4 14h7l-1 8 9-12h-7z',
+      snow: 'M12 2v20M4 7l16 10M20 7 4 17',
+      acid: 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3',
+      blade: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      wave: 'M2 12c3-6 5 6 8 0s5 6 8 0 3-3 4-3',
+      skull: 'M12 3a7 7 0 0 0-7 7v4l2 2v3h10v-3l2-2v-4a7 7 0 0 0-7-7zM9 12h.01M15 12h.01',
+      heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+      drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+      shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+      eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
+      up: 'M12 19V5M5 12l7-7 7 7',
+      sword: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      peas: 'M8 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+      leaf: 'M5 21c0-9 5-15 15-16-1 10-7 15-15 16zM5 21l8-8',
+      gem: 'M6 3h12l4 6-10 12L2 9zM2 9h20M9 3l3 18 3-18',
+      vial: 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3',
+      tal: 'M12 3v18M7 7h10M8 12h8M9 17h6',
+      taper: 'M10 8h4v13h-4zM12 3c1 1.5 1.5 2.5 0 4-1.5-1.5-1-2.5 0-4z'
+    };
+    const tile = (c) => 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.5))';
+    const tabs = [['Spells', !isComponents], ['Components', isComponents]].map(([label, on]) => ({ label, on, line: on ? GOLD : 'transparent', fg: on ? TXT : MUTED }));
+
+    const schoolFilters = [['All schools', 412, GOLD, true], ['War Magic', 96, S.war], ['Life Magic', 104, S.life], ['Creature Enchantment', 118, S.creature], ['Item Enchantment', 78, S.item], ['Void Magic', 16, S.void]];
+    const compFilters = [['All', 18, GOLD, true], ['Scarabs', 6, '#B3AA9C'], ['Herbs', 4, OK], ['Powdered gems', 3, S.void], ['Alchemy potions', 2, '#6EA8FF'], ['Talismans', 2, S.item], ['Tapers', 1, BAD]];
+    const filters = (isComponents ? compFilters : schoolFilters).map(([label, n, color, on]) => ({ label, n, color, on: !!on, edge: on ? GOLD : 'transparent', bg: on ? 'rgba(224,176,104,0.16)' : 'transparent' }));
+    const levels = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'].map((label, i) => { const on = i >= 6; return { label, on, edge: on ? GOLD : 'rgba(201,160,98,0.3)', bg: on ? 'rgba(224,176,104,0.18)' : 'transparent', fg: on ? TXT : MUTED }; });
+
+    const spell = (name, d, school, sub, bars, sel) => ({ spell: true, head: false, name, d, color: S[school], tile: tile(S[school]), sub, bars: bars || '', edge: sel ? GOLD : 'transparent', bg: sel ? 'rgba(224,176,104,0.14)' : 'transparent', op: '1' });
+    const head = (title, n, school) => ({ head: true, spell: false, title, n, color: S[school] });
+    const rows = [
+      head('WAR MAGIC', '42', 'war'),
+      spell('Incantation of Flame Bolt', P.flame, 'war', 'Level VIII · 80 mana', 'SPELLS', state !== 'drag'),
+      spell('Incantation of Lightning Bolt', P.bolt, 'war', 'Level VIII · 80 mana', 'SPELLS'),
+      spell('Incantation of Frost Bolt', P.snow, 'war', 'Level VIII · 80 mana', 'SPELLS'),
+      spell('Incantation of Acid Stream', P.acid, 'war', 'Level VIII · 80 mana', 'SPELLS'),
+      spell('Incantation of Whirling Blade', P.blade, 'war', 'Level VIII · 80 mana'),
+      spell('Incantation of Flame Arc', P.flame, 'war', 'Level VIII · 80 mana', 'SPELLS'),
+      spell('Incantation of Shock Wave', P.wave, 'war', 'Level VIII · 80 mana'),
+      head('VOID MAGIC', '6', 'void'),
+      spell('Nether Bolt VII', P.skull, 'void', 'Level VII · 70 mana', 'SPELLS'),
+      spell('Corrosion VII', P.skull, 'void', 'Level VII · 70 mana'),
+      head('LIFE MAGIC', '38', 'life'),
+      spell('Incantation of Heal Self', P.heart, 'life', 'Level VIII · 80 mana', state === 'drag' ? '' : 'MAIN', state === 'drag'),
+      spell('Incantation of Revitalize Self', P.drop, 'life', 'Level VIII · 80 mana', 'MAIN'),
+      spell('Incantation of Regeneration Self', P.heart, 'life', 'Level VIII · 80 mana', 'BUFFS'),
+      spell('Incantation of Armor Self', P.shield, 'life', 'Level VIII · 80 mana', 'BUFFS'),
+      head('CREATURE ENCHANTMENT', '44', 'creature'),
+      spell('Incantation of Focus Self', P.star, 'creature', 'Level VIII · 80 mana', 'BUFFS'),
+      spell('Incantation of Fire Vulnerability Other', P.eye, 'creature', 'Level VIII · 80 mana', 'SPELLS'),
+      head('ITEM ENCHANTMENT', '34', 'item'),
+      spell('Incantation of Impenetrability', P.shield, 'item', 'Level VIII · 80 mana', 'BUFFS'),
+      spell('Incantation of Spirit Drinker Self', P.sword, 'item', 'Level VIII · 80 mana', 'BUFFS')
+    ];
+    if (state === 'drag') rows.forEach((r) => { if (r.spell && r.name !== 'Incantation of Heal Self') r.op = '0.5'; });
+
+    const have = (n, use) => n === 0 ? { have: 'none', c: BAD, dot: BAD } : { have: n + ' left', c: n < 10 ? GOLD : TXT, dot: n < 10 ? GOLD : OK };
+    const comps = [['Platinum Scarab', 1, 48], ['Powdered Bloodstone', 1, 12], ['Ashwood Talisman', 1, 6], ['Wormwood', 1, 0], ['Prismatic Taper', 2, 310]].map(([name, use, n]) => ({ name, use, ...have(n) }));
+
+    const barNames = ['War', 'Debuffs', 'Self buffs', 'Item buffs', 'Heals', 'Portals', 'Other', 'Utility'];
+    const barTabs = barNames.map((label, i) => ({ n: i + 1, label, on: i === 0, edge: i === 0 ? GOLD : 'rgba(201,160,98,0.3)', bg: i === 0 ? 'rgba(224,176,104,0.16)' : 'transparent', fg: i === 0 ? TXT : MUTED }));
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '', '', '', '', '', ''];
+    const barSpells = [[P.flame, 'war', 'Flame Bolt'], [P.bolt, 'war', 'Lightning Bolt'], [P.snow, 'war', 'Frost Bolt'], [P.acid, 'war', 'Acid Stream'], [P.flame, 'war', 'Flame Arc'], [P.skull, 'void', 'Nether Bolt']];
+    const barCells = keys.map((key, i) => {
+      const s = barSpells[i];
+      const cell = s
+        ? { key, d: s[0], color: S[s[1]], bg: tile(S[s[1]]), border: '1px solid rgba(201,160,98,0.45)', label: s[2], glow: 'none' }
+        : { key, d: '', color: 'transparent', bg: 'rgba(0,0,0,0.3)', border: '1px solid rgba(201,160,98,0.16)', label: 'Empty slot', glow: 'none' };
+      if (state === 'drag' && i === 6) { cell.border = '2px dashed #E0B068'; cell.glow = '0 0 14px rgba(224,176,104,0.45)'; cell.label = 'Drop here'; }
+      return cell;
+    });
+
+    const compRow = (name, type, d, color, haveN, want) => {
+      const pct = Math.min(100, Math.round(100 * haveN / want));
+      return { name, type, d, color, tile: tile(color), have: haveN, want, pct: pct + '%', bar: haveN === 0 ? BAD : haveN < want ? GOLD : OK, haveColor: haveN === 0 ? BAD : haveN < want ? GOLD : TXT };
+    };
+    const compRows = [
+      compRow('Prismatic Taper', 'Taper', P.taper, BAD, 310, 500),
+      compRow('Platinum Scarab', 'Scarab', P.peas, '#B3AA9C', 48, 50),
+      compRow('Pyreal Scarab', 'Scarab', P.peas, '#B3AA9C', 4, 20),
+      compRow('Gold Scarab', 'Scarab', P.peas, '#B3AA9C', 18, 20),
+      compRow('Silver Scarab', 'Scarab', P.peas, '#B3AA9C', 22, 20),
+      compRow('Iron Scarab', 'Scarab', P.peas, '#B3AA9C', 15, 10),
+      compRow('Lead Scarab', 'Scarab', P.peas, '#B3AA9C', 20, 10),
+      compRow('Wormwood', 'Herb', P.leaf, OK, 0, 30),
+      compRow('Hyssop', 'Herb', P.leaf, OK, 50, 30),
+      compRow('Mandrake Root', 'Herb', P.leaf, OK, 25, 30),
+      compRow('Powdered Bloodstone', 'Powdered gem', P.gem, S.void, 12, 20),
+      compRow('Powdered Agate', 'Powdered gem', P.gem, S.void, 40, 20),
+      compRow('Ashwood Talisman', 'Talisman', P.tal, S.item, 6, 10),
+      compRow('Birch Talisman', 'Talisman', P.tal, S.item, 11, 10)
+    ];
+
+    return {
+      tabs, filters, levels, rows, comps, barTabs, barCells, compRows,
+      isSpells: !isComponents, isComponents, isDrag: state === 'drag', isForget: state === 'forget',
+      filterTitle: isComponents ? 'TYPE' : 'SCHOOL',
+      searchLabel: isComponents ? 'Search components' : 'Search spells',
+      forgetEdge: state === 'forget' ? '#FF8A8E' : 'rgba(201,160,98,0.45)',
+      facts: [{ k: 'Mana', v: '80', c: TXT }, { k: 'Difficulty', v: '400', c: TXT }, { k: 'Your skill', v: '412', c: OK }],
+      barHint: state === 'drag' ? 'Drop on a slot · Esc cancels' : 'Drag spells here to cast them by key'
+    };
+  }
+}
+</script>
+</body>
+</html>

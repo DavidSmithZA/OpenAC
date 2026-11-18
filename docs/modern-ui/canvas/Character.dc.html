@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Character sheet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.ch-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,160,98,0.7) rgba(255,255,255,0.06)}
+.ch-scroll::-webkit-scrollbar{width:6px}
+.ch-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,0.06);border-radius:3px}
+.ch-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
+</style>
+</helmet>
+<div style="width: 1100px; height: 720px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.94); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- title bar -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 16px 0 20px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0"></path></svg>
+    <h1 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.02em;">Character</h1>
+    <div role="tablist" aria-label="Character pages" style="display: flex; gap: 2px; margin-left: 8px;">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+        <button role="tab" aria-selected="{{t.on}}" style="height: 30px; padding: 0 12px; border: 0; border-bottom: 2px solid {{t.line}}; background: transparent; color: {{t.fg}}; font-size: 12px; font-weight: 600; cursor: pointer;">{{t.label}}</button>
+      </sc-for>
+    </div>
+    <span style="flex: 1;"></span>
+    <button aria-label="Close character sheet" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- identity band -->
+  <div style="position: absolute; left: 0; right: 0; top: 52px; height: 104px; display: flex; align-items: center; gap: 20px; padding: 0 24px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.25);">
+    <div title="Level {{lv.level}}" style="min-width: 72px; height: 64px; flex: none; box-sizing: border-box; padding: 0 14px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: linear-gradient(180deg, rgba(224,176,104,0.18), rgba(0,0,0,0.3)); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">LEVEL</span>
+      <span style="font-size: 24px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap;">{{lv.level}}</span>
+    </div>
+    <div style="width: 250px; display: flex; flex-direction: column; gap: 3px;">
+      <span style="font-size: 18px; font-weight: 600;">Aerin Vale</span>
+      <span style="font-size: 12px; color: #E9D3AE;">the Apprentice Mage</span>
+      <span style="font-size: 11.5px; color: #C8B89C;">Female Aluvian · Non-player killer</span>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; font-size: 11.5px; font-variant-numeric: tabular-nums;">
+        <span><span style="color: #C8B89C;">Total</span> <span style="font-weight: 600;">{{lv.total}}</span></span>
+        <span><span style="font-weight: 600;">{{lv.next}}</span> <span style="color: #C8B89C;">to level {{lv.nextLevel}}</span></span>
+      </div>
+      <div style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1);"><div style="width: {{lv.pct}}; height: 100%; border-radius: 3px; background: #E0B068;"></div></div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <sc-for list="{{chips}}" as="c" hint-placeholder-count="4">
+          <span title="{{c.tip}}" style="display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; border: 1px solid {{c.edge}}; background: {{c.bg}}; font-size: 11.5px;"><span style="color: #C8B89C;">{{c.k}}</span><span style="font-weight: 700; color: {{c.fg}}; font-variant-numeric: tabular-nums;">{{c.v}}</span></span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- ATTRIBUTES & SKILLS -->
+  <sc-if value="{{isStats}}" hint-placeholder-val="{{true}}">
+    <!-- attributes + vitals -->
+    <section aria-label="Attributes" style="position: absolute; left: 24px; top: 172px; width: 300px; display: flex; flex-direction: column; gap: 14px;">
+      <sc-for list="{{attrGroups}}" as="g" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; color: #E9D3AE; padding-bottom: 6px; border-bottom: 1px solid rgba(201,160,98,0.25); margin-bottom: 4px;">{{g.title}}</span>
+          <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="6">
+            <div style="height: 42px; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 10px; border-radius: 4px; border: 1px solid {{r.edge}}; background: {{r.bg}};">
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+                <span style="font-size: 12.5px; font-weight: 600;">{{r.name}}</span>
+                <span style="font-size: 10.5px; color: #C8B89C;">base {{r.base}} <span style="color: {{r.modColor}};">{{r.mod}}</span></span>
+              </div>
+              <span style="font-size: 16px; font-weight: 700; color: {{r.valColor}}; font-variant-numeric: tabular-nums;">{{r.val}}</span>
+              <span style="width: 50px; text-align: right; font-size: 10.5px; color: #C8B89C; font-variant-numeric: tabular-nums;">{{r.cost}}</span>
+              <button aria-label="Raise {{r.name}} by one for {{r.cost}} experience" style="width: 26px; height: 26px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.55); background: rgba(224,176,104,0.14); color: #E0B068; font-size: 15px; font-weight: 700; line-height: 1; cursor: pointer;">+</button>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </section>
+
+    <!-- skills -->
+    <section aria-label="Skills" style="position: absolute; left: 344px; top: 172px; width: 410px; height: 532px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; color: #E9D3AE;">SKILLS</span>
+        <span style="flex: 1;"></span>
+        <label style="display: flex; align-items: center; gap: 6px; width: 170px; height: 26px; padding: 0 8px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+          <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Find a skill</span>
+          <input placeholder="Find a skill" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 11.5px;">
+        </label>
+      </div>
+      <div class="ch-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{skillRows}}" as="r" hint-placeholder-count="16">
+          <sc-if value="{{r.head}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; align-items: center; gap: 6px; padding: 8px 0 4px;">
+              <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: {{r.color}};">{{r.title}}</span>
+              <span style="flex: 1; height: 1px; background: rgba(201,160,98,0.25);"></span>
+              <span style="font-size: 10.5px; color: #C8B89C;">{{r.n}}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{r.skill}}" hint-placeholder-val="{{true}}">
+            <div style="height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 10px; border-radius: 4px; border: 1px solid {{r.edge}}; background: {{r.bg}}; opacity: {{r.op}};">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: {{r.dot}};"></span>
+              <span style="flex: 1; font-size: 12.5px; font-weight: 600;">{{r.name}}</span>
+              <span style="font-size: 13.5px; font-weight: 700; color: {{r.valColor}}; font-variant-numeric: tabular-nums;">{{r.val}}</span>
+              <span style="width: 54px; text-align: right; font-size: 10.5px; color: #C8B89C; font-variant-numeric: tabular-nums;">{{r.cost}}</span>
+              <button aria-label="{{r.actLabel}}" style="min-width: 26px; height: 24px; padding: 0 6px; border-radius: 4px; border: 1px solid {{r.btnEdge}}; background: {{r.btnBg}}; color: {{r.btnFg}}; font-size: {{r.btnSize}}; font-weight: 700; line-height: 1; cursor: pointer;">{{r.act}}</button>
+            </div>
+          </sc-if>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- selected -->
+    <aside aria-label="Selected" style="position: absolute; left: 774px; top: 172px; width: 302px; height: 532px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.35); background: rgba(0,0,0,0.28); display: flex; flex-direction: column;">
+      <div style="padding: 14px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid rgba(201,160,98,0.2);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h3 style="margin: 0; font-size: 15px; font-weight: 600;">{{sel.name}}</h3>
+          <span style="padding: 1px 8px; border-radius: 999px; border: 1px solid {{sel.chipEdge}}; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: {{sel.chipFg}};">{{sel.chip}}</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 8px;">
+          <span style="font-size: 30px; font-weight: 700; color: {{sel.valColor}}; font-variant-numeric: tabular-nums;">{{sel.val}}</span>
+          <span style="font-size: 11.5px; color: #C8B89C;">{{sel.valNote}}</span>
+        </div>
+      </div>
+      <div class="ch-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 10px 12px 14px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C; margin-bottom: 4px;">{{sel.breakTitle}}</span>
+          <sc-for list="{{sel.breakdown}}" as="b" hint-placeholder-count="5">
+            <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.6;"><span style="color: {{b.kc}};">{{b.k}}</span><span style="font-weight: 600; color: {{b.c}}; font-variant-numeric: tabular-nums;">{{b.v}}</span></div>
+          </sc-for>
+        </div>
+        <p style="margin: 0; font-size: 12px; line-height: 1.55; color: #E9D3AE;">{{sel.about}}</p>
+      </div>
+      <div style="padding: 12px 14px 14px; border-top: 1px solid rgba(201,160,98,0.2); display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; font-size: 11.5px;"><span style="color: #C8B89C;">{{sel.costLabel}}</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">{{sel.costValue}}</span></div>
+        <div style="display: flex; gap: 6px;">
+          <sc-for list="{{sel.buttons}}" as="b" hint-placeholder-count="3">
+            <button title="{{b.tip}}" style="flex: {{b.flex}}; height: 34px; padding: 0 8px; border-radius: 4px; border: 1px solid {{b.edge}}; background: {{b.bg}}; color: {{b.fg}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; cursor: pointer;">
+              <span style="font-size: 12px; font-weight: 700;">{{b.label}}</span>
+              <span style="font-size: 9.5px; opacity: 0.8; font-variant-numeric: tabular-nums;">{{b.sub}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </aside>
+  </sc-if>
+
+  <!-- TITLES -->
+  <sc-if value="{{isTitles}}" hint-placeholder-val="{{false}}">
+    <section aria-label="Titles" style="position: absolute; left: 24px; right: 24px; top: 172px; bottom: 16px; display: flex; gap: 20px;">
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; color: #E9D3AE;">EARNED TITLES</span>
+          <span style="font-size: 11px; color: #C8B89C;">23</span>
+          <span style="flex: 1;"></span>
+          <label style="display: flex; align-items: center; gap: 6px; width: 220px; height: 28px; padding: 0 8px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35);">
+            <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Find a title</span>
+            <input placeholder="Find a title" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12px;">
+          </label>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;">
+          <sc-for list="{{titles}}" as="t" hint-placeholder-count="18">
+            <button aria-pressed="{{t.on}}" style="height: 40px; padding: 0 12px; border-radius: 4px; border: 1px solid {{t.edge}}; background: {{t.bg}}; display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: left; font-size: 12.5px; font-weight: 600;">
+              <span style="flex: 1;">{{t.label}}</span><span style="font-size: 10px; font-weight: 700; color: #E0B068;">{{t.tag}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+      <aside style="width: 300px; box-sizing: border-box; padding: 16px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.35); background: rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 10px; align-self: flex-start;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">OTHERS SEE YOU AS</span>
+        <span style="font-size: 16px; font-weight: 600;">Aerin Vale</span>
+        <span style="font-size: 13px; color: #E9D3AE;">the Slayer of Drudges</span>
+        <span style="font-size: 11.5px; line-height: 1.5; color: #C8B89C;">Selected. Your current title is “the Apprentice Mage”. The change shows once the server confirms it.</span>
+        <button style="height: 34px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Display this title</button>
+      </aside>
+    </section>
+  </sc-if>
+
+  <!-- INFO -->
+  <sc-if value="{{isInfo}}" hint-placeholder-val="{{false}}">
+    <section aria-label="Character information" style="position: absolute; left: 24px; right: 24px; top: 172px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+      <sc-for list="{{infoCards}}" as="card" hint-placeholder-count="6">
+        <div style="padding: 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #E9D3AE; margin-bottom: 6px;">{{card.title}}</span>
+          <sc-for list="{{card.rows}}" as="r" hint-placeholder-count="4">
+            <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.7;"><span style="color: #C8B89C;">{{r.k}}</span><span style="font-weight: 600; text-align: right; font-variant-numeric: tabular-nums;">{{r.v}}</span></div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </section>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"page":{"editor":"enum","options":["skill","attribute","train","titles","info"],"default":"skill"},"level":{"editor":"enum","options":["normal","high"],"default":"normal"},"$preview":{"width":1100,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const page = this.props.page ?? 'skill';
+    const high = (this.props.level ?? 'normal') === 'high';
+    const lv = high
+      ? { level: '4,782', total: '191,226,310,247 XP', next: '2,180,445,900 XP', nextLevel: '4,783', pct: '37%', unassigned: '38,912,004,118 XP' }
+      : { level: '87', total: '52,118,440 XP', next: '1,204,880 XP', nextLevel: '88', pct: '64%', unassigned: '4,210,880 XP' };
+    const GOLD = '#E0B068', MUTED = '#C8B89C', TXT = '#F4EBDC', GREEN = '#7FD08A', RED = '#FF8A8E';
+    const isTitles = page === 'titles', isInfo = page === 'info', isStats = !isTitles && !isInfo;
+    const tabs = [['Attributes and skills', isStats], ['Titles', isTitles], ['Information', isInfo]].map(([label, on]) => ({ label, on, line: on ? GOLD : 'transparent', fg: on ? TXT : MUTED }));
+    const chips = [
+      { k: 'Unassigned', v: lv.unassigned, tip: 'Experience you can spend on attributes, vitals and skills', edge: GOLD, bg: 'rgba(224,176,104,0.14)', fg: GOLD },
+      { k: 'Skill credits', v: page === 'train' ? '7' : '3', tip: 'Spend credits to train new skills', edge: 'rgba(201,160,98,0.4)', bg: 'transparent', fg: TXT },
+      { k: 'Luminance', v: '1,250,000', tip: 'Spent with luminance trainers', edge: 'rgba(201,160,98,0.4)', bg: 'transparent', fg: TXT },
+      { k: 'Vitae', v: '95%', tip: '14,200 XP more brings back the next 1%', edge: 'rgba(255,138,142,0.6)', bg: 'rgba(255,107,112,0.1)', fg: RED }
+    ];
+
+    const selAttr = page === 'attribute' ? 'Self' : '';
+    const attr = (name, base, mod, val, cost) => ({ name, base, mod: mod ? '· spells ' + mod : '', modColor: GREEN, val, valColor: mod ? GREEN : TXT, cost, edge: name === selAttr ? GOLD : 'transparent', bg: name === selAttr ? 'rgba(224,176,104,0.14)' : 'transparent' });
+    const attrGroups = [
+      { title: 'ATTRIBUTES', rows: [attr('Strength', 100, '+35', 135, '118k'), attr('Endurance', 100, '+35', 135, '118k'), attr('Coordination', 100, '+35', 135, '118k'), attr('Quickness', 100, '+35', 135, '118k'), attr('Focus', 290, '+35', 325, '4.2M'), attr('Self', 290, '+35', 325, '4.2M')] },
+      { title: 'VITALS', rows: [attr('Health', 410, '+40', 450, '96k'), attr('Stamina', 410, '', 410, '96k'), attr('Mana', 580, '+40', 620, '210k')] }
+    ];
+
+    const selSkill = page === 'skill' ? 'War Magic' : page === 'train' ? 'Lockpick' : '';
+    const C = { spec: GOLD, trained: '#E9D3AE', untrained: MUTED, unusable: '#7A7166' };
+    const sk = (name, val, opts) => {
+      const o = opts || {};
+      const sel = name === selSkill;
+      const kind = o.kind || 'raise';
+      const row = { skill: true, head: false, name, val, valColor: o.buff ? GREEN : o.debuff ? RED : TXT, cost: o.cost || '', dot: o.dot || GOLD, op: o.op || '1', edge: sel ? GOLD : 'transparent', bg: sel ? 'rgba(224,176,104,0.14)' : 'transparent' };
+      if (kind === 'raise') Object.assign(row, { act: '+', actLabel: 'Raise ' + name + ' by one', btnEdge: 'rgba(201,160,98,0.55)', btnBg: 'rgba(224,176,104,0.14)', btnFg: GOLD, btnSize: '15px' });
+      if (kind === 'train') Object.assign(row, { act: 'Train', actLabel: 'Train ' + name, btnEdge: 'rgba(201,160,98,0.55)', btnBg: 'transparent', btnFg: '#E9D3AE', btnSize: '10.5px' });
+      if (kind === 'none') Object.assign(row, { act: '—', actLabel: name + ' cannot be raised', btnEdge: 'transparent', btnBg: 'transparent', btnFg: '#7A7166', btnSize: '12px' });
+      return row;
+    };
+    const head = (title, n, color) => ({ head: true, skill: false, title, n, color });
+    const skillRows = [
+      head('SPECIALIZED', '4 of 4', C.spec),
+      sk('War Magic', 391, { buff: true, cost: '52k', dot: '#FF9A6B' }),
+      sk('Life Magic', 362, { buff: true, cost: '48k', dot: GREEN }),
+      sk('Mana Conversion', 344, { cost: '44k', dot: '#7FB2FF' }),
+      sk('Magic Defense', 333, { buff: true, cost: '41k', dot: GOLD }),
+      head('TRAINED', '11', C.trained),
+      sk('Creature Enchantment', 341, { buff: true, cost: '61k', dot: '#7FB2FF' }),
+      sk('Item Enchantment', 323, { buff: true, cost: '58k', dot: GOLD }),
+      sk('Arcane Lore', 296, { cost: '33k', dot: '#C9A2FF' }),
+      sk('Void Magic', 238, { cost: '22k', dot: '#C9A2FF' }),
+      sk('Melee Defense', 285, { buff: true, cost: '29k', dot: '#FF9A6B' }),
+      sk('Missile Defense', 266, { cost: '26k', dot: '#FF9A6B' }),
+      sk('Run', 276, { buff: true, cost: '18k', dot: GREEN }),
+      sk('Jump', 228, { cost: '15k', dot: GREEN }),
+      sk('Healing', 190, { cost: '12k', dot: GREEN }),
+      sk('Salvaging', 160, { cost: '9k', dot: MUTED }),
+      sk('Leadership', 124, { cost: '6k', dot: MUTED }),
+      head('UNTRAINED · TRAIN WITH CREDITS', '9', C.untrained),
+      sk('Lockpick', 42, { kind: 'train', cost: '6 credits', dot: MUTED }),
+      sk('Alchemy', 38, { kind: 'train', cost: '6 credits', dot: MUTED }),
+      sk('Cooking', 40, { kind: 'train', cost: '4 credits', dot: MUTED }),
+      sk('Fletching', 36, { kind: 'train', cost: '4 credits', dot: MUTED }),
+      sk('Assess Creature', 48, { kind: 'train', cost: '4 credits', dot: MUTED }),
+      head('UNUSABLE · NEEDS TRAINING FIRST', '6', C.unusable),
+      sk('Two Handed Combat', '—', { kind: 'train', cost: '8 credits', dot: '#7A7166', op: '0.6' }),
+      sk('Heavy Weapons', '—', { kind: 'train', cost: '6 credits', dot: '#7A7166', op: '0.6' }),
+      sk('Missile Weapons', '—', { kind: 'train', cost: '6 credits', dot: '#7A7166', op: '0.6' })
+    ];
+
+    const bd = (k, v, c, kc) => ({ k, v, c: c || TXT, kc: kc || TXT });
+    const btn = (label, sub, primary, tip, flex) => ({ label, sub, tip: tip || '', flex: flex || '1', edge: primary ? GOLD : 'rgba(201,160,98,0.5)', bg: primary ? 'rgba(224,176,104,0.85)' : 'rgba(0,0,0,0.35)', fg: primary ? '#1A140D' : TXT });
+    let sel;
+    if (page === 'train') {
+      sel = {
+        name: 'Lockpick', chip: 'UNTRAINED', chipEdge: 'rgba(201,160,98,0.4)', chipFg: MUTED, val: '42', valColor: TXT, valNote: 'untrained',
+        breakTitle: 'IF YOU TRAIN IT',
+        breakdown: [bd('From attributes', '(Coordination + Focus) ÷ 3'), bd('Now', '42'), bd('Once trained', 'raise it with experience', MUTED, MUTED)],
+        about: 'Open locked doors and chests. Picking a lock uses up a lockpick.',
+        costLabel: 'Training costs', costValue: '6 of your 7 credits',
+        buttons: [btn('Train Lockpick', 'leaves 1 credit', true, '', '1')]
+      };
+    } else if (page === 'attribute') {
+      sel = {
+        name: 'Self', chip: 'ATTRIBUTE', chipEdge: 'rgba(201,160,98,0.4)', chipFg: MUTED, val: '325', valColor: GREEN, valNote: '290 without spells',
+        breakTitle: 'HOW IT ADDS UP',
+        breakdown: [bd('Starting value', '100'), bd('Raised with experience', '+190'), bd('Spells: Self Mastery VIII', '+35', GREEN), bd('Vitae 95%', 'does not reduce attributes', MUTED, MUTED)],
+        about: 'Feeds your mana and every magic skill. Raising Self also raises Mana, War Magic, Life Magic, Creature and Item Enchantment, Void Magic, Mana Conversion and Magic Defense.',
+        costLabel: 'Next point', costValue: '4,210,880 XP',
+        buttons: [btn('+1', '4.21M XP', true, 'Raise by one'), btn('+10', 'not enough XP', false, 'Needs 43,880,120 XP')]
+      };
+    } else {
+      sel = {
+        name: 'War Magic', chip: 'SPECIALIZED', chipEdge: GOLD, chipFg: GOLD, val: '391', valColor: GREEN, valNote: '412 before vitae',
+        breakTitle: 'HOW IT ADDS UP',
+        breakdown: [bd('From attributes (Focus + Self) ÷ 4', '162'), bd('Raised with experience', '+208'), bd('Specialized', '+10'), bd('Spells: War Magic Mastery VIII', '+32', GREEN), bd('Vitae 95%', '−21', RED)],
+        about: 'Casts war spells: bolts, streaks, arcs and rings. Higher skill means fewer fizzles; Incantation of Flame Bolt has difficulty 400.',
+        costLabel: 'Next point', costValue: '52,300 XP',
+        buttons: [btn('+1', '52.3k XP', true, 'Raise by one'), btn('+10', '541k XP', false, 'Raise by ten'), btn('Max', '+58 · 4.19M XP', false, 'As many points as your unassigned XP buys')]
+      };
+    }
+
+    const titleNames = ['the Apprentice Mage', 'the Slayer of Drudges', 'Adventurer', 'the Explorer', 'Friend of the Aun', 'Tusker Hunter', 'Banderling Bane', 'the Seasoned', 'Defender of Holtburg', 'Master Chef', 'Swamp Walker', 'the Patient', 'Rare Finder', 'Hero of Arwic', 'the Generous', 'Golem Breaker', 'Olthoi Hunter', 'Portal Wanderer'];
+    const titles = titleNames.map((label) => {
+      const cur = label === 'the Apprentice Mage', pick = label === 'the Slayer of Drudges';
+      return { label, on: pick, tag: cur ? 'SHOWN' : '', edge: pick ? GOLD : cur ? 'rgba(201,160,98,0.6)' : 'rgba(201,160,98,0.2)', bg: pick ? 'rgba(224,176,104,0.16)' : 'rgba(0,0,0,0.22)' };
+    });
+
+    const r = (k, v) => ({ k, v });
+    const infoCards = [
+      { title: 'LIFE', rows: [r('Born', '14 March 2026'), r('Age', '61 days played'), r('Deaths', '38'), r('Vitae', '95% · 14,200 XP to next')] },
+      { title: 'ALLEGIANCE', rows: [r('Monarch', 'Rook of Arwic'), r('Patron', 'Mira'), r('Rank', '6'), r('Followers', '4 direct · 19 in all')] },
+      { title: 'FELLOWSHIP', rows: [r('Fellowship', 'Ramp Runners'), r('Leader', 'Mira'), r('Members', '5'), r('Sharing', 'experience')] },
+      { title: 'HOUSING', rows: [r('House', 'Cottage 2214'), r('Village', 'Arwic outskirts'), r('Rent due', 'in 4 days'), r('Upkeep', 'paid')] },
+      { title: 'PURSUITS', rows: [r('Society', 'none'), r('Chess rank', '1,412'), r('Fishing', '154'), r('Augmentations', '7')] },
+      { title: 'CARRYING', rows: [r('Burden', '61% · 2,840 of 4,650'), r('Pyreals', '48,210'), r('Packs', '7 of 7'), r('Titles earned', '23')] }
+    ];
+
+    return { lv, tabs, chips, attrGroups, skillRows, sel, titles, infoCards, isStats, isTitles, isInfo };
+  }
+}
+</script>
+</body>
+</html>

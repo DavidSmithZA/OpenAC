@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Horizon HUD</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7CC4FF}a:hover{color:#A9D8FF}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: {{t.text}}; background: linear-gradient(180deg, #8FB3C9 0%, #C9D9C4 34%, #6F8A55 50%, #4A6338 66%, #2E3F22 100%);">
+
+  <!-- world: soft tree band + target in the world -->
+  <div style="position: absolute; left: 0; right: 0; top: 230px; height: 230px; background: linear-gradient(180deg, rgba(40,62,36,0) 0%, rgba(40,62,36,0.55) 60%, rgba(40,62,36,0) 100%);"></div>
+  <div style="position: absolute; left: 920px; top: 330px; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+    <svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true"><path d="M2 2l9 9 9-9" fill="none" stroke="{{t.accent}}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    <span style="font-size: 13px; font-weight: 600; color: {{t.accent}}; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">Drudge Ravener</span>
+    <div style="width: 70px; height: 110px; margin-top: 6px; border: 1.5px dashed rgba(255,255,255,0.5); border-radius: 36px 36px 10px 10px;"></div>
+  </div>
+  <div style="position: absolute; left: 650px; top: 520px; width: 90px; height: 180px; border: 1.5px dashed rgba(255,255,255,0.55); border-radius: 46px 46px 12px 12px;"></div>
+
+  <!-- vitals, top centre -->
+  <div style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: flex; gap: 10px;">
+    <sc-for list="{{vitals}}" as="v" hint-placeholder-count="3">
+      <div style="width: 230px; height: 18px; position: relative; border-radius: {{t.radius}}; border: 1px solid {{t.trim}}; background: rgba(0,0,0,0.5); overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.35);">
+        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{v.pct}}; background: {{v.color}};"></div>
+        <div style="position: absolute; left: 0; right: 0; top: 0; height: 50%; background: rgba(255,255,255,0.10);"></div>
+        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.9);">
+          <span>{{v.label}}</span><span style="font-weight: 600; letter-spacing: 0.02em; font-variant-numeric: tabular-nums;">{{v.val}}</span>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- target, under the vitals -->
+  <div style="position: absolute; left: 50%; top: 46px; transform: translateX(-50%); width: 420px; display: flex; flex-direction: column; gap: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.85);">
+    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+      <span style="font-size: 14px; font-weight: 600; color: {{t.accent}};">Drudge Ravener</span>
+      <span style="font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;">68%</span>
+    </div>
+    <div style="height: 4px; border-radius: 2px; background: rgba(0,0,0,0.5);"><div style="width: 68%; height: 100%; border-radius: 2px; background: #E5484D;"></div></div>
+  </div>
+
+  <!-- buffs, top left -->
+  <div style="position: absolute; left: 16px; top: 14px; display: flex; gap: 6px;">
+    <sc-for list="{{buffs}}" as="b" hint-placeholder-count="7">
+      <div title="{{b.name}}" style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+        <div style="width: 28px; height: 28px; border-radius: {{t.radius}}; border: 1px solid {{b.edge}}; background: {{b.tile}}; display: flex; align-items: center; justify-content: center;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{b.color}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{b.d}}"></path></svg>
+        </div>
+        <span style="font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">{{b.t}}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- status line + radar, top right -->
+  <div style="position: absolute; right: 16px; top: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+    <div style="align-self: flex-end; display: flex; gap: 8px; font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">
+      <span>Holtburg</span><span style="opacity: 0.5;">|</span><span>6:01 AM</span><span style="opacity: 0.5;">|</span><span>38 ms</span><span style="width: 7px; height: 7px; border-radius: 50%; background: #6BD47A; align-self: center;"></span>
+    </div>
+    <div style="width: 160px; height: 160px; position: relative; border-radius: 50%; border: 2px solid {{t.trim}}; background: rgba(0,0,0,0.38); box-shadow: 0 2px 10px rgba(0,0,0,0.35);">
+      <div style="position: absolute; inset: 26px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.12);"></div>
+      <div style="position: absolute; left: 50%; top: 50%; width: 0; height: 0; margin: -6px 0 0 -6px; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 11px solid #FFFFFF;"></div>
+      <div style="position: absolute; left: 102px; top: 52px; width: 8px; height: 8px; border-radius: 50%; background: {{t.accent}};"></div>
+      <div style="position: absolute; left: 44px; top: 98px; width: 7px; height: 7px; border-radius: 50%; background: #E5484D;"></div>
+      <div style="position: absolute; left: 110px; top: 112px; width: 7px; height: 7px; border-radius: 50%; background: #6BD47A;"></div>
+      <span style="position: absolute; left: 50%; top: 3px; transform: translateX(-50%); font-size: 11px; font-weight: 700; color: {{t.accent}};">N</span>
+      <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); font-size: 10px; font-weight: 600; opacity: 0.8;">E</span>
+      <span style="position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%); font-size: 10px; font-weight: 600; opacity: 0.8;">S</span>
+      <span style="position: absolute; left: 5px; top: 50%; transform: translateY(-50%); font-size: 10px; font-weight: 600; opacity: 0.8;">W</span>
+      <div style="position: absolute; right: -6px; bottom: 4px; display: flex; flex-direction: column; gap: 4px;">
+        <button aria-label="Zoom radar in" style="width: 22px; height: 22px; border-radius: 50%; border: 1px solid {{t.trim}}; background: rgba(0,0,0,0.6); font-size: 13px; line-height: 1; padding: 0; cursor: pointer;">+</button>
+        <button aria-label="Zoom radar out" style="width: 22px; height: 22px; border-radius: 50%; border: 1px solid {{t.trim}}; background: rgba(0,0,0,0.6); font-size: 13px; line-height: 1; padding: 0; cursor: pointer;">−</button>
+      </div>
+    </div>
+    <span style="font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">42.1N 33.6E</span>
+  </div>
+
+  <!-- chat, bottom left -->
+  <div style="position: absolute; left: 16px; bottom: 14px; width: 420px; display: flex; flex-direction: column; gap: 6px;">
+    <div role="tablist" aria-label="Chat channels" style="display: flex; gap: 2px;">
+      <sc-for list="{{tabs}}" as="tb" hint-placeholder-count="5">
+        <button role="tab" style="padding: 4px 10px; border: 1px solid {{tb.edge}}; border-radius: {{t.radius}}; background: {{tb.bg}}; font-size: 11px; font-weight: 600; color: {{tb.fg}}; cursor: pointer;">{{tb.label}}</button>
+      </sc-for>
+    </div>
+    <div style="display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; height: 150px; padding: 10px 12px; border-radius: 8px; background: linear-gradient(90deg, rgba(0,0,0,0.42), rgba(0,0,0,0.12)); font-size: 12.5px; line-height: 1.45; text-shadow: 0 1px 2px rgba(0,0,0,0.9);">
+      <sc-for list="{{chat}}" as="c" hint-placeholder-count="7">
+        <div><span style="color: {{c.color}}; font-weight: 600;">{{c.who}}</span> {{c.text}}</div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- shortcut bars + xp, bottom centre -->
+  <div style="position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <sc-if value="{{showBars}}" hint-placeholder-val="{{true}}">
+    <button style="display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 16px; border-radius: 999px; border: 1px solid {{t.trim}}; background: rgba(0,0,0,0.55); font-size: 12px; font-weight: 600; cursor: pointer;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{t.accent}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 16 8M14 4l1.5 3L19 8.5 15.5 10 14 13l-1.5-3L9 8.5 12.5 7z"></path></svg>
+      Magic
+    </button>
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <sc-for list="{{rows}}" as="row" hint-placeholder-count="3">
+          <div style="display: flex; gap: 3px;">
+            <sc-for list="{{row.slots}}" as="s" hint-placeholder-count="12">
+              <button aria-label="{{s.label}}" style="width: 40px; height: 40px; padding: 0; border-radius: {{t.slotRadius}}; border: 1px solid {{t.slotEdge}}; background: {{s.tile}}; position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+                <span style="position: absolute; left: 3px; top: 1px; font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.7);">{{s.key}}</span>
+                <span style="position: absolute; left: 0; right: 0; bottom: 0; height: {{s.cd}}; background: rgba(0,0,0,0.55);"></span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">
+        <button aria-label="Previous bar page" style="width: 20px; height: 20px; padding: 0; border: 0; background: transparent; cursor: pointer;">▲</button>
+        <span>1/2</span>
+        <button aria-label="Next bar page" style="width: 20px; height: 20px; padding: 0; border: 0; background: transparent; cursor: pointer;">▼</button>
+      </div>
+    </div>
+    </sc-if>
+    <div style="width: 513px; margin-right: 26px; display: flex; flex-direction: column; gap: 3px; position: relative;">
+      <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">
+        <span><span style="color: {{t.accent}};">LV 87</span>  ·  EXP 52,118,440</span>
+        <span style="opacity: 0.85;">1,204,880 to 88</span>
+      </div>
+      <div style="height: 3px; border-radius: 2px; background: rgba(0,0,0,0.55);"><div style="width: 64%; height: 100%; border-radius: 2px; background: {{t.accent}};"></div></div>
+      <span style="position: absolute; left: 300px; top: -22px; font-size: 13px; font-weight: 700; color: {{t.accent}}; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">+18,420</span>
+    </div>
+  </div>
+
+  <!-- panel strip, bottom right -->
+  <nav aria-label="Panels" style="position: absolute; right: 16px; bottom: 14px; display: flex; gap: 2px; padding: 4px; border-radius: 8px; border: 1px solid {{t.trim}}; background: rgba(0,0,0,0.5);">
+    <sc-for list="{{panels}}" as="p" hint-placeholder-count="7">
+      <button aria-label="{{p.label}}" title="{{p.label}} ({{p.key}})" style="width: 36px; height: 36px; padding: 0; border: 0; border-radius: 6px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{t.icon}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.d}}"></path></svg>
+      </button>
+    </sc-for>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"trim":{"editor":"enum","options":["neutral","bronze"],"default":"neutral"},"bars":{"editor":"enum","options":["stacked","none"],"default":"stacked"},"accent":{"editor":"color","default":"","options":["#7CC4FF","#D9A75B","#8BE38F","#C9A2FF"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const bronze = (this.props.trim ?? 'neutral') === 'bronze';
+    const t = bronze
+      ? { trim: 'rgba(201,160,98,0.8)', text: '#F4EBDC', accent: '#E0B068', radius: '3px', slotRadius: '4px', slotEdge: 'rgba(201,160,98,0.45)', icon: '#E9D3AE' }
+      : { trim: 'rgba(255,255,255,0.22)', text: '#F2F5F8', accent: '#7CC4FF', radius: '4px', slotRadius: '7px', slotEdge: 'rgba(255,255,255,0.14)', icon: '#E6ECF2' };
+    if (this.props.accent) t.accent = this.props.accent;
+    const P = {
+      bolt: 'M13 2 4 14h7l-1 8 9-12h-7z',
+      shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+      drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+      snow: 'M12 2v20M4 7l16 10M20 7 4 17',
+      star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+      eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
+      up: 'M12 19V5M5 12l7-7 7 7',
+      flame: 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1.5 1 3 2 3 4',
+      sword: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      acid: 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3',
+      skull: 'M12 3a7 7 0 0 0-7 7v4l2 2v3h10v-3l2-2v-4a7 7 0 0 0-7-7zM9 12h.01M15 12h.01',
+      bag: 'M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2',
+      book: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5',
+      user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+      map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14',
+      users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7',
+      scroll: 'M6 3h12v14a4 4 0 0 1-4 4H6M6 3a3 3 0 0 0-3 3v2h3M10 8h5M10 12h5',
+      gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1'
+    };
+    const C = { war: '#FF9A6B', life: '#7FD08A', creat: '#7FB2FF', item: '#E0B068', void: '#C08BFF', hp: '#FF6B70', mp: '#6EA8FF' };
+    const tile = (c) => c ? 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.55))' : 'rgba(0,0,0,0.35)';
+    const S = (key, d, c, label, cd) => ({ key, d: d || '', color: c || 'transparent', tile: tile(c), label: label || 'Empty slot', cd: cd || '0%' });
+    const keys = ['1','2','3','4','5','6','7','8','9','0','-','='];
+    const row1 = [[P.flame,C.war,'Flame Bolt'],[P.bolt,C.war,'Lightning Bolt','55%'],[P.snow,C.war,'Frost Bolt'],[P.acid,C.war,'Acid Stream'],[P.flame,C.war,'Flame Arc'],[P.skull,C.void,'Nether Bolt'],[P.eye,C.creat,'Fire Vulnerability'],[P.eye,C.creat,'Imperil'],[P.heart,C.life,'Heal Self'],[P.drop,C.life,'Revitalize'],[P.drop,C.hp,'Health Potion','30%'],[P.drop,C.mp,'Mana Potion']];
+    const row2 = [[P.shield,C.creat,'Armor Self'],[P.star,C.creat,'Focus Self'],[P.star,C.creat,'Willpower Self'],[P.star,C.creat,'Strength Self'],[P.heart,C.life,'Regeneration Self'],[P.drop,C.life,'Mana Renewal'],[P.shield,C.item,'Impenetrability'],[P.sword,C.item,'Blood Drinker'],[P.up,C.item,'Lifestone Recall'],[P.up,C.item,'Portal Recall'],[],[]];
+    const row3 = [[P.sword,C.item,'Wand'],[P.shield,C.item,'Shield'],[P.bag,C.item,'Food'],[],[],[],[],[],[],[],[],[]];
+    const mk = (row, prefix) => ({ slots: row.map((r, i) => S(prefix + keys[i], r[0], r[1], r[2], r[3])) });
+    const tabBase = (label, on) => ({ label, bg: on ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)', fg: on ? t.accent : t.text, edge: on ? t.trim : 'transparent' });
+    const buff = (name, d, c, time, bad) => ({ name, d, color: c, t: time, tile: tile(c), edge: bad ? '#E5484D' : t.slotEdge });
+    return {
+      t,
+      showBars: (this.props.bars ?? 'stacked') !== 'none',
+      vitals: [
+        { label: 'HEALTH', val: '412 / 450', pct: '92%', color: '#B8323A' },
+        { label: 'STAMINA', val: '298 / 410', pct: '73%', color: '#B88A1E' },
+        { label: 'MANA', val: '361 / 620', pct: '58%', color: '#2F64C2' }
+      ],
+      buffs: [
+        buff('Armor Self VIII', P.shield, C.creat, '58m'), buff('Focus Self VIII', P.star, C.creat, '58m'),
+        buff('Regeneration Self VII', P.heart, C.life, '57m'), buff('Mana Renewal VI', P.drop, C.life, '14m'),
+        buff('Blood Drinker', P.sword, C.item, '1h'), buff('Impenetrability', P.shield, C.item, '1h'),
+        buff('Frost Vulnerability', P.snow, '#FF6B70', '0:22', true)
+      ],
+      tabs: [tabBase('Main', true), tabBase('Combat'), tabBase('Allegiance'), tabBase('Fellowship'), tabBase('General')],
+      chat: [
+        { who: '[Fellowship] Mira:', text: 'pulling the next room, stay on the ramp', color: '#7FD08A' },
+        { who: '[General] Osk:', text: 'anyone selling Major Coordination?', color: '#E6ECF2' },
+        { who: 'You cast', text: 'Incantation of Flame Bolt on Drudge Ravener', color: '#7FB2FF' },
+        { who: 'You hit', text: 'Drudge Ravener for 212 points of fire damage', color: '#FF9A6B' },
+        { who: 'Drudge Ravener', text: 'misses you', color: '#B8C2CC' },
+        { who: 'Rook tells you,', text: 'portal gem ready when you are', color: '#C9A2FF' },
+        { who: 'You gain', text: '18,420 experience', color: t.accent }
+      ],
+      rows: [mk(row1, ''), mk(row2, '⇧'), mk(row3, '⌃')],
+      panels: [
+        { label: 'Character', key: 'C', d: P.user }, { label: 'Inventory', key: 'I', d: P.bag },
+        { label: 'Spellbook', key: 'K', d: P.book }, { label: 'Quests', key: 'J', d: P.scroll },
+        { label: 'Map', key: 'M', d: P.map }, { label: 'Social', key: 'O', d: P.users },
+        { label: 'Options', key: 'Esc', d: P.gear }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

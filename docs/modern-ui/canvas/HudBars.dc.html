@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HUD with your own bars</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC;">
+  <div style="position: absolute; left: 0; top: 0;">
+    <dc-import name="Horizon" trim="bronze" bars="none" hint-size="1440px,900px"></dc-import>
+  </div>
+
+  <!-- edit mode: dim the world, centre guide -->
+  <sc-if value="{{isEdit}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; background: rgba(10,8,6,0.45);"></div>
+    <div style="position: absolute; left: 719px; top: 120px; bottom: 0; width: 0; border-left: 1px dashed rgba(224,176,104,0.55);"></div>
+    <div role="toolbar" aria-label="HUD layout" style="position: absolute; left: 50%; top: 92px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 16px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.96); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+      <span style="font-size: 13px; font-weight: 600;">Editing your HUD</span>
+      <span style="font-size: 11.5px; color: #C8B89C;">Drag a bar by its tab · click a slot to set its keys</span>
+      <button title="This character only, a shared layout, or copy one from another character" style="height: 30px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;"><span style="color: #C8B89C;">Layout</span><span style="font-weight: 600;">Aerin Vale only</span><span style="color: #C8B89C;">▾</span></button>
+      <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">+ New bar</button>
+      <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 0; background: transparent; color: #C8B89C; font-size: 12px; font-weight: 600; cursor: pointer;">Reset layout</button>
+      <button style="height: 30px; padding: 0 14px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Done</button>
+    </div>
+  </sc-if>
+
+  <!-- the spellbook, faded while a spell is dragged out of it -->
+  <sc-if value="{{isDrag}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 250px; top: 176px; opacity: 0.12; pointer-events: none;">
+      <dc-import name="Spellbook" state="spells" hint-size="940px,640px"></dc-import>
+    </div>
+    <div style="position: absolute; left: 50%; top: 92px; transform: translateX(-50%); padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.92); font-size: 12px;">
+      Release over a slot to place it · release anywhere else to cancel
+    </div>
+  </sc-if>
+
+  <!-- combat mode pill -->
+  <button style="position: absolute; left: 1001px; top: 809px; display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.8); background: rgba(0,0,0,0.55); color: #F4EBDC; font-size: 12px; font-weight: 600; cursor: pointer;">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{modeIcon}}"></path></svg>
+    {{modeLabel}}
+  </button>
+
+  <!-- the bars -->
+  <sc-for list="{{bars}}" as="bar" hint-placeholder-count="4">
+    <div role="toolbar" aria-label="{{bar.name}} bar" style="position: absolute; left: {{bar.x}}; top: {{bar.y}}; display: flex; flex-direction: {{bar.dir}}; align-items: center; gap: 3px; padding: 4px; border-radius: 6px; border: {{bar.border}}; background: {{bar.bg}}; box-shadow: {{bar.glow}};">
+      <sc-if value="{{isEdit}}" hint-placeholder-val="{{false}}">
+        <div style="position: absolute; {{bar.tabPos}} display: flex; align-items: center; gap: 2px; height: 26px; padding: 0 4px 0 8px; border: 1px solid #E0B068; background: rgba(24,19,14,0.96); white-space: nowrap; cursor: move;">
+          <svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true"><path d="M2 2h.01M8 2h.01M2 7h.01M8 7h.01M2 12h.01M8 12h.01" stroke="#C8B89C" stroke-width="2.4" stroke-linecap="round"></path></svg>
+          <span style="font-size: 11px; font-weight: 700; margin: 0 6px 0 4px;">{{bar.name}}</span>
+          <span style="font-size: 10.5px; color: #C8B89C; margin-right: 4px;">{{bar.keyNote}}</span>
+          <button aria-label="Turn {{bar.name}} bar {{bar.turnTo}}" title="Turn {{bar.turnTo}}" style="width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"></path></svg></button>
+          <button aria-label="Fewer slots" title="Fewer slots" style="width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #E9D3AE; font-size: 14px; line-height: 1; cursor: pointer;">−</button>
+          <button aria-label="More slots" title="More slots" style="width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #E9D3AE; font-size: 14px; line-height: 1; cursor: pointer;">+</button>
+          <button aria-label="{{bar.name}} bar options" title="Rename, lock, delete" style="width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #E9D3AE; font-size: 13px; line-height: 1; cursor: pointer;">⋯</button>
+        </div>
+      </sc-if>
+      <sc-for list="{{bar.slots}}" as="s" hint-placeholder-count="12">
+        <button aria-label="{{s.label}}" title="{{s.title}}" style="width: 40px; height: 40px; padding: 0; border-radius: 4px; border: {{s.border}}; background: {{s.bg}}; box-shadow: {{s.glow}}; position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity: {{s.op}};"><path d="{{s.d}}"></path></svg>
+          <span style="position: absolute; left: 3px; top: 1px; font-size: 9px; font-weight: 600; color: {{s.keyColor}};">{{s.key}}</span>
+          <sc-if value="{{s.isSpell}}" hint-placeholder-val="{{false}}">
+            <span style="position: absolute; right: 2px; bottom: 2px; width: 5px; height: 5px; border-radius: 50%; background: {{s.dot}};"></span>
+          </sc-if>
+        </button>
+      </sc-for>
+    </div>
+  </sc-for>
+
+  <!-- edit: key binding for one slot -->
+  <sc-if value="{{isEdit}}" hint-placeholder-val="{{false}}">
+    <div role="dialog" aria-label="Keys for this slot" style="position: absolute; left: 386px; top: 566px; width: 300px; box-sizing: border-box; padding: 14px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.9); background: rgba(24,19,14,0.98); box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px;">
+      <div style="position: absolute; left: 84px; bottom: -7px; width: 12px; height: 12px; background: rgba(24,19,14,0.98); border-right: 1px solid rgba(201,160,98,0.9); border-bottom: 1px solid rgba(201,160,98,0.9); transform: rotate(45deg);"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 13px; font-weight: 600;">Health Potion</span>
+        <span style="font-size: 11px; color: #C8B89C;">Main bar, slot 1</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+        <span style="flex: 1;">Peace, melee and missile</span>
+        <span style="min-width: 70px; height: 28px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.5); background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-weight: 700;">1</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+        <span style="flex: 1;">Magic</span>
+        <span style="min-width: 70px; height: 28px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 2px solid #E0B068; background: rgba(224,176,104,0.12); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #E0B068;">Press a key…</span>
+      </div>
+      <span style="font-size: 10.5px; line-height: 1.45; color: #C8B89C;">In Magic mode the number keys cast from the Spells bar, so this bar uses Shift. Taken keys are offered to swap.</span>
+      <div style="display: flex; justify-content: flex-end; gap: 6px;">
+        <button style="height: 28px; padding: 0 10px; border-radius: 4px; border: 0; background: transparent; color: #C8B89C; font-size: 12px; font-weight: 600; cursor: pointer;">Clear keys</button>
+        <button style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Done</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- drag: the spell being placed -->
+  <sc-if value="{{isDrag}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 808px; top: 724px; display: flex; align-items: center; gap: 8px; pointer-events: none;">
+      <div style="width: 42px; height: 42px; border-radius: 4px; border: 2px solid #E0B068; background: linear-gradient(160deg, #7FB2FF55, rgba(0,0,0,0.75)); box-shadow: 0 8px 20px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; transform: rotate(-4deg);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7FB2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6"></path></svg>
+      </div>
+      <span style="padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.85); font-size: 11px; font-weight: 600;">Incantation of Imperil Other → Spells, slot 9</span>
+    </div>
+  </sc-if>
+
+  <!-- melee: why the spells are grey -->
+  <sc-if value="{{isCombat}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 1001px; top: 760px; font-size: 11px; color: #C8B89C; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">Spells wake up in Magic mode</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["combat","magic","edit","drag"],"default":"magic"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const mode = this.props.mode ?? 'magic';
+    const magic = mode !== 'combat';
+    const edit = mode === 'edit';
+    const P = {
+      flame: 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1.5 1 3 2 3 4',
+      bolt: 'M13 2 4 14h7l-1 8 9-12h-7z',
+      snow: 'M12 2v20M4 7l16 10M20 7 4 17',
+      acid: 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3',
+      blade: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      wave: 'M2 12c3-6 5 6 8 0s5 6 8 0 3-3 4-3',
+      skull: 'M12 3a7 7 0 0 0-7 7v4l2 2v3h10v-3l2-2v-4a7 7 0 0 0-7-7zM9 12h.01M15 12h.01',
+      heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+      drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+      shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+      eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
+      up: 'M12 19V5M5 12l7-7 7 7',
+      gem: 'M6 3h12l4 6-10 12L2 9zM2 9h20M9 3l3 18 3-18',
+      food: 'M12 21c-4 0-7-3-7-7 0-3 2-6 5-6 1 0 1.5.5 2 .5s1-.5 2-.5c3 0 5 3 5 6 0 4-3 7-7 7zM12 8c0-2 1-4 3-5',
+      wand: 'M4 20 16 8M14 4l1.5 3L19 8.5 15.5 10 14 13l-1.5-3L9 8.5 12.5 7z',
+      sword: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      portal: 'M12 3a6 9 0 1 0 0 18 6 9 0 1 0 0-18zM12 7a3 5 0 1 0 0 10 3 5 0 1 0 0-10'
+    };
+    const C = { war: '#FF9A6B', life: '#7FD08A', creat: '#7FB2FF', item: '#E0B068', void: '#C9A2FF', hp: '#FF6B70', mp: '#6EA8FF', st: '#E8C547', food: '#7FD08A', misc: '#B3AA9C' };
+    const tile = (c) => 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.55))';
+    const it = (label, d, c) => ({ label, d, c, spell: false });
+    const sp = (label, d, c) => ({ label, d, c, spell: true });
+    const slotOf = (x, key) => {
+      if (!x) return { label: 'Empty slot', title: 'Empty slot', d: '', color: 'transparent', bg: 'rgba(0,0,0,0.32)', border: edit ? '1px dashed rgba(201,160,98,0.45)' : '1px solid rgba(201,160,98,0.16)', glow: 'none', op: '1', key, keyColor: 'rgba(255,255,255,0.55)', isSpell: false, dot: 'transparent' };
+      const off = x.spell && !magic;
+      return {
+        label: x.label + (off ? ' (Magic mode only)' : ''),
+        title: x.label + (key ? ' · ' + key : '') + (off ? ' · Magic mode only' : ''),
+        d: x.d, color: off ? '#8A8278' : x.c, bg: off ? 'rgba(0,0,0,0.45)' : tile(x.c),
+        border: '1px solid ' + (off ? 'rgba(201,160,98,0.16)' : 'rgba(201,160,98,0.4)'), glow: 'none',
+        op: off ? '0.45' : '1', key, keyColor: off ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.75)',
+        isSpell: x.spell, dot: off ? 'rgba(201,160,98,0.35)' : '#C9A2FF'
+      };
+    };
+    const nums = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='];
+    const mk = (name, x, y, dir, items, keysCombat, keysMagic, keyNote) => {
+      const keys = magic ? keysMagic : keysCombat;
+      const slots = items.map((x, i) => slotOf(x, keys[i] || ''));
+      return {
+        name, x: x + 'px', y: y + 'px', tabPos: name === 'Main' ? 'left: -1px; bottom: -31px; border-radius: 0 0 4px 4px; border-top: 0;' : 'left: -1px; top: -31px; border-radius: 4px 4px 0 0; border-bottom: 0;', dir: dir === 'v' ? 'column' : 'row', turnTo: dir === 'v' ? 'horizontal' : 'vertical', keyNote,
+        border: edit ? '1px dashed #E0B068' : '1px solid rgba(201,160,98,0.55)',
+        bg: 'rgba(0,0,0,0.45)', glow: edit ? '0 0 0 3px rgba(224,176,104,0.15)' : 'none', slots
+      };
+    };
+    const spellsItems = [sp('Incantation of Flame Bolt', P.flame, C.war), sp('Incantation of Lightning Bolt', P.bolt, C.war), sp('Incantation of Frost Bolt', P.snow, C.war), sp('Incantation of Acid Stream', P.acid, C.war), sp('Incantation of Flame Arc', P.flame, C.war), sp('Incantation of Whirling Blade', P.blade, C.war), sp('Incantation of Shock Wave', P.wave, C.war), sp('Nether Bolt VII', P.skull, C.void), null, sp('Incantation of Fire Vulnerability Other', P.eye, C.creat), null, null];
+    const mainItems = [it('Health Potion', P.drop, C.hp), it('Mana Potion', P.drop, C.mp), it('Stamina Elixir', P.drop, C.st), it('Healing Kit', P.drop, C.food), sp('Incantation of Heal Self', P.heart, C.life), sp('Incantation of Revitalize Self', P.drop, C.life), it('Lifestone Recall Gem', P.gem, C.item), it('Cooked Meat', P.food, C.food), it('Mana Stone', P.gem, C.mp), it('Ornate Gold Wand', P.wand, C.war), it('Short Sword', P.sword, C.war), null];
+    const buffItems = [sp('Incantation of Armor Self', P.shield, C.life), sp('Incantation of Focus Self', P.star, C.creat), sp('Incantation of Willpower Self', P.star, C.creat), sp('Incantation of Strength Self', P.star, C.creat), sp('Incantation of Regeneration Self', P.heart, C.life), sp('Incantation of Mana Renewal Self', P.drop, C.life), sp('Incantation of Impenetrability', P.shield, C.item), sp('Incantation of Blood Drinker Self', P.sword, C.item), sp('Incantation of Spirit Drinker Self', P.wand, C.item)];
+    const travelItems = [sp('Lifestone Recall', P.up, C.item), sp('Portal Recall', P.portal, C.item), sp('Primary Portal Recall', P.portal, C.item), it('Town Network Portal Gem', P.gem, C.item), it('Lifestone Recall Gem', P.gem, C.item)];
+    const bars = [
+      mk('Spells', 452, 742, 'h', spellsItems, [], nums, 'Magic: 1 to ='),
+      mk('Main', 452, 796, 'h', mainItems, nums, nums.map((n) => '⇧' + n), 'keys 1 to = · Magic ⇧1 to ⇧='),
+      mk('Buffs', 1376, 270, 'v', buffItems, [], ['⌃1', '⌃2', '⌃3', '⌃4', '⌃5', '⌃6', '⌃7', '⌃8', '⌃9'], 'Magic: ⌃1 to ⌃9'),
+      mk('Travel', 16, 640, 'h', travelItems, ['F1', 'F2', 'F3', 'F4', 'F5'], ['F1', 'F2', 'F3', 'F4', 'F5'], 'F1 to F5')
+    ];
+    if (mode === 'drag') {
+      const t = bars[0].slots[8];
+      t.border = '2px dashed #E0B068'; t.glow = '0 0 16px rgba(224,176,104,0.55)'; t.label = 'Drop here';
+    }
+    if (edit) {
+      const t = bars[1].slots[0];
+      t.border = '2px solid #E0B068'; t.glow = '0 0 14px rgba(224,176,104,0.5)';
+    }
+    return {
+      bars, isEdit: edit, isDrag: mode === 'drag', isCombat: mode === 'combat',
+      modeLabel: magic ? 'Magic' : 'Melee',
+      modeIcon: magic ? P.wand : P.sword
+    };
+  }
+}
+</script>
+</body>
+</html>

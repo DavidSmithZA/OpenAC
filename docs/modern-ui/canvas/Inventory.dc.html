@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inventory panel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.inv-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,160,98,0.7) rgba(255,255,255,0.06)}
+.inv-scroll::-webkit-scrollbar{width:6px}
+.inv-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,0.06);border-radius:3px}
+.inv-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
+</style>
+</helmet>
+<div style="width: {{w}}; height: 640px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.92); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 16px 0 20px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2"></path></svg>
+    <h1 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.02em;">Inventory</h1>
+    <span style="font-size: 12px; color: #C8B89C;">Aerin Vale</span>
+    <span style="flex: 1;"></span>
+    <label style="display: flex; align-items: center; gap: 8px; width: 240px; height: 30px; padding: 0 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+      <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Search all packs</span>
+      <input placeholder="Search all packs" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12px;">
+    </label>
+    <button aria-label="Close inventory" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- equipment column -->
+  <section aria-label="Equipment" style="position: absolute; left: 24px; top: 68px; width: 300px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2 style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">EQUIPPED</h2>
+      <div role="group" aria-label="Equipment view" style="display: flex; border: 1px solid rgba(201,160,98,0.45); border-radius: 4px; overflow: hidden;">
+        <button style="height: 24px; padding: 0 10px; border: 0; background: rgba(224,176,104,0.22); color: #F4EBDC; font-size: 11px; font-weight: 600; cursor: pointer;">Figure</button>
+        <button style="height: 24px; padding: 0 10px; border: 0; background: transparent; color: #C8B89C; font-size: 11px; font-weight: 600; cursor: pointer;">Slots</button>
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <sc-for list="{{leftCol}}" as="s" hint-placeholder-count="6">
+          <button aria-label="{{s.label}}" title="{{s.label}}" style="width: 40px; height: 40px; padding: 0; border-radius: 4px; border: 1px solid {{s.edge}}; background: {{s.bg}}; opacity: {{s.op}}; box-shadow: {{s.glow}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+          </button>
+        </sc-for>
+      </div>
+      <div style="flex: 1; height: 270px; position: relative; border-radius: 4px; background: radial-gradient(ellipse at 50% 60%, rgba(224,176,104,0.10), rgba(0,0,0,0) 70%);">
+        <svg width="204" height="270" viewBox="0 0 190 270" aria-hidden="true" style="position: absolute; left: 0; top: 0;">
+          <circle cx="95" cy="34" r="20" fill="rgba(255,255,255,0.04)" stroke="rgba(201,160,98,0.6)" stroke-width="1.5" stroke-dasharray="4 4"></circle>
+          <path d="M60 64 Q95 54 130 64 L146 148 L130 151 L120 104 L118 168 L126 262 L104 262 L95 178 L86 262 L64 262 L72 168 L70 104 L60 151 L44 148 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(201,160,98,0.6)" stroke-width="1.5" stroke-dasharray="4 4" stroke-linejoin="round"></path>
+        </svg>
+        <span style="position: absolute; left: 0; right: 0; bottom: -2px; text-align: center; font-size: 10px; color: #C8B89C;">Your character, drawn live · drag to turn</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <sc-for list="{{rightCol}}" as="s" hint-placeholder-count="6">
+          <button aria-label="{{s.label}}" title="{{s.label}}" style="width: 40px; height: 40px; padding: 0; border-radius: 4px; border: 1px solid {{s.edge}}; background: {{s.bg}}; opacity: {{s.op}}; box-shadow: {{s.glow}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+    <sc-for list="{{rowsBelow}}" as="row" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">{{row.title}}</span>
+        <div style="display: flex; gap: 6px;">
+          <sc-for list="{{row.slots}}" as="s" hint-placeholder-count="6">
+            <button aria-label="{{s.label}}" title="{{s.label}}" style="width: 40px; height: 40px; padding: 0; border-radius: 4px; border: 1px solid {{s.edge}}; background: {{s.bg}}; opacity: {{s.op}}; box-shadow: {{s.glow}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </section>
+
+  <!-- packs + contents -->
+  <section aria-label="Packs" style="position: absolute; left: 348px; top: 68px; width: 420px; height: 506px; display: flex; gap: 12px;">
+    <nav aria-label="Containers" style="width: 56px; display: flex; flex-direction: column; gap: 6px;">
+      <sc-for list="{{packs}}" as="p" hint-placeholder-count="9">
+        <button aria-label="{{p.label}}" title="{{p.label}} · {{p.fill}}" style="width: 56px; height: {{p.h}}; padding: 0; border-radius: 4px; border: 1px solid {{p.edge}}; background: {{p.bg}}; margin-bottom: {{p.gapAfter}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer;">
+          <svg width="{{p.icon}}" height="{{p.icon}}" viewBox="0 0 24 24" fill="none" stroke="{{p.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.d}}"></path></svg>
+          <span style="font-size: 9.5px; font-weight: 600; color: #E9D3AE; font-variant-numeric: tabular-nums;">{{p.fill}}</span>
+          <span style="width: 36px; height: 2px; background: {{p.track}};"><span style="display: block; width: {{p.pct}}; height: 100%; background: {{p.bar}};"></span></span>
+        </button>
+      </sc-for>
+    </nav>
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600;">{{viewTitle}}</h2>
+        <span style="font-size: 11px; color: #C8B89C; font-variant-numeric: tabular-nums;">{{viewCount}}</span>
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <button style="height: 26px; padding: 0 8px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;"><span style="color: #C8B89C;">Group</span><span style="font-weight: 600;">{{groupBy}}</span><span style="color: #C8B89C;">▾</span></button>
+        <button style="height: 26px; padding: 0 8px; border-radius: 4px; border: 1px solid {{sortEdge}}; background: {{sortBg}}; display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;"><span style="color: #C8B89C;">Sort</span><span style="font-weight: 600;">Type</span><span style="color: #C8B89C;">▾</span></button>
+        <span style="flex: 1;"></span>
+        <button aria-label="Compact view" title="Smaller icons" style="width: 26px; height: 26px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" aria-hidden="true"><path d="M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z"></path></svg>
+        </button>
+        <button aria-label="List view" title="List with names" style="width: 26px; height: 26px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>
+        </button>
+      </div>
+      <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+        <sc-for list="{{chips}}" as="c" hint-placeholder-count="6">
+          <button style="height: 22px; padding: 0 9px; border-radius: 999px; border: 1px solid {{c.edge}}; background: {{c.bg}}; color: {{c.fg}}; font-size: 11px; font-weight: 600; cursor: pointer;">{{c.label}}</button>
+        </sc-for>
+      </div>
+      <div class="inv-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 10px;">
+        <sc-for list="{{groups}}" as="g" hint-placeholder-count="1">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <sc-if value="{{g.titled}}" hint-placeholder-val="{{false}}">
+              <button onClick="{{g.toggle}}" aria-expanded="{{g.open}}" style="display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; cursor: pointer; text-align: left;">
+                <span style="font-size: 10px; color: #C8B89C; width: 10px;">{{g.chev}}</span>
+                <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: #E9D3AE;">{{g.title}}</span>
+                <span style="flex: 1; height: 1px; background: rgba(201,160,98,0.25);"></span>
+                <span style="font-size: 10.5px; color: #C8B89C; font-variant-numeric: tabular-nums;">{{g.meta}}</span>
+              </button>
+            </sc-if>
+            <sc-if value="{{g.open}}" hint-placeholder-val="{{true}}">
+              <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px;">
+                <sc-for list="{{g.cells}}" as="c" hint-placeholder-count="32">
+                  <button aria-label="{{c.label}}" title="{{c.label}}" style="height: 40px; padding: 0; border-radius: 4px; border: {{c.border}}; background: {{c.bg}}; opacity: {{c.op}}; position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{c.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.d}}"></path></svg>
+                    <span style="position: absolute; left: 3px; top: 1px; font-size: 9px; font-weight: 700; color: #E0B068;">{{c.stamp}}</span>
+                    <span style="position: absolute; right: 3px; bottom: 1px; font-size: 9.5px; font-weight: 700; color: #FFFFFF; text-shadow: 0 1px 2px #000;">{{c.count}}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- item details: fixed head, scrolling body, fixed actions -->
+  <sc-if value="{{hasDetails}}" hint-placeholder-val="{{true}}">
+    <aside aria-label="Selected item" style="position: absolute; left: {{ad.left}}; top: {{ad.top}}; width: 264px; height: {{ad.h}}; box-sizing: border-box; border-radius: {{ad.radius}}; border: {{ad.border}}; background: {{ad.bg}}; box-shadow: {{ad.shadow}}; display: flex; flex-direction: column;">
+      <sc-if value="{{ad.floating}}" hint-placeholder-val="{{false}}">
+        <div style="position: absolute; left: -7px; top: 22px; width: 12px; height: 12px; background: rgba(24,19,14,0.98); border-left: 1px solid rgba(201,160,98,0.8); border-bottom: 1px solid rgba(201,160,98,0.8); transform: rotate(45deg);"></div>
+        <div style="position: absolute; right: 8px; top: 8px; display: flex; gap: 2px;">
+          <button aria-label="Dock details in the window" title="Dock in the window" style="width: 24px; height: 24px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5M9 3h6l-1 7 4 3v2H6v-2l4-3z"></path></svg>
+          </button>
+          <button aria-label="Close details" title="Close" style="width: 24px; height: 24px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+          </button>
+        </div>
+      </sc-if>
+      <div style="padding: 14px {{ad.padR}} 10px 14px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid rgba(201,160,98,0.2);">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="width: 52px; height: 52px; flex: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: {{item.tile}}; display: flex; align-items: center; justify-content: center;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{{item.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.d}}"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <h3 style="margin: 0; font-size: 14px; font-weight: 600; line-height: 1.25;">{{item.name}}</h3>
+            <span style="font-size: 11px; color: #C8B89C;">{{item.sub}}</span>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;">
+          <sc-for list="{{item.facts}}" as="f" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column; gap: 1px; padding: 5px 8px; border-radius: 4px; background: rgba(255,255,255,0.04);">
+              <span style="font-size: 10px; color: #C8B89C;">{{f.k}}</span>
+              <span style="font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;">{{f.v}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div class="inv-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 10px 10px 10px 14px; display: flex; flex-direction: column; gap: 12px;">
+        <sc-for list="{{item.sections}}" as="sec" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <button onClick="{{sec.toggle}}" aria-expanded="{{sec.open}}" style="display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; cursor: pointer; text-align: left;">
+              <span style="font-size: 10px; color: #C8B89C; width: 10px;">{{sec.chev}}</span>
+              <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">{{sec.title}}</span>
+              <span style="flex: 1;"></span>
+              <span style="font-size: 10px; color: #C8B89C;">{{sec.count}}</span>
+            </button>
+            <sc-if value="{{sec.open}}" hint-placeholder-val="{{true}}">
+              <div style="display: flex; flex-direction: column;">
+                <sc-for list="{{sec.rows}}" as="r" hint-placeholder-count="3">
+                  <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.55;"><span style="color: {{r.kc}};">{{r.k}}</span><span style="color: {{r.c}}; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right;">{{r.v}}</span></div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding: 10px 14px 14px; border-top: 1px solid rgba(201,160,98,0.2); display: flex; gap: 6px;">
+        <button style="flex: 1; height: 32px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">{{item.primary}}</button>
+        <sc-for list="{{actions}}" as="a" hint-placeholder-count="3">
+          <button aria-label="{{a.label}}" title="{{a.label}}" style="width: 32px; height: 32px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.d}}"></path></svg>
+          </button>
+        </sc-for>
+      </div>
+    </aside>
+  </sc-if>
+
+  <!-- footer: burden + pyreals -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 58px; display: flex; align-items: center; gap: 24px; padding: 0 24px; box-sizing: border-box; border-top: 1px solid rgba(201,160,98,0.35);">
+    <div style="width: 420px; display: flex; flex-direction: column; gap: 5px;">
+      <div style="display: flex; justify-content: space-between; font-size: 11px;">
+        <span><span style="font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">BURDEN</span>  <span style="font-weight: 600; color: {{burdenColor}};">{{burdenPct}}</span></span>
+        <span style="color: #C8B89C; font-variant-numeric: tabular-nums;">{{burdenUnits}}</span>
+      </div>
+      <div style="height: 6px; position: relative; border-radius: 3px; background: rgba(255,255,255,0.1);">
+        <div style="width: {{burdenBar}}; height: 100%; border-radius: 3px; background: {{burdenColor}};"></div>
+        <div title="Above 100% you slow down" style="position: absolute; left: 33.3%; top: -3px; width: 2px; height: 12px; background: #F4EBDC; opacity: 0.6;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #C8B89C;"><span>0%</span><span style="margin-left: 26%;">100% · slowed</span><span>300%</span></div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+      <span style="width: 10px; height: 10px; border-radius: 50%; background: #E0B068; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);"></span>
+      <span style="font-weight: 600; font-variant-numeric: tabular-nums;">48,210</span><span style="color: #C8B89C;">pyreals</span>
+    </div>
+    <span style="flex: 1;"></span>
+    <span style="font-size: 11px; color: #C8B89C;">{{hint}}</span>
+  </div>
+
+  <!-- sort menu -->
+  <sc-if value="{{isSort}}" hint-placeholder-val="{{false}}">
+    <div role="menu" aria-label="Sort and tidy" style="position: absolute; left: 488px; top: 128px; width: 240px; box-sizing: border-box; padding: 6px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.98); box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 1px; font-size: 12px;">
+      <span style="padding: 6px 8px 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">SORT BY</span>
+      <sc-for list="{{sortBy}}" as="o" hint-placeholder-count="7">
+        <button role="menuitemradio" aria-checked="{{o.on}}" style="height: 28px; padding: 0 8px; border: 0; border-radius: 4px; background: {{o.bg}}; display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: left;">
+          <span style="width: 12px; color: #E0B068; font-weight: 700;">{{o.mark}}</span><span style="flex: 1;">{{o.label}}</span><span style="font-size: 10.5px; color: #C8B89C;">{{o.note}}</span>
+        </button>
+      </sc-for>
+      <button role="menuitemcheckbox" aria-checked="false" style="height: 28px; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: left;"><span style="width: 12px;"></span><span>Reverse order</span></button>
+      <div style="height: 1px; margin: 4px 0; background: rgba(201,160,98,0.25);"></div>
+      <span style="padding: 4px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">TIDY</span>
+      <sc-for list="{{tidy}}" as="o" hint-placeholder-count="4">
+        <button role="menuitem" style="padding: 5px 8px; border: 0; border-radius: 4px; background: transparent; display: flex; flex-direction: column; gap: 1px; cursor: pointer; text-align: left;">
+          <span>{{o.label}}</span><span style="font-size: 10.5px; color: #C8B89C;">{{o.note}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- drag: the lifted item -->
+  <sc-if value="{{isDrag}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 92px; top: 150px; display: flex; align-items: center; gap: 8px; pointer-events: none;">
+      <div style="width: 44px; height: 44px; border-radius: 4px; border: 2px solid #E0B068; background: linear-gradient(160deg, #7FB2FF55, rgba(0,0,0,0.7)); box-shadow: 0 8px 20px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; transform: rotate(-4deg);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7FB2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path></svg>
+      </div>
+      <span style="padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.8); font-size: 11px; font-weight: 600;">Amuli Coat · covers 4 slots</span>
+    </div>
+  </sc-if>
+
+  <!-- split: popover on a stack -->
+  <sc-if value="{{isSplit}}" hint-placeholder-val="{{false}}">
+    <div role="dialog" aria-label="Split stack" style="position: absolute; left: 452px; top: 214px; width: 250px; box-sizing: border-box; padding: 14px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.98); box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 12px;">
+      <div style="position: absolute; left: 22px; top: -7px; width: 12px; height: 12px; background: rgba(24,19,14,0.98); border-left: 1px solid rgba(201,160,98,0.8); border-top: 1px solid rgba(201,160,98,0.8); transform: rotate(45deg);"></div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <span style="font-size: 13px; font-weight: 600;">Split Health Potions</span>
+        <span style="font-size: 11px; color: #C8B89C;">stack of 14</span>
+      </div>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: #C8B89C;">
+        Take
+        <input type="range" min="1" max="13" value="7" style="width: 100%; accent-color: #E0B068;">
+      </label>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #C8B89C;">Count
+          <input value="7" style="width: 52px; height: 28px; box-sizing: border-box; padding: 0 8px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.4); color: #F4EBDC; font: inherit; font-size: 12px; font-weight: 600;">
+        </label>
+        <span style="font-size: 11px; color: #C8B89C;">leaves 7</span>
+        <span style="flex: 1;"></span>
+        <button style="height: 28px; padding: 0 10px; border-radius: 4px; border: 0; background: transparent; color: #C8B89C; font-size: 12px; font-weight: 600; cursor: pointer;">Cancel</button>
+        <button style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Split</button>
+      </div>
+      <span style="font-size: 10.5px; color: #C8B89C;">Tip: Shift-drag a stack to split it straight onto a slot.</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["browse","none","float","long","all","sort","drag","split","heavy"],"default":"browse"},"$preview":{"width":1080,"height":640}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { closed: {} }; }
+  renderVals() {
+    const state = this.props.state ?? 'browse';
+    const closed = this.state.closed || {};
+    const toggle = (id) => () => this.setState({ closed: { ...closed, [id]: !closed[id] } });
+    const P = {
+      helm: 'M5 14a7 7 0 0 1 14 0v4H5zM12 7V4M9 18v-4h6v4',
+      shirt: 'M8 3 3 6l2 5 2-1v11h10V10l2 1 2-5-5-3a3 3 0 0 1-6 0z',
+      pants: 'M6 3h12l1 18h-5l-2-11-2 11H5z',
+      glove: 'M7 11V5a1.5 1.5 0 0 1 3 0v5M10 10V4a1.5 1.5 0 0 1 3 0v6M13 10V5a1.5 1.5 0 0 1 3 0v7M16 12V8a1.5 1.5 0 0 1 3 0v6a7 7 0 0 1-7 7 6 6 0 0 1-5-3l-3-5a1.5 1.5 0 0 1 2.5-1.5L7 14',
+      boot: 'M8 3h5v10l6 3a2 2 0 0 1 1 2v3H5V3z',
+      shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      arm: 'M7 4h6l3 7-3 9H8l1-9z',
+      leg: 'M8 3h8l-1 9 1 9h-5l-1-9z',
+      neck: 'M5 4c0 6 3 9 7 9s7-3 7-9M12 13v3M10 18a2 2 0 1 0 4 0 2 2 0 0 0-4 0',
+      wrist: 'M6 12a6 4 0 1 0 12 0 6 4 0 1 0-12 0M6 12v2a6 4 0 0 0 12 0v-2',
+      ring: 'M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM9 4h6l-1.5 5h-3z',
+      trinket: 'M12 3l3 6 6 1-4.5 4 1 6-5.5-3-5.5 3 1-6L3 10l6-1z',
+      cloak: 'M8 3h8l1 3 3 15H4L7 6zM12 3v6',
+      wand: 'M4 20 16 8M14 4l1.5 3L19 8.5 15.5 10 14 13l-1.5-3L9 8.5 12.5 7z',
+      sword: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      bow: 'M5 3c9 3 13 7 16 16M5 3l16 16M3 21l5-5',
+      arrow: 'M4 20 20 4M14 4h6v6M4 16v4h4',
+      sigil: 'M12 3l8 9-8 9-8-9z',
+      drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+      food: 'M12 21c-4 0-7-3-7-7 0-3 2-6 5-6 1 0 1.5.5 2 .5s1-.5 2-.5c3 0 5 3 5 6 0 4-3 7-7 7zM12 8c0-2 1-4 3-5',
+      gem: 'M6 3h12l4 6-10 12L2 9zM2 9h20M9 3l3 18 3-18',
+      key: 'M15 7a4 4 0 1 1-3.5 6L4 20H2v-3l1-1h2v-2h2v-2l2.5-2.5A4 4 0 0 1 15 7z',
+      scroll: 'M6 3h12v14a4 4 0 0 1-4 4H6M6 3a3 3 0 0 0-3 3v2h3M10 8h5M10 12h5',
+      salvage: 'M4 7h16v13H4zM8 7V4h8v3M9 12h6',
+      peas: 'M8 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+      bag: 'M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2',
+      stack: 'M12 3 2 8l10 5 10-5zM2 13l10 5 10-5M2 17.5l10 5 10-5',
+      give: 'M3 12h13M12 7l5 5-5 5M20 4v16',
+      drop2: 'M12 3v13M7 11l5 5 5-5M5 21h14',
+      break: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z'
+    };
+    const T = { weapon: '#FF9A6B', armor: '#7FB2FF', jewel: '#C9A2FF', cloth: '#9FC7B0', hp: '#FF6B70', mp: '#6EA8FF', st: '#E8C547', food: '#7FD08A', salv: '#D9B27A', misc: '#B3AA9C', key: '#E0B068', aeth: '#5FC3E8' };
+    const tile = (c) => 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.5))';
+    const MUTED = '#C8B89C', OK = '#7FD08A', TXT = '#F4EBDC';
+
+    // equipment
+    const coatCovers = ['Chest armor', 'Abdomen armor', 'Upper arm armor', 'Lower arm armor'];
+    const slot = (label, d, color, filled) => {
+      const s = { label, d, color: filled ? color : 'rgba(233,211,174,0.35)', edge: filled ? 'rgba(201,160,98,0.55)' : 'rgba(201,160,98,0.22)', bg: filled ? tile(color) : 'rgba(0,0,0,0.3)', op: '1', glow: 'none' };
+      if (state === 'drag') {
+        if (coatCovers.indexOf(label) >= 0) { s.edge = '#E0B068'; s.glow = '0 0 0 2px rgba(224,176,104,0.45), 0 0 14px rgba(224,176,104,0.45)'; }
+        else { s.op = '0.35'; }
+      }
+      return s;
+    };
+    const leftCol = [slot('Head', P.helm, T.armor, true), slot('Chest armor', P.shield, T.armor, true), slot('Upper arm armor', P.arm, T.armor, true), slot('Lower arm armor', P.arm, T.armor, true), slot('Hands', P.glove, T.armor, true), slot('Shirt', P.shirt, T.cloth, true)];
+    const rightCol = [slot('Cloak', P.cloak, T.cloth, true), slot('Abdomen armor', P.shield, T.armor, true), slot('Upper leg armor', P.leg, T.armor, true), slot('Lower leg armor', P.leg, T.armor, true), slot('Feet', P.boot, T.armor, true), slot('Pants', P.pants, T.cloth, true)];
+    const rowsBelow = [
+      { title: 'JEWELRY', slots: [slot('Neck', P.neck, T.jewel, true), slot('Left wrist', P.wrist, T.jewel, true), slot('Right wrist', P.wrist, T.jewel, true), slot('Left ring', P.ring, T.jewel, true), slot('Right ring', P.ring, T.jewel, false), slot('Trinket', P.trinket, T.jewel, true)] },
+      { title: 'HELD · AETHERIA', slots: [slot('Weapon', P.wand, T.weapon, true), slot('Shield or off hand', P.shield, T.weapon, false), slot('Ammunition', P.arrow, T.weapon, false), slot('Blue Aetheria', P.sigil, T.aeth, true), slot('Yellow Aetheria', P.sigil, '#E8C547', true), slot('Red Aetheria (locked)', P.sigil, '#FF6B70', false)] }
+    ];
+
+    // pack contents
+    const mainItems = [
+      ['Ornate Gold Wand', P.wand, T.weapon], ['Health Potion', P.drop, T.hp, '14', '-'], ['Mana Potion', P.drop, T.mp, '9', '='], ['Stamina Elixir', P.drop, T.st, '6'],
+      ['Olthoi Amuli Coat', P.shield, T.armor], ['Celdon Leggings', P.leg, T.armor], ['Silver Bracelet', P.wrist, T.jewel], ['Sapphire Ring', P.ring, T.jewel],
+      ['Lifestone Recall Gem', P.gem, T.key, '3', '0'], ['Cooked Meat', P.food, T.food, '20'], ['Steel Salvage (100)', P.salvage, T.salv], ['Gold Salvage (62)', P.salvage, T.salv],
+      ['Spiked Gauntlets', P.glove, T.armor], ['Yumi', P.bow, T.weapon], ['Greater Fire Peas', P.peas, T.weapon, '12'], ['Scroll of Flame Arc VI', P.scroll, T.misc],
+      ['Ring of Focus', P.ring, T.jewel], ['Hood of the Wise', P.helm, T.armor], ['Healing Kit', P.drop, T.food, '42'], ['Sturdy Iron Key', P.key, T.key],
+      ['Quest: Drudge Charm', P.trinket, T.key], ['Leather Boots', P.boot, T.armor], ['Robe of Shadows', P.cloak, T.cloth], ['Iron Salvage (88)', P.salvage, T.salv],
+      ['Tusker Paw', P.food, T.misc, '7'], ['Ivory', P.gem, T.misc, '3'], ['Major Coordination Scroll', P.scroll, T.misc], ['Atlatl', P.bow, T.weapon],
+      ['Hollow Minion Cap', P.helm, T.armor], ['Fire Wand', P.wand, T.weapon], ['Amber Necklace', P.neck, T.jewel], ['Dried Rations', P.food, T.food, '15'],
+      ['Mana Stone', P.gem, T.mp, '5'], ['Mithril Salvage (25)', P.salvage, T.salv], ['Pine Arrows', P.arrow, T.weapon, '250'], ['Drudge Skin', P.salvage, T.misc, '9'],
+      ['Short Sword', P.sword, T.weapon], ['Silk Shirt', P.shirt, T.cloth], ['Wool Pants', P.pants, T.cloth], ['Blue Aetheria (unattuned)', P.sigil, T.aeth],
+      ['Rare: Pearl of Life', P.gem, '#FF6B70'], ['Note', P.scroll, T.misc], ['Gem of Strength', P.gem, T.jewel], ['Platinum Bracelet', P.wrist, T.jewel]
+    ];
+    while (mainItems.length < 68) mainItems.push(mainItems[(mainItems.length * 7) % 44]);
+    const mk = (it, i, sel) => {
+      if (!it) return { label: 'Empty', d: '', color: 'transparent', bg: 'rgba(0,0,0,0.28)', border: '1px solid rgba(201,160,98,0.14)', op: '1', stamp: '', count: '' };
+      const [label, d, c, count, stamp] = it;
+      const cell = { label, d, color: c, bg: tile(c), border: '1px solid rgba(201,160,98,0.3)', op: '1', stamp: stamp || '', count: count || '' };
+      if (sel === i) cell.border = '2px solid #E0B068';
+      return cell;
+    };
+    const selIndex = { float: 0, browse: 0, long: 4, all: 0, sort: 0, split: 1, heavy: 0 }[state];
+    const mainCells = [];
+    for (let i = 0; i < 102; i++) {
+      const cell = mk(mainItems[i], i, selIndex);
+      if (state === 'drag' && i === 4) { cell.d = ''; cell.bg = 'rgba(0,0,0,0.2)'; cell.border = '1px dashed #E0B068'; }
+      if (state === 'drag' && i !== 4 && mainItems[i]) cell.op = '0.55';
+      mainCells.push(cell);
+    }
+    const isAll = state === 'all';
+    const packDefs = [
+      ['Spell components', '22/24', [['Prismatic Taper', P.peas, T.misc, '310'], ['Platinum Scarab', P.peas, T.misc, '48'], ['Pyreal Scarab', P.peas, T.misc, '4'], ['Hyssop', P.food, T.food, '50'], ['Powdered Agate', P.peas, T.jewel, '40'], ['Lead Scarab', P.peas, T.misc, '20'], ['Iron Scarab', P.peas, T.misc, '15'], ['Copper Scarab', P.peas, T.misc, '10'], ['Mandrake Root', P.food, T.food, '25'], ['Turquoise', P.gem, T.aeth, '30'], ['Silver Scarab', P.peas, T.misc, '22'], ['Gold Scarab', P.peas, T.key, '18']]],
+      ['Salvage', '24/24', [['Steel Salvage (100)', P.salvage, T.salv], ['Granite Salvage (100)', P.salvage, T.salv], ['Brass Salvage (100)', P.salvage, T.salv], ['Velvet Salvage (54)', P.salvage, T.salv], ['Ivory Salvage (40)', P.salvage, T.salv], ['Iron Salvage (88)', P.salvage, T.salv], ['Mahogany Salvage (71)', P.salvage, T.salv], ['Oak Salvage (100)', P.salvage, T.salv]]],
+      ['Potions', '9/24', [['Health Potion', P.drop, T.hp, '30'], ['Mana Potion', P.drop, T.mp, '25'], ['Stamina Elixir', P.drop, T.st, '12'], ['Healing Kit', P.drop, T.food, '42'], ['Elixir of Health', P.drop, T.hp, '5'], ['Philter of Mana', P.drop, T.mp, '4'], ['Draught of Stamina', P.drop, T.st, '8'], ['Mana Stone', P.gem, T.mp, '10'], ['Food: Apple', P.food, T.food, '30']]],
+      ['Keys and quest items', '15/24', [['Sturdy Iron Key', P.key, T.key], ['Black Marrow Key', P.key, T.key], ['Quest: Drudge Charm', P.trinket, T.key], ['Mukkir Wing', P.salvage, T.misc, '3'], ['Ancient Map', P.scroll, T.misc], ['Aun Tanua Totem', P.trinket, T.key]]],
+      ['Spare armor', '6/24', [['Celdon Sleeves', P.arm, T.armor], ['Celdon Girth', P.shield, T.armor], ['Lorica Gauntlets', P.glove, T.armor], ['Covenant Helm', P.helm, T.armor], ['Shadow Boots', P.boot, T.armor], ['Tower Shield', P.shield, T.armor]]],
+      ['Trade', '0/24', []]
+    ];
+    let groups;
+    if (isAll) {
+      const main = { id: 'g-main', title: 'MAIN PACK', meta: '68/102', cells: mainCells.slice(0, 16) };
+      const rest = packDefs.map(([name, fill, list], k) => ({ id: 'g-' + k, title: name.toUpperCase(), meta: fill, cells: list.map((it, i) => mk(it, i, -1)) }));
+      groups = [main].concat(rest).map((g) => {
+        const open = !closed[g.id] && g.cells.length > 0;
+        return { ...g, titled: true, open, chev: open ? '▾' : '▸', toggle: toggle(g.id), meta: g.cells.length ? g.meta : g.meta + ' · empty' };
+      });
+    } else {
+      groups = [{ titled: false, open: true, cells: mainCells, chev: '', title: '', meta: '', toggle: () => {} }];
+    }
+
+    const packRail = [{ label: 'All packs', fill: 'All', pct: '0%', h: '40px', icon: 16, sel: isAll, d: P.stack, gapAfter: '6px', track: 'transparent' },
+      { label: 'Main pack', fill: '68/102', pct: '67%', h: '50px', icon: 18, sel: !isAll, d: P.bag, gapAfter: '0px', track: 'rgba(255,255,255,0.12)' }]
+      .concat(packDefs.concat([['Foci of Enchantment', '—', []]]).map(([label, fill]) => { const [a, b] = fill.split('/'); return { label: 'Pack: ' + label, fill, pct: b ? Math.round(100 * a / b) + '%' : '0%', h: '40px', icon: 14, sel: false, d: P.bag, gapAfter: '0px', track: 'rgba(255,255,255,0.12)' }; }))
+      .map((p) => ({ ...p, edge: p.sel ? '#E0B068' : 'rgba(201,160,98,0.3)', bg: p.sel ? 'rgba(224,176,104,0.16)' : 'rgba(0,0,0,0.3)', color: p.sel ? '#E0B068' : MUTED, bar: p.pct === '100%' ? '#FF6B70' : '#E0B068' }));
+    const chips = ['All', 'Gear', 'Magic', 'Consumables', 'Salvage', 'Other'].map((label, i) => ({ label, edge: i === 0 ? '#E0B068' : 'rgba(201,160,98,0.3)', bg: i === 0 ? 'rgba(224,176,104,0.18)' : 'transparent', fg: i === 0 ? TXT : MUTED }));
+
+    // item details
+    const sec = (id, title, rows, count) => {
+      const open = !closed[id];
+      return { title, rows, count: count || '', open, chev: open ? '▾' : '▸', toggle: toggle(id) };
+    };
+    const row = (k, v, c, kc) => ({ k, v, c: c || TXT, kc: kc || TXT });
+    const wand = {
+      name: 'Ornate Gold Wand', sub: 'Caster · in Main pack', d: P.wand, color: T.weapon, tile: tile(T.weapon), primary: 'Equip',
+      facts: [{ k: 'Value', v: '18,400' }, { k: 'Burden', v: '50' }, { k: 'Workmanship', v: '8' }],
+      sections: [
+        sec('w-props', 'PROPERTIES', [row('Elemental damage', '+8%', T.weapon), row('Mana conversion', '+5%', T.armor), row('Melee defense', '+12%', OK), row('Imbued', 'Fire rending', T.weapon)]),
+        sec('w-spells', 'SPELLS', [row('Hermetic Link VI', 'Item', MUTED), row('Spirit Drinker VI', 'Item', MUTED), row('Defender VI', 'Item', MUTED)], '3'),
+        sec('w-mana', 'MANA', [row('Current', '2,410 / 3,000'), row('Spellcraft', '280'), row('Mana cost', '1 every 12 s')]),
+        sec('w-req', 'REQUIRES', [row('Wield: War Magic', '300', OK), row('Activate: Arcane Lore', '260', OK)])
+      ]
+    };
+    const coat = {
+      name: 'Olthoi Amuli Coat', sub: 'Armor · chest, abdomen, arms', d: P.shield, color: T.armor, tile: tile(T.armor), primary: 'Equip',
+      facts: [{ k: 'Armor', v: '650' }, { k: 'Value', v: '42,000' }, { k: 'Burden', v: '1,240' }],
+      sections: [
+        sec('c-prot', 'PROTECTION', [row('Slashing', 'Excellent'), row('Piercing', 'Above average'), row('Bludgeoning', 'Excellent'), row('Fire', 'Average'), row('Cold', 'Below average', '#FF8A8E'), row('Acid', 'Above average'), row('Lightning', 'Average')]),
+        sec('c-rate', 'RATINGS', [row('Damage resistance', '+3', OK), row('Critical damage resistance', '+2', OK), row('Healing boost', '+1', OK)]),
+        sec('c-set', "SOLDIER'S SET · 3 OF 5", [row('2 pieces', '+4% damage', OK), row('3 pieces', '+10 melee defense', OK), row('4 pieces', '+5% critical', MUTED, MUTED), row('5 pieces', '+1 damage rating', MUTED, MUTED)]),
+        sec('c-spells', 'SPELLS', [row('Legendary Strength', 'Cantrip', MUTED), row('Legendary Endurance', 'Cantrip', MUTED), row('Epic Invulnerability', 'Cantrip', MUTED), row('Epic Impenetrability', 'Cantrip', MUTED), row('Major Blade Ward', 'Cantrip', MUTED), row('Major Flame Ward', 'Cantrip', MUTED), row('Impenetrability VII', 'Item', MUTED), row('Blade Bane VII', 'Item', MUTED), row('Flame Bane VII', 'Item', MUTED), row('Acid Bane VII', 'Item', MUTED)], '10'),
+        sec('c-tink', 'TINKERING · 7', [row('Steel', '×5'), row('Alabaster', '×2'), row('Last tinkered by', 'Mira')]),
+        sec('c-req', 'REQUIRES', [row('Wield: level', '180', OK), row('Activate: Arcane Lore', '310', '#FF8A8E')]),
+        sec('c-about', 'ABOUT', [row('Attuned · Bonded', ''), row('Made from the carapace of an Olthoi queen.', '', MUTED, MUTED)])
+      ]
+    };
+    const potion = {
+      name: 'Health Potion', sub: 'Consumable · stack of 14', d: P.drop, color: T.hp, tile: tile(T.hp), primary: 'Use',
+      facts: [{ k: 'Value', v: '350' }, { k: 'Burden', v: '140' }, { k: 'Shortcut', v: '-' }],
+      sections: [sec('p-eff', 'EFFECT', [row('Restores health', '+200'), row('Cooldown', '5 s')])]
+    };
+    const item = state === 'long' ? coat : state === 'split' ? potion : wand;
+
+    const heavy = state === 'heavy';
+    const floating = state === 'float';
+    const hasDetails = !(state === 'none' || state === 'drag');
+    const docked = hasDetails && !floating;
+    const ad = floating
+      ? { floating: true, left: '466px', top: '150px', h: '430px', radius: '6px', border: '1px solid rgba(201,160,98,0.8)', bg: 'rgba(24,19,14,0.98)', shadow: '0 14px 36px rgba(0,0,0,0.65)', padR: '64px' }
+      : { floating: false, left: '792px', top: '68px', h: '506px', radius: '4px', border: '1px solid rgba(201,160,98,0.35)', bg: 'rgba(0,0,0,0.28)', shadow: 'none', padR: '14px' };
+    return {
+      w: docked ? '1080px' : '792px',
+      ad,
+      hasDetails, item,
+      leftCol, rightCol, rowsBelow, packs: packRail, chips, groups,
+      viewTitle: isAll ? 'All packs' : 'Main pack',
+      viewCount: isAll ? '144 items · 72 free' : '68 of 102 · 34 free',
+      groupBy: isAll ? 'Pack' : 'None',
+      sortEdge: state === 'sort' ? '#E0B068' : 'rgba(201,160,98,0.45)',
+      sortBg: state === 'sort' ? 'rgba(224,176,104,0.18)' : 'rgba(0,0,0,0.35)',
+      isDrag: state === 'drag', isSplit: state === 'split', isSort: state === 'sort',
+      sortBy: [['Name', ''], ['Type', 'then name'], ['Value', ''], ['Burden', ''], ['Workmanship', ''], ['Newest first', ''], ['My order', 'drag to arrange']]
+        .map(([label, note]) => ({ label, note, on: label === 'Type', mark: label === 'Type' ? '✓' : '', bg: label === 'Type' ? 'rgba(224,176,104,0.14)' : 'transparent' })),
+      tidy: [
+        { label: 'Merge partial stacks', note: 'Joins 3 split stacks' },
+        { label: 'Close gaps', note: 'Moves items up into empty slots' }
+      ],
+      actions: [{ label: 'Give to your target', d: P.give }, { label: 'Drop on the ground', d: P.drop2 }, { label: 'Salvage', d: P.break }, { label: 'More: split, inscribe, add to shortcut bar, link in chat', d: 'M5 12h.01M12 12h.01M19 12h.01' }],
+      burdenPct: heavy ? '142%' : '61%',
+      burdenBar: heavy ? '47.3%' : '20.3%',
+      burdenColor: heavy ? '#FF8A5B' : '#E0B068',
+      burdenUnits: heavy ? '6,610 of 4,650' : '2,840 of 4,650',
+      hint: state === 'drag' ? 'Drop on a highlighted slot to equip · Esc cancels'
+        : heavy ? 'You are slowed. Drop, sell or salvage something.'
+        : state === 'none' ? 'Select an item for details'
+        : floating ? 'Pin the card to keep it docked'
+        : 'Double-click to use · Shift-drag splits'
+    };
+  }
+}
+</script>
+</body>
+</html>

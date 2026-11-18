@@ -1,0 +1,459 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Horizon.dc.html": {
+      "h": 900,
+      "title": "D \u00b7 Horizon (neutral): world first, chrome barely there",
+      "w": 1440,
+      "x": 0,
+      "y": 0,
+      "page": "r2"
+    },
+    "HorizonBronze.dc.html": {
+      "h": 900,
+      "title": "D \u00b7 Horizon (bronze trim): same layout, warmer edges",
+      "w": 1440,
+      "x": 1520,
+      "y": 0,
+      "page": "r2"
+    },
+    "Main.dc.html": {
+      "h": 900,
+      "title": "A \u00b7 Glass: quiet, floating, fades away",
+      "w": 1440,
+      "x": 0,
+      "y": 0,
+      "page": "r1"
+    },
+    "Orbit.dc.html": {
+      "h": 900,
+      "title": "C \u00b7 Orbit: everything around one centre",
+      "w": 1440,
+      "x": 3040,
+      "y": 0,
+      "page": "r1"
+    },
+    "Tactical.dc.html": {
+      "h": 900,
+      "title": "B \u00b7 Tactical: solid, dense, numbers first",
+      "w": 1440,
+      "x": 1520,
+      "y": 0,
+      "page": "r1"
+    },
+    "InventoryInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "inv",
+      "title": "Inventory open over the bronze HUD"
+    },
+    "Inventory.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1080,
+      "h": 640,
+      "page": "inv",
+      "title": "Browse: item selected, details inline",
+      "is_interactive": true
+    },
+    "InventoryDrag.dc.html": {
+      "x": 2680,
+      "y": 0,
+      "w": 1080,
+      "h": 640,
+      "page": "inv",
+      "title": "Drag to equip: the slots it covers light up"
+    },
+    "InventorySplit.dc.html": {
+      "x": 1520,
+      "y": 760,
+      "w": 1080,
+      "h": 640,
+      "page": "inv",
+      "title": "Split a stack"
+    },
+    "InventoryHeavy.dc.html": {
+      "x": 2680,
+      "y": 760,
+      "w": 1080,
+      "h": 640,
+      "page": "inv",
+      "title": "Over-burdened"
+    },
+    "InventoryAll.dc.html": {
+      "x": 1520,
+      "y": 1520,
+      "w": 1080,
+      "h": 640,
+      "page": "inv",
+      "title": "All packs, grouped by pack (click a heading to fold it)",
+      "is_interactive": true
+    },
+    "InventoryLong.dc.html": {
+      "x": 2680,
+      "y": 1520,
+      "w": 1080,
+      "h": 640,
+      "page": "inv",
+      "title": "Long item: details scroll, sections fold",
+      "is_interactive": true
+    },
+    "InventorySort.dc.html": {
+      "x": 1520,
+      "y": 2280,
+      "w": 1080,
+      "h": 640,
+      "page": "inv",
+      "title": "Sort and tidy menu",
+      "is_interactive": true
+    },
+    "InventoryCompact.dc.html": {
+      "x": 2680,
+      "y": 2280,
+      "w": 792,
+      "h": 640,
+      "page": "inv",
+      "title": "Nothing selected: details tuck away (792 wide)",
+      "is_interactive": true
+    },
+    "InventoryFloat.dc.html": {
+      "x": 3552,
+      "y": 2280,
+      "w": 792,
+      "h": 640,
+      "page": "inv",
+      "title": "Small screen: details pop up as a card beside the item",
+      "is_interactive": true
+    },
+    "SpellbookInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "spells",
+      "title": "Spellbook open over the bronze HUD"
+    },
+    "Spellbook.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 940,
+      "h": 640,
+      "page": "spells",
+      "title": "Spells: filter by school and level, details inline",
+      "is_interactive": true
+    },
+    "SpellbookForget.dc.html": {
+      "x": 1520,
+      "y": 760,
+      "w": 940,
+      "h": 640,
+      "page": "spells",
+      "title": "Forget a spell: confirm first"
+    },
+    "SpellbookComponents.dc.html": {
+      "x": 2540,
+      "y": 760,
+      "w": 940,
+      "h": 640,
+      "page": "spells",
+      "title": "Components: carried and restock amounts",
+      "is_interactive": true
+    },
+    "HudBarsCombat.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "bars",
+      "title": "Melee mode: spells on any bar sit greyed out"
+    },
+    "HudBars.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "bars",
+      "title": "Magic mode: spells wake up, Main bar keys move to Shift"
+    },
+    "HudBarsEdit.dc.html": {
+      "x": 0,
+      "y": 1020,
+      "w": 1440,
+      "h": 900,
+      "page": "bars",
+      "title": "Edit layout: move, turn, resize bars; set each slot\u2019s keys"
+    },
+    "HudBarsDrag.dc.html": {
+      "x": 1520,
+      "y": 1020,
+      "w": 1440,
+      "h": 900,
+      "page": "bars",
+      "title": "Dragging from the spellbook: the book fades so bars behind it take the drop"
+    },
+    "OptionsInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "opts",
+      "title": "Options open over the bronze HUD"
+    },
+    "Options.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1100,
+      "h": 720,
+      "page": "opts",
+      "title": "Interface: the Modern / Retail switch lives here",
+      "is_interactive": true
+    },
+    "OptionsGameplay.dc.html": {
+      "x": 2700,
+      "y": 0,
+      "w": 1100,
+      "h": 720,
+      "page": "opts",
+      "title": "Gameplay: character options, saved on the server",
+      "is_interactive": true
+    },
+    "OptionsChat.dc.html": {
+      "x": 1520,
+      "y": 840,
+      "w": 1100,
+      "h": 720,
+      "page": "opts",
+      "title": "Chat: channels, and what each tab shows as one grid",
+      "is_interactive": true
+    },
+    "OptionsControls.dc.html": {
+      "x": 2700,
+      "y": 840,
+      "w": 1100,
+      "h": 720,
+      "page": "opts",
+      "title": "Controls: key bindings, with a clash caught",
+      "is_interactive": true
+    },
+    "OptionsGraphics.dc.html": {
+      "x": 1520,
+      "y": 1680,
+      "w": 1100,
+      "h": 720,
+      "page": "opts",
+      "title": "Graphics: one preset, or fine-tune",
+      "is_interactive": true
+    },
+    "OptionsSearch.dc.html": {
+      "x": 2700,
+      "y": 1680,
+      "w": 1100,
+      "h": 720,
+      "page": "opts",
+      "title": "Search across every section",
+      "is_interactive": true
+    },
+    "CharacterInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "char",
+      "title": "Character sheet open over the bronze HUD"
+    },
+    "Character.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1100,
+      "h": 720,
+      "page": "char",
+      "title": "Skill selected: how it adds up, raise +1, +10 or max",
+      "is_interactive": true
+    },
+    "CharacterAttribute.dc.html": {
+      "x": 2700,
+      "y": 0,
+      "w": 1100,
+      "h": 720,
+      "page": "char",
+      "title": "Attribute selected: what it feeds",
+      "is_interactive": true
+    },
+    "CharacterTrain.dc.html": {
+      "x": 1520,
+      "y": 840,
+      "w": 1100,
+      "h": 720,
+      "page": "char",
+      "title": "Untrained skill: train it with credits",
+      "is_interactive": true
+    },
+    "CharacterTitles.dc.html": {
+      "x": 2700,
+      "y": 840,
+      "w": 1100,
+      "h": 720,
+      "page": "char",
+      "title": "Titles: pick the one others see",
+      "is_interactive": true
+    },
+    "CharacterInfo.dc.html": {
+      "x": 1520,
+      "y": 1680,
+      "w": 1100,
+      "h": 720,
+      "page": "char",
+      "title": "Information: life, allegiance, fellowship, housing"
+    },
+    "CharacterHighLevel.dc.html": {
+      "x": 2700,
+      "y": 1680,
+      "w": 1100,
+      "h": 720,
+      "page": "char",
+      "title": "High-level servers: level 4,782, the plate grows with the number",
+      "is_interactive": true
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-18T09:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas",
+    "page": "char"
+  },
+  "notes": {
+    "t1": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "In-world HUD: three directions",
+      "w": 240,
+      "x": 0,
+      "y": -300,
+      "page": "r1"
+    },
+    "t2": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "Round 2: Horizon, world first",
+      "x": 0,
+      "y": -300,
+      "page": "r2"
+    },
+    "t3": {
+      "kind": "title1",
+      "maxW": 3760,
+      "text": "Inventory (bronze)",
+      "x": 0,
+      "y": -300,
+      "page": "inv"
+    },
+    "t4": {
+      "kind": "title1",
+      "maxW": 3480,
+      "text": "Spellbook (bronze)",
+      "x": 0,
+      "y": -300,
+      "page": "spells"
+    },
+    "t5": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "Your bars: anywhere, any shape",
+      "x": 0,
+      "y": -300,
+      "page": "bars"
+    },
+    "t6": {
+      "kind": "title1",
+      "maxW": 3800,
+      "text": "Options (bronze)",
+      "x": 0,
+      "y": -300,
+      "page": "opts"
+    },
+    "t7": {
+      "kind": "title1",
+      "maxW": 3800,
+      "text": "Character sheet (bronze)",
+      "x": 0,
+      "y": -300,
+      "page": "char"
+    }
+  },
+  "order": [
+    "Horizon.dc.html",
+    "HorizonBronze.dc.html",
+    "Main.dc.html",
+    "Tactical.dc.html",
+    "Orbit.dc.html",
+    "InventoryInGame.dc.html",
+    "Inventory.dc.html",
+    "InventoryDrag.dc.html",
+    "InventorySplit.dc.html",
+    "InventoryHeavy.dc.html",
+    "InventoryAll.dc.html",
+    "InventoryLong.dc.html",
+    "InventorySort.dc.html",
+    "InventoryCompact.dc.html",
+    "InventoryFloat.dc.html",
+    "SpellbookInGame.dc.html",
+    "Spellbook.dc.html",
+    "SpellbookForget.dc.html",
+    "SpellbookComponents.dc.html",
+    "HudBarsCombat.dc.html",
+    "HudBars.dc.html",
+    "HudBarsEdit.dc.html",
+    "HudBarsDrag.dc.html",
+    "OptionsInGame.dc.html",
+    "Options.dc.html",
+    "OptionsGameplay.dc.html",
+    "OptionsChat.dc.html",
+    "OptionsControls.dc.html",
+    "OptionsGraphics.dc.html",
+    "OptionsSearch.dc.html",
+    "CharacterInGame.dc.html",
+    "Character.dc.html",
+    "CharacterAttribute.dc.html",
+    "CharacterTrain.dc.html",
+    "CharacterTitles.dc.html",
+    "CharacterInfo.dc.html",
+    "CharacterHighLevel.dc.html"
+  ],
+  "pages": [
+    {
+      "id": "r2",
+      "name": "Round 2: Horizon"
+    },
+    {
+      "id": "bars",
+      "name": "Your bars"
+    },
+    {
+      "id": "inv",
+      "name": "Inventory"
+    },
+    {
+      "id": "spells",
+      "name": "Spellbook"
+    },
+    {
+      "id": "opts",
+      "name": "Options"
+    },
+    {
+      "id": "char",
+      "name": "Character"
+    },
+    {
+      "id": "r1",
+      "name": "Round 1"
+    }
+  ],
+  "title": "OpenAC Modern UI"
+}
