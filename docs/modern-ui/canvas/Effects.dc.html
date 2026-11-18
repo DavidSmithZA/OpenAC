@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Effects window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{opacity:0.45;cursor:default}
+.fx-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,160,98,0.7) transparent}
+.fx-scroll::-webkit-scrollbar{width:5px}
+.fx-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
+</style>
+</helmet>
+<div style="width: 760px; height: 560px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.93); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 20px; box-sizing: border-box; background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM12 8v4l2.5 2"></path></svg>
+    <h1 style="margin: 0; font-size: 15px; font-weight: 600;">Effects on you</h1>
+    <span style="flex: 1;"></span>
+    <button aria-label="Close" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- tabs -->
+  <div role="tablist" aria-label="Effects" style="position: absolute; left: 0; right: 0; top: 52px; height: 40px; display: flex; gap: 4px; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35);">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+      <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="height: 40px; padding: 0 12px; border: 0; border-bottom: 2px solid {{t.line}}; background: transparent; color: {{t.fg}}; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; cursor: pointer;">
+        {{t.label}}
+        <span style="height: 18px; padding: 0 6px; border-radius: 999px; background: {{t.countBg}}; color: {{t.countFg}}; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; font-variant-numeric: tabular-nums;">{{t.count}}</span>
+      </button>
+    </sc-for>
+  </div>
+
+  <!-- list -->
+  <div style="position: absolute; left: 20px; top: 104px; width: 420px; bottom: 64px; display: flex; flex-direction: column; gap: 8px;">
+    <div style="flex: none; display: flex; gap: 8px;">
+      <label style="flex: 1; height: 32px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 8px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+        <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Find an effect</span>
+        <input placeholder="Find a spell, or what it changes" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12.5px;">
+      </label>
+      <button title="Sort by time left, name, or what it changes" style="height: 32px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+        <span style="color: #A89A82; font-weight: 500;">Sort</span> Time left
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+    </div>
+    <sc-if value="{{hasChips}}" hint-placeholder-val="{{true}}">
+      <div role="group" aria-label="What it changes" style="flex: none; display: flex; gap: 4px; flex-wrap: wrap;">
+        <sc-for list="{{chips}}" as="c" hint-placeholder-count="5">
+          <button aria-pressed="{{c.on}}" onClick="{{c.pick}}" style="height: 26px; padding: 0 9px; border-radius: 999px; border: 1px solid {{c.edge}}; background: {{c.bg}}; display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
+            {{c.label}}<span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">{{c.count}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+    <div class="fx-scroll" style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding-right: 4px;">
+      <sc-if value="{{showVitae}}" hint-placeholder-val="{{false}}">
+        <div style="flex: none; margin-bottom: 8px; padding: 10px 12px; border-radius: 4px; border: 1px solid rgba(255,107,112,0.6); background: rgba(60,14,16,0.45); display: flex; gap: 12px; align-items: center;">
+          <span style="flex: none; width: 52px; display: flex; flex-direction: column; align-items: center; gap: 1px;">
+            <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #FF8A8E;">VITAE</span>
+            <span style="font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums;">94%</span>
+          </span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; line-height: 1.45; color: #E9D3AE;">
+            <span>From your recent death: health, stamina, mana and skills are 6% lower.</span>
+            <span style="color: #C8B89C; font-variant-numeric: tabular-nums;">1% comes back after 412,880 more experience.</span>
+          </span>
+        </div>
+      </sc-if>
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+        <div style="height: 26px; flex: none; display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: {{g.color}};"><span>{{g.title}}</span><span style="font-variant-numeric: tabular-nums;">{{g.count}}</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span></div>
+        <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="3">
+          <button onClick="{{r.pick}}" aria-pressed="{{r.on}}" style="flex: none; height: 44px; margin-bottom: 2px; padding: 0 10px 0 6px; box-sizing: border-box; border-radius: 4px; border: 1px solid {{r.edge}}; background: {{r.bg}}; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+            <span style="width: 30px; height: 30px; flex: none; border-radius: 4px; border: 1px solid {{r.tileEdge}}; background: {{r.tile}}; display: flex; align-items: center; justify-content: center;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{r.color}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.d}}"></path></svg>
+            </span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.name}}</span>
+              <span style="font-size: 10.5px; color: #A89A82; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span style="color: {{r.changeColor}};">{{r.change}}</span> · {{r.by}}</span>
+            </span>
+            <span style="flex: none; width: 62px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+              <span style="font-size: 12px; font-weight: 700; color: {{r.tc}}; font-variant-numeric: tabular-nums;">{{r.t}}</span>
+              <sc-if value="{{r.timed}}" hint-placeholder-val="{{true}}">
+                <span style="width: 56px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.55); overflow: hidden;"><span style="display: block; width: {{r.pct}}; height: 100%; background: {{r.tc}};"></span></span>
+              </sc-if>
+            </span>
+          </button>
+        </sc-for>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- details -->
+  <section aria-label="{{s.name}}" style="position: absolute; left: 456px; right: 20px; top: 104px; bottom: 64px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.28); display: flex; flex-direction: column;">
+    <div style="flex: none; padding: 14px 14px 12px; display: flex; gap: 10px; align-items: flex-start; border-bottom: 1px solid rgba(201,160,98,0.2);">
+      <span style="width: 40px; height: 40px; flex: none; border-radius: 4px; border: 1px solid {{s.tileEdge}}; background: {{s.tile}}; display: flex; align-items: center; justify-content: center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+      </span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+        <h2 style="margin: 0; font-size: 14px; font-weight: 700; line-height: 1.3;">{{s.name}}</h2>
+        <span style="font-size: 11px; color: #C8B89C;">{{s.school}}</span>
+      </span>
+    </div>
+    <div class="fx-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: grid; grid-template-columns: 70px 1fr; row-gap: 8px; column-gap: 10px; font-size: 12px; align-items: baseline;">
+        <span style="font-size: 10.5px; color: #A89A82;">Changes</span>
+        <span style="display: flex; align-items: baseline; gap: 8px;"><span style="font-weight: 600; font-variant-numeric: tabular-nums;">{{s.stat}}</span><span style="font-weight: 700; color: {{s.changeColor}}; font-variant-numeric: tabular-nums;">{{s.delta}}</span></span>
+        <span style="font-size: 10.5px; color: #A89A82;">{{s.byLabel}}</span>
+        <span style="font-weight: 600;">{{s.by}}</span>
+        <span style="font-size: 10.5px; color: #A89A82;">Time left</span>
+        <span style="display: flex; flex-direction: column; gap: 5px;">
+          <span style="font-weight: 700; color: {{s.tc}}; font-variant-numeric: tabular-nums;">{{s.timeText}}</span>
+          <sc-if value="{{s.timed}}" hint-placeholder-val="{{true}}">
+            <span style="height: 4px; border-radius: 2px; background: rgba(0,0,0,0.55); overflow: hidden;"><span style="display: block; width: {{s.pct}}; height: 100%; background: {{s.tc}};"></span></span>
+          </sc-if>
+        </span>
+      </div>
+      <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #E9D3AE;">{{s.desc}}</p>
+      <sc-if value="{{s.hasUnder}}" hint-placeholder-val="{{false}}">
+        <div style="padding: 8px 10px; border-radius: 4px; border: 1px dashed rgba(201,160,98,0.45); font-size: 11px; line-height: 1.45; color: #C8B89C;">{{s.under}}</div>
+      </sc-if>
+    </div>
+    <div style="flex: none; min-height: 52px; padding: 0 14px; box-sizing: border-box; border-top: 1px solid rgba(201,160,98,0.2); display: flex; align-items: center; gap: 10px;">
+      <sc-if value="{{s.canCast}}" hint-placeholder-val="{{true}}">
+        <button style="height: 32px; padding: 0 14px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Cast again</button>
+        <span style="font-size: 10.5px; color: #A89A82;">{{s.bar}}</span>
+      </sc-if>
+      <sc-if value="{{s.isGear}}" hint-placeholder-val="{{false}}">
+        <button style="height: 32px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Show {{s.by}}</button>
+        <span style="font-size: 10.5px; color: #A89A82;">Lasts while you wear it</span>
+      </sc-if>
+      <sc-if value="{{s.isHarm}}" hint-placeholder-val="{{false}}">
+        <span style="font-size: 11px; line-height: 1.4; color: #C8B89C;">Ends on its own when the time runs out, or sooner if you dispel it.</span>
+      </sc-if>
+    </div>
+  </section>
+
+  <!-- foot -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 52px; padding: 0 20px; box-sizing: border-box; border-top: 1px solid rgba(201,160,98,0.3); display: flex; align-items: center; gap: 14px; font-size: 11px; color: #A89A82;">
+    <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #FFB547;"></span>Warns 5 min before a helpful one ends</span>
+    <span>Hover a count on screen for a quick list</span>
+    <span style="flex: 1;"></span>
+    <button title="Options › Interface › Effects" style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; color: #F4EBDC; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"></path></svg>
+      Settings
+    </button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tab":{"editor":"enum","options":["helpful","harmful"],"default":"helpful"},"vitae":{"editor":"enum","options":["no","yes"],"default":"no"},"$preview":{"width":760,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const GOLD = '#E0B068', SOON = '#FFB547', RED = '#FF6B70', GREEN = '#7FD08A', TXT = '#F4EBDC';
+    const tab = st.tab || this.props.tab || 'helpful';
+    const harmTab = tab === 'harmful';
+    const vitae = (this.props.vitae ?? 'no') === 'yes';
+    const P = {
+      star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+      shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+      drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+      flame: 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1.5 1 3 2 3 4',
+      eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
+      ring: 'M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM9 3h6l-3 6z',
+      broken: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM13 7l-3 5h4l-3 5',
+      down: 'M12 5v14M5 12l7 7 7-7',
+      wave: 'M4 15c3-6 5 6 8 0s5 6 8 0M4 9c3-6 5 6 8 0s5 6 8 0'
+    };
+    const C = { creat: '#7FB2FF', life: '#7FD08A', war: '#FF9A6B', gear: '#E0B068', harm: '#FF8A8E' };
+    const tile = (c) => 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.5))';
+    // key, group, kind, name, d, color, stat, delta, by, time, total, pct, desc, extra
+    const E = (key, group, kind, name, d, color, stat, delta, by, time, total, pct, desc, x) =>
+      Object.assign({ key, group, kind, name, d, color, stat, delta, by, time, total, pct, desc }, x || {});
+    const CREAT8 = 'Creature Enchantment · Level VIII', LIFE8 = 'Life Magic · Level VIII';
+    const helpful = [
+      E('focus', 'soon', 'attr', 'Incantation of Focus Self', P.star, C.creat, 'Focus 210 → 255', '+45', 'You', '3:40', '1:30:00', 4, "Increases the caster's Focus by 45 points.", { school: CREAT8, cast: true, bar: 'On Buffs bar, ⇧4' }),
+      E('will', 'soon', 'attr', 'Incantation of Willpower Self', P.star, C.creat, 'Willpower 190 → 235', '+45', 'You', '4:12', '1:30:00', 5, "Increases the caster's Willpower by 45 points.", { school: CREAT8, cast: true, bar: 'On Buffs bar, ⇧5' }),
+      E('armor', 'timed', 'prot', 'Incantation of Armor Other', P.shield, C.life, 'Natural armor', '+225', 'Mira', '41:08', '1:30:00', 46, "Increases the target's natural armor by 225 points.", { school: LIFE8 }),
+      E('str', 'timed', 'attr', 'Incantation of Strength Self', P.star, C.creat, 'Strength 245 → 290', '+45', 'You', '44:30', '1:30:00', 49, "Increases the caster's Strength by 45 points.", { school: CREAT8, cast: true, bar: 'On Buffs bar, ⇧1', under: 'Underneath: Strength Other VI from Osk (+35, 31:02 left). It takes over if this one ends first.' }),
+      E('regen', 'timed', 'vital', 'Incantation of Regeneration Self', P.heart, C.life, 'Health regained', 'faster', 'You', '46:51', '1:30:00', 52, 'Increases the rate at which the caster regains Health.', { school: LIFE8, cast: true, bar: 'On Buffs bar, ⇧7' }),
+      E('renew', 'timed', 'vital', 'Incantation of Mana Renewal Self', P.drop, C.life, 'Mana regained', 'faster', 'You', '47:10', '1:30:00', 52, 'Increases the rate at which the caster regains Mana.', { school: LIFE8, cast: true, bar: 'On Buffs bar, ⇧8' }),
+      E('invuln', 'timed', 'skill', 'Incantation of Invulnerability Self', P.shield, C.creat, 'Melee Defense 402 → 447', '+45', 'You', '52:02', '1:30:00', 58, "Increases the caster's Melee Defense skill by 45 points.", { school: CREAT8, cast: true, bar: 'Not on a bar' }),
+      E('mres', 'timed', 'skill', 'Incantation of Magic Resistance Self', P.eye, C.creat, 'Magic Defense 388 → 433', '+45', 'You', '52:06', '1:30:00', 58, "Increases the caster's Magic Defense skill by 45 points.", { school: CREAT8, cast: true, bar: 'Not on a bar' }),
+      E('fprot', 'timed', 'prot', 'Incantation of Fire Protection Self', P.flame, C.life, 'Fire damage taken', 'lower', 'You', '57:58', '1:30:00', 64, 'Reduces damage the caster takes from fire.', { school: LIFE8, cast: true, bar: 'Not on a bar' }),
+      E('epstr', 'gear', 'attr', 'Epic Strength', P.ring, C.gear, 'Strength', '+20', 'Gold Ring', '', '', 100, "Increases the target's Strength by 20 points. Additional spells can be layered over this.", { school: 'Cantrip · from your gear', gear: true }),
+      E('epend', 'gear', 'attr', 'Epic Endurance', P.ring, C.gear, 'Endurance', '+20', 'Amuli Leggings', '', '', 100, "Increases the target's Endurance by 20 points. Additional spells can be layered over this.", { school: 'Cantrip · from your gear', gear: true }),
+      E('majco', 'gear', 'attr', 'Major Coordination', P.ring, C.gear, 'Coordination', '+15', 'Platemail Gauntlets', '', '', 100, "Increases the target's Coordination by 15 points. Additional spells can be layered over this.", { school: 'Cantrip · from your gear', gear: true }),
+      E('legfo', 'gear', 'attr', 'Legendary Focus', P.ring, C.gear, 'Focus', '+35', 'Ivory Wand', '', '', 100, "Increases the target's Focus by 35 points. Additional spells can be layered over this.", { school: 'Cantrip · from your gear', gear: true })
+    ];
+    // the rest of the 42, so the list scrolls through all of them
+    const selfT = (n, kind, stat, time, pct, d, color, prot) => E('x' + n, 'timed', kind, 'Incantation of ' + n + ' Self', d, color,
+      stat, prot ? 'lower' : kind === 'vital' ? 'faster' : '+45', 'You', time, '1:30:00', pct,
+      prot ? 'Reduces damage the caster takes from ' + stat.replace(' damage taken', '').toLowerCase() + '.'
+        : kind === 'vital' ? 'Increases the rate at which the caster regains ' + stat.replace(' regained', '') + '.'
+        : "Increases the caster's " + stat + ' by 45 points.',
+      { school: (prot || kind === 'vital') ? LIFE8 : CREAT8, cast: true, bar: 'Not on a bar' });
+    [
+      selfT('Rejuvenation', 'vital', 'Stamina regained', '47:15', 52, P.drop, C.life),
+      selfT('Endurance', 'attr', 'Endurance', '48:02', 53, P.star, C.creat), selfT('Coordination', 'attr', 'Coordination', '48:05', 53, P.star, C.creat),
+      selfT('Quickness', 'attr', 'Quickness', '48:09', 53, P.star, C.creat), selfT('Impregnability', 'skill', 'Missile Defense', '52:04', 58, P.shield, C.creat),
+      selfT('War Magic Mastery', 'skill', 'War Magic', '55:40', 62, P.flame, C.creat), selfT('Life Magic Mastery', 'skill', 'Life Magic', '55:44', 62, P.heart, C.creat),
+      selfT('Mana Conversion Mastery', 'skill', 'Mana Conversion', '55:48', 62, P.drop, C.creat), selfT('Arcane Enlightenment', 'skill', 'Arcane Lore', '56:10', 62, P.eye, C.creat),
+      selfT('Cold Protection', 'prot', 'Cold damage taken', '58:01', 64, P.shield, C.life, true), selfT('Lightning Protection', 'prot', 'Lightning damage taken', '58:03', 64, P.shield, C.life, true),
+      selfT('Acid Protection', 'prot', 'Acid damage taken', '58:06', 64, P.shield, C.life, true), selfT('Blade Protection', 'prot', 'Slashing damage taken', '58:10', 64, P.shield, C.life, true),
+      selfT('Piercing Protection', 'prot', 'Piercing damage taken', '58:12', 64, P.shield, C.life, true), selfT('Bludgeoning Protection', 'prot', 'Bludgeoning damage taken', '58:15', 65, P.shield, C.life, true)
+    ].forEach((e) => helpful.push(e));
+    const gearX = (name, kind, stat, delta, item) => E('g' + name, 'gear', kind, name, P.ring, C.gear, stat, delta || 'raised', item, '', '', 100,
+      "Increases the target's " + stat + (delta ? ' by ' + delta.slice(1) + ' points' : '') + '. Additional spells can be layered over this.',
+      { school: 'Cantrip · from your gear', gear: true });
+    [
+      gearX('Epic Willpower', 'attr', 'Willpower', '+20', 'Gold Ring'), gearX('Major Quickness', 'attr', 'Quickness', '+15', 'Amuli Leggings'),
+      gearX('Epic War Magic Aptitude', 'skill', 'War Magic', '', 'Ivory Wand'), gearX('Epic Magic Resistance', 'skill', 'Magic Defense', '', 'Silver Necklace'),
+      gearX('Major Life Magic Aptitude', 'skill', 'Life Magic', '', 'Silver Necklace'), gearX('Epic Mana Conversion Prowess', 'skill', 'Mana Conversion', '', 'Ivory Wand'),
+      gearX('Legendary Arcane Prowess', 'skill', 'Arcane Lore', '', 'Ivory Wand'), gearX('Major Invulnerability', 'skill', 'Melee Defense', '', 'Platemail Hauberk'),
+      gearX('Epic Impregnability', 'skill', 'Missile Defense', '', 'Platemail Hauberk'), gearX('Major Health Gain', 'vital', 'maximum Health', '', 'Platemail Helm'),
+      gearX('Major Stamina Gain', 'vital', 'maximum Stamina', '', 'Leather Boots'), gearX('Major Mana Gain', 'vital', 'maximum Mana', '', 'Gold Ring'),
+      gearX('Epic Deception Prowess', 'skill', 'Deception', '', 'Leather Boots'), gearX('Major Jumping Prowess', 'skill', 'Jump', '', 'Leather Boots')
+    ].forEach((e) => helpful.push(e));
+    const secs = (s) => s.split(':').reduce((a, b) => a * 60 + Number(b), 0);
+    helpful.sort((a, b) => (a.gear ? 1e9 : secs(a.time)) - (b.gear ? 1e9 : secs(b.time)));
+    const harmful = [
+      E('imperil', 'harm', 'prot', 'Imperil Other VI', P.broken, C.harm, 'Natural armor', '−200', 'Drudge Ravener', '0:22', '3:30', 10, "Decreases the target's natural armor by 200 points.", { school: 'Life Magic · Level VI', harm: true }),
+      E('weak', 'harm', 'attr', 'Weakness Other VI', P.down, C.harm, 'Strength 290 → 255', '−35', 'Drudge Ravener', '0:48', '3:30', 23, "Decreases the target's Strength by 35 points.", { school: 'Creature Enchantment · Level VI', harm: true }),
+      E('clumsy', 'harm', 'attr', 'Clumsiness Other VI', P.wave, C.harm, 'Coordination 230 → 195', '−35', 'Drudge Ravener', '3:27', '3:30', 99, "Decreases the target's Coordination by 35 points.", { school: 'Creature Enchantment · Level VI', harm: true })
+    ];
+    const list = harmTab ? harmful : helpful;
+    const filter = harmTab ? 'all' : (st.filter || 'all');
+    const selKey = st.sel && list.some((e) => e.key === st.sel) ? st.sel : (harmTab ? 'imperil' : 'focus');
+    const timeColor = (e) => e.harm ? (e.pct < 15 ? RED : '#FF8A8E') : e.gear ? '#A89A82' : e.group === 'soon' ? SOON : TXT;
+    const row = (e) => {
+      const on = e.key === selKey;
+      return { name: e.name, d: e.d, color: e.color, tile: tile(e.color), tileEdge: e.harm ? 'rgba(255,107,112,0.6)' : 'transparent',
+        change: e.stat.replace(/ \d.*$/, '') + ' ' + e.delta, changeColor: e.harm ? '#FF8A8E' : GREEN,
+        by: e.gear ? e.by : e.by === 'You' ? 'cast by you' : 'from ' + e.by,
+        t: e.gear ? 'worn' : e.time, tc: timeColor(e), timed: !e.gear, pct: e.pct + '%', on,
+        edge: on ? GOLD : 'transparent', bg: on ? 'rgba(224,176,104,0.12)' : 'rgba(0,0,0,0.2)',
+        pick: () => this.setState({ sel: e.key }) };
+    };
+    const shown = list.filter((e) => filter === 'all' || e.kind === filter);
+    const G = harmTab
+      ? [['harm', 'ENDING FIRST', '#FF8A8E', '3']]
+      : [['soon', 'ENDING SOON', SOON, '2'], ['timed', 'TIMED', '#C8B89C', '22'], ['gear', 'FROM YOUR GEAR', '#C8B89C', '18']];
+    const groups = G.map(([key, title, color, count]) => ({ title, color, count, rows: shown.filter((e) => e.group === key).map(row) }))
+      .filter((g) => g.rows.length > 0);
+    const chips = [['all', 'All', '42'], ['attr', 'Attributes', '12'], ['skill', 'Skills', '16'], ['vital', 'Vitals', '6'], ['prot', 'Protections', '8']].map(([key, label, count]) => {
+      const on = key === filter;
+      return { label, count, on, edge: on ? GOLD : 'rgba(201,160,98,0.3)', bg: on ? 'rgba(224,176,104,0.14)' : 'rgba(0,0,0,0.25)', pick: () => this.setState({ filter: key }) };
+    });
+    const e = list.find((x) => x.key === selKey);
+    const s = {
+      name: e.name, d: e.d, color: e.color, tile: tile(e.color), tileEdge: e.harm ? 'rgba(255,107,112,0.6)' : 'rgba(201,160,98,0.4)',
+      school: e.school, stat: e.stat, delta: e.delta, changeColor: e.harm ? '#FF8A8E' : GREEN,
+      byLabel: e.gear ? 'From' : 'Cast by', by: e.by,
+      timeText: e.gear ? 'While you wear it' : e.time + ' of ' + e.total, timed: !e.gear, pct: e.pct + '%', tc: timeColor(e),
+      desc: e.desc, under: e.under || '', hasUnder: !!e.under,
+      canCast: !!e.cast, bar: e.bar || '', isGear: !!e.gear, isHarm: !!e.harm
+    };
+    const T = (key, label, count, red) => {
+      const on = key === tab;
+      return { label, count, on, fg: on ? TXT : '#A89A82', line: on ? GOLD : 'transparent',
+        countBg: red ? 'rgba(255,107,112,0.18)' : 'rgba(201,160,98,0.16)', countFg: red ? '#FFB3B5' : '#E9D3AE',
+        pick: () => this.setState({ tab: key, sel: '' }) };
+    };
+    return {
+      tabs: [T('helpful', 'Helpful', '42'), T('harmful', 'Harmful', vitae ? '3 · vitae' : '3', true)],
+      hasChips: !harmTab, chips, groups, showVitae: harmTab && vitae, s
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -15,8 +15,8 @@ This folder holds the design only. There is no code yet.
   switches at once, with a short "Switch back" notice. Each interface
   keeps its own layout.
 - **Look:** "Horizon", bronze trim. The world comes first and the chrome
-  stays thin: slim vitals top centre, target under them, round radar top
-  right, chat with no panel behind it bottom left, and a small strip of
+  stays thin: slim vitals top centre, target under them, counts of the
+  effects on you top left, round radar top right, chat with no panel behind it bottom left, and a small strip of
   panel buttons bottom right. Fonts are Inter.
 - **Numbers:** levels can run into the thousands and XP into the hundreds
   of billions. No level or XP display may assume a few digits.
@@ -278,7 +278,7 @@ This folder holds the design only. There is no code yet.
 - With no fellowship: Start a fellowship (name, share experience, which
   cannot change later), and how joining works.
 - Fellows on screen (OPENAC, on by default): small frames under the
-  buffs with name, level and the three vitals; a fellow low on health is
+  effect counts with name, level and the three vitals; a fellow low on health is
   edged red; clicking one selects them (for healing). Retail only streams
   fellows' vitals while the Fellowship page is open, so this keeps that
   stream on.
@@ -432,6 +432,38 @@ This folder holds the design only. There is no code yet.
   status line, Offer stalemate, and Resign (asks first).
 - OPENAC helpers: picking up a piece shows where it can go (dots) and
   what it can take (ring), and a move list.
+
+## Effects on you
+
+- Buffs easily run past 40, so the HUD shows no icon per effect. Top
+  left are up to three small counts:
+  - Helpful: how many, and the time left on the next to end. It turns
+    amber when one ends within 5 minutes (5 minutes is the default and
+    can be changed in Options).
+  - Harmful: how many, and the time left on the first to end, in red.
+  - Vitae: the percentage, shown only after a death.
+- Hovering the helpful or harmful count opens a small pane that lists
+  every effect of that kind (name and time left, soonest first), with a
+  scrollbar. Helpful is grouped as Ending soon, Timed and From your
+  gear (cantrips on what you wear, which have no timer). Harmful starts
+  with the vitae line. Clicking a count opens the Effects window.
+- Nothing is drawn in the world: no icons over the character, in either
+  camera.
+- Effects window, 760 x 560, with Helpful and Harmful tabs (retail's
+  separate positive, negative and vitae panels):
+  - Helpful: search, sort (time left, name, what it changes), filters
+    Attributes / Skills / Vitals / Protections, the same three groups.
+    Each row: what it changes, who cast it, time left with a bar.
+  - Details: what it changes (Focus 210 → 255, +45), who cast it (or
+    which item), time left of the full duration, the game's description,
+    a weaker copy waiting underneath that takes over when this one ends,
+    and Cast again (with its bar slot) for your own spells or Show item
+    for gear.
+  - Harmful: a vitae card (retail's text: how much is lost, and how much
+    experience brings 1% back), then each debuff with what it does and
+    who cast it.
+- Times follow retail: m:ss, h:mm:ss from an hour, and the "show spell
+  durations" option still hides them.
 
 ## Still to design
 

@@ -14,6 +14,9 @@
 body{margin:0}
 a{color:#7CC4FF}a:hover{color:#A9D8FF}
 button{font:inherit;color:inherit}
+.hz-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,160,98,0.7) transparent}
+.hz-scroll::-webkit-scrollbar{width:5px}
+.hz-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
 </style>
 </helmet>
 <div style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: {{t.text}}; background: linear-gradient(180deg, #8FB3C9 0%, #C9D9C4 34%, #6F8A55 50%, #4A6338 66%, #2E3F22 100%);">
@@ -49,17 +52,59 @@ button{font:inherit;color:inherit}
     <div style="height: 4px; border-radius: 2px; background: rgba(0,0,0,0.5);"><div style="width: 68%; height: 100%; border-radius: 2px; background: #E5484D;"></div></div>
   </div>
 
-  <!-- buffs, top left -->
-  <div style="position: absolute; left: 16px; top: 14px; display: flex; gap: 6px;">
-    <sc-for list="{{buffs}}" as="b" hint-placeholder-count="7">
-      <div title="{{b.name}}" style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-        <div style="width: 28px; height: 28px; border-radius: {{t.radius}}; border: 1px solid {{b.edge}}; background: {{b.tile}}; display: flex; align-items: center; justify-content: center;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{b.color}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{b.d}}"></path></svg>
-        </div>
-        <span style="font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">{{b.t}}</span>
-      </div>
-    </sc-for>
+  <!-- effects on you, top left: counts and the next to end, not 40 icons -->
+  <div style="position: absolute; left: 16px; top: 14px; display: flex; gap: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
+    <button aria-label="{{fx.helpLabel}}" title="{{fx.helpLabel}}. Hover for the list, click for details." style="height: 28px; padding: 0 10px 0 8px; border-radius: {{t.radius}}; border: 1px solid {{fx.helpEdge}}; background: {{fx.helpBg}}; display: flex; align-items: center; gap: 7px; cursor: pointer;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7FD08A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM12 16V9M9 12l3-3 3 3"></path></svg>
+      <span style="font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;">{{fx.help}}</span>
+      <span style="font-size: 11px; font-weight: 600; color: {{fx.soonColor}}; font-variant-numeric: tabular-nums;">{{fx.next}}</span>
+    </button>
+    <button aria-label="{{fx.harmLabel}}" title="{{fx.harmLabel}}. Hover for the list, click for details." style="height: 28px; padding: 0 10px 0 8px; border-radius: {{t.radius}}; border: 1px solid {{fx.harmEdge}}; background: {{fx.harmBg}}; display: flex; align-items: center; gap: 7px; cursor: pointer;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF6B70" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM12 8v7M9 12l3 3 3-3"></path></svg>
+      <span style="font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;">{{fx.harm}}</span>
+      <span style="font-size: 11px; font-weight: 600; color: #FF8A8E; font-variant-numeric: tabular-nums;">{{fx.harmNext}}</span>
+    </button>
+    <sc-if value="{{fx.vitae}}" hint-placeholder-val="{{false}}">
+      <button aria-label="Vitae 94%: health, stamina, mana and skills 6% lower" title="Vitae 94%: health, stamina, mana and skills are 6% lower. Click for details." style="height: 28px; padding: 0 10px; border-radius: {{t.radius}}; border: 1px solid rgba(255,107,112,0.75); background: rgba(40,10,12,0.6); display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #FFD6D7; cursor: pointer;">
+        VITAE <span style="font-size: 12.5px; letter-spacing: 0; font-variant-numeric: tabular-nums;">94%</span>
+      </button>
+    </sc-if>
   </div>
+
+  <!-- hovering a count: every effect of that kind, in a small scrolling pane -->
+  <sc-if value="{{fx.pop}}" hint-placeholder-val="{{false}}">
+  <div role="dialog" aria-label="{{fx.popLabel}}" style="position: absolute; left: {{fx.popLeft}}; top: 48px; width: 320px; box-sizing: border-box; padding: 10px 6px 8px 10px; border-radius: 6px; border: 1px solid {{fx.popEdge}}; background: rgba(20,16,12,0.95); box-shadow: 0 12px 30px rgba(0,0,0,0.55); display: flex; flex-direction: column;">
+    <div style="flex: none; display: flex; align-items: baseline; gap: 8px; padding: 0 6px 6px 2px;">
+      <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: {{fx.popTitleColor}};">{{fx.popTitle}}</span>
+      <span style="flex: 1;"></span>
+      <span style="font-size: 10.5px; color: #A89A82;">{{fx.popSub}}</span>
+    </div>
+    <sc-if value="{{fx.popVitae}}" hint-placeholder-val="{{false}}">
+      <div style="flex: none; margin: 0 4px 4px 0; padding: 6px 8px; border-radius: 4px; border: 1px solid rgba(255,107,112,0.5); background: rgba(60,14,16,0.45); display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #FF8A8E;">VITAE</span>
+        <span style="font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums;">94%</span>
+        <span style="flex: 1; font-size: 11px; color: #E9D3AE; text-align: right;">health, mana, skills 6% lower</span>
+      </div>
+    </sc-if>
+    <div class="hz-scroll" style="max-height: {{fx.popMax}}; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column;">
+      <sc-for list="{{fx.groups}}" as="g" hint-placeholder-count="2">
+        <div style="flex: none; height: 22px; display: flex; align-items: center; gap: 8px; padding: 0 2px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: {{g.color}};"><span>{{g.title}}</span><span style="font-variant-numeric: tabular-nums;">{{g.count}}</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span></div>
+        <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="2">
+          <div title="{{r.name}}: {{r.change}}" style="flex: none; height: 28px; padding: 0 4px; display: flex; align-items: center; gap: 8px;">
+            <span style="width: 22px; height: 22px; flex: none; border-radius: 3px; background: {{r.tile}}; display: flex; align-items: center; justify-content: center;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="{{r.color}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.d}}"></path></svg>
+            </span>
+            <span style="flex: 1; min-width: 0; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.name}}</span>
+            <span style="font-size: 11.5px; font-weight: 700; color: {{r.tc}}; font-variant-numeric: tabular-nums;">{{r.t}}</span>
+          </div>
+        </sc-for>
+      </sc-for>
+    </div>
+    <div style="flex: none; margin: 6px 4px 0 0; padding: 6px 2px 0; border-top: 1px solid rgba(201,160,98,0.22); display: flex; align-items: center; gap: 8px; font-size: 10.5px; color: #A89A82;">
+      <span style="flex: 1;">Click the count for details</span><span>{{fx.popFoot}}</span>
+    </div>
+  </div>
+  </sc-if>
 
   <!-- status line + radar, top right -->
   <div style="position: absolute; right: 16px; top: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
@@ -149,7 +194,7 @@ button{font:inherit;color:inherit}
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"trim":{"editor":"enum","options":["neutral","bronze"],"default":"neutral"},"bars":{"editor":"enum","options":["stacked","none"],"default":"stacked"},"chat":{"editor":"enum","options":["shown","none"],"default":"shown"},"accent":{"editor":"color","default":"","options":["#7CC4FF","#D9A75B","#8BE38F","#C9A2FF"]},"housedue":{"editor":"enum","options":["no","yes"],"default":"no"},"$preview":{"width":1440,"height":900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"trim":{"editor":"enum","options":["neutral","bronze"],"default":"neutral"},"bars":{"editor":"enum","options":["stacked","none"],"default":"stacked"},"chat":{"editor":"enum","options":["shown","none"],"default":"shown"},"accent":{"editor":"color","default":"","options":["#7CC4FF","#D9A75B","#8BE38F","#C9A2FF"]},"housedue":{"editor":"enum","options":["no","yes"],"default":"no"},"effects":{"editor":"enum","options":["closed","helpful","harmful"],"default":"closed"},"vitae":{"editor":"enum","options":["no","yes"],"default":"no"},"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
   renderVals() {
     const bronze = (this.props.trim ?? 'neutral') === 'bronze';
@@ -188,21 +233,75 @@ class Component extends DCLogic {
     const row3 = [[P.sword,C.item,'Wand'],[P.shield,C.item,'Shield'],[P.bag,C.item,'Food'],[],[],[],[],[],[],[],[],[]];
     const mk = (row, prefix) => ({ slots: row.map((r, i) => S(prefix + keys[i], r[0], r[1], r[2], r[3])) });
     const tabBase = (label, on) => ({ label, bg: on ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)', fg: on ? t.accent : t.text, edge: on ? t.trim : 'transparent' });
-    const buff = (name, d, c, time, bad) => ({ name, d, color: c, t: time, tile: tile(c), edge: bad ? '#E5484D' : t.slotEdge });
+    const SOON = '#FFB547';
+    const fxMode = this.props.effects ?? 'closed';
+    const vitae = (this.props.vitae ?? 'no') === 'yes';
+    const RED = '#FF8A8E';
+    const fr = (name, change, d, c, time, tc) => ({ name, change, d, color: c, tile: tile(c), t: time, tc: tc || t.text });
+    // every helpful effect: [name, what it changes, icon, colour, time]
+    const soon = [['Incantation of Focus Self', 'Focus +45', P.star, C.creat, '3:40'], ['Incantation of Willpower Self', 'Willpower +45', P.star, C.creat, '4:12']];
+    const timed = [
+      ['Incantation of Armor Other', 'natural armor +225', P.shield, C.life, '41:08'], ['Incantation of Strength Self', 'Strength +45', P.star, C.creat, '44:30'],
+      ['Incantation of Regeneration Self', 'health regained faster', P.heart, C.life, '46:51'], ['Incantation of Mana Renewal Self', 'mana regained faster', P.drop, C.life, '47:10'],
+      ['Incantation of Rejuvenation Self', 'stamina regained faster', P.drop, C.life, '47:15'], ['Incantation of Endurance Self', 'Endurance +45', P.star, C.creat, '48:02'],
+      ['Incantation of Coordination Self', 'Coordination +45', P.star, C.creat, '48:05'], ['Incantation of Quickness Self', 'Quickness +45', P.star, C.creat, '48:09'],
+      ['Incantation of Invulnerability Self', 'Melee Defense +45', P.shield, C.creat, '52:02'], ['Incantation of Impregnability Self', 'Missile Defense +45', P.shield, C.creat, '52:04'],
+      ['Incantation of Magic Resistance Self', 'Magic Defense +45', P.eye, C.creat, '52:06'], ['Incantation of War Magic Mastery Self', 'War Magic +45', P.flame, C.creat, '55:40'],
+      ['Incantation of Life Magic Mastery Self', 'Life Magic +45', P.heart, C.creat, '55:44'], ['Incantation of Mana Conversion Mastery Self', 'Mana Conversion +45', P.drop, C.creat, '55:48'],
+      ['Incantation of Arcane Enlightenment Self', 'Arcane Lore +45', P.book, C.creat, '56:10'], ['Incantation of Fire Protection Self', 'less fire damage', P.flame, C.life, '57:58'],
+      ['Incantation of Cold Protection Self', 'less cold damage', P.snow, C.life, '58:01'], ['Incantation of Lightning Protection Self', 'less lightning damage', P.bolt, C.life, '58:03'],
+      ['Incantation of Acid Protection Self', 'less acid damage', P.acid, C.life, '58:06'], ['Incantation of Blade Protection Self', 'less slashing damage', P.sword, C.life, '58:10'],
+      ['Incantation of Piercing Protection Self', 'less piercing damage', P.sword, C.life, '58:12'], ['Incantation of Bludgeoning Protection Self', 'less bludgeoning damage', P.shield, C.life, '58:15']
+    ];
+    const gear = [
+      ['Epic Strength', 'Strength +20'], ['Epic Endurance', 'Endurance +20'], ['Major Coordination', 'Coordination +15'], ['Legendary Focus', 'Focus +35'],
+      ['Epic Willpower', 'Willpower +20'], ['Major Quickness', 'Quickness +15'], ['Epic War Magic Aptitude', 'War Magic'], ['Epic Magic Resistance', 'Magic Defense'],
+      ['Major Life Magic Aptitude', 'Life Magic'], ['Epic Mana Conversion Prowess', 'Mana Conversion'], ['Legendary Arcane Prowess', 'Arcane Lore'], ['Major Invulnerability', 'Melee Defense'],
+      ['Epic Impregnability', 'Missile Defense'], ['Major Health Gain', 'maximum health'], ['Major Stamina Gain', 'maximum stamina'], ['Major Mana Gain', 'maximum mana'],
+      ['Epic Deception Prowess', 'Deception'], ['Major Jumping Prowess', 'Jump']
+    ];
+    const ring = 'M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM9 3h6l-3 6z';
+    const helpGroups = [
+      { title: 'ENDING SOON', count: '2', color: SOON, rows: soon.map((r) => fr(r[0], r[1], r[2], r[3], r[4], SOON)) },
+      { title: 'TIMED', count: '22', color: '#C8B89C', rows: timed.map((r) => fr(r[0], r[1], r[2], r[3], r[4])) },
+      { title: 'FROM YOUR GEAR', count: '18', color: '#C8B89C', rows: gear.map((r) => fr(r[0], r[1], ring, C.item, 'worn', '#A89A82')) }
+    ];
+    const harmGroups = [
+      { title: 'ENDING FIRST', count: '3', color: RED, rows: [
+        fr('Imperil Other VI', 'natural armor −200', 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM13 7l-3 5h4l-3 5', RED, '0:22', '#FF6B70'),
+        fr('Weakness Other VI', 'Strength −35', 'M12 5v14M5 12l7 7 7-7', RED, '0:48', RED),
+        fr('Clumsiness Other VI', 'Coordination −35', 'M4 15c3-6 5 6 8 0s5 6 8 0M4 9c3-6 5 6 8 0s5 6 8 0', RED, '3:27', RED) ] }
+    ];
+    const helpOpen = fxMode === 'helpful', harmOpen = fxMode === 'harmful';
+    const fx = {
+      help: '42', next: '3:40', soonColor: SOON,
+      helpLabel: '42 helpful effects; 2 end within 5 minutes, the first in 3:40',
+      helpEdge: helpOpen ? t.accent : 'rgba(255,181,71,0.75)',
+      helpBg: helpOpen ? 'rgba(20,16,12,0.85)' : 'rgba(0,0,0,0.55)',
+      harm: '3', harmNext: '0:22', harmLabel: '3 harmful effects; the first ends in 0:22',
+      harmEdge: harmOpen ? '#FF6B70' : 'rgba(255,107,112,0.75)',
+      harmBg: harmOpen ? 'rgba(40,10,12,0.9)' : 'rgba(40,10,12,0.6)',
+      vitae,
+      pop: helpOpen || harmOpen,
+      popLeft: harmOpen ? '108px' : '16px',
+      popLabel: harmOpen ? 'Harmful effects on you' : 'Helpful effects on you',
+      popEdge: harmOpen ? 'rgba(255,107,112,0.75)' : t.trim,
+      popTitle: harmOpen ? 'HARMFUL · 3' : 'HELPFUL · 42',
+      popTitleColor: harmOpen ? RED : '#C8B89C',
+      popSub: harmOpen ? 'all cast by Drudge Ravener' : 'soonest to end first',
+      popVitae: harmOpen && vitae,
+      popMax: harmOpen ? '260px' : '372px',
+      popFoot: harmOpen ? '' : 'Warns under 5 min',
+      groups: harmOpen ? harmGroups : helpGroups
+    };
     return {
-      t,
+      t, fx,
       showBars: (this.props.bars ?? 'stacked') !== 'none',
       showChat: (this.props.chat ?? 'shown') !== 'none',
       vitals: [
         { label: 'HEALTH', val: '412 / 450', pct: '92%', color: '#B8323A' },
         { label: 'STAMINA', val: '298 / 410', pct: '73%', color: '#B88A1E' },
         { label: 'MANA', val: '361 / 620', pct: '58%', color: '#2F64C2' }
-      ],
-      buffs: [
-        buff('Armor Self VIII', P.shield, C.creat, '58m'), buff('Focus Self VIII', P.star, C.creat, '58m'),
-        buff('Regeneration Self VII', P.heart, C.life, '57m'), buff('Mana Renewal VI', P.drop, C.life, '14m'),
-        buff('Blood Drinker', P.sword, C.item, '1h'), buff('Impenetrability', P.shield, C.item, '1h'),
-        buff('Frost Vulnerability', P.snow, '#FF6B70', '0:22', true)
       ],
       tabs: [tabBase('Main', true), tabBase('Combat'), tabBase('Allegiance'), tabBase('Fellowship'), tabBase('General')],
       chat: [

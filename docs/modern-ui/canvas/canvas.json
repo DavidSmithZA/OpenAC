@@ -1128,6 +1128,40 @@
       "h": 470,
       "page": "misc",
       "title": "Right-click: Inspect, Loot, or loot straight into a chosen pack"
+    },
+    "EffectsInGame.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "effects",
+      "title": "Hovering the harmful count: vitae, then every debuff, ending first"
+    },
+    "EffectsHover.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "effects",
+      "title": "Hovering the helpful count: all 42 in a small scrolling pane, soonest to end first"
+    },
+    "Effects.dc.html": {
+      "x": 0,
+      "y": 1020,
+      "w": 760,
+      "h": 560,
+      "page": "effects",
+      "title": "Click a count: the full window, Helpful (ending soon, timed, from your gear)",
+      "is_interactive": true
+    },
+    "EffectsHarmful.dc.html": {
+      "x": 840,
+      "y": 1020,
+      "w": 760,
+      "h": 560,
+      "page": "effects",
+      "title": "Effects window, Harmful: vitae and what is on you, ending first",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -1137,7 +1171,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "misc"
+    "page": "effects"
   },
   "notes": {
     "t1": {
@@ -1284,6 +1318,14 @@
       "x": 0,
       "y": -300,
       "page": "misc"
+    },
+    "t19": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Effects on you: buffs, debuffs, vitae",
+      "x": 0,
+      "y": -300,
+      "page": "effects"
     }
   },
   "order": [
@@ -1417,7 +1459,11 @@
     "BarberSkin.dc.html",
     "Chess.dc.html",
     "ChessResign.dc.html",
-    "LootMenu.dc.html"
+    "LootMenu.dc.html",
+    "EffectsHover.dc.html",
+    "EffectsInGame.dc.html",
+    "Effects.dc.html",
+    "EffectsHarmful.dc.html"
   ],
   "pages": [
     {
@@ -1487,6 +1533,10 @@
     {
       "id": "misc",
       "name": "Loot, barber, chess"
+    },
+    {
+      "id": "effects",
+      "name": "Effects on you"
     },
     {
       "id": "r1",
