@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Social window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{opacity:0.45;cursor:default}
+.so-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,160,98,0.7) transparent}
+.so-scroll::-webkit-scrollbar{width:5px}
+.so-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
+</style>
+</helmet>
+<div style="width: 792px; height: 600px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.92); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 20px; box-sizing: border-box; background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7"></path></svg>
+    <h1 style="margin: 0; font-size: 15px; font-weight: 600;">Social</h1>
+    <span style="font-size: 11px; color: #A89A82;">O</span>
+    <span style="flex: 1;"></span>
+    <button aria-label="Close" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- tabs -->
+  <div role="tablist" aria-label="Social" style="position: absolute; left: 0; right: 0; top: 52px; height: 40px; display: flex; gap: 4px; padding: 0 16px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35);">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+      <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="height: 40px; padding: 0 12px; border: 0; border-bottom: 2px solid {{t.line}}; background: transparent; color: {{t.fg}}; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; cursor: pointer;">
+        {{t.label}}
+        <sc-if value="{{t.hasCount}}" hint-placeholder-val="{{true}}">
+          <span style="height: 18px; padding: 0 6px; border-radius: 999px; background: rgba(201,160,98,0.16); color: #E9D3AE; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; font-variant-numeric: tabular-nums;">{{t.count}}</span>
+        </sc-if>
+      </button>
+    </sc-for>
+  </div>
+
+  <!-- ============ ALLEGIANCE ============ -->
+  <sc-if value="{{showAlleg}}" hint-placeholder-val="{{true}}">
+    <!-- band -->
+    <div style="position: absolute; left: 20px; right: 20px; top: 104px; height: 44px; display: flex; align-items: center; gap: 14px;">
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 700;">House of Arwic</h2>
+        <span style="font-size: 11.5px; color: #C8B89C; font-variant-numeric: tabular-nums;">1,284 members · 19 follow you, 4 of them sworn to you directly</span>
+      </div>
+      <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>Allegiance chat
+      </button>
+      <button title="Recall to the allegiance's hometown" style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5"></path></svg>Hometown
+      </button>
+    </div>
+
+    <!-- message of the day -->
+    <div style="position: absolute; left: 20px; right: 20px; top: 158px; min-height: 40px; box-sizing: border-box; padding: 8px 12px; border-radius: 4px; background: rgba(201,160,98,0.08); border: 1px solid rgba(201,160,98,0.25); display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C; flex: none;">MESSAGE</span>
+      <span style="flex: 1; font-size: 12.5px; line-height: 1.4; font-style: italic;">Mana forge run on Friday. Meet at the Arwic lifestone an hour before.</span>
+      <span style="font-size: 11px; color: #A89A82; flex: none;">Rook of Arwic</span>
+    </div>
+
+    <!-- line of fealty: monarch, patron, you -->
+    <div style="position: absolute; left: 20px; right: 20px; top: 212px; height: 56px; display: flex; align-items: stretch; gap: 6px;">
+      <sc-for list="{{chain}}" as="c" hint-placeholder-count="3">
+        <button onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="flex: 1; min-width: 0; padding: 0 12px; border-radius: 4px; border: 1px solid {{c.edge}}; background: {{c.bg}}; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+          <span style="display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0;">
+            <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">{{c.role}}</span>
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              <span style="width: 7px; height: 7px; flex: none; border-radius: 50%; box-sizing: border-box; border: 1.5px solid {{c.dot}}; background: {{c.dotFill}};"></span>{{c.full}}
+            </span>
+          </span>
+          <span style="font-size: 11px; color: #C8B89C; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums;">{{c.side}}</span>
+        </button>
+        <sc-if value="{{c.arrow}}" hint-placeholder-val="{{true}}">
+          <span style="flex: none; display: flex; align-items: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(201,160,98,0.8)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></span>
+        </sc-if>
+      </sc-for>
+    </div>
+
+    <!-- vassals | selected member -->
+    <div style="position: absolute; left: 20px; right: 20px; top: 280px; bottom: 76px; display: grid; grid-template-columns: minmax(0, 1fr) 292px; gap: 16px;">
+      <section aria-label="Sworn to you" style="min-height: 0; display: flex; flex-direction: column;">
+        <div style="height: 24px; display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">
+          <span>SWORN TO YOU · 4</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span><span>PASSED UP</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <sc-for list="{{vassals}}" as="v" hint-placeholder-count="4">
+            <button onClick="{{v.pick}}" aria-pressed="{{v.on}}" style="height: 44px; padding: 0 10px; border-radius: 4px; border: 1px solid {{v.edge}}; background: {{v.bg}}; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+              <span title="{{v.status}}" style="width: 8px; height: 8px; flex: none; border-radius: 50%; box-sizing: border-box; border: 1.5px solid {{v.dot}}; background: {{v.dotFill}};"></span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 12.5px; font-weight: 600; color: {{v.nameColor}};">{{v.full}}</span>
+                <span style="font-size: 10.5px; color: #A89A82;">{{v.sub}}</span>
+              </span>
+              <span style="font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;">{{v.passed}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section aria-label="{{sel.full}}" style="min-height: 0; box-sizing: border-box; padding: 12px 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="flex: 1; font-size: 14px; font-weight: 700;">{{sel.full}}</span>
+          <span style="font-size: 11px; font-weight: 600; color: {{sel.dot}};">{{sel.status}}</span>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <sc-for list="{{sel.rows}}" as="r" hint-placeholder-count="5">
+            <div style="height: 22px; display: flex; align-items: center; font-size: 12px;">
+              <span style="flex: 1; color: #E9D3AE;">{{r.k}}</span>
+              <span style="font-weight: 700; font-variant-numeric: tabular-nums;">{{r.v}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <span style="flex: 1;"></span>
+        <sc-if value="{{sel.canTalk}}" hint-placeholder-val="{{true}}">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+            <button style="height: 30px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Tell</button>
+            <button style="height: 30px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Invite</button>
+            <button disabled="{{sel.isFriend}}" style="height: 30px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">{{sel.friendLabel}}</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{sel.hasDanger}}" hint-placeholder-val="{{true}}">
+          <button onClick="{{askRelease}}" style="height: 30px; border-radius: 4px; border: 1px solid rgba(255,138,142,0.5); background: rgba(229,72,77,0.10); color: #FF8A8E; font-size: 11.5px; font-weight: 600; cursor: pointer;">{{sel.danger}}</button>
+        </sc-if>
+      </section>
+    </div>
+
+    <!-- bottom bar -->
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 64px; box-sizing: border-box; padding: 0 20px; border-top: 1px solid rgba(201,160,98,0.35); display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2);">
+      <button role="switch" aria-checked="{{ignoreAlleg.on}}" aria-label="Ignore allegiance requests" onClick="{{ignoreAlleg.flip}}" style="width: 38px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: {{ignoreAlleg.track}}; position: relative; cursor: pointer;"><span style="position: absolute; top: 3px; left: {{ignoreAlleg.knobX}}; width: 14px; height: 14px; border-radius: 50%; background: {{ignoreAlleg.knob}};"></span></button>
+      <span style="font-size: 12px; color: #E9D3AE;">Ignore allegiance requests</span>
+      <span style="flex: 1;"></span>
+      <sc-if value="{{isMonarch}}" hint-placeholder-val="{{false}}">
+      <button onClick="{{openManage}}" style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        Manage allegiance
+        <span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span>
+      </button>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- allegiance: none yet -->
+  <sc-if value="{{showAllegNone}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 0; right: 0; top: 92px; bottom: 64px; display: flex; align-items: center; justify-content: center;">
+      <div style="width: 420px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path></svg>
+        <h2 style="margin: 0; font-size: 16px; font-weight: 700;">You have no allegiance yet</h2>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.5; color: #C8B89C;">Swear to a patron and part of the experience you earn passes up to them. Anyone who swears to you becomes your vassal.</p>
+        <button style="margin-top: 6px; height: 38px; padding: 0 18px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 13px; font-weight: 700; cursor: pointer;">Swear allegiance to Lysse</button>
+        <span style="font-size: 11px; color: #A89A82;">Uses the player you have selected. They are asked to accept.</span>
+      </div>
+    </div>
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 64px; box-sizing: border-box; padding: 0 20px; border-top: 1px solid rgba(201,160,98,0.35); display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2);">
+      <button role="switch" aria-checked="{{ignoreAlleg.on}}" aria-label="Ignore allegiance requests" onClick="{{ignoreAlleg.flip}}" style="width: 38px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: {{ignoreAlleg.track}}; position: relative; cursor: pointer;"><span style="position: absolute; top: 3px; left: {{ignoreAlleg.knobX}}; width: 14px; height: 14px; border-radius: 50%; background: {{ignoreAlleg.knob}};"></span></button>
+      <span style="font-size: 12px; color: #E9D3AE;">Ignore allegiance requests</span>
+    </div>
+  </sc-if>
+
+  <!-- allegiance: manage -->
+  <sc-if value="{{showManage}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 0; right: 0; top: 92px; bottom: 0; display: flex; flex-direction: column; background: rgba(20,16,12,1);">
+      <div style="flex: none; height: 48px; padding: 0 20px 0 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(201,160,98,0.2);">
+        <button onClick="{{closeOver}}" style="height: 30px; padding: 0 10px 0 6px; border-radius: 4px; border: 0; background: transparent; font-size: 12px; font-weight: 600; color: #E9D3AE; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>Allegiance
+        </button>
+        <h2 style="margin: 0; font-size: 14px; font-weight: 700;">Manage House of Arwic</h2>
+        <span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span>
+        <span style="flex: 1;"></span>
+        <span style="font-size: 11px; color: #A89A82;">Only the monarch sees this. Officers use @ commands.</span>
+      </div>
+      <div class="so-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 20px 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-content: start;">
+
+        <section aria-label="Name and message" style="padding: 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">NAME AND MESSAGE</span>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #C8B89C;">Allegiance name
+            <span style="display: flex; gap: 6px;">
+              <input value="House of Arwic" style="flex: 1; min-width: 0; height: 30px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 12.5px;">
+              <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Rename</button>
+            </span>
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #C8B89C;">Message of the day
+            <textarea style="height: 54px; box-sizing: border-box; padding: 7px 10px; resize: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 12.5px; line-height: 1.4;">Mana forge run on Friday. Meet at the Arwic lifestone an hour before.</textarea>
+          </label>
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12px; font-weight: 600; cursor: pointer;">Clear</button>
+            <button style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Post message</button>
+          </div>
+        </section>
+
+        <section aria-label="Officers" style="padding: 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center;">
+            <span style="flex: 1; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">OFFICERS</span>
+            <button style="height: 22px; padding: 0 6px; border: 0; background: transparent; font-size: 11px; font-weight: 600; color: #E0B068; cursor: pointer;">List them in chat</button>
+          </div>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #C8B89C;">Member
+            <input placeholder="Name" value="Hask" style="height: 30px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 12.5px;">
+          </label>
+          <div role="radiogroup" aria-label="Office" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;">
+            <sc-for list="{{offices}}" as="o" hint-placeholder-count="3">
+              <button role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}" style="height: 40px; border-radius: 4px; border: 1px solid {{o.edge}}; background: {{o.bg}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer;">
+                <span style="font-size: 12px; font-weight: 600;">{{o.title}}</span>
+                <span style="font-size: 10px; color: #A89A82;">{{o.level}}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12px; font-weight: 600; cursor: pointer;">Remove office</button>
+            <button style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Appoint Hask</button>
+          </div>
+          <span style="font-size: 10.5px; line-height: 1.4; color: #A89A82;">Click an office to rename its title for the whole allegiance. Clear all officers sits in its menu.</span>
+        </section>
+
+        <section aria-label="Joining" style="padding: 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">JOINING</span>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button role="switch" aria-checked="{{locked.on}}" aria-label="Lock the allegiance" onClick="{{locked.flip}}" style="width: 38px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: {{locked.track}}; position: relative; cursor: pointer; flex: none;"><span style="position: absolute; top: 3px; left: {{locked.knobX}}; width: 14px; height: 14px; border-radius: 50%; background: {{locked.knob}};"></span></button>
+            <span style="display: flex; flex-direction: column; gap: 1px;">
+              <span style="font-size: 12.5px; font-weight: 600;">Locked</span>
+              <span style="font-size: 10.5px; color: #A89A82;">Nobody new may swear in, except the one person approved below.</span>
+            </span>
+          </div>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #C8B89C;">Approved to swear in
+            <span style="display: flex; gap: 6px;">
+              <input value="Lysse" style="flex: 1; min-width: 0; height: 30px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 12.5px;">
+              <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Approve</button>
+            </span>
+          </label>
+        </section>
+
+        <section aria-label="Bans and chat" style="padding: 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center;">
+            <span style="flex: 1; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">BANS AND ALLEGIANCE CHAT</span>
+            <button style="height: 22px; padding: 0 6px; border: 0; background: transparent; font-size: 11px; font-weight: 600; color: #E0B068; cursor: pointer;">List bans in chat</button>
+          </div>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #C8B89C;">Character
+            <input placeholder="Name" style="height: 30px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 12.5px;">
+          </label>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+            <button style="height: 28px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Ban from allegiance</button>
+            <button style="height: 28px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Lift ban</button>
+            <button style="height: 28px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Gag in chat</button>
+            <button style="height: 28px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Remove from chat</button>
+          </div>
+          <span style="font-size: 10.5px; line-height: 1.4; color: #A89A82;">The server answers these lists in chat, so they are not kept here.</span>
+        </section>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ FELLOWSHIP ============ -->
+  <sc-if value="{{showFellow}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 20px; right: 20px; top: 104px; height: 44px; display: flex; align-items: center; gap: 10px;">
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 700;">Ramp Runners</h2>
+        <span style="font-size: 11.5px; color: #C8B89C;">{{fel.sub}}</span>
+      </div>
+      <span title="{{fel.openTip}}" style="height: 24px; padding: 0 10px; border-radius: 999px; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: {{fel.openFg}}; border: 1px solid {{fel.openEdge}};"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{fel.openFg}};"></span>{{fel.openText}}</span>
+      <sc-if value="{{fel.locked}}" hint-placeholder-val="{{false}}">
+        <span title="Set by the quest it is on. Nobody new may join; those who left may come back." style="height: 24px; padding: 0 10px; border-radius: 999px; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #E0B068; border: 1px solid rgba(224,176,104,0.6);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"></path></svg>Locked
+        </span>
+      </sc-if>
+    </div>
+
+    <!-- roster -->
+    <div role="table" aria-label="Fellows" style="position: absolute; left: 20px; right: 20px; top: 160px; display: flex; flex-direction: column; gap: 2px;">
+      <div role="row" style="height: 24px; padding: 0 10px; display: grid; grid-template-columns: minmax(0, 1fr) 56px 56px 110px 110px 110px 24px; gap: 12px; align-items: center; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">
+        <span role="columnheader">FELLOW</span><span role="columnheader" style="text-align: right;">LEVEL</span><span role="columnheader" style="text-align: right;">SHARE</span><span role="columnheader">HEALTH</span><span role="columnheader">STAMINA</span><span role="columnheader">MANA</span><span role="columnheader" aria-label="Shares loot"></span>
+      </div>
+      <sc-for list="{{fellows}}" as="f" hint-placeholder-count="5">
+        <button role="row" onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="height: 44px; padding: 0 10px; border-radius: 4px; border: 1px solid {{f.edge}}; background: {{f.bg}}; display: grid; grid-template-columns: minmax(0, 1fr) 56px 56px 110px 110px 110px 24px; gap: 12px; align-items: center; cursor: pointer; text-align: left;">
+          <span role="cell" style="display: flex; align-items: center; gap: 7px; min-width: 0;">
+            <sc-if value="{{f.leader}}" hint-placeholder-val="{{false}}">
+              <svg role="img" aria-label="Leader" width="14" height="14" viewBox="0 0 24 24" fill="#E0B068" stroke="#E0B068" stroke-width="1.5" stroke-linejoin="round"><path d="M3 18h18l-2-10-5 4-2-6-2 6-5-4z"></path></svg>
+            </sc-if>
+            <span style="font-size: 12.5px; font-weight: 600; white-space: nowrap;">{{f.name}}</span>
+            <sc-if value="{{f.you}}" hint-placeholder-val="{{false}}">
+              <span style="height: 16px; padding: 0 5px; border-radius: 3px; background: rgba(201,160,98,0.18); color: #E9D3AE; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; display: flex; align-items: center;">YOU</span>
+            </sc-if>
+          </span>
+          <span role="cell" style="text-align: right; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;">{{f.level}}</span>
+          <span role="cell" style="text-align: right; font-size: 12px; font-weight: 600; color: #E9D3AE; font-variant-numeric: tabular-nums;">{{f.share}}</span>
+          <sc-for list="{{f.vitals}}" as="m" hint-placeholder-count="3">
+            <span role="cell" style="display: flex; flex-direction: column; gap: 3px;">
+              <span style="height: 6px; border-radius: 3px; background: rgba(0,0,0,0.55); overflow: hidden;"><span style="display: block; width: {{m.pct}}; height: 100%; background: {{m.color}};"></span></span>
+              <span style="font-size: 10px; color: {{m.fg}}; font-variant-numeric: tabular-nums;">{{m.text}}</span>
+            </span>
+          </sc-for>
+          <span role="cell" title="{{f.lootTip}}" style="display: flex; justify-content: center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{f.lootColor}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2"></path></svg>
+          </span>
+        </button>
+      </sc-for>
+      <sc-if value="{{fel.locked}}" hint-placeholder-val="{{false}}">
+        <div style="height: 30px; padding: 0 10px; display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #C8B89C;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; box-sizing: border-box; border: 1.5px solid #8C8070;"></span>
+          <span><span style="font-weight: 600; color: #E9D3AE;">Pell</span> left 12 minutes ago and can still rejoin while the fellowship is locked.</span>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- your settings -->
+    <div style="position: absolute; left: 20px; right: 20px; bottom: 76px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>YOUR SETTINGS</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span></div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 24px;">
+        <sc-for list="{{felOpts}}" as="o" hint-placeholder-count="4">
+          <div style="height: 26px; display: flex; align-items: center; gap: 10px;">
+            <button role="switch" aria-checked="{{o.on}}" aria-label="{{o.label}}" onClick="{{o.flip}}" style="width: 38px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: {{o.track}}; position: relative; cursor: pointer; flex: none;"><span style="position: absolute; top: 3px; left: {{o.knobX}}; width: 14px; height: 14px; border-radius: 50%; background: {{o.knob}};"></span></button>
+            <span style="font-size: 12px; color: #E9D3AE;">{{o.label}}</span>
+            <sc-if value="{{o.openac}}" hint-placeholder-val="{{false}}">
+              <span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- bottom bar -->
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 64px; box-sizing: border-box; padding: 0 20px; border-top: 1px solid rgba(201,160,98,0.35); display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2);">
+      <button disabled="{{fel.noRecruit}}" title="Recruits the player you have selected" style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Recruit Lysse
+      </button>
+      <sc-if value="{{fel.lead}}" hint-placeholder-val="{{false}}">
+        <button disabled="{{fel.selIsYou}}" style="height: 34px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Make {{fel.selName}} leader</button>
+        <button disabled="{{fel.selIsYou}}" style="height: 34px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Dismiss {{fel.selName}}</button>
+        <button onClick="{{fel.flipOpen}}" style="height: 34px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">{{fel.openAction}}</button>
+      </sc-if>
+      <span style="flex: 1;"></span>
+      <sc-if value="{{fel.hint}}" hint-placeholder-val="{{true}}"><span style="font-size: 11px; color: #A89A82;">Only Mira can dismiss, hand on the lead or close it.</span></sc-if>
+      <button style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12px; font-weight: 600; cursor: pointer;">Leave</button>
+      <sc-if value="{{fel.lead}}" hint-placeholder-val="{{false}}">
+        <button style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(255,138,142,0.5); background: rgba(229,72,77,0.10); color: #FF8A8E; font-size: 12px; font-weight: 600; cursor: pointer;">Disband</button>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- fellowship: none -->
+  <sc-if value="{{showFellowNone}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 20px; right: 20px; top: 112px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px;">
+      <section aria-label="Start a fellowship" style="padding: 16px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 10px;">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700;">Start a fellowship</h2>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #C8B89C;">Name
+          <input value="Night Shift" style="height: 34px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 13px;">
+        </label>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button role="switch" aria-checked="{{shareXp.on}}" aria-label="Share experience" onClick="{{shareXp.flip}}" style="width: 38px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: {{shareXp.track}}; position: relative; cursor: pointer; flex: none;"><span style="position: absolute; top: 3px; left: {{shareXp.knobX}}; width: 14px; height: 14px; border-radius: 50%; background: {{shareXp.knob}};"></span></button>
+          <span style="display: flex; flex-direction: column; gap: 1px;">
+            <span style="font-size: 12.5px; font-weight: 600;">Share experience</span>
+            <span style="font-size: 10.5px; color: #A89A82;">Chosen now; it cannot be changed later.</span>
+          </span>
+        </div>
+        <button style="align-self: flex-start; margin-top: 4px; height: 38px; padding: 0 20px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 13px; font-weight: 700; cursor: pointer;">Create</button>
+      </section>
+      <section aria-label="Joining one" style="padding: 16px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.25); display: flex; flex-direction: column; gap: 8px;">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700;">Or join one</h2>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: #C8B89C;">A leader can recruit you, and so can anyone in an open fellowship. You are asked first, unless you accept requests automatically below.</p>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: #C8B89C;">A fellowship holds up to nine people.</p>
+      </section>
+    </div>
+    <div style="position: absolute; left: 20px; right: 20px; bottom: 24px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>YOUR SETTINGS</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span></div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 24px;">
+        <sc-for list="{{felOpts}}" as="o" hint-placeholder-count="4">
+          <div style="height: 26px; display: flex; align-items: center; gap: 10px;">
+            <button role="switch" aria-checked="{{o.on}}" aria-label="{{o.label}}" onClick="{{o.flip}}" style="width: 38px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: {{o.track}}; position: relative; cursor: pointer; flex: none;"><span style="position: absolute; top: 3px; left: {{o.knobX}}; width: 14px; height: 14px; border-radius: 50%; background: {{o.knob}};"></span></button>
+            <span style="font-size: 12px; color: #E9D3AE;">{{o.label}}</span>
+            <sc-if value="{{o.openac}}" hint-placeholder-val="{{false}}">
+              <span title="Not in the original client" style="padding: 1px 6px; border-radius: 999px; border: 1px solid rgba(201,160,98,0.5); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E0B068;">OPENAC</span>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ FRIENDS ============ -->
+  <sc-if value="{{showFriends}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 20px; right: 20px; top: 104px; height: 34px; display: flex; align-items: center; gap: 8px;">
+      <label style="width: 280px; height: 34px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 8px;">
+        <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Friend's name</span>
+        <input placeholder="Add a friend by name" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12.5px;">
+      </label>
+      <button disabled="{{always}}" style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Add</button>
+      <span style="font-size: 11px; color: #A89A82; font-variant-numeric: tabular-nums;">8 of 50</span>
+      <span style="flex: 1;"></span>
+      <button role="switch" aria-checked="{{appearOff.on}}" aria-label="Appear offline" onClick="{{appearOff.flip}}" style="width: 38px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: {{appearOff.track}}; position: relative; cursor: pointer; flex: none;"><span style="position: absolute; top: 3px; left: {{appearOff.knobX}}; width: 14px; height: 14px; border-radius: 50%; background: {{appearOff.knob}};"></span></button>
+      <span style="display: flex; flex-direction: column; gap: 1px;">
+        <span style="font-size: 12px; color: #E9D3AE;">Appear offline</span>
+        <span style="font-size: 10px; color: #A89A82;">{{appearOff.note}}</span>
+      </span>
+    </div>
+    <div class="so-scroll" style="position: absolute; left: 20px; right: 20px; top: 150px; bottom: 16px; overflow-y: auto; display: flex; flex-direction: column;">
+      <sc-for list="{{friendGroups}}" as="g" hint-placeholder-count="2">
+        <div style="height: 28px; flex: none; display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>{{g.title}}</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span></div>
+        <sc-for list="{{g.rows}}" as="f" hint-placeholder-count="4">
+          <div style="height: 40px; flex: none; margin-bottom: 2px; padding: 0 6px 0 10px; border-radius: 4px; border: 1px solid {{f.edge}}; background: {{f.bg}}; display: flex; align-items: center; gap: 10px;">
+            <button onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="flex: 1; min-width: 0; height: 38px; padding: 0; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+              <span title="{{f.status}}" style="width: 8px; height: 8px; flex: none; border-radius: 50%; box-sizing: border-box; border: 1.5px solid {{f.dot}}; background: {{f.dotFill}};"></span>
+              <span style="font-size: 12.5px; font-weight: 600; color: {{f.nameColor}};">{{f.name}}</span>
+              <sc-for list="{{f.tags}}" as="tg" hint-placeholder-count="1">
+                <span style="height: 18px; padding: 0 6px; border-radius: 3px; border: 1px solid rgba(201,160,98,0.3); color: #C8B89C; font-size: 10px; font-weight: 600; display: flex; align-items: center;">{{tg}}</span>
+              </sc-for>
+            </button>
+            <sc-if value="{{f.on}}" hint-placeholder-val="{{false}}">
+              <button disabled="{{f.offline}}" style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Tell</button>
+              <button disabled="{{f.offline}}" style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 11.5px; font-weight: 600; cursor: pointer;">Invite to fellowship</button>
+              <button style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(255,138,142,0.5); background: transparent; color: #FF8A8E; font-size: 11.5px; font-weight: 600; cursor: pointer;">Remove</button>
+            </sc-if>
+          </div>
+        </sc-for>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- ============ IGNORED ============ -->
+  <sc-if value="{{showIgnored}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 20px; right: 20px; top: 104px; height: 34px; display: flex; align-items: center; gap: 8px;">
+      <label style="width: 260px; height: 34px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center;">
+        <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Name to ignore</span>
+        <input placeholder="Name to ignore" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12.5px;">
+      </label>
+      <button disabled="{{always}}" style="height: 34px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Ignore character</button>
+      <button disabled="{{always}}" style="height: 34px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer;">Ignore whole account</button>
+      <span style="flex: 1;"></span>
+      <span style="font-size: 11px; color: #A89A82; font-variant-numeric: tabular-nums;">3 of 50</span>
+    </div>
+    <div style="position: absolute; left: 20px; right: 20px; top: 150px; bottom: 16px; display: flex; flex-direction: column;">
+      <div style="height: 28px; display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>PEOPLE</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span><span>WHAT IS HIDDEN</span></div>
+      <sc-for list="{{ignored}}" as="q" hint-placeholder-count="3">
+        <div style="height: 46px; margin-bottom: 2px; padding: 0 6px 0 12px; border-radius: 4px; border: 1px solid {{q.edge}}; background: {{q.bg}}; display: flex; align-items: center; gap: 10px;">
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 12.5px; font-weight: 600;">{{q.name}}</span>
+            <span style="font-size: 10.5px; color: #A89A82;">{{q.scope}}</span>
+          </span>
+          <button onClick="{{q.edit}}" aria-expanded="{{q.open}}" style="height: 30px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            {{q.what}}
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+          </button>
+          <button aria-label="Stop ignoring {{q.name}}" title="Stop ignoring" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+          </button>
+        </div>
+      </sc-for>
+      <div style="height: 28px; margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><span>FROM EVERYONE</span><span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span></div>
+      <div style="height: 46px; padding: 0 6px 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.2); background: rgba(0,0,0,0.22); display: flex; align-items: center; gap: 10px;">
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 12.5px; font-weight: 600;">Everyone</span>
+          <span style="font-size: 10.5px; color: #A89A82;">Hidden whoever sends it</span>
+        </span>
+        <button style="height: 30px; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+          Spell words
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+        <span style="width: 30px;"></span>
+      </div>
+      <span style="flex: 1;"></span>
+      <span style="font-size: 11px; line-height: 1.5; color: #A89A82;">Ignoring a whole account hides every character on it, including ones made later. Click a name in chat to ignore someone from there.</span>
+    </div>
+
+    <!-- what to hide -->
+    <sc-if value="{{showTypes}}" hint-placeholder-val="{{false}}">
+      <div role="dialog" aria-label="What to hide from Loudmouth" style="position: absolute; right: 56px; top: 286px; width: 260px; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.98); box-shadow: 0 16px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 2px;">
+        <span style="padding: 2px 4px 6px; font-size: 11px; color: #C8B89C;">Hide from Loudmouth</span>
+        <sc-for list="{{types}}" as="ty" hint-placeholder-count="8">
+          <button role="menuitemcheckbox" aria-checked="{{ty.on}}" onClick="{{ty.flip}}" style="height: 30px; padding: 0 6px; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+            <span style="width: 16px; height: 16px; flex: none; box-sizing: border-box; border-radius: 3px; border: 1.5px solid {{ty.edge}}; background: {{ty.bg}}; color: #1A140D; font-size: 11px; font-weight: 800; line-height: 13px; text-align: center;">{{ty.mark}}</span>
+            <span style="font-size: 12.5px; font-weight: {{ty.weight}};">{{ty.label}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <!-- confirm: release or break -->
+  <sc-if value="{{showConfirm}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; background: rgba(10,8,6,0.6); display: flex; align-items: center; justify-content: center;">
+      <div role="alertdialog" aria-label="{{confirm.title}}" style="width: 380px; box-sizing: border-box; padding: 18px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.99); box-shadow: 0 16px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px;">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700;">{{confirm.title}}</h2>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: #E9D3AE;">{{confirm.text}}</p>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+          <button onClick="{{closeOver}}" style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: transparent; font-size: 12px; font-weight: 600; cursor: pointer;">Cancel</button>
+          <button style="height: 34px; padding: 0 16px; border-radius: 4px; border: 1px solid #E5484D; background: rgba(229,72,77,0.9); color: #FFFFFF; font-size: 12px; font-weight: 700; cursor: pointer;">{{confirm.action}}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tab":{"editor":"enum","options":["alleg","fellow","friends","ignored"],"default":"alleg"},"alleg":{"editor":"enum","options":["sworn","none"],"default":"sworn"},"fellow":{"editor":"enum","options":["member","lead","none"],"default":"member"},"overlay":{"editor":"enum","options":["","release","manage","types"],"default":""},"sel":{"editor":"enum","options":["hask","tarn","wren","pell","mira","rook","you"],"default":"hask"},"$preview":{"width":792,"height":600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const TXT = '#F4EBDC', MUTED = '#C8B89C', DIM = '#A89A82', GOLD = '#E0B068', ON = '#7FD08A', OFFDOT = '#8C8070';
+    const tab = st.tab || this.props.tab || 'alleg';
+    const overlay = st.overlay !== undefined ? st.overlay : (this.props.overlay || '');
+    const allegMode = this.props.alleg || 'sworn';
+    const felMode = this.props.fellow || 'member';
+    const go = (patch) => () => this.setState(patch);
+    const flag = (key, def) => (st[key] !== undefined ? st[key] : def);
+    const sw = (key, def, label, extra) => {
+      const on = flag(key, def);
+      return Object.assign({ label, on, track: on ? 'rgba(224,176,104,0.9)' : 'rgba(255,255,255,0.14)', knob: on ? '#1A140D' : MUTED, knobX: on ? '21px' : '3px', flip: () => this.setState({ [key]: !on }) }, extra || {});
+    };
+    const dot = (online) => ({ dot: online ? ON : OFFDOT, dotFill: online ? ON : 'transparent', status: online ? 'Online' : 'Offline' });
+    const pickEdge = (on) => ({ edge: on ? GOLD : 'rgba(201,160,98,0.18)', bg: on ? 'rgba(224,176,104,0.12)' : 'rgba(0,0,0,0.22)' });
+
+    // tabs
+    const tabDefs = [['alleg', 'Allegiance', ''], ['fellow', 'Fellowship', felMode === 'none' ? '' : '5 of 9'], ['friends', 'Friends', '4 online'], ['ignored', 'Ignored', '3']];
+    const tabs = tabDefs.map(([key, label, count]) => {
+      const on = key === tab;
+      return { label, count, hasCount: !!count, on, line: on ? GOLD : 'transparent', fg: on ? TXT : MUTED, pick: go({ tab: key, overlay: '' }) };
+    });
+
+    // ---- allegiance
+    const R = (k, v) => ({ k, v });
+    const people = {
+      rook: { role: 'MONARCH', title: 'King', name: 'Rook of Arwic', online: true, side: '1,284 members', rows: [R('Level', '275'), R('Rank', '9'), R('Heritage', 'Aluvian'), R('Loyalty · leadership', '300 · 300'), R('Followers', '1,284')] },
+      mira: { role: 'YOUR PATRON', title: 'Duchess', name: 'Mira', online: true, side: 'you pass up 1.24M', rows: [R('Level', '201'), R('Rank', '7'), R('Heritage', 'Aluvian'), R('Loyalty · leadership', '260 · 245'), R('You passed up', '1,241,880 XP')], danger: 'Break allegiance with Mira', confirm: { title: 'Break allegiance with Mira?', text: 'You leave Mira’s allegiance, and your 19 followers come with you. Your experience stops passing up to Mira.', action: 'Break allegiance' } },
+      you: { role: 'YOU', title: 'Ealdor', name: 'Aerin Vale', online: true, you: true, side: 'rank 6', rows: [R('Level', '126'), R('Rank', '6'), R('Loyalty · leadership', '210 · 188'), R('Followers', '4 direct · 19 in all'), R('Passed up to you', '964,910 XP')] },
+      hask: { title: 'Maulan', name: 'Hask', online: true, heritage: 'Gharu’ndim', level: '98', rank: '3', passed: '812,400', short: '812.4k', loyalty: '140', leadership: '95', friend: true },
+      tarn: { title: 'Baronet', name: 'Tarn', online: false, heritage: 'Aluvian', level: '64', rank: '2', passed: '140,210', short: '140.2k', loyalty: '88', leadership: '60', friend: true },
+      wren: { title: 'Jinin', name: 'Wren', online: true, heritage: 'Sho', level: '31', rank: '1', passed: '9,880', short: '9.9k', loyalty: '40', leadership: '10', friend: false },
+      pell: { title: 'Yeoman', name: 'Pell', online: false, heritage: 'Aluvian', level: '12', rank: '1', passed: '2,420', short: '2.4k', loyalty: '15', leadership: '5', friend: true }
+    };
+    ['hask', 'tarn', 'wren', 'pell'].forEach((k) => {
+      const p = people[k];
+      p.rows = [R('Level', p.level), R('Rank', p.rank), R('Heritage', p.heritage), R('Loyalty · leadership', p.loyalty + ' · ' + p.leadership), R('Passed up to you', p.passed + ' XP')];
+      p.danger = 'Release ' + p.name;
+      p.confirm = { title: 'Release ' + p.name + '?', text: p.name + ' leaves your allegiance, along with anyone sworn to ' + p.name + '. The experience ' + p.name + ' passes up to you stops.', action: 'Release ' + p.name };
+    });
+    people.rook.friend = true; people.mira.friend = true;
+    const selKey = st.sel || this.props.sel || 'hask';
+    const full = (p) => p.title + ' ' + p.name;
+    const chain = ['rook', 'mira', 'you'].map((k, i) => {
+      const p = people[k], on = k === selKey;
+      return Object.assign({ role: p.role, full: full(p), side: p.side, on, arrow: i < 2, pick: go({ sel: k }) }, dot(p.online), pickEdge(on));
+    });
+    const vassals = ['hask', 'tarn', 'wren', 'pell'].map((k) => {
+      const p = people[k], on = k === selKey;
+      return Object.assign({ full: full(p), sub: 'Level ' + p.level + ' · rank ' + p.rank + ' · ' + p.heritage, passed: p.short, nameColor: p.online ? TXT : MUTED, on, pick: go({ sel: k }) }, dot(p.online), pickEdge(on));
+    });
+    const sp = people[selKey] || people.hask;
+    const sel = Object.assign({ full: full(sp), rows: sp.rows, canTalk: !sp.you, isFriend: !!sp.friend, friendLabel: sp.friend ? 'Friend' : 'Add friend', hasDanger: !!sp.danger, danger: sp.danger || '' }, dot(sp.online));
+    if (sp.you) sel.status = 'You';
+    const officeKey = st.office || 'seneschal';
+    const offices = [['speaker', 'Speaker', 'Office 1'], ['seneschal', 'Seneschal', 'Office 2'], ['castellan', 'Castellan', 'Office 3']].map(([key, title, level]) => {
+      const on = key === officeKey;
+      return { title, level, on, edge: on ? GOLD : 'rgba(201,160,98,0.3)', bg: on ? 'rgba(224,176,104,0.14)' : 'rgba(0,0,0,0.25)', pick: go({ office: key }) };
+    });
+
+    // ---- fellowship
+    const lead = felMode === 'lead';
+    const V = (cur, max, color) => {
+      const pct = Math.round((cur / max) * 100);
+      return { pct: pct + '%', color, text: cur.toLocaleString('en-US') + ' / ' + max.toLocaleString('en-US'), fg: pct < 40 ? '#FF8A8E' : MUTED };
+    };
+    const HP = '#C2343C', ST = '#B88A1E', MP = '#2F64C2';
+    const fdefs = [
+      ['mira', 'Mira', '201', '38%', [1020, 1020], [880, 1150], [610, 900], true],
+      ['you', 'Aerin Vale', '126', '22%', [412, 450], [298, 410], [361, 620], true],
+      ['osk', 'Osk', '126', '22%', [305, 305], [410, 450], [290, 290], false],
+      ['hask', 'Hask', '98', '15%', [140, 388], [300, 300], [120, 200], true],
+      ['wren', 'Wren', '31', '3%', [160, 160], [90, 210], [300, 300], true]
+    ];
+    const fselKey = st.fsel || 'hask';
+    const leaderKey = lead ? 'you' : 'mira';
+    const fellows = fdefs.map(([key, name, level, share, h, s, m, loot]) => {
+      const on = key === fselKey;
+      return Object.assign({ name, level, share, you: key === 'you', leader: key === leaderKey, on, pick: go({ fsel: key }),
+        vitals: [V(h[0], h[1], HP), V(s[0], s[1], ST), V(m[0], m[1], MP)],
+        lootColor: loot ? GOLD : 'rgba(168,154,130,0.35)', lootTip: loot ? 'Shares loot' : 'Keeps own loot' }, pickEdge(on));
+    });
+    const isOpen = flag('felOpen', true);
+    const selName = (fdefs.find((f) => f[0] === fselKey) || fdefs[3])[1];
+    const fel = {
+      sub: (lead ? 'You lead' : 'Mira leads') + ' · 5 of 9 · experience shared by level',
+      openText: isOpen ? 'Open' : 'Closed', openFg: isOpen ? ON : MUTED, openEdge: isOpen ? 'rgba(127,208,138,0.5)' : 'rgba(201,160,98,0.4)',
+      openTip: isOpen ? 'Anyone in it may recruit' : 'Only the leader may recruit',
+      openAction: isOpen ? 'Close recruiting' : 'Open recruiting', flipOpen: () => this.setState({ felOpen: !isOpen }),
+      locked: lead, lead, hint: !lead, noRecruit: !lead && !isOpen, selName, selIsYou: fselKey === 'you'
+    };
+    const felOpts = [
+      sw('shareLoot', true, 'Share my loot'),
+      sw('ignoreFel', false, 'Ignore fellowship requests'),
+      sw('autoFel', false, 'Accept requests automatically'),
+      sw('felHud', true, 'Show fellows on screen', { openac: true })
+    ];
+
+    // ---- friends
+    const tagsOf = { mira: ['Patron', 'Fellowship'], osk: ['Fellowship'], rook: ['Monarch'], tarn: ['Vassal'], pell: ['Vassal'] };
+    const frSel = st.frsel || 'osk';
+    const F = (key, name, online) => {
+      const on = key === frSel;
+      return Object.assign({ name, on, offline: !online, nameColor: online ? TXT : MUTED, tags: tagsOf[key] || [], pick: go({ frsel: key }) }, dot(online), pickEdge(on));
+    };
+    const friendGroups = [
+      { title: 'ONLINE · 4', rows: [F('mira', 'Mira', true), F('osk', 'Osk', true), F('rook', 'Rook of Arwic', true), F('lysse', 'Lysse', true)] },
+      { title: 'OFFLINE · 4', rows: [F('corvan', 'Corvan', false), F('kestrel', 'Kestrel', false), F('pell', 'Pell', false), F('tarn', 'Tarn', false)] }
+    ];
+    const appearOff = sw('appearOff', false, 'Appear offline');
+    appearOff.note = appearOff.on ? 'Friends see you as offline' : 'Friends see when you are on';
+
+    // ---- ignored
+    const typesOpen = overlay === 'types';
+    const ignored = [
+      ['Spamtastic', 'Character', 'Everything'],
+      ['Pyreal Dealer', 'Whole account: every character on it', 'Everything'],
+      ['Loudmouth', 'Character', 'Tells, emotes']
+    ].map(([name, scope, what]) => {
+      const open = typesOpen && name === 'Loudmouth';
+      return Object.assign({ name, scope, what, open, edit: go({ overlay: open ? '' : (name === 'Loudmouth' ? 'types' : '') }) }, { edge: open ? GOLD : 'rgba(201,160,98,0.2)', bg: open ? 'rgba(224,176,104,0.10)' : 'rgba(0,0,0,0.22)' });
+    });
+    const typeDefs = [['all', 'Everything', false], ['speech', 'Speech nearby', false], ['tell', 'Tells', true], ['emote', 'Emotes', true], ['words', 'Spell words', false], ['alleg', 'Allegiance chat', false], ['fellow', 'Fellowship chat', false], ['combat', 'Combat messages', false]];
+    const types = typeDefs.map(([key, label, def]) => {
+      const on = flag('ty_' + key, def);
+      return { label, on, mark: on ? '✓' : '', edge: on ? GOLD : 'rgba(201,160,98,0.6)', bg: on ? GOLD : 'transparent', weight: key === 'all' ? '700' : '500', flip: () => this.setState({ ['ty_' + key]: !on }) };
+    });
+
+    const isAlleg = tab === 'alleg';
+    const showConfirm = isAlleg && overlay === 'release' && !!sp.confirm;
+    return {
+      always: true,
+      isMonarch: this.props.overlay === 'manage',
+      tabs,
+      showAlleg: isAlleg && allegMode === 'sworn',
+      showAllegNone: isAlleg && allegMode === 'none',
+      showManage: isAlleg && allegMode === 'sworn' && overlay === 'manage',
+      chain, vassals, sel, offices,
+      ignoreAlleg: sw('ignoreAlleg', false, 'Ignore allegiance requests'),
+      locked: sw('locked', false, 'Locked'),
+      askRelease: go({ overlay: 'release' }), openManage: go({ overlay: 'manage' }), closeOver: go({ overlay: '' }),
+      showConfirm, confirm: sp.confirm || { title: '', text: '', action: '' },
+      showFellow: tab === 'fellow' && felMode !== 'none',
+      showFellowNone: tab === 'fellow' && felMode === 'none',
+      fellows, fel, felOpts, shareXp: sw('shareXp', true, 'Share experience'),
+      showFriends: tab === 'friends', friendGroups, appearOff,
+      showIgnored: tab === 'ignored', ignored, showTypes: typesOpen, types
+    };
+  }
+}
+</script>
+</body>
+</html>

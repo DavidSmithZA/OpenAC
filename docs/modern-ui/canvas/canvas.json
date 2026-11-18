@@ -746,6 +746,102 @@
       "h": 620,
       "page": "inspect",
       "title": "Spell from a bar: casting, components"
+    },
+    "SocialInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "social",
+      "title": "Social open over the bronze HUD (allegiance tab)"
+    },
+    "Social.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 792,
+      "h": 600,
+      "page": "social",
+      "title": "Allegiance: your monarch, patron and vassals; click anyone",
+      "is_interactive": true
+    },
+    "SocialRelease.dc.html": {
+      "x": 2392,
+      "y": 0,
+      "w": 792,
+      "h": 600,
+      "page": "social",
+      "title": "Release a vassal: asked first"
+    },
+    "SocialManage.dc.html": {
+      "x": 3264,
+      "y": 0,
+      "w": 792,
+      "h": 600,
+      "page": "social",
+      "title": "Monarch only: name, message, officers, joining, bans",
+      "is_interactive": true
+    },
+    "SocialHud.dc.html": {
+      "x": 0,
+      "y": 1020,
+      "w": 1440,
+      "h": 900,
+      "page": "social",
+      "title": "Fellows on screen: click one to select them",
+      "is_interactive": true
+    },
+    "SocialFellow.dc.html": {
+      "x": 1520,
+      "y": 1020,
+      "w": 792,
+      "h": 600,
+      "page": "social",
+      "title": "Fellowship: everyone\u2019s share and vitals",
+      "is_interactive": true
+    },
+    "SocialFellowLead.dc.html": {
+      "x": 2392,
+      "y": 1020,
+      "w": 792,
+      "h": 600,
+      "page": "social",
+      "title": "You lead: recruit, hand on the lead, dismiss, close, disband",
+      "is_interactive": true
+    },
+    "SocialFellowNone.dc.html": {
+      "x": 3264,
+      "y": 1020,
+      "w": 792,
+      "h": 600,
+      "page": "social",
+      "title": "No fellowship: start one, or how to join",
+      "is_interactive": true
+    },
+    "SocialFriends.dc.html": {
+      "x": 1520,
+      "y": 2040,
+      "w": 792,
+      "h": 600,
+      "page": "social",
+      "title": "Friends: online first, actions on the selected one",
+      "is_interactive": true
+    },
+    "SocialIgnored.dc.html": {
+      "x": 2392,
+      "y": 2040,
+      "w": 792,
+      "h": 600,
+      "page": "social",
+      "title": "Ignored: who, how wide, and what is hidden",
+      "is_interactive": true
+    },
+    "SocialNone.dc.html": {
+      "x": 3264,
+      "y": 2040,
+      "w": 792,
+      "h": 600,
+      "page": "social",
+      "title": "No allegiance yet"
     }
   },
   "createdOnFiles": {
@@ -755,7 +851,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "inspect"
+    "page": "social"
   },
   "notes": {
     "t1": {
@@ -854,6 +950,14 @@
       "x": 0,
       "y": -300,
       "page": "inspect"
+    },
+    "t13": {
+      "kind": "title1",
+      "maxW": 4056,
+      "text": "Social: allegiance, fellowship, friends",
+      "x": 0,
+      "y": -300,
+      "page": "social"
     }
   },
   "order": [
@@ -943,7 +1047,18 @@
     "InspectInscribe.dc.html",
     "InspectPortal.dc.html",
     "InspectChest.dc.html",
-    "InspectSpell.dc.html"
+    "InspectSpell.dc.html",
+    "SocialInGame.dc.html",
+    "Social.dc.html",
+    "SocialRelease.dc.html",
+    "SocialManage.dc.html",
+    "SocialHud.dc.html",
+    "SocialFellow.dc.html",
+    "SocialFellowLead.dc.html",
+    "SocialFellowNone.dc.html",
+    "SocialFriends.dc.html",
+    "SocialIgnored.dc.html",
+    "SocialNone.dc.html"
   ],
   "pages": [
     {
@@ -989,6 +1104,10 @@
     {
       "id": "inspect",
       "name": "Inspect"
+    },
+    {
+      "id": "social",
+      "name": "Social"
     },
     {
       "id": "r1",
