@@ -98,7 +98,7 @@
       "w": 1080,
       "h": 640,
       "page": "inv",
-      "title": "Long item: details scroll, sections fold",
+      "title": "Long item: the same four tabs as the inspect sheet (Spells tab open)",
       "is_interactive": true
     },
     "InventorySort.dc.html": {
@@ -628,6 +628,124 @@
       "page": "salvage",
       "title": "Done: the bags you got",
       "is_interactive": true
+    },
+    "InspectInGame.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "inspect",
+      "title": "A creature: the sheet on the right edge"
+    },
+    "InspectInGamePlayer.dc.html": {
+      "x": 0,
+      "y": 1020,
+      "w": 1440,
+      "h": 900,
+      "page": "inspect",
+      "title": "A player"
+    },
+    "InspectInGameItem.dc.html": {
+      "x": 0,
+      "y": 2040,
+      "w": 1440,
+      "h": 900,
+      "page": "inspect",
+      "title": "Loot on the ground"
+    },
+    "Inspect.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 360,
+      "h": 620,
+      "page": "inspect",
+      "title": "Creature: one column, no tabs"
+    },
+    "InspectFailed.dc.html": {
+      "x": 1960,
+      "y": 0,
+      "w": 360,
+      "h": 620,
+      "page": "inspect",
+      "title": "Assessment failed: only health is known"
+    },
+    "InspectPlayer.dc.html": {
+      "x": 2400,
+      "y": 0,
+      "w": 360,
+      "h": 620,
+      "page": "inspect",
+      "title": "Player: Stats, Allegiance, Armor, About",
+      "is_interactive": true
+    },
+    "InspectPlayerArmor.dc.html": {
+      "x": 2840,
+      "y": 0,
+      "w": 360,
+      "h": 620,
+      "page": "inspect",
+      "title": "Player, Armor tab",
+      "is_interactive": true
+    },
+    "InspectItem.dc.html": {
+      "x": 1520,
+      "y": 740,
+      "w": 360,
+      "h": 620,
+      "page": "inspect",
+      "title": "Item: Overview, Spells, Needs, Details",
+      "is_interactive": true
+    },
+    "InspectItemSpells.dc.html": {
+      "x": 1960,
+      "y": 740,
+      "w": 360,
+      "h": 620,
+      "page": "inspect",
+      "title": "Item, Spells tab: casting and every spell",
+      "is_interactive": true
+    },
+    "InspectItemNeeds.dc.html": {
+      "x": 2400,
+      "y": 740,
+      "w": 360,
+      "h": 620,
+      "page": "inspect",
+      "title": "Item, Needs tab: what it takes, against what you have",
+      "is_interactive": true
+    },
+    "InspectInscribe.dc.html": {
+      "x": 2840,
+      "y": 740,
+      "w": 360,
+      "h": 620,
+      "page": "inspect",
+      "title": "Item, Details tab: an inscription you can write",
+      "is_interactive": true
+    },
+    "InspectPortal.dc.html": {
+      "x": 1520,
+      "y": 1480,
+      "w": 360,
+      "h": 620,
+      "page": "inspect",
+      "title": "Portal: where it goes, who may use it"
+    },
+    "InspectChest.dc.html": {
+      "x": 1960,
+      "y": 1480,
+      "w": 360,
+      "h": 620,
+      "page": "inspect",
+      "title": "Chest: lock and capacity"
+    },
+    "InspectSpell.dc.html": {
+      "x": 2400,
+      "y": 1480,
+      "w": 360,
+      "h": 620,
+      "page": "inspect",
+      "title": "Spell from a bar: casting, components"
     }
   },
   "createdOnFiles": {
@@ -637,7 +755,7 @@
   "designSystems": [],
   "launch": {
     "view": "canvas",
-    "page": "salvage"
+    "page": "inspect"
   },
   "notes": {
     "t1": {
@@ -728,6 +846,14 @@
       "x": 0,
       "y": -300,
       "page": "salvage"
+    },
+    "t12": {
+      "kind": "title1",
+      "maxW": 3200,
+      "text": "Inspect: everything you can assess",
+      "x": 0,
+      "y": -300,
+      "page": "inspect"
     }
   },
   "order": [
@@ -803,7 +929,21 @@
     "SalvageEmpty.dc.html",
     "SalvagePick.dc.html",
     "SalvageRefused.dc.html",
-    "SalvageDone.dc.html"
+    "SalvageDone.dc.html",
+    "InspectInGame.dc.html",
+    "InspectInGamePlayer.dc.html",
+    "InspectInGameItem.dc.html",
+    "Inspect.dc.html",
+    "InspectFailed.dc.html",
+    "InspectPlayer.dc.html",
+    "InspectPlayerArmor.dc.html",
+    "InspectItem.dc.html",
+    "InspectItemSpells.dc.html",
+    "InspectItemNeeds.dc.html",
+    "InspectInscribe.dc.html",
+    "InspectPortal.dc.html",
+    "InspectChest.dc.html",
+    "InspectSpell.dc.html"
   ],
   "pages": [
     {
@@ -845,6 +985,10 @@
     {
       "id": "salvage",
       "name": "Salvage"
+    },
+    {
+      "id": "inspect",
+      "name": "Inspect"
     },
     {
       "id": "r1",

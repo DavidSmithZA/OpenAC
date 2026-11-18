@@ -50,10 +50,12 @@ This folder holds the design only. There is no code yet.
 - Sort by name, type, value, burden, workmanship, newest, or your own
   order. Tidy: merge partial stacks, close gaps. Automatic rules such as
   sorting items into packs belong in plugins, not the client.
-- Item details: fixed header, scrolling sections that fold, fixed action
-  buttons. The main button says Equip for things you wear or wield and
-  Use for things you use. The small buttons are Give, Drop, Salvage, and
-  More (split, inscribe, add to bar, link in chat).
+- Item details: fixed header, then the same four tabs as the inspect
+  sheet (Overview, Spells, Needs, Details; empty tabs are left out), a
+  scrolling body and fixed action buttons. The main button says Equip
+  for things you wear or wield and Use for things you use. The small
+  buttons are Give, Drop, Salvage, and More (split, inscribe, add to
+  bar, link in chat).
 - Small screens: with nothing selected the window narrows to 792 px. The
   details then pop up as a card beside the item, which can be pinned back
   into the window. Docked, Pop-up or Auto is an option.
@@ -213,12 +215,41 @@ This folder holds the design only. There is no code yet.
 - After salvaging, the window shows each bag you got, with its units
   and workmanship, and Salvage more. The same lines go to chat.
 
+## Inspect
+
+- One sheet for everything you can assess, as retail's one examination
+  window: items (anything not alive, so loot, gear, portals, chests,
+  doors), creatures, players, and spells examined from a bar. It sits
+  on the right edge under the radar, 360 px wide.
+- Tabs appear only when there is enough to split:
+  - Players: Stats, Allegiance, Armor, About.
+  - Items: Overview (value, burden, weapon or armor numbers, ratings,
+    set, a magic summary), Spells (mana, spellcraft, every spell and
+    cantrip), Needs (each requirement against your own value, ticked or
+    crossed), Details (tinkering, crafter, inscription, description).
+    Empty tabs are left out. The inventory's item details use the same
+    tabs, so an item reads the same in a pack or on the ground.
+  - Creatures, portals, chests and doors, and spells: one column.
+- Head: an icon for things; level and a health bar for creatures and
+  players.
+- Values raised or lowered by a spell keep retail's green and red and
+  add an arrow; unknown values show ???. A failed assessment says so
+  and shows only health.
+- Portals show their use text, level range and retail's restriction
+  lines. Chests and doors show the lock, retail's "looks hard to pick
+  (Resistance N)" line, your Lockpick and the capacity. Spells show
+  mana, difficulty against your skill, the description and components
+  with what you carry.
+- Inscriptions: a signed one shows read-only with who signed it; on
+  your own unsigned item it is a field you write in.
+- No action buttons: the chat name menu and right-clicking a player
+  cover Tell, Trade and the rest.
+
 ## Still to design
 
-Appraising other players and creatures, social (allegiance,
-fellowship, friends), map, journal and quests, pop-up dialogs, login and
-character creation. After that, a check of every retail panel in
-`crates/ac-ui/src/panels` against this design.
+Social (allegiance, fellowship, friends), map, journal and quests,
+pop-up dialogs, login and character creation. After that, a check of
+every retail panel in `crates/ac-ui/src/panels` against this design.
 
 Open question: at a server's level cap, does the XP bar say "Max level"
 or keep counting total XP?

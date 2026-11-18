@@ -142,7 +142,7 @@ body{margin:0}
     </div>
   </section>
 
-  <!-- item details: fixed head, scrolling body, fixed actions -->
+  <!-- item details: fixed head, the same tabs as the inspect sheet, scrolling body, fixed actions -->
   <sc-if value="{{hasDetails}}" hint-placeholder-val="{{true}}">
     <aside aria-label="Selected item" style="position: absolute; left: {{ad.left}}; top: {{ad.top}}; width: 264px; height: {{ad.h}}; box-sizing: border-box; border-radius: {{ad.radius}}; border: {{ad.border}}; background: {{ad.bg}}; box-shadow: {{ad.shadow}}; display: flex; flex-direction: column;">
       <sc-if value="{{ad.floating}}" hint-placeholder-val="{{false}}">
@@ -175,22 +175,26 @@ body{margin:0}
           </sc-for>
         </div>
       </div>
+      <sc-if value="{{item.hasTabs}}" hint-placeholder-val="{{true}}">
+        <div role="tablist" aria-label="Item sections" style="flex: none; display: flex; padding: 0 6px; border-bottom: 1px solid rgba(201,160,98,0.25);">
+          <sc-for list="{{item.tabs}}" as="t" hint-placeholder-count="4">
+            <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="flex: 1; height: 32px; padding: 0 2px; border: 0; border-bottom: 2px solid {{t.line}}; background: transparent; color: {{t.fg}}; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap;">{{t.label}}</button>
+          </sc-for>
+        </div>
+      </sc-if>
       <div class="inv-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 10px 10px 10px 14px; display: flex; flex-direction: column; gap: 12px;">
         <sc-for list="{{item.sections}}" as="sec" hint-placeholder-count="3">
           <div style="display: flex; flex-direction: column; gap: 4px;">
-            <button onClick="{{sec.toggle}}" aria-expanded="{{sec.open}}" style="display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; cursor: pointer; text-align: left;">
-              <span style="font-size: 10px; color: #C8B89C; width: 10px;">{{sec.chev}}</span>
-              <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">{{sec.title}}</span>
-              <span style="flex: 1;"></span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">{{sec.title}}</span>
+              <span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span>
               <span style="font-size: 10px; color: #C8B89C;">{{sec.count}}</span>
-            </button>
-            <sc-if value="{{sec.open}}" hint-placeholder-val="{{true}}">
-              <div style="display: flex; flex-direction: column;">
-                <sc-for list="{{sec.rows}}" as="r" hint-placeholder-count="3">
-                  <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.55;"><span style="color: {{r.kc}};">{{r.k}}</span><span style="color: {{r.c}}; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right;">{{r.v}}</span></div>
-                </sc-for>
-              </div>
-            </sc-if>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+              <sc-for list="{{sec.rows}}" as="r" hint-placeholder-count="3">
+                <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.55;"><span style="color: {{r.kc}};">{{r.k}}</span><span style="color: {{r.c}}; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right;">{{r.v}}</span></div>
+              </sc-for>
+            </div>
           </div>
         </sc-for>
       </div>
@@ -399,41 +403,50 @@ class Component extends DCLogic {
       .map((p) => ({ ...p, edge: p.sel ? '#E0B068' : 'rgba(201,160,98,0.3)', bg: p.sel ? 'rgba(224,176,104,0.16)' : 'rgba(0,0,0,0.3)', color: p.sel ? '#E0B068' : MUTED, bar: p.pct === '100%' ? '#FF6B70' : '#E0B068' }));
     const chips = ['All', 'Gear', 'Magic', 'Consumables', 'Salvage', 'Other'].map((label, i) => ({ label, edge: i === 0 ? '#E0B068' : 'rgba(201,160,98,0.3)', bg: i === 0 ? 'rgba(224,176,104,0.18)' : 'transparent', fg: i === 0 ? TXT : MUTED }));
 
-    // item details
-    const sec = (id, title, rows, count) => {
-      const open = !closed[id];
-      return { title, rows, count: count || '', open, chev: open ? '▾' : '▸', toggle: toggle(id) };
-    };
+    // item details: the same four tabs as the inspect sheet; empty tabs are left out
+    const sec = (title, rows, count) => ({ title, rows, count: count || '' });
     const row = (k, v, c, kc) => ({ k, v, c: c || TXT, kc: kc || TXT });
+    const BAD = '#FF8A8E';
+    const TABS = [['overview', 'Overview'], ['spells', 'Spells'], ['reqs', 'Needs'], ['details', 'Details']];
+    const withTabs = (it, first) => {
+      const keys = TABS.filter(([k]) => it.pages[k] && it.pages[k].length);
+      const cur = keys.some(([k]) => k === this.state.itab) ? this.state.itab : (first || keys[0][0]);
+      return Object.assign({}, it, {
+        hasTabs: keys.length > 1,
+        tabs: keys.map(([key, label]) => ({ label, on: key === cur, line: key === cur ? '#E0B068' : 'transparent', fg: key === cur ? TXT : MUTED, pick: () => this.setState({ itab: key }) })),
+        sections: it.pages[cur]
+      });
+    };
     const wand = {
       name: 'Ornate Gold Wand', sub: 'Caster · in Main pack', d: P.wand, color: T.weapon, tile: tile(T.weapon), primary: 'Equip',
       facts: [{ k: 'Value', v: '18,400' }, { k: 'Burden', v: '50' }, { k: 'Workmanship', v: '8' }],
-      sections: [
-        sec('w-props', 'PROPERTIES', [row('Elemental damage', '+8%', T.weapon), row('Mana conversion', '+5%', T.armor), row('Melee defense', '+12%', OK), row('Imbued', 'Fire rending', T.weapon)]),
-        sec('w-spells', 'SPELLS', [row('Hermetic Link VI', 'Item', MUTED), row('Spirit Drinker VI', 'Item', MUTED), row('Defender VI', 'Item', MUTED)], '3'),
-        sec('w-mana', 'MANA', [row('Current', '2,410 / 3,000'), row('Spellcraft', '280'), row('Mana cost', '1 every 12 s')]),
-        sec('w-req', 'REQUIRES', [row('Wield: War Magic', '300', OK), row('Activate: Arcane Lore', '260', OK)])
-      ]
+      pages: {
+        overview: [sec('PROPERTIES', [row('Elemental damage', '+8%', T.weapon), row('Mana conversion', '+5%', T.armor), row('Melee defense', '+12%', OK), row('Imbued', 'Fire rending', T.weapon)])],
+        spells: [sec('MANA', [row('Current', '2,410 / 3,000'), row('Spellcraft', '280'), row('Mana cost', '1 every 12 s')]), sec('SPELLS', [row('Hermetic Link VI', 'Item', MUTED), row('Spirit Drinker VI', 'Item', MUTED), row('Defender VI', 'Item', MUTED)], '3')],
+        reqs: [sec('TO WIELD', [row('War Magic', '300 (you: 412)', OK)]), sec('TO ACTIVATE', [row('Arcane Lore', '260 (you: 300)', OK)])],
+        details: [sec('MADE BY', [row('Crafted by', 'Hask'), row('Imbued by', 'Corvan')]), sec('DESCRIPTION', [row('A wand of worked gold, warm in the hand.', '', MUTED, MUTED)])]
+      }
     };
     const coat = {
       name: 'Olthoi Amuli Coat', sub: 'Armor · chest, abdomen, arms', d: P.shield, color: T.armor, tile: tile(T.armor), primary: 'Equip',
       facts: [{ k: 'Armor', v: '650' }, { k: 'Value', v: '42,000' }, { k: 'Burden', v: '1,240' }],
-      sections: [
-        sec('c-prot', 'PROTECTION', [row('Slashing', 'Excellent'), row('Piercing', 'Above average'), row('Bludgeoning', 'Excellent'), row('Fire', 'Average'), row('Cold', 'Below average', '#FF8A8E'), row('Acid', 'Above average'), row('Lightning', 'Average')]),
-        sec('c-rate', 'RATINGS', [row('Damage resistance', '+3', OK), row('Critical damage resistance', '+2', OK), row('Healing boost', '+1', OK)]),
-        sec('c-set', "SOLDIER'S SET · 3 OF 5", [row('2 pieces', '+4% damage', OK), row('3 pieces', '+10 melee defense', OK), row('4 pieces', '+5% critical', MUTED, MUTED), row('5 pieces', '+1 damage rating', MUTED, MUTED)]),
-        sec('c-spells', 'SPELLS', [row('Legendary Strength', 'Cantrip', MUTED), row('Legendary Endurance', 'Cantrip', MUTED), row('Epic Invulnerability', 'Cantrip', MUTED), row('Epic Impenetrability', 'Cantrip', MUTED), row('Major Blade Ward', 'Cantrip', MUTED), row('Major Flame Ward', 'Cantrip', MUTED), row('Impenetrability VII', 'Item', MUTED), row('Blade Bane VII', 'Item', MUTED), row('Flame Bane VII', 'Item', MUTED), row('Acid Bane VII', 'Item', MUTED)], '10'),
-        sec('c-tink', 'TINKERING · 7', [row('Steel', '×5'), row('Alabaster', '×2'), row('Last tinkered by', 'Mira')]),
-        sec('c-req', 'REQUIRES', [row('Wield: level', '180', OK), row('Activate: Arcane Lore', '310', '#FF8A8E')]),
-        sec('c-about', 'ABOUT', [row('Attuned · Bonded', ''), row('Made from the carapace of an Olthoi queen.', '', MUTED, MUTED)])
-      ]
+      pages: {
+        overview: [
+          sec('PROTECTION', [row('Slashing', 'Excellent'), row('Piercing', 'Above average'), row('Bludgeoning', 'Excellent'), row('Fire', 'Average'), row('Cold', 'Below average', BAD), row('Acid', 'Above average'), row('Lightning', 'Average')]),
+          sec('RATINGS', [row('Damage resistance', '+3', OK), row('Critical damage resistance', '+2', OK), row('Healing boost', '+1', OK)]),
+          sec("SOLDIER'S SET · 3 OF 5", [row('2 pieces', '+4% damage', OK), row('3 pieces', '+10 melee defense', OK), row('4 pieces', '+5% critical', MUTED, MUTED), row('5 pieces', '+1 damage rating', MUTED, MUTED)])
+        ],
+        spells: [sec('SPELLS', [row('Legendary Strength', 'Cantrip', MUTED), row('Legendary Endurance', 'Cantrip', MUTED), row('Epic Invulnerability', 'Cantrip', MUTED), row('Epic Impenetrability', 'Cantrip', MUTED), row('Major Blade Ward', 'Cantrip', MUTED), row('Major Flame Ward', 'Cantrip', MUTED), row('Impenetrability VII', 'Item', MUTED), row('Blade Bane VII', 'Item', MUTED), row('Flame Bane VII', 'Item', MUTED), row('Acid Bane VII', 'Item', MUTED)], '10')],
+        reqs: [sec('TO WIELD', [row('Level', '180 (you: 186)', OK)]), sec('TO ACTIVATE', [row('Arcane Lore', '310 (you: 300)', BAD)])],
+        details: [sec('TINKERING · 7', [row('Steel', '×5'), row('Alabaster', '×2'), row('Last tinkered by', 'Mira')]), sec('ABOUT', [row('Attuned · Bonded', ''), row('Made from the carapace of an Olthoi queen.', '', MUTED, MUTED)])]
+      }
     };
     const potion = {
       name: 'Health Potion', sub: 'Consumable · stack of 14', d: P.drop, color: T.hp, tile: tile(T.hp), primary: 'Use',
       facts: [{ k: 'Value', v: '350' }, { k: 'Burden', v: '140' }, { k: 'Shortcut', v: '-' }],
-      sections: [sec('p-eff', 'EFFECT', [row('Restores health', '+200'), row('Cooldown', '5 s')])]
+      pages: { overview: [sec('EFFECT', [row('Restores health', '+200'), row('Cooldown', '5 s')])] }
     };
-    const item = state === 'long' ? coat : state === 'split' ? potion : wand;
+    const item = state === 'long' ? withTabs(coat, 'spells') : state === 'split' ? withTabs(potion) : withTabs(wand);
 
     const heavy = state === 'heavy';
     const floating = state === 'float';

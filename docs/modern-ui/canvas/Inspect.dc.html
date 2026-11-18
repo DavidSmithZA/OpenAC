@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inspect sheet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+.in-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,160,98,0.7) transparent}
+.in-scroll::-webkit-scrollbar{width:5px}
+.in-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
+</style>
+</helmet>
+<div style="width: 360px; height: 620px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.9); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.5); overflow: hidden; display: flex; flex-direction: column;">
+
+  <!-- head -->
+  <div style="flex: none; padding: 14px 10px 12px 16px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid rgba(201,160,98,0.3);">
+    <div style="display: flex; align-items: flex-start; gap: 10px;">
+      <sc-if value="{{hasIcon}}" hint-placeholder-val="{{false}}">
+        <span style="width: 40px; height: 40px; flex: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: {{who.tile}}; display: flex; align-items: center; justify-content: center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{who.iconColor}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{who.icon}}"></path></svg>
+        </span>
+      </sc-if>
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+        <h1 style="margin: 0; font-size: 16px; font-weight: 700; color: {{who.nameColor}}; line-height: 1.25;">{{who.name}}</h1>
+        <span style="font-size: 11.5px; color: #C8B89C;">{{who.line}}</span>
+      </div>
+      <sc-if value="{{hasLevel}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; flex-direction: column; align-items: flex-end; padding-top: 1px;">
+          <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">LEVEL</span>
+          <span style="font-size: 18px; font-weight: 700; line-height: 1.1; color: #E0B068; font-variant-numeric: tabular-nums;">{{who.level}}</span>
+        </div>
+      </sc-if>
+      <button aria-label="Close" style="width: 26px; height: 26px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+      </button>
+    </div>
+    <sc-if value="{{hasHealth}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; align-items: center; gap: 8px; padding-right: 6px;">
+        <span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.5);"><span style="display: block; width: {{who.healthPct}}; height: 100%; border-radius: 2px; background: #E5484D;"></span></span>
+        <span style="font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;">{{who.healthPct}}</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{isFailed}}" hint-placeholder-val="{{false}}">
+      <span role="status" style="font-size: 11.5px; line-height: 1.45; color: #E0B068;">Your assessment failed. Only its health is known.</span>
+    </sc-if>
+  </div>
+
+  <!-- tabs, only when there is enough to split -->
+  <sc-if value="{{hasTabs}}" hint-placeholder-val="{{false}}">
+    <div role="tablist" aria-label="Sections" style="flex: none; display: flex; padding: 0 8px; border-bottom: 1px solid rgba(201,160,98,0.25);">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+        <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="flex: 1; height: 36px; padding: 0 4px; border: 0; border-bottom: 2px solid {{t.line}}; background: transparent; color: {{t.fg}}; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap;">{{t.label}}</button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- one column -->
+  <div class="in-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 16px;">
+    <sc-for list="{{sections}}" as="sec" hint-placeholder-count="3">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 14px 0 4px;">
+        <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">{{sec.title}}</span>
+        <span style="flex: 1; height: 1px; background: rgba(201,160,98,0.22);"></span>
+      </div>
+      <sc-for list="{{sec.items}}" as="e" hint-placeholder-count="3">
+        <sc-if value="{{e.isRow}}" hint-placeholder-val="{{true}}">
+          <div style="min-height: 26px; display: flex; align-items: center; gap: 8px; font-size: 12.5px;">
+            <span style="flex: 1; color: #E9D3AE;">{{e.k}}</span>
+            <sc-if value="{{e.hasBar}}" hint-placeholder-val="{{false}}">
+              <span style="width: 56px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.5);"><span style="display: block; width: {{e.pct}}; height: 100%; border-radius: 2px; background: {{e.bar}};"></span></span>
+            </sc-if>
+            <span style="font-weight: 700; color: {{e.c}}; font-variant-numeric: tabular-nums; text-align: right;">{{e.v}}</span>
+            <span style="width: 10px; font-size: 10px; font-weight: 700; color: {{e.c}};">{{e.mark}}</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{e.isPara}}" hint-placeholder-val="{{false}}">
+          <p style="margin: 4px 0; font-size: 12px; line-height: 1.5; color: {{e.c}};">{{e.text}}</p>
+        </sc-if>
+        <sc-if value="{{e.isSpell}}" hint-placeholder-val="{{false}}">
+          <div style="padding: 5px 0; display: flex; flex-direction: column; gap: 1px;">
+            <span style="font-size: 12.5px; font-weight: 600; color: {{e.c}};">{{e.name}}</span>
+            <span style="font-size: 11px; line-height: 1.4; color: #C8B89C;">{{e.desc}}</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{e.isInscr}}" hint-placeholder-val="{{false}}">
+          <div style="padding: 6px 0; display: flex; flex-direction: column; gap: 6px;">
+            <sc-if value="{{e.editable}}" hint-placeholder-val="{{false}}">
+              <label style="display: flex; flex-direction: column;">
+                <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Inscription</span>
+                <textarea placeholder="Inscribe here" style="height: 72px; box-sizing: border-box; padding: 8px 10px; resize: none; border-radius: 4px; border: 1px solid {{e.edge}}; background: rgba(0,0,0,0.35); color: #F4EBDC; font: inherit; font-size: 12.5px; line-height: 1.45; font-style: italic;"></textarea>
+              </label>
+            </sc-if>
+            <sc-if value="{{e.readOnly}}" hint-placeholder-val="{{true}}">
+              <div style="padding: 8px 10px; border-radius: 4px; background: rgba(255,255,255,0.04); font-size: 12.5px; line-height: 1.45; font-style: italic; color: #F4EBDC;">{{e.text}}</div>
+            </sc-if>
+            <span style="font-size: 10.5px; line-height: 1.4; color: #A89A82;">{{e.note}}</span>
+          </div>
+        </sc-if>
+      </sc-for>
+    </sc-for>
+    <sc-if value="{{hasLegend}}" hint-placeholder-val="{{true}}">
+      <div style="padding-top: 14px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 10.5px; color: #A89A82;">
+        <span><span style="color: #7FD08A; font-weight: 700;">▲</span> raised by a spell</span>
+        <span><span style="color: #FF8A8E; font-weight: 700;">▼</span> lowered</span>
+        <sc-if value="{{hasStar}}" hint-placeholder-val="{{false}}"><span><span style="color: #E0B068; font-weight: 700;">*</span> unenchantable</span></sc-if>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":"enum","options":["creature","failed","player","weapon","inscribe","portal","chest","spell"],"default":"creature"},"tab":{"editor":"enum","options":["","stats","alleg","armor","about","overview","spells","reqs","details"],"default":""},"$preview":{"width":360,"height":620}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const st = this.state || {};
+    const kind = this.props.kind ?? 'creature';
+    const failed = kind === 'failed';
+    const TXT = '#F4EBDC', MUTED = '#C8B89C', GOLD = '#E0B068', UP = '#7FD08A', DOWN = '#FF8A8E', MAGIC = '#7FB2FF';
+    const blank = { isRow: false, isPara: false, isSpell: false, isInscr: false };
+    const R = (k, v, how, extra) => {
+      if (failed && k !== 'Health') return Object.assign({}, blank, { isRow: true, k, v: '???', c: MUTED, mark: '', hasBar: false });
+      const c = how === 'up' || how === 'ok' ? UP : how === 'down' || how === 'bad' ? DOWN : how === 'gold' ? GOLD : TXT;
+      const mark = how === 'up' ? '▲' : how === 'down' ? '▼' : how === 'ok' ? '✓' : how === 'bad' ? '✗' : '';
+      return Object.assign({}, blank, { isRow: true, k, v, c, mark, hasBar: false }, extra || {});
+    };
+    const Bar = (k, v, pct, bar) => R(k, failed ? (k === 'Health' ? '68%' : '???') : v, '', failed && k !== 'Health' ? {} : { hasBar: true, pct: failed ? '68%' : pct, bar });
+    const Pa = (text, c) => Object.assign({}, blank, { isPara: true, text, c: c || '#E9D3AE' });
+    const Sp = (name, desc, c) => Object.assign({}, blank, { isSpell: true, name, desc, c: c || MAGIC });
+    const Ins = (text, readOnly, note, edge) => Object.assign({}, blank, { isInscr: true, text, readOnly, editable: !readOnly, note, edge: edge || 'rgba(201,160,98,0.45)' });
+    const S = (title, items) => ({ title, items });
+    const P = {
+      creature: 'M12 3a6 6 0 0 0-6 6v3l-2 3h4v6h8v-6h4l-2-3V9a6 6 0 0 0-6-6zM9.5 10h.01M14.5 10h.01M10 14h4',
+      sword: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      ring: 'M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM9 3h6l-3 6z',
+      portal: 'M12 3c4 0 6 4 6 9s-2 9-6 9-6-4-6-9 2-9 6-9zM12 7c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5z',
+      chest: 'M3 9h18v11H3zM3 9l2-5h14l2 5M10 13h4v3h-4z',
+      flame: 'M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1.5 1 3 2 3 4'
+    };
+    const tile = (c) => 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.5))';
+
+    let who, tabDefs = null, pages, legend = false, star = false;
+    if (kind === 'player') {
+      who = { name: 'Osk', nameColor: TXT, level: '126', line: 'Male Sho · not a player killer', healthPct: '100%' };
+      tabDefs = [['stats', 'Stats'], ['alleg', 'Allegiance'], ['armor', 'Armor'], ['about', 'About']];
+      pages = {
+        stats: [
+          S('ATTRIBUTES', [R('Strength', '210'), R('Endurance', '190'), R('Coordination', '260', 'up'), R('Quickness', '240'), R('Focus', '180'), R('Self', '200')]),
+          S('VITALS', [Bar('Health', '305 / 305', '100%', '#E5484D'), Bar('Stamina', '410 / 450', '91%', '#D69A2D'), Bar('Mana', '290 / 290', '100%', '#2F64C2')]),
+          S('RATINGS', [R('Damage', '18'), R('Crit damage', '6'), R('Damage resist', '12')])
+        ],
+        alleg: [
+          S('SOCIETY', [R('Celestial Hand', 'Knight', 'ok'), Pa('Your own society.', UP)]),
+          S('ALLEGIANCE', [R('Name', 'Order of the Lantern'), R('Monarch', 'Thessaly'), R('Patron', 'Corvan')])
+        ],
+        armor: [S('ARMOR LEVEL', [R('Head', '812', 'up'), R('Chest', '*846'), R('Groin', '*846'), R('Upper arm', '790'), R('Lower arm', '790'), R('Hand', '744'), R('Thigh', '802'), R('Shin', '802'), R('Foot', '760')])],
+        about: [S('ABOUT', [R('Fellowship', 'Lantern Runners'), R('Arrived in Dereth', '12 Mar 2001'), R('Time in Dereth', '8y 2m'), R('Chess rank', '1,420'), R('Fishing skill', '45'), R('Deaths', '1,283'), R('Titles earned', '94')]), S('', [Pa('Osk chooses which of these others can see.', '#A89A82')])]
+      };
+      legend = true; star = true;
+    } else if (kind === 'weapon' || kind === 'inscribe') {
+      const ring = kind === 'inscribe';
+      who = ring
+        ? { name: 'Silver Ring', nameColor: TXT, line: 'Jewelry · Silver · workmanship 6', icon: P.ring, iconColor: '#D8DEE6', tile: tile('#D8DEE6') }
+        : { name: 'Mithril Tachi', nameColor: TXT, line: 'Sword · Heavy Weapons · Mithril · workmanship 8', icon: P.sword, iconColor: '#B8C2CC', tile: tile('#B8C2CC') };
+      tabDefs = [['overview', 'Overview'], ['spells', 'Spells'], ['reqs', 'Needs'], ['details', 'Details']];
+      pages = ring ? {
+        overview: [S('VALUE', [R('Value', '2,100p'), R('Burden', '30')]), S('MAGIC', [R('Spells', '1 cantrip'), R('Mana', '420 / 600')])],
+        spells: [S('SPELLS', [Sp('Major Coordination', 'Raises your Coordination by 15.')])],
+        reqs: [S('TO ACTIVATE', [R('Arcane Lore', '120 (you: 300)', 'ok')])],
+        details: [
+          S('INSCRIPTION', [Ins('', false, 'Yours to write on: nobody else has signed it. Leaving the field saves it; empty clears it.', '#E0B068')]),
+          S('DESCRIPTION', [Pa('A plain band of polished silver.')])
+        ]
+      } : {
+        overview: [
+          S('VALUE', [R('Value', '18,250p'), R('Burden', '450')]),
+          S('WEAPON', [R('Damage', '32 – 64, slashing'), R('Speed', 'Fast (30)'), R('Attack bonus', '+12%'), R('Melee defense', '+15%')]),
+          S('RATINGS', [R('Damage rating', '+3'), R('Crit damage rating', '+2')]),
+          S('SET', [R('Soldier’s Set', '2 of 5 worn', 'gold')]),
+          S('MAGIC', [R('Spells', '3 spells, 1 cantrip'), R('Properties', 'Attuned')])
+        ],
+        spells: [
+          S('CASTING', [Bar('Mana', '1,240 / 1,800', '69%', '#2F64C2'), R('Spellcraft', '340')]),
+          S('SPELLS', [Sp('Blood Drinker VII', 'Raises the weapon’s damage by 20.'), Sp('Heart Seeker VII', 'Raises the weapon’s attack bonus by 15%.'), Sp('Swift Killer VII', 'Makes the weapon faster by 30.'), Sp('Major Strength', 'Cantrip: raises your Strength by 15.', GOLD)])
+        ],
+        reqs: [
+          S('TO WIELD', [R('Heavy Weapons', '350 (you: 412)', 'ok'), R('Level', '120 (you: 87)', 'bad')]),
+          S('TO ACTIVATE', [R('Arcane Lore', '240 (you: 300)', 'ok')]),
+          S('ITEM LEVEL', [R('Level', '3 of 5'), R('To next level', '1,200,000 xp')])
+        ],
+        details: [
+          S('TINKERING', [R('Tinkered', '3 times'), R('Last tinkered by', 'Corvan'), R('Imbued by', 'Corvan')]),
+          S('MADE BY', [R('Crafted by', 'Hask')]),
+          S('INSCRIPTION', [Ins('For Kestrel, who held the ramp.', true, 'Signed by Corvan. Only an unsigned inscription can be changed.')]),
+          S('DESCRIPTION', [Pa('A curved blade of mithril, cold to the touch.')])
+        ]
+      };
+    } else if (kind === 'portal') {
+      who = { name: 'Holtburg Portal', nameColor: '#C9A2FF', line: 'Portal', icon: P.portal, iconColor: '#C9A2FF', tile: tile('#C9A2FF') };
+      pages = { one: [
+        S('USE', [Pa('Use this portal to travel to Holtburg.')]),
+        S('WHO MAY USE IT', [R('Levels', '20 to 80'), Pa('Player Killers may not use this portal.', DOWN), Pa('This portal cannot be recalled nor linked to.')])
+      ] };
+    } else if (kind === 'chest') {
+      who = { name: 'Chest', nameColor: TXT, line: 'Container', icon: P.chest, iconColor: GOLD, tile: tile(GOLD) };
+      pages = { one: [
+        S('LOCK', [R('Locked', 'Yes', 'bad'), Pa('The lock looks hard to pick (Resistance 300).'), R('Your Lockpick', '290')]),
+        S('CAPACITY', [R('Holds', '120 items')])
+      ] };
+    } else if (kind === 'spell') {
+      who = { name: 'Incantation of Flame Bolt', nameColor: TXT, line: 'War Magic · Level VIII', icon: P.flame, iconColor: '#FF9A6B', tile: tile('#FF9A6B') };
+      pages = { one: [
+        S('CASTING', [R('Mana', '80'), R('Difficulty', '400 (you: 412)', 'ok')]),
+        S('DESCRIPTION', [Pa('Shoots a bolt of flame at the target, dealing fire damage on impact.')]),
+        S('COMPONENTS', [R('Platinum Scarab', '×1 · 48 left'), R('Powdered Bloodstone', '×1 · 12 left', 'gold'), R('Ashwood Talisman', '×1 · 6 left', 'gold'), R('Wormwood', '×1 · none', 'bad'), R('Prismatic Taper', '×2 · 310 left')])
+      ] };
+    } else {
+      who = { name: 'Drudge Ravener', nameColor: '#FF9A6B', level: '87', line: failed ? 'Drudge · partly known' : 'Drudge · hostile', healthPct: '68%' };
+      const one = [
+        S('ATTRIBUTES', [R('Strength', '170', 'down'), R('Endurance', '200'), R('Coordination', '160'), R('Quickness', '150', 'down'), R('Focus', '90'), R('Self', '90')]),
+        S('VITALS', [Bar('Health', '306 / 450', '68%', '#E5484D'), Bar('Stamina', '400 / 400', '100%', '#D69A2D'), Bar('Mana', '0 / 0', '0%', '#2F64C2')])
+      ];
+      if (!failed) one.push(S('RATINGS', [R('Damage', '10'), R('Damage resist', '5')]));
+      pages = { one };
+      legend = true;
+    }
+
+    const hasTabs = !!tabDefs;
+    const tab = hasTabs ? (st.tab || this.props.tab || tabDefs[0][0]) : 'one';
+    const tabs = hasTabs ? tabDefs.map(([key, label]) => {
+      const on = key === tab;
+      return { label, on, line: on ? GOLD : 'transparent', fg: on ? TXT : MUTED, pick: () => this.setState({ tab: key }) };
+    }) : [];
+    const sections = (pages[tab] || pages[Object.keys(pages)[0]]).map((s) => s);
+    const living = kind === 'creature' || kind === 'failed' || kind === 'player';
+    return {
+      who, tabs, hasTabs, sections,
+      hasIcon: !living, hasLevel: living, hasHealth: living, isFailed: failed,
+      hasLegend: legend && (tab === 'stats' || tab === 'armor' || tab === 'one'), hasStar: star && tab === 'armor'
+    };
+  }
+}
+</script>
+</body>
+</html>
