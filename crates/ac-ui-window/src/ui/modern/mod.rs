@@ -13,6 +13,7 @@
 //! [`places`].
 
 pub mod fonts;
+pub mod hud;
 pub mod places;
 
 use std::sync::Arc;
@@ -34,6 +35,10 @@ pub struct ModernLayer {
     pub fonts: fonts::HorizonFonts,
     /// The layer quick move outlines the pieces in.
     pub outlines: Option<ElementId>,
+    /// The vitals.
+    pub vitals: Option<ElementId>,
+    /// The low-health glow round the screen's edge.
+    pub edge_glow: Option<ElementId>,
 }
 
 impl ModernLayer {
@@ -57,9 +62,15 @@ impl ModernLayer {
     }
 
     /// Tells the window layout persistence to leave the replaced windows
-    /// alone.
+    /// alone, and where the modern windows first go.
     pub fn leave_alone(&self, host: &mut UiHost, layouts: &mut LayoutPersistence) {
         layouts.set_left_alone(host, self.replaced.iter().copied());
+        layouts.set_default_places(Box::new(|name, (w, h)| {
+            places::default_place(name).map(|place| {
+                let rect = place.rect((w as f32, h as f32));
+                (rect.x, rect.y)
+            })
+        }));
     }
 
     /// Hides every replaced retail window something showed (a key, a
@@ -74,6 +85,11 @@ impl ModernLayer {
     }
 }
 
+/// The sizes of the vitals' words and values, and of the numbers that fall
+/// off them, pixels to the em.
+const VITALS_LABEL_SIZE: f32 = 11.0;
+const VITALS_NUMBER_SIZE: f32 = 14.0;
+
 /// The key that, held, lets modern pieces be moved whatever the lock says.
 pub const QUICK_MOVE_KEY: Modifiers = Modifiers::CTRL;
 
@@ -81,6 +97,52 @@ pub const QUICK_MOVE_KEY: Modifiers = Modifiers::CTRL;
 const QUICK_MOVE_NAME_SIZE: f32 = 11.0;
 
 impl WindowUi {
+    /// The HUD pieces built so far, each standing in for its retail
+    /// windows.
+    pub(super) fn mount_hud(&mut self) {
+        let label = self.modern_font(Weight::SemiBold, VITALS_LABEL_SIZE);
+        let number = self.modern_font(Weight::SemiBold, VITALS_NUMBER_SIZE);
+        let glow = hud::edge_glow::EdgeGlow::mount(&mut self.host.root);
+        let vitals = hud::mount_piece(
+            &mut self.host.root,
+            hud::VITALS,
+            (hud::vitals::WIDTH, hud::vitals::BAR_HEIGHT),
+            hud::vitals::VitalsHud::new(Horizon::BRONZE, label, number),
+        );
+        let Some(modern) = self.modern.as_mut() else {
+            return;
+        };
+        modern.edge_glow = Some(glow);
+        match vitals {
+            Ok(id) => {
+                modern.vitals = Some(id);
+                modern.replace(super::window::VITALS_WINDOW);
+                modern.replace(super::window::SIDE_VITALS_WINDOW);
+            }
+            Err(e) => self.notices.push(format!("ui: modern vitals: {e}")),
+        }
+    }
+
+    /// The vitals' new values, for the modern vitals and the edge glow.
+    pub(super) fn feed_modern_vitals(&mut self, vitals: &ac_ui::panels::vitals::VitalsView) {
+        let Some(modern) = self.modern.as_ref() else {
+            return;
+        };
+        let (bars, glow) = (modern.vitals, modern.edge_glow);
+        let mut low = false;
+        if let Some(bars) = bars
+            && let Some(hud) = self.host.root.widget_mut::<hud::vitals::VitalsHud>(bars)
+        {
+            hud.apply(vitals);
+            low = hud.health_is_low();
+        }
+        if let Some(glow) = glow
+            && let Some(edge) = self.host.root.widget_mut::<hud::edge_glow::EdgeGlow>(glow)
+        {
+            edge.on = low;
+        }
+    }
+
     /// Quick move on: its key, and the layer that outlines and names every
     /// modern piece while the key is held.
     pub(super) fn mount_quick_move(&mut self) {

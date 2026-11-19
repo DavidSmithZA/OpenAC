@@ -1168,6 +1168,7 @@ impl WindowUi {
                         c.apply(ui, &vitals);
                     });
             }
+            self.feed_modern_vitals(&vitals);
             if let Some(view) = view {
                 self.host.root.set_ui_locked(view.ui_locked);
             }
@@ -1521,11 +1522,14 @@ impl WindowUi {
                 if self.modern.is_some() {
                     return;
                 }
-                let modern = self.modern.insert(super::modern::ModernLayer::new());
-                if let Some(layouts) = self.status.layouts.as_mut() {
-                    modern.leave_alone(&mut self.host, layouts);
+                self.modern = Some(super::modern::ModernLayer::new());
+                self.mount_hud();
+                if let Some(modern) = self.modern.as_mut() {
+                    if let Some(layouts) = self.status.layouts.as_mut() {
+                        modern.leave_alone(&mut self.host, layouts);
+                    }
+                    modern.hide_replaced(&mut self.host);
                 }
-                modern.hide_replaced(&mut self.host);
                 self.mount_quick_move();
             }
         }

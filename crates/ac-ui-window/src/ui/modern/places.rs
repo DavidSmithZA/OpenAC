@@ -78,7 +78,16 @@ impl Place {
 
 /// Every modern window's first place, by window name (filled in as the
 /// windows are built).
-const PLACES: &[(&str, Place)] = &[];
+const PLACES: &[(&str, Place)] = &[(
+    super::hud::VITALS,
+    Place {
+        anchor: Anchor::Top,
+        dx: 0.0,
+        dy: 14.0,
+        width: super::hud::vitals::WIDTH,
+        height: super::hud::vitals::BAR_HEIGHT,
+    },
+)];
 
 /// Where modern window `name` first appears.
 #[must_use]
@@ -122,6 +131,13 @@ mod tests {
             place(Anchor::Center, 0.0, 0.0).rect(screen),
             Rect::new(400.0, 350.0, 200.0, 100.0)
         );
+    }
+
+    #[test]
+    fn the_vitals_start_top_centre() {
+        let place = default_place(crate::ui::modern::hud::VITALS).unwrap();
+        let rect = place.rect((1920.0, 1080.0));
+        assert_eq!((rect.x, rect.y), ((1920.0 - rect.w) / 2.0, 14.0));
     }
 
     #[test]
