@@ -587,6 +587,9 @@ pub struct WindowUi {
     /// (the chat's strings, the tooltips' content, the keyboard screen's
     /// names), reached when the misses are forgotten.
     pub(super) miss_caches: MissCaches,
+    /// The modern interface, while the launcher asked for it
+    /// (`super::modern`).
+    pub(super) modern: Option<super::modern::ModernLayer>,
 }
 
 /// Handles on caches of dat reads held elsewhere (see
@@ -683,6 +686,7 @@ impl WindowUi {
             vitals_side_by_side: None,
             barber: super::barber_window::BarberWindow::default(),
             miss_caches: MissCaches::default(),
+            modern: None,
         };
         let pregame_dats = dats.clone();
         ui.load_tables(&dats);
@@ -1494,6 +1498,9 @@ impl WindowUi {
         self.tick_examination(dt);
         self.tick_keyboard_dialogs();
         self.tick_tooltips(dt, now_ms);
+        if let Some(modern) = &self.modern {
+            modern.hide_replaced(&mut self.host);
+        }
         let list = self
             .host
             .draw((size.0 as f32, size.1 as f32), &self.content);
@@ -1501,6 +1508,37 @@ impl WindowUi {
         // session, which holds those and lets go of the rest.
         self.report_drawn_file_icons();
         list
+    }
+
+    /// Shows the interface the launcher asked for. Retail is what the
+    /// window builds; Modern mounts the modern layer over it, which stands
+    /// in for the retail windows it has replaced. Called once, after
+    /// [`WindowUi::build_with`].
+    pub fn set_interface(&mut self, interface: ac_host::Interface) {
+        match interface {
+            ac_host::Interface::Retail => {}
+            ac_host::Interface::Modern => {
+                if self.modern.is_some() {
+                    return;
+                }
+                let modern = self.modern.insert(super::modern::ModernLayer::new());
+                if let Some(layouts) = self.status.layouts.as_mut() {
+                    modern.leave_alone(&mut self.host, layouts);
+                }
+                modern.hide_replaced(&mut self.host);
+                self.mount_quick_move();
+            }
+        }
+    }
+
+    /// The interface the window shows.
+    #[must_use]
+    pub fn interface(&self) -> ac_host::Interface {
+        if self.modern.is_some() {
+            ac_host::Interface::Modern
+        } else {
+            ac_host::Interface::Retail
+        }
     }
 
     /// How many framebuffer pixels one UI unit covers.

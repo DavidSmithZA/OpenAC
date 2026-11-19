@@ -2059,6 +2059,15 @@ impl Inner {
         // file or whatever the shell exported.
         spec.environment
             .extend(crate::launching::child_environment(&inner.paths));
+        // The interface the player picked in the launcher's settings (an
+        // unreadable file is the retail one; the settings dialog says why).
+        let interface = crate::profiles::LauncherInterfaceSettingsStore::for_paths(&inner.paths)
+            .load()
+            .unwrap_or_default();
+        spec.environment.push((
+            ac_host_core::INTERFACE_VARIABLE.to_owned(),
+            interface.name().to_owned(),
+        ));
         supervisor
             .start(&spec, password)
             .map_err(|error| StartFailure::Error(error.to_string()))?;

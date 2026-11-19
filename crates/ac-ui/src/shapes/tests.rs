@@ -840,3 +840,101 @@ fn a_polygon_too_large_to_measure_is_not_drawn() {
     );
     assert!(t.is_empty());
 }
+
+#[test]
+fn an_arc_covers_its_band_with_soft_sides_and_ends() {
+    let mut t = Vec::new();
+    stroke_arc(
+        (100.0, 100.0),
+        50.0,
+        0.0,
+        FRAC_PI_2,
+        WHITE,
+        4.0,
+        1.0,
+        &mut t,
+    );
+    // A quarter of the band between radii 48 and 52.
+    let band = PI64 / 4.0 * (52.0 * 52.0 - 48.0 * 48.0);
+    assert_covers(band, &t, 0.02);
+    assert!(alphas_in_range(&t));
+    assert_eq!(max_alpha(&t), 1.0);
+    // Nothing reaches past the soft edge round the band.
+    for v in &t {
+        let distance = length((v.x - 100.0, v.y - 100.0));
+        assert!(
+            (47.5 - 1e-3..=52.5 + 1e-3).contains(&distance),
+            "{distance}"
+        );
+    }
+}
+
+#[test]
+fn an_arc_runs_either_way_and_a_whole_turn_is_the_ring() {
+    let (mut forward, mut back) = (Vec::new(), Vec::new());
+    stroke_arc((0.0, 0.0), 30.0, 0.0, 1.0, RED, 2.0, 1.0, &mut forward);
+    stroke_arc((0.0, 0.0), 30.0, 1.0, -1.0, RED, 2.0, 1.0, &mut back);
+    assert_eq!(forward, back);
+    let mut ring = Vec::new();
+    stroke_arc(
+        (40.0, 40.0),
+        30.0,
+        0.5,
+        TAU + 1.0,
+        BLUE,
+        2.0,
+        1.0,
+        &mut ring,
+    );
+    let mut ellipse = Vec::new();
+    stroke_ellipse((10.0, 10.0, 60.0, 60.0), BLUE, 2.0, 1.0, &mut ellipse);
+    assert_eq!(ring, ellipse);
+}
+
+#[test]
+fn an_arc_with_nothing_to_it_draws_nothing() {
+    let mut t = Vec::new();
+    stroke_arc((0.0, 0.0), 30.0, 0.0, 0.0, WHITE, 2.0, 1.0, &mut t);
+    stroke_arc((0.0, 0.0), 0.0, 0.0, 1.0, WHITE, 2.0, 1.0, &mut t);
+    stroke_arc((0.0, 0.0), 30.0, 0.0, 1.0, WHITE, f32::NAN, 1.0, &mut t);
+    stroke_arc(
+        (f32::INFINITY, 0.0),
+        30.0,
+        0.0,
+        1.0,
+        WHITE,
+        2.0,
+        1.0,
+        &mut t,
+    );
+    assert!(t.is_empty());
+}
+
+#[test]
+fn a_tiny_arc_is_dimmed_to_what_it_covers() {
+    let mut t = Vec::new();
+    // About a fifth of a pixel long.
+    stroke_arc((0.0, 0.0), 40.0, 0.0, 0.005, WHITE, 2.0, 1.0, &mut t);
+    assert!(max_alpha(&t) < 0.25);
+}
+
+#[test]
+fn a_shape_cache_builds_once_per_key() {
+    let mut cache: ShapeCache<(f32, f32)> = ShapeCache::default();
+    let mut builds = 0;
+    let mut draw = |cache: &mut ShapeCache<(f32, f32)>, key: (f32, f32)| {
+        cache
+            .get(key, |out| {
+                builds += 1;
+                stroke_ellipse((0.0, 0.0, key.0, key.0), WHITE, 1.0, key.1, out);
+            })
+            .len()
+    };
+    let first = draw(&mut cache, (40.0, 1.0));
+    assert_eq!(draw(&mut cache, (40.0, 1.0)), first);
+    // A finer screen cuts the curve again.
+    assert!(draw(&mut cache, (40.0, 0.5)) > first);
+    cache.clear();
+    draw(&mut cache, (40.0, 0.5));
+    assert_eq!(builds, 3);
+}

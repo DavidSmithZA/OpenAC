@@ -47,6 +47,14 @@ pub static NOTO_SANS_REGULAR: &[u8] =
 pub static NOTO_SANS_SEMIBOLD: &[u8] =
     include_bytes!("../../../assets/fonts/NotoSans/NotoSans-SemiBold.ttf");
 
+/// Every pair of `glyphs` that `face` kerns, by glyph numbers, in font
+/// units, none of them zero: read as a plugin's fonts are, within the same
+/// limits.
+#[must_use]
+pub fn kerning_pairs(face: &Face<'_>, glyphs: &[GlyphId]) -> HashMap<(u16, u16), i32> {
+    kerning::read(face, glyphs).into_pairs()
+}
+
 /// The most distinct fonts one plugin may hold.
 pub const MAXIMUM_COUNT: usize = 16;
 /// The most memory one plugin's own fonts may take: the files and their

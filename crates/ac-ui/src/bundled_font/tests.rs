@@ -142,8 +142,8 @@ fn the_atlas_is_one_coverage_byte_per_pixel() {
 }
 
 #[test]
-fn sizes_outside_8_to_32_pixels_are_refused() {
-    for size in [7.9, 32.1, 0.0, -16.0, f32::NAN, f32::INFINITY] {
+fn sizes_outside_8_to_48_pixels_are_refused() {
+    for size in [7.9, 48.1, 0.0, -16.0, f32::NAN, f32::INFINITY] {
         assert!(
             matches!(
                 bake(size, Weight::Regular),
@@ -253,4 +253,107 @@ fn the_sharper_bake_has_an_image_for_every_glyph_of_the_usual_size() {
             .collect();
         assert!(missing.is_empty(), "{weight:?}: {missing:x?}");
     }
+}
+
+/// Inter in every weight, at the sizes the modern interface sets text in
+/// and at a sharper bake of the largest for a display of twice the
+/// density, has every Latin glyph within its atlas.
+#[test]
+fn inter_bakes_every_latin_glyph_in_every_weight() {
+    for weight in [Weight::Regular, Weight::Medium, Weight::SemiBold] {
+        let face = FontFace::inter(weight);
+        for size in [
+            pixel_height_for_em(face, 9.5).unwrap(),
+            MAXIMUM_PIXEL_HEIGHT,
+        ] {
+            let atlas = bake_face(size, face).unwrap();
+            let font = atlas.create_font(TextureRef::Runtime(1));
+            for c in (' '..='~').chain("åäöéüßÅÄÖ—…·×".chars()) {
+                let g = font
+                    .glyph(c)
+                    .unwrap_or_else(|| panic!("{c} {weight:?} {size}"));
+                if !c.is_whitespace() {
+                    assert!(g.width > 0 && g.height > 0, "{c} {weight:?} {size}");
+                }
+                assert!(u32::from(g.offset_x) + u32::from(g.width) <= atlas.width);
+                assert!(u32::from(g.offset_y) + u32::from(g.height) <= atlas.height);
+            }
+        }
+    }
+}
+
+#[test]
+fn every_family_weight_and_size_has_its_own_font_id() {
+    let id = |size, face| {
+        bake_face(size, face)
+            .unwrap()
+            .create_font(TextureRef::Runtime(1))
+            .id
+    };
+    let mut ids = vec![
+        id(16.0, FontFace::noto(Weight::Regular)),
+        id(16.0, FontFace::noto(Weight::SemiBold)),
+        id(16.0, FontFace::inter(Weight::Regular)),
+        id(16.0, FontFace::inter(Weight::Medium)),
+        id(16.0, FontFace::inter(Weight::SemiBold)),
+        id(17.0, FontFace::inter(Weight::Regular)),
+    ];
+    ids.sort_unstable();
+    ids.dedup();
+    assert_eq!(ids.len(), 6);
+}
+
+#[test]
+fn inter_digits_are_all_one_width_and_noto_digits_are_not_touched() {
+    let inter = bake_face(16.0, FontFace::inter(Weight::Regular))
+        .unwrap()
+        .create_font(TextureRef::Runtime(1));
+    let widths: Vec<f32> = ('0'..='9').map(|c| inter.advance(c)).collect();
+    assert!(widths.iter().all(|&w| w == widths[0]), "{widths:?}");
+    assert_eq!(inter.measure_width("1111"), inter.measure_width("8888"));
+    // Noto keeps its own digits.
+    let noto = bake(16.0, Weight::Regular).unwrap();
+    let advance = |c: char| {
+        noto.glyphs
+            .iter()
+            .find(|g| g.unicode == c as u16)
+            .unwrap()
+            .advance()
+    };
+    let font = noto.create_font(TextureRef::Runtime(1));
+    assert_eq!(font.advance('1') as i32, advance('1'));
+    assert!(noto.kerning.is_empty());
+}
+
+#[test]
+fn inter_is_kerned_in_whole_pixels() {
+    let atlas = bake_face(16.0, FontFace::inter(Weight::Regular)).unwrap();
+    assert!(!atlas.kerning.is_empty());
+    assert!(atlas.kerning.iter().all(|&(_, _, px)| px != 0));
+    assert!(
+        atlas
+            .kerning
+            .iter()
+            .all(|&(a, b, _)| !a.is_ascii_digit() && !b.is_ascii_digit())
+    );
+    let font = atlas.create_font(TextureRef::Runtime(1));
+    // "AV" and "To" sit closer than their letters' advances add up to.
+    assert!(font.kern('A', 'V') < 0.0);
+    assert!(font.kern('T', 'o') < 0.0);
+    assert!(font.measure_width("AV") < font.advance('A') + font.advance('V'));
+}
+
+#[test]
+fn a_design_size_is_set_from_the_em() {
+    // Inter's ascender to descender spans about 1.21 em.
+    let height = pixel_height_for_em(FontFace::inter(Weight::Regular), 12.0).unwrap();
+    assert!((14.0..15.0).contains(&height), "{height}");
+}
+
+#[test]
+fn the_modern_fonts_bake_sharper_than_the_plugin_themes_allow() {
+    // 12 px Inter (about 14.5 high) on a display of twice the density.
+    let height = pixel_height_for_em(FontFace::inter(Weight::Regular), 16.0).unwrap();
+    assert_eq!(sharp_scale_for(height, 2.0), 1.5);
+    assert_eq!(sharp_scale_within(height, 2.0, MAXIMUM_PIXEL_HEIGHT), 2.0);
 }

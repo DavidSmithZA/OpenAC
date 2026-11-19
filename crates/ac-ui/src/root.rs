@@ -217,6 +217,16 @@ pub enum UiOutput {
     },
     /// The UI lock changed.
     UiLockChanged(bool),
+    /// The quick-move key was held and a modern piece right-clicked: its
+    /// owner offers the piece's quick edits at (`x`, `y`).
+    QuickMoveMenu {
+        /// The piece (the element marked [`Element::quick_move`]).
+        piece: ElementId,
+        /// Where, canvas units.
+        x: i32,
+        /// Where, canvas units.
+        y: i32,
+    },
     /// Something happened to a registered window.
     Window {
         /// Window name.
@@ -315,6 +325,9 @@ pub struct UiRoot {
     window_blocks: HashMap<ElementId, Vec<ElementId>>,
     /// Buttons whose press a block swallowed and whose release is due.
     swallowed_releases: Vec<MouseButton>,
+    /// The modifiers that, held, let modern pieces be moved whatever the
+    /// lock says (none: quick move is off).
+    quick_move_key: Option<Modifiers>,
     /// Blockers flashing after a press on what they block, seconds left.
     flashing: HashMap<ElementId, f32>,
 }
@@ -396,6 +409,7 @@ impl UiRoot {
             output: Vec::new(),
             window_blocks: HashMap::new(),
             swallowed_releases: Vec::new(),
+            quick_move_key: None,
             flashing: HashMap::new(),
         }
     }
@@ -2236,6 +2250,68 @@ impl UiRoot {
         self.modifiers = modifiers;
     }
 
+    /// The modifiers that, held, let pieces marked
+    /// [`Element::quick_move`] be dragged whatever the lock says, and
+    /// right-clicked for their quick edits; none turns quick move off.
+    pub fn set_quick_move_key(&mut self, key: Option<Modifiers>) {
+        self.quick_move_key = key.filter(|k| *k != Modifiers::NONE);
+    }
+
+    /// The quick-move key.
+    #[must_use]
+    pub fn quick_move_key(&self) -> Option<Modifiers> {
+        self.quick_move_key
+    }
+
+    /// True while the quick-move key is held (with or without Shift, which
+    /// places a piece without snapping).
+    #[must_use]
+    pub fn quick_move_held(&self) -> bool {
+        self.quick_move_key
+            .is_some_and(|key| self.modifiers.contains(key))
+    }
+
+    /// The nearest element at or above `start` marked
+    /// [`Element::quick_move`].
+    fn find_quick_move_piece(&self, start: ElementId) -> Option<ElementId> {
+        let mut cur = Some(start);
+        while let Some(c) = cur {
+            if self.element(c)?.quick_move {
+                return Some(c);
+            }
+            cur = self.parent(c);
+        }
+        None
+    }
+
+    /// Where a dragged quick-move piece lands near `(left, top)`: each axis
+    /// snapped to the parent's edges and the edges of the piece's visible
+    /// quick-move siblings within [`QUICK_MOVE_SNAP`] units.
+    fn snap_piece(&self, piece: ElementId, left: f32, top: f32) -> (f32, f32) {
+        let (Some(me), Some(parent)) = (
+            self.element(piece),
+            self.parent(piece).and_then(|p| Some((p, self.element(p)?))),
+        ) else {
+            return (left, top);
+        };
+        let (width, height) = (me.width, me.height);
+        let mut xs = vec![0.0, parent.1.width];
+        let mut ys = vec![0.0, parent.1.height];
+        for sibling in self.children(parent.0) {
+            if sibling == piece {
+                continue;
+            }
+            if let Some(o) = self
+                .element(sibling)
+                .filter(|o| o.quick_move && o.visible())
+            {
+                xs.extend([o.left, o.left + o.width]);
+                ys.extend([o.top, o.top + o.height]);
+            }
+        }
+        (snap_axis(left, width, &xs), snap_axis(top, height, &ys))
+    }
+
     /// The pointer moved to window (`x`, `y`).
     pub fn on_mouse_move(&mut self, x: i32, y: i32) {
         let (x, y) = self.map_window_to_canvas(x, y);
@@ -2286,6 +2362,12 @@ impl UiRoot {
         if let Some(d) = self.window_drag {
             let mut left = (x - d.offset.0) as f32;
             let mut top = (y - d.offset.1) as f32;
+            // A quick-move piece snaps into line unless Shift is held.
+            if self.element(d.target).is_some_and(|t| t.quick_move)
+                && !self.modifiers.contains(Modifiers::SHIFT)
+            {
+                (left, top) = self.snap_piece(d.target, left, top);
+            }
             if let Some(t) = self.element(d.target)
                 && let Some(parent) = self.parent(d.target).and_then(|p| self.element(p))
             {
@@ -2422,6 +2504,33 @@ impl UiRoot {
             });
             return;
         };
+
+        // Quick move: with its key held a modern piece moves, or offers its
+        // quick edits, whatever the lock says; the press goes no further.
+        if self.quick_move_held()
+            && let Some(piece) = self.find_quick_move_piece(target)
+        {
+            match button {
+                MouseButton::Left => {
+                    self.bring_to_front(piece);
+                    self.set_capture(piece);
+                    let (pl, pt) = self
+                        .element(piece)
+                        .map_or((0, 0), |e| (e.left as i32, e.top as i32));
+                    self.window_drag = Some(WindowDrag {
+                        target: piece,
+                        offset: (x - pl, y - pt),
+                    });
+                    self.drag_candidate = false;
+                }
+                MouseButton::Right => {
+                    self.swallowed_releases.push(button);
+                    self.emit(UiOutput::QuickMoveMenu { piece, x, y });
+                }
+                MouseButton::Middle => self.swallowed_releases.push(button),
+            }
+            return;
+        }
 
         // Focus may scroll a scrolling ancestor to reveal the target; the
         // press is reported where it landed, so read the position first.
@@ -2951,6 +3060,25 @@ impl UiRoot {
     pub fn anchors_for(left: u32, top: u32, right: u32, bottom: u32) -> AnchorEdges {
         crate::element_info::to_anchors(left, top, right, bottom)
     }
+}
+
+/// How close, in units, a quick-move piece's edge must come to another edge
+/// to snap to it.
+pub const QUICK_MOVE_SNAP: f32 = 8.0;
+
+/// `start` (a piece `size` long on one axis) moved so its near or far edge
+/// meets the nearest of `edges` within [`QUICK_MOVE_SNAP`] units.
+fn snap_axis(start: f32, size: f32, edges: &[f32]) -> f32 {
+    let mut best: Option<(f32, f32)> = None;
+    for &edge in edges {
+        for candidate in [edge, edge - size] {
+            let distance = (candidate - start).abs();
+            if distance <= QUICK_MOVE_SNAP && best.is_none_or(|(d, _)| distance < d) {
+                best = Some((distance, candidate));
+            }
+        }
+    }
+    best.map_or(start, |(_, at)| at)
 }
 
 /// How far `parent`'s scrolling moves a child: nothing for its scroll

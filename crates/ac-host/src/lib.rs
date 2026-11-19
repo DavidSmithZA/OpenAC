@@ -28,8 +28,8 @@ pub mod process_stats;
 pub mod settings;
 
 pub use ac_host_core::{
-    character_options, config, console_kind, exit, install_lease, json, layout, local_time, paths,
-    status,
+    character_options, config, console_kind, exit, install_lease, interface, json, layout,
+    local_time, paths, status,
 };
 
 pub use character_options::CharacterOption;
@@ -46,6 +46,7 @@ pub use credentials::{
 };
 pub use exit::ExitCode;
 pub use install_lease::InstallSessionLease;
+pub use interface::{INTERFACE_VARIABLE, Interface};
 pub use paths::{KnownFolder, Os, PathOverrides, PathSet, Platform, RootSource, SystemPlatform};
 pub use status::{
     FileSink, HEARTBEAT_INTERVAL, HEARTBEAT_VARIABLE, RosterEntry, RosterReport, ServerRefusalNote,

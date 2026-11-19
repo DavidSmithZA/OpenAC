@@ -4,6 +4,7 @@
 
 use egui::{Align, Color32, CornerRadius, Frame, Layout, Margin, RichText, Stroke, Ui, Vec2};
 
+use ac_host_core::Interface;
 use ac_launcher_core::plugins::PluginReleaseChannel;
 use ac_launcher_core::profiles::LauncherTextEditorKind;
 use ac_launcher_core::window::accounts::{AccountGroup, AccountServerRow, RowLaunchMode};
@@ -2441,12 +2442,36 @@ fn settings(window: &mut Window, ui: &mut Ui) {
                 .wrap(),
             );
         });
+    interface_choice(window, ui);
     install_folder(window, ui);
     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
         if ui.button("Close").clicked() {
             window.close_desktop_dialogs();
         }
     });
+}
+
+/// The settings' Interface section: the retail interface or OpenAC's
+/// modern one, for every client started from now on.
+fn interface_choice(window: &mut Window, ui: &mut Ui) {
+    ui.add_space(8.0);
+    ui.label(RichText::new("Interface").strong());
+    let mut chosen = window.interface();
+    ui.horizontal(|ui| {
+        ui.radio_value(&mut chosen, Interface::Retail, "Retail");
+        ui.radio_value(&mut chosen, Interface::Modern, "Modern");
+    });
+    if chosen != window.interface() {
+        window.set_interface(chosen);
+    }
+    ui.add(
+        egui::Label::new(muted(
+            "Retail is the game's own interface. Modern is OpenAC's new look, still being built: \
+             the parts not built yet show as Retail. Clients started from now on use the choice; \
+             running ones keep theirs.",
+        ))
+        .wrap(),
+    );
 }
 
 /// The settings' Install folder section: where everything lives, a row

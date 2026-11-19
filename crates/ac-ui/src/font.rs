@@ -41,6 +41,9 @@ pub struct UiFont {
     /// The glyph a printable character without one draws as (the bundled
     /// font's `?`); dat fonts have none and skip such characters.
     fallback_character: Option<char>,
+    /// How far the pen moves (whole pixels, negative: closer) between two
+    /// characters, before the second; dat fonts have none.
+    kerning: HashMap<(char, char), i8>,
 }
 
 /// A font baked again at a multiple of its size. Its glyphs are drawn in the
@@ -93,7 +96,35 @@ impl UiFont {
             border_y,
             glyphs: map,
             fallback_character: None,
+            kerning: HashMap::new(),
         }
+    }
+
+    /// The same font with `pairs` kerned: the pen moves that many pixels
+    /// between the first character and the second (a later pair replaces
+    /// an earlier one; zero pairs are left out).
+    #[must_use]
+    pub fn with_kerning(mut self, pairs: impl IntoIterator<Item = (char, char, i8)>) -> Self {
+        for (a, b, pixels) in pairs {
+            if pixels == 0 {
+                self.kerning.remove(&(a, b));
+            } else {
+                self.kerning.insert((a, b), pixels);
+            }
+        }
+        self
+    }
+
+    /// How far the pen moves between `previous` and `c`, pixels (0 for a
+    /// font without kerning).
+    #[must_use]
+    pub fn kern(&self, previous: char, c: char) -> f32 {
+        if self.kerning.is_empty() {
+            return 0.0;
+        }
+        self.kerning
+            .get(&(previous, c))
+            .map_or(0.0, |&pixels| f32::from(pixels))
     }
 
     /// The same font, drawing printable characters it has no glyph for as
@@ -157,14 +188,24 @@ impl UiFont {
         self.background.is_some()
     }
 
-    /// Width of `text` in pixels: the sum of the glyph advances; characters
-    /// without a glyph (and no fallback) add nothing.
+    /// Width of `text` in pixels: the sum of the glyph advances, and the
+    /// kerning between neighbours; characters without a glyph (and no
+    /// fallback) add nothing.
     #[must_use]
     pub fn measure_width(&self, text: &str) -> f32 {
-        text.chars()
-            .filter_map(|c| self.glyph(c))
-            .map(glyph_advance)
-            .sum()
+        let mut width = 0.0;
+        let mut previous = None;
+        for c in text.chars() {
+            let Some(g) = self.glyph(c) else {
+                continue;
+            };
+            if let Some(p) = previous {
+                width += self.kern(p, c);
+            }
+            width += glyph_advance(g);
+            previous = Some(c);
+        }
+        width
     }
 
     /// The advance of `c`, 0 without a glyph.
@@ -290,6 +331,22 @@ mod tests {
         assert_eq!(f.advance('\t'), 0.0);
         let without = table(&[glyph('A', (0, 0), (5, 8), 0, 0, 0)]).with_fallback('?');
         assert!(without.glyph('X').is_none());
+    }
+
+    #[test]
+    fn kerning_moves_the_pen_between_its_pairs_only() {
+        let f = table(&[
+            glyph('A', (0, 0), (8, 8), 0, 0, 0),
+            glyph('V', (0, 0), (8, 8), 0, 0, 0),
+        ])
+        .with_kerning([('A', 'V', -2), ('V', 'A', -1), ('A', 'A', 0)]);
+        assert_eq!(f.kern('A', 'V'), -2.0);
+        assert_eq!(f.kern('V', 'V'), 0.0);
+        assert_eq!(f.measure_width("AV"), 14.0);
+        assert_eq!(f.measure_width("AVA"), 21.0);
+        assert_eq!(f.measure_width("AA"), 16.0);
+        // A character without a glyph does not break the pair.
+        assert_eq!(f.measure_width("A\u{7}V"), 14.0);
     }
 
     #[test]

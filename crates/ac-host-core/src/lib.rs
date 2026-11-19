@@ -12,6 +12,7 @@
 //!   the client and the launcher show.
 //! - [`ExitCode`]: the client's exit codes.
 //! - [`console_kind`]: the kind marks on console lines a launcher asks for.
+//! - [`Interface`]: the retail or modern interface a launcher asks for.
 //! - [`InstallSessionLease`]: the lock that keeps an update from replacing
 //!   files a running session uses.
 //!
@@ -23,6 +24,7 @@ pub mod config;
 pub mod console_kind;
 pub mod exit;
 pub mod install_lease;
+pub mod interface;
 pub mod json;
 pub mod layout;
 pub mod local_time;
@@ -38,6 +40,7 @@ pub use config::{
 };
 pub use exit::ExitCode;
 pub use install_lease::InstallSessionLease;
+pub use interface::{INTERFACE_VARIABLE, Interface};
 pub use paths::{KnownFolder, Os, PathOverrides, PathSet, Platform, RootSource, SystemPlatform};
 pub use status::{
     FileSink, HEARTBEAT_INTERVAL, HEARTBEAT_VARIABLE, RosterEntry, RosterReport, ServerRefusalNote,
