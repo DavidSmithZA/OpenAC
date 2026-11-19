@@ -8,3 +8,5 @@
 
 pub mod keys;
 pub mod model;
+pub mod widgets;
+pub mod edit;
