@@ -30,11 +30,11 @@ pub const BAR_GAP: f32 = 10.0;
 pub const WIDTH: f32 = BAR_WIDTH * 3.0 + BAR_GAP * 2.0;
 
 /// A change shows its number from this share of the bar (the design's 5%;
-/// Options will set it).
+/// Options sets it).
 pub const DEFAULT_NUMBER_THRESHOLD: f32 = 0.05;
 
-/// Health under this share pulses.
-pub const LOW_HEALTH: f32 = 0.25;
+/// Health under this share pulses (the design's 25%; Options sets it).
+pub const DEFAULT_LOW_HEALTH: f32 = 0.25;
 
 /// How long the lost part flashes, seconds.
 const FLASH_SECONDS: f32 = 0.35;
@@ -167,8 +167,9 @@ impl BarMotion {
     }
 
     /// Takes the vital's new value; a change of at least `threshold` of
-    /// the bar shows its number.
-    pub fn apply(&mut self, view: VitalView, threshold: f32) {
+    /// the bar shows its number. Not `animate`d, the bar moves straight to
+    /// it, with no flash, ghost or glint.
+    pub fn apply(&mut self, view: VitalView, threshold: f32, animate: bool) {
         let share = match (view.current, view.max, view.percent) {
             (Some(c), Some(m), _) if m > 0 => c as f32 / m as f32,
             (_, _, Some(p)) => p,
@@ -192,6 +193,27 @@ impl BarMotion {
             _ => 0,
         };
         let big = (share - before.0).abs() >= threshold && amount > 0;
+        if !animate {
+            self.gaining = false;
+            self.flash = None;
+            self.sheen = None;
+            self.fill.jump_to(share);
+            self.ghost.jump_to(share);
+            let gain = share > before.0;
+            if big && (gain || self.vital == Vital::Health) {
+                self.number = Some(FallingNumber {
+                    text: if gain {
+                        format!("+{}", compact(i64::from(amount)))
+                    } else {
+                        format!("\u{2212}{}", compact(i64::from(amount)))
+                    },
+                    gain,
+                    at: share,
+                    age: 0.0,
+                });
+            }
+            return;
+        }
         if share < before.0 {
             // The bar drops at once; the lost part stays as a pale ghost
             // that drains after a beat.
@@ -306,8 +328,13 @@ pub struct VitalsHud {
     number_font: Option<Arc<UiFont>>,
     /// Health, stamina, mana.
     pub bars: [BarMotion; 3],
-    /// The share of a bar a change must reach to show its number.
+    /// The share of a bar a change must reach to show its number (above 1:
+    /// never).
     pub number_threshold: f32,
+    /// Health under this share pulses (0: never).
+    pub low_health: f32,
+    /// The bars move (losses flash and drain, gains fill in).
+    pub animate: bool,
     /// Seconds since the piece was made (the pulses' clock).
     clock: f32,
 }
@@ -331,16 +358,18 @@ impl VitalsHud {
                 BarMotion::new(Vital::Mana),
             ],
             number_threshold: DEFAULT_NUMBER_THRESHOLD,
+            low_health: DEFAULT_LOW_HEALTH,
+            animate: true,
             clock: 0.0,
         }
     }
 
     /// Takes the vitals' new values.
     pub fn apply(&mut self, vitals: &VitalsView) {
-        let threshold = self.number_threshold;
-        self.bars[0].apply(vitals.health, threshold);
-        self.bars[1].apply(vitals.stamina, threshold);
-        self.bars[2].apply(vitals.mana, threshold);
+        let (threshold, animate) = (self.number_threshold, self.animate);
+        self.bars[0].apply(vitals.health, threshold, animate);
+        self.bars[1].apply(vitals.stamina, threshold, animate);
+        self.bars[2].apply(vitals.mana, threshold, animate);
     }
 
     /// A spell needing `need` mana was refused for want of it: the mana bar
@@ -353,7 +382,7 @@ impl VitalsHud {
     /// glow).
     #[must_use]
     pub fn health_is_low(&self) -> bool {
-        self.bars[0].seeded && self.bars[0].share() < LOW_HEALTH
+        self.bars[0].seeded && self.bars[0].share() < self.low_health
     }
 
     fn draw_bar(&self, rc: &mut RenderContext<'_>, bar: &BarMotion, x: f32) {
@@ -582,7 +611,7 @@ mod tests {
 
     fn seeded(vital: Vital, current: u32, max: u32) -> BarMotion {
         let mut bar = BarMotion::new(vital);
-        bar.apply(reading(current, max), DEFAULT_NUMBER_THRESHOLD);
+        bar.apply(reading(current, max), DEFAULT_NUMBER_THRESHOLD, true);
         bar
     }
 
@@ -597,7 +626,7 @@ mod tests {
     #[test]
     fn a_big_hit_drops_flashes_shows_its_number_and_the_ghost_drains_after() {
         let mut bar = seeded(Vital::Health, 412, 450);
-        bar.apply(reading(200, 450), DEFAULT_NUMBER_THRESHOLD);
+        bar.apply(reading(200, 450), DEFAULT_NUMBER_THRESHOLD, true);
         let n = bar.number.clone().unwrap();
         assert_eq!(n.text, "\u{2212}212");
         assert!(!n.gain);
@@ -614,18 +643,18 @@ mod tests {
     #[test]
     fn a_small_change_shows_no_number() {
         let mut bar = seeded(Vital::Health, 412, 450);
-        bar.apply(reading(400, 450), DEFAULT_NUMBER_THRESHOLD);
+        bar.apply(reading(400, 450), DEFAULT_NUMBER_THRESHOLD, true);
         assert!(bar.number.is_none());
         assert!(bar.flash.is_some());
         let mut bar = seeded(Vital::Health, 300, 450);
-        bar.apply(reading(310, 450), DEFAULT_NUMBER_THRESHOLD);
+        bar.apply(reading(310, 450), DEFAULT_NUMBER_THRESHOLD, true);
         assert!(bar.number.is_none() && bar.sheen.is_none());
     }
 
     #[test]
     fn spending_stamina_or_mana_drains_without_a_flash_or_number() {
         let mut bar = seeded(Vital::Mana, 600, 620);
-        bar.apply(reading(300, 620), DEFAULT_NUMBER_THRESHOLD);
+        bar.apply(reading(300, 620), DEFAULT_NUMBER_THRESHOLD, true);
         assert!(bar.flash.is_none() && bar.number.is_none());
         assert!(bar.is_moving());
     }
@@ -633,7 +662,7 @@ mod tests {
     #[test]
     fn a_big_gain_leads_and_the_bar_fills_up_behind() {
         let mut bar = seeded(Vital::Health, 200, 450);
-        bar.apply(reading(285, 450), DEFAULT_NUMBER_THRESHOLD);
+        bar.apply(reading(285, 450), DEFAULT_NUMBER_THRESHOLD, true);
         assert!(bar.gaining);
         assert_eq!(bar.number.as_ref().unwrap().text, "+85");
         assert!(bar.sheen.is_some());
@@ -648,7 +677,7 @@ mod tests {
     #[test]
     fn big_numbers_are_short() {
         let mut bar = seeded(Vital::Health, 1_500_000, 2_000_000);
-        bar.apply(reading(400_000, 2_000_000), DEFAULT_NUMBER_THRESHOLD);
+        bar.apply(reading(400_000, 2_000_000), DEFAULT_NUMBER_THRESHOLD, true);
         assert_eq!(bar.number.as_ref().unwrap().text, "\u{2212}1.10M");
         assert_eq!(bar.value_text(), "400K / 2.00M");
     }
@@ -674,6 +703,35 @@ mod tests {
         };
         hud.apply(&vitals);
         assert!(hud.health_is_low());
+    }
+
+    #[test]
+    fn the_low_health_warning_follows_its_setting() {
+        let mut hud = VitalsHud::new(Horizon::BRONZE, None, None);
+        hud.apply(&VitalsView {
+            health: reading(200, 450),
+            stamina: reading(104, 410),
+            mana: reading(361, 620),
+        });
+        assert!(!hud.health_is_low());
+        hud.low_health = 0.5;
+        assert!(hud.health_is_low());
+        hud.low_health = 0.0;
+        assert!(!hud.health_is_low());
+    }
+
+    #[test]
+    fn unanimated_bars_move_at_once_and_still_count() {
+        let mut bar = BarMotion::new(Vital::Health);
+        bar.apply(reading(450, 450), DEFAULT_NUMBER_THRESHOLD, false);
+        bar.apply(reading(200, 450), DEFAULT_NUMBER_THRESHOLD, false);
+        assert!(bar.flash.is_none() && bar.fill.is_settled() && bar.ghost.is_settled());
+        assert_eq!(
+            bar.number.as_ref().map(|n| n.text.as_str()),
+            Some("\u{2212}250")
+        );
+        bar.apply(reading(300, 450), 2.0, false);
+        assert!(bar.sheen.is_none() && bar.fill.is_settled());
     }
 
     #[test]

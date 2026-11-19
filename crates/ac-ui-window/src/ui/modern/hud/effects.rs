@@ -28,9 +28,10 @@ use ac_ui::{UiFont, UiRoot};
 
 use super::target::fit;
 
-/// A helpful effect ending within this many seconds turns its count amber
+/// By default, a helpful effect ending within this many seconds turns its
+/// count amber (Options sets it)
 /// (the design's default; an Options row is to follow).
-pub const SOON_SECONDS: f64 = 300.0;
+pub const DEFAULT_SOON_SECONDS: f64 = 300.0;
 
 /// A chip's height, units.
 pub const CHIP_HEIGHT: f32 = 28.0;
@@ -752,13 +753,13 @@ fn board(rc: &mut RenderContext<'_>, x: f32, y: f32, color: Color) {
 
 /// The chips for `effects` (the times hidden when `show_times` is off).
 #[must_use]
-pub fn effect_chips(effects: &EffectsOnYou, show_times: bool) -> [Option<ChipView>; 3] {
+pub fn effect_chips(effects: &EffectsOnYou, show_times: bool, soon: f64) -> [Option<ChipView>; 3] {
     let time = |left: Option<f64>| match left {
         Some(t) if show_times => format_seconds_left(t),
         _ => String::new(),
     };
     let helpful = (!effects.helpful.is_empty()).then(|| ChipView {
-        tone: if effects.helpful_ending_within(SOON_SECONDS) > 0 {
+        tone: if effects.helpful_ending_within(soon) > 0 {
             Tone::Soon
         } else {
             Tone::Good
@@ -829,6 +830,9 @@ pub struct PaneView {
     pub vitae: Option<f32>,
     /// The groups.
     pub groups: Vec<PaneGroup>,
+    /// How long before a helpful effect ends it counts as ending soon,
+    /// seconds (0: never).
+    pub soon: f64,
 }
 
 impl PaneView {
@@ -838,6 +842,7 @@ impl PaneView {
         effects: &EffectsOnYou,
         harmful: bool,
         show_times: bool,
+        soon: f64,
         mut icon: impl FnMut(u32) -> Option<TextureRef>,
     ) -> Self {
         let mut row = |line: &EffectLine, tone: TimeTone| PaneRow {
@@ -865,8 +870,8 @@ impl PaneView {
                     .collect(),
             }]
         } else {
-            let soon = |l: &&EffectLine| l.left.is_some_and(|t| t < SOON_SECONDS);
-            let timed = |l: &&EffectLine| l.left.is_some_and(|t| t >= SOON_SECONDS);
+            let ending = |l: &&EffectLine| l.left.is_some_and(|t| t < soon);
+            let timed = |l: &&EffectLine| l.left.is_some_and(|t| t >= soon);
             vec![
                 PaneGroup {
                     title: "ENDING SOON",
@@ -874,7 +879,7 @@ impl PaneView {
                     rows: effects
                         .helpful
                         .iter()
-                        .filter(soon)
+                        .filter(ending)
                         .map(|l| row(l, TimeTone::Soon))
                         .collect(),
                 },
@@ -909,6 +914,7 @@ impl PaneView {
             },
             vitae: if harmful { effects.vitae } else { None },
             groups: groups.into_iter().filter(|g| !g.rows.is_empty()).collect(),
+            soon,
         }
     }
 
@@ -1266,8 +1272,8 @@ impl Widget for EffectsPane {
                 ty,
                 TextStyle::plain(p.muted),
             );
-            if !self.view.harmful {
-                let words = format!("Warns under {} min", (SOON_SECONDS / 60.0).round() as u32);
+            if !self.view.harmful && self.view.soon > 0.0 {
+                let words = format!("Warns under {} min", (self.view.soon / 60.0).round() as u32);
                 let w = text::measure(f, &words, 0.0);
                 text::draw(
                     rc,
@@ -1307,8 +1313,17 @@ mod tests {
     }
 
     #[test]
+    fn the_warning_time_is_a_setting() {
+        let e = effects();
+        let [never, _, _] = effect_chips(&e, true, 0.0);
+        assert_ne!(never.map(|c| c.tone), Some(Tone::Soon));
+        let [long, _, _] = effect_chips(&e, true, 1.0e9);
+        assert_eq!(long.map(|c| c.tone), Some(Tone::Soon));
+    }
+
+    #[test]
     fn the_counts_say_how_many_and_the_next_to_end() {
-        let [helpful, harmful, vitae] = effect_chips(&effects(), true);
+        let [helpful, harmful, vitae] = effect_chips(&effects(), true, DEFAULT_SOON_SECONDS);
         let helpful = helpful.unwrap();
         assert_eq!(
             (helpful.figure.as_str(), helpful.words.as_str()),
@@ -1327,7 +1342,7 @@ mod tests {
     fn nothing_ending_soon_keeps_the_helpful_count_calm() {
         let mut e = effects();
         e.helpful.remove(0);
-        let [helpful, _, _] = effect_chips(&e, true);
+        let [helpful, _, _] = effect_chips(&e, true, DEFAULT_SOON_SECONDS);
         let helpful = helpful.unwrap();
         assert_eq!(helpful.tone, Tone::Good);
         assert_eq!(helpful.words, "41:08");
@@ -1335,7 +1350,7 @@ mod tests {
 
     #[test]
     fn hidden_durations_leave_only_the_counts() {
-        let [helpful, harmful, _] = effect_chips(&effects(), false);
+        let [helpful, harmful, _] = effect_chips(&effects(), false, DEFAULT_SOON_SECONDS);
         assert_eq!(helpful.unwrap().words, "");
         assert_eq!(harmful.unwrap().words, "");
     }
@@ -1343,14 +1358,14 @@ mod tests {
     #[test]
     fn no_effects_no_chips() {
         assert_eq!(
-            effect_chips(&EffectsOnYou::default(), true),
+            effect_chips(&EffectsOnYou::default(), true, DEFAULT_SOON_SECONDS),
             [None, None, None]
         );
     }
 
     #[test]
     fn the_helpful_pane_groups_ending_soon_timed_and_gear() {
-        let pane = PaneView::of(&effects(), false, true, |_| None);
+        let pane = PaneView::of(&effects(), false, true, DEFAULT_SOON_SECONDS, |_| None);
         let titles: Vec<_> = pane.groups.iter().map(|g| g.title).collect();
         assert_eq!(titles, ["ENDING SOON", "TIMED", "FROM YOUR GEAR"]);
         assert_eq!(pane.groups[2].rows[0].time, "worn");
@@ -1361,13 +1376,13 @@ mod tests {
 
     #[test]
     fn the_harmful_pane_starts_with_vitae_and_leaves_out_empty_groups() {
-        let pane = PaneView::of(&effects(), true, true, |_| None);
+        let pane = PaneView::of(&effects(), true, true, DEFAULT_SOON_SECONDS, |_| None);
         assert_eq!(pane.vitae, Some(0.94));
         assert_eq!(pane.groups.len(), 1);
         assert_eq!(pane.groups[0].rows[0].time, "0:22");
         let mut e = effects();
         e.helpful.retain(|l| l.left.is_none());
-        let pane = PaneView::of(&e, false, true, |_| None);
+        let pane = PaneView::of(&e, false, true, DEFAULT_SOON_SECONDS, |_| None);
         assert_eq!(pane.groups.len(), 1);
     }
 
@@ -1380,7 +1395,9 @@ mod tests {
             ..EffectsOnYou::default()
         };
         let mut pane = EffectsPane::new(Horizon::BRONZE, PaneFonts::default());
-        pane.show(PaneView::of(&e, false, true, |_| None));
+        pane.show(PaneView::of(&e, false, true, DEFAULT_SOON_SECONDS, |_| {
+            None
+        }));
         assert_eq!(pane.list_room(), HELPFUL_LIST_MAX);
         assert!(pane.scroll_max() > 0.0);
         let mut ui = UiRoot::new();

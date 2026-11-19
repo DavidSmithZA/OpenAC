@@ -56,6 +56,15 @@ pub struct ModernLayer {
     last_ping: Option<f64>,
     /// The card was open last frame.
     card_was_open: bool,
+    /// The dialog that adds or changes a recall of the player's own.
+    pub recall_dialog: Option<ElementId>,
+    /// The player's own recalls (all servers), loaded once.
+    own_recalls: Option<Vec<ac_host::settings::CustomRecall>>,
+    /// The combat strip (and the jump meter), above the shortcut bars.
+    pub combat: Option<ElementId>,
+    /// The panel strip, bottom right: the band and its buttons in
+    /// [`hud::panels::Panel::ALL`]'s order.
+    pub panels: Option<(ElementId, [ElementId; 8])>,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -76,6 +85,9 @@ pub struct EffectsHud {
     /// What the last read was made of: the enchantments' revision and
     /// the whole second.
     read_at: Option<(u64, i64)>,
+    /// How long before a helpful effect ends its count warns, seconds (0:
+    /// never; Options sets it).
+    pub soon: f64,
 }
 
 impl EffectsHud {
@@ -159,6 +171,19 @@ const RADAR_BOLD_SIZE: f32 = 11.0;
 const RADAR_TINY_SIZE: f32 = 8.0;
 const RADAR_SMALL_SIZE: f32 = 11.0;
 
+/// The Recall list's names and small text, pixels to the em.
+const RECALL_NAME_SIZE: f32 = 12.5;
+const RECALL_SMALL_SIZE: f32 = 11.0;
+
+/// The combat strip's mode, its heights and ammunition, and its Power or
+/// Accuracy, pixels to the em.
+const COMBAT_MODE_SIZE: f32 = 12.0;
+const COMBAT_SMALL_SIZE: f32 = 11.0;
+const COMBAT_WORD_SIZE: f32 = 10.5;
+
+/// The panel strip's drop note, pixels to the em.
+const PANEL_NOTE_SIZE: f32 = 11.5;
+
 /// The connection card's title and body, pixels to the em.
 const CARD_TITLE_SIZE: f32 = 13.5;
 const CARD_BODY_SIZE: f32 = 12.0;
@@ -218,6 +243,37 @@ impl WindowUi {
             (hud::radar::WIDTH, hud::radar::HEIGHT),
             hud::radar::RadarRing::new(Horizon::BRONZE, radar_fonts),
         );
+        let recall_fonts = hud::recall::RecallFonts {
+            name: self.modern_font(Weight::SemiBold, RECALL_NAME_SIZE),
+            small: self.modern_font(Weight::Regular, RECALL_SMALL_SIZE),
+            label: self.modern_font(Weight::SemiBold, EFFECTS_LABEL_SIZE),
+        };
+        let dialog_fonts = hud::recall_dialog::DialogFonts {
+            title: self.modern_font(Weight::SemiBold, CARD_BODY_SIZE),
+            body: self.modern_font(Weight::Medium, CARD_BODY_SIZE),
+            caption: self.modern_font(Weight::Regular, EFFECTS_CAPTION_SIZE),
+        };
+        let mut recall_dialog = None;
+        if let Ok(radar) = &radar {
+            let ui = &mut self.host.root;
+            let element = Element::at(0.0, 0.0, hud::recall::WIDTH, 100.0)
+                .with_visible(false)
+                .with_anchors(AnchorEdges::NONE);
+            let list = ui.add(
+                *radar,
+                element,
+                hud::recall::RecallList::new(Horizon::BRONZE, recall_fonts),
+            );
+            if let Some(r) = ui.widget_mut::<hud::radar::RadarRing>(*radar) {
+                r.recall_list = Some(list);
+            }
+            recall_dialog = Some(hud::recall_dialog::RecallDialog::mount(
+                ui,
+                *radar,
+                Horizon::BRONZE,
+                dialog_fonts,
+            ));
+        }
         let card = {
             let ui = &mut self.host.root;
             let root = ui.root();
@@ -235,15 +291,32 @@ impl WindowUi {
                 hud::connection::ConnectionCard::new(Horizon::BRONZE, card_fonts),
             ))
         };
+        let combat = self.mount_modern_combat();
+        let panels = self.mount_modern_panels();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
         modern.edge_glow = Some(glow);
+        match combat {
+            Ok(id) => {
+                modern.combat = Some(id);
+                // The retail combat window still carries the spell bars,
+                // so it shows in Magic (until the shortcut bars come);
+                // `follow_modern_combat_window` keeps it to that.
+                modern.replace(super::status::JUMP_POWERBAR_WINDOW);
+            }
+            Err(e) => self.notices.push(format!("ui: modern combat strip: {e}")),
+        }
+        match panels {
+            Ok(ids) => modern.panels = Some(ids),
+            Err(e) => self.notices.push(format!("ui: modern panel strip: {e}")),
+        }
         match effects {
             Ok(hud) => modern.effects = Some(hud),
             Err(e) => self.notices.push(format!("ui: modern effects: {e}")),
         }
         modern.connection_card = card;
+        modern.recall_dialog = recall_dialog;
         match radar {
             Ok(id) => {
                 modern.radar = Some(id);
@@ -263,6 +336,239 @@ impl WindowUi {
             }
             Err(e) => self.notices.push(format!("ui: modern vitals: {e}")),
         }
+    }
+
+    /// The panel strip: the band and a button for each panel.
+    fn mount_modern_panels(&mut self) -> Result<(ElementId, [ElementId; 8]), String> {
+        use hud::panels::{BUTTON, Panel, PanelButton, PanelStrip};
+        let font = self.modern_font(Weight::SemiBold, PANEL_NOTE_SIZE);
+        let ui = &mut self.host.root;
+        let strip = hud::mount_piece(
+            ui,
+            hud::PANELS,
+            (hud::panels::WIDTH, hud::panels::HEIGHT),
+            PanelStrip::new(Horizon::BRONZE),
+        )?;
+        let top = (hud::panels::HEIGHT - BUTTON) * 0.5;
+        let mut index = 0;
+        let buttons = Panel::ALL.map(|panel| {
+            let element = Element::at(PanelStrip::button_left(index), top, BUTTON, BUTTON)
+                .with_anchors(AnchorEdges::NONE);
+            index += 1;
+            ui.add(
+                strip,
+                element,
+                PanelButton::new(Horizon::BRONZE, font.clone(), panel),
+            )
+        });
+        Ok((strip, buttons))
+    }
+
+    /// The panel strip's buttons name the keys bound to their actions.
+    pub(super) fn feed_modern_panel_keys(&mut self, bindings: &ac_ui::input::KeyBindings) {
+        use ac_dat::objects::StringTable;
+        let Some((_, buttons)) = self.modern.as_ref().and_then(|m| m.panels) else {
+            return;
+        };
+        let dats = self.content.dats().clone();
+        let strings = ac_ui::strings::StringResolver::new(move |id| {
+            dats.get::<StringTable>(id).ok().flatten()
+        });
+        let names = ac_ui::input::key_names::RetailKeyNames::new(
+            Box::new(move |table, hash| strings.resolve(table, hash, 0)),
+            (self.os_key_names)(),
+        );
+        let ui = &mut self.host.root;
+        for id in buttons {
+            if let Some(b) = ui.widget_mut::<hud::panels::PanelButton>(id) {
+                b.key = bindings
+                    .for_action(b.panel.action())
+                    .map(|binding| names.describe(binding.chord))
+                    .find(|name| !name.is_empty());
+            }
+        }
+    }
+
+    /// One frame of the panel strip: what was clicked or dropped is done,
+    /// and the buttons follow their panels, the house's maintenance and an
+    /// item dragged over Inventory.
+    pub(super) fn tick_modern_panels(&mut self) {
+        use hud::panels::{Panel, PanelButton, drop_note};
+        let Some((_, buttons)) = self.modern.as_ref().and_then(|m| m.panels) else {
+            return;
+        };
+        let mut clicked = Vec::new();
+        let mut dropped = Vec::new();
+        let mut over = false;
+        for &id in &buttons {
+            if let Some(b) = self.host.root.widget_mut::<PanelButton>(id) {
+                if std::mem::take(&mut b.clicked) {
+                    clicked.push(b.panel);
+                }
+                if let Some(item) = b.dropped.take() {
+                    dropped.push(item);
+                }
+                over |= b.over.is_some();
+            }
+        }
+        let target_mode = self.facts.state.mode != ac_runtime::inventory::InteractionMode::None;
+        for panel in clicked {
+            if panel == Panel::Inventory && target_mode {
+                // In a use or examine mode, Inventory targets the player.
+                ac_ui::panels::items::offer_target(
+                    &mut self.host.root,
+                    ac_runtime::inventory::ObjectRef::Player,
+                );
+            } else {
+                self.handle_input_action(panel.action());
+            }
+        }
+        let player = self.facts.state.player;
+        for item in dropped {
+            // The player's own item goes into the preferred pack, anything
+            // else straight into the main pack; the session tells them
+            // apart (retail's backpack button).
+            if player != 0 && self.facts.objects.get(item).is_some() {
+                ac_ui::panels::items::emit(
+                    &mut self.host.root,
+                    ac_ui::panels::PanelOutput::Session(ac_runtime::session::SessionCommand::Item(
+                        ac_runtime::inventory::ItemCommand::DropOnBackpack(
+                            ac_runtime::inventory::ObjectRef::Guid(item),
+                        ),
+                    )),
+                );
+            }
+        }
+        let note = over.then(|| {
+            let resolve = super::facts::composed_names(&self.status.names);
+            let view = self.facts.items_view(None, &[], None, &resolve);
+            let capacity = view.get(player).map_or(0, |o| o.items_capacity);
+            let held = ac_ui::panels::inventory::count_loose_contents(&view, player);
+            drop_note(held, capacity)
+        });
+        let world_open = self
+            .host
+            .root
+            .is_window_visible(super::map_window::MAP_HOUSE_WINDOW);
+        let on_house = world_open
+            && self
+                .host
+                .with_controller::<ac_ui::panels::map_house::MapHousePanelController, _>(
+                    super::map_window::MAP_HOUSE_WINDOW,
+                    |c, ui| c.is_showing_house(ui),
+                )
+                .unwrap_or(false);
+        let due = self.facts.house.as_ref().is_some_and(|h| {
+            h.owns_house
+                && h.lines
+                    .iter()
+                    .any(|(_, c)| *c == ac_runtime::gameplay::HouseLineColor::RentNotPaid)
+        });
+        let ui = &mut self.host.root;
+        for id in buttons {
+            let Some(panel) = ui.widget::<PanelButton>(id).map(|b| b.panel) else {
+                continue;
+            };
+            let open = match panel {
+                Panel::Character => ui.is_window_visible(super::window::CHARACTER_WINDOW),
+                Panel::Inventory => ui.is_window_visible(super::window::INVENTORY_WINDOW),
+                Panel::Spellbook => ui.is_window_visible(super::window::SPELLBOOK_WINDOW),
+                Panel::Journal => ui.is_window_visible(super::social_panels::JOURNAL_WINDOW),
+                Panel::Map => world_open && !on_house,
+                Panel::House => on_house,
+                Panel::Social => ui.is_window_visible(super::social_panels::SOCIAL_WINDOW),
+                Panel::Options => ui.is_window_visible(super::options::OPTIONS_WINDOW),
+            };
+            if let Some(b) = ui.widget_mut::<PanelButton>(id) {
+                b.open = open;
+                b.dot = panel == Panel::House && due;
+                if b.over.is_some() {
+                    if b.note != note {
+                        b.note.clone_from(&note);
+                    }
+                } else {
+                    b.note = None;
+                }
+            }
+        }
+    }
+
+    /// The combat strip and the menu its mode button opens.
+    fn mount_modern_combat(&mut self) -> Result<ElementId, String> {
+        let fonts = hud::combat::StripFonts {
+            mode: self.modern_font(Weight::SemiBold, COMBAT_MODE_SIZE),
+            small: self.modern_font(Weight::SemiBold, COMBAT_SMALL_SIZE),
+            word: self.modern_font(Weight::SemiBold, COMBAT_WORD_SIZE),
+        };
+        let menu_font = fonts.mode.clone();
+        let ui = &mut self.host.root;
+        let strip = hud::mount_piece(
+            ui,
+            hud::COMBAT,
+            (hud::combat::WIDTH, hud::combat::HEIGHT),
+            hud::combat::CombatStrip::new(Horizon::BRONZE, fonts),
+        )?;
+        let element = Element::at(
+            0.0,
+            0.0,
+            hud::combat::MENU_WIDTH,
+            hud::combat::ModeMenu::height(),
+        )
+        .with_visible(false)
+        .with_anchors(AnchorEdges::NONE);
+        let menu = ui.add(
+            strip,
+            element,
+            hud::combat::ModeMenu::new(Horizon::BRONZE, menu_font),
+        );
+        if let Some(s) = ui.widget_mut::<hud::combat::CombatStrip>(strip) {
+            s.menu = Some(menu);
+        }
+        Ok(strip)
+    }
+
+    /// The combat strip follows the mode, the attack, a jump being charged
+    /// and, in Missile, the ammunition. False without the strip.
+    pub(super) fn feed_modern_combat(&mut self, mode: ac_core::combat::CombatMode) -> bool {
+        use hud::combat::{Ammo, CombatStrip, CombatView};
+        let Some(id) = self.modern.as_ref().and_then(|m| m.combat) else {
+            return false;
+        };
+        let view = self.player_view;
+        let ammo = (mode == ac_core::combat::CombatMode::MISSILE).then(|| {
+            let player = self.facts.state.player;
+            let equipped = if player != 0 {
+                self.facts.objects.get_equipped_by(player)
+            } else {
+                Vec::new()
+            };
+            let ammo = ac_core::items::ToolbarAmmo::resolve(&equipped);
+            if ammo.is_visible() {
+                Ammo::Loaded {
+                    count: ammo.display_count,
+                    name: self
+                        .facts
+                        .objects
+                        .get(ammo.object_id)
+                        .map(|o| o.name.clone())
+                        .unwrap_or_default(),
+                }
+            } else {
+                Ammo::Out
+            }
+        });
+        let next = CombatView {
+            mode: view.map(|_| mode),
+            attack: view.map(|v| v.attack).unwrap_or_default(),
+            jump: view.and_then(|v| v.jump_charge),
+            ammo,
+        };
+        if let Some(strip) = self.host.root.widget_mut::<CombatStrip>(id)
+            && strip.view != next
+        {
+            strip.set_view(next);
+        }
+        true
     }
 
     /// The status line above the radar and its card follow the link and
@@ -342,13 +648,191 @@ impl WindowUi {
         }
     }
 
-    /// The modern radar shows `scene`.
+    /// The modern radar shows `scene`, and its Recall list what the
+    /// player can use.
     pub(super) fn feed_modern_radar(&mut self, scene: &ac_ui::panels::radar::RadarScene) {
         let Some(id) = self.modern.as_ref().and_then(|m| m.radar) else {
             return;
         };
-        if let Some(radar) = self.host.root.widget_mut::<hud::radar::RadarRing>(id) {
-            radar.set_scene(scene);
+        let facts = self.recall_facts(scene);
+        let Self { host, icons, .. } = self;
+        let ui = &mut host.root;
+        let list = ui
+            .widget_mut::<hud::radar::RadarRing>(id)
+            .and_then(|radar| {
+                radar.set_scene(scene);
+                radar.recall_list
+            });
+        if let Some(list) = list
+            && let Some(l) = ui.widget_mut::<hud::recall::RecallList>(list)
+        {
+            l.set_facts(facts, &mut |spell| {
+                ac_ui::icons::IconSource::spell_icon(icons, spell)
+            });
+            // The list may have grown or shrunk while open.
+            let height = l.height();
+            if let Some(e) = ui.element_mut(list)
+                && e.height != height
+            {
+                e.height = height;
+            }
+        }
+    }
+
+    /// What decides which recalls the player can use.
+    fn recall_facts(&self, scene: &ac_ui::panels::radar::RadarScene) -> hud::recall::RecallFacts {
+        let traits = scene.player.map(|p| {
+            ac_ui::radar::ObjectTraits::from_public_weenie_description(
+                p.item_type,
+                p.pwd_bitfield,
+                0,
+            )
+        });
+        let social = self.facts.social.as_ref().filter(|s| s.in_world);
+        let spells = self
+            .facts
+            .numbers()
+            .and_then(|n| n.spellbook())
+            .map(|book| {
+                hud::recall::recall_spells(
+                    book.learned_spells()
+                        .filter_map(|id| book.try_get_metadata(id).map(|m| (id, m.name.clone()))),
+                )
+            })
+            .unwrap_or_default();
+        hud::recall::RecallFacts {
+            owns_house: self
+                .facts
+                .house
+                .as_ref()
+                .filter(|h| h.has_received_notice)
+                .map(|h| h.owns_house),
+            in_allegiance: social
+                .map(|s| s.allegiance.as_ref().is_some_and(|a| a.monarch.is_some())),
+            player_killer: traits.is_some_and(|t| t.is_player_killer),
+            pk_lite: traits.is_some_and(|t| t.is_pk_lite),
+            magic: self.facts.state.combat_mode == ac_core::combat::CombatMode::MAGIC,
+            spells,
+            server: self.status.server_world.clone(),
+            own: self.shown_own_recalls(),
+        }
+    }
+
+    /// The player's own recalls shown on this server, with their place in
+    /// the saved list.
+    fn shown_own_recalls(&self) -> Vec<(usize, ac_host::settings::CustomRecall)> {
+        let server = self.status.server_world.as_deref();
+        self.modern
+            .as_ref()
+            .and_then(|m| m.own_recalls.as_ref())
+            .map(|all| {
+                all.iter()
+                    .enumerate()
+                    .filter(|(_, r)| r.server.is_none() || r.server.as_deref() == server)
+                    .map(|(i, r)| (i, r.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// One frame of the player's own recalls: loaded once the settings
+    /// file is known; what the list and the dialog asked for is done and
+    /// saved.
+    pub(super) fn tick_modern_recalls(&mut self) {
+        use hud::recall::OwnRequest;
+        use hud::recall_dialog::{DialogOutcome, RecallDialog};
+        let Some(modern) = self.modern.as_mut() else {
+            return;
+        };
+        if modern.own_recalls.is_none()
+            && let Some(store) = &self.status.settings_store
+        {
+            modern.own_recalls = Some(store.load_custom_recalls());
+        }
+        let (Some(radar), Some(dialog)) = (modern.radar, modern.recall_dialog) else {
+            return;
+        };
+        let ui = &mut self.host.root;
+        let list = ui
+            .widget::<hud::radar::RadarRing>(radar)
+            .and_then(|r| r.recall_list);
+        let requests = list
+            .and_then(|l| ui.widget_mut::<hud::recall::RecallList>(l))
+            .map(|l| std::mem::take(&mut l.requests))
+            .unwrap_or_default();
+        let outcome = ui
+            .widget_mut::<RecallDialog>(dialog)
+            .and_then(|d| d.outcome.take());
+        if requests.is_empty() && outcome.is_none() {
+            return;
+        }
+        let server = self.status.server_world.clone();
+        let shown: Vec<usize> = self
+            .shown_own_recalls()
+            .into_iter()
+            .map(|(i, _)| i)
+            .collect();
+        let Some(modern) = self.modern.as_mut() else {
+            return;
+        };
+        let all = modern.own_recalls.get_or_insert_with(Vec::new);
+        let mut changed = false;
+        for request in requests {
+            match request {
+                OwnRequest::Add | OwnRequest::Edit(_) => {
+                    let (editing, recall) = match request {
+                        OwnRequest::Edit(i) => (Some(i), all.get(i).cloned().unwrap_or_default()),
+                        _ => (None, ac_host::settings::CustomRecall::default()),
+                    };
+                    let ui = &mut self.host.root;
+                    let (left, top) = hud::radar::beside(
+                        ui,
+                        radar,
+                        hud::recall_dialog::WIDTH,
+                        hud::recall_dialog::HEIGHT,
+                    );
+                    if let Some(e) = ui.element_mut(dialog) {
+                        e.left = left;
+                        e.top = top;
+                    }
+                    RecallDialog::show(ui, dialog, editing, &recall, server.clone());
+                    ui.bring_to_front(radar);
+                }
+                OwnRequest::Remove(i) if i < all.len() => {
+                    all.remove(i);
+                    changed = true;
+                }
+                OwnRequest::Move(i, step) => {
+                    // Swap with the neighbour shown on this server.
+                    let at = shown.iter().position(|&s| s == i);
+                    let other = at
+                        .and_then(|a| a.checked_add_signed(step as isize))
+                        .and_then(|b| shown.get(b).copied());
+                    if let Some(j) = other
+                        && i < all.len()
+                        && j < all.len()
+                    {
+                        all.swap(i, j);
+                        changed = true;
+                    }
+                }
+                OwnRequest::Remove(_) => {}
+            }
+        }
+        if let Some(DialogOutcome::Done(editing, recall)) = outcome {
+            match editing {
+                Some(i) if i < all.len() => all[i] = recall,
+                _ => all.push(recall),
+            }
+            changed = true;
+        }
+        if changed {
+            let saved = all.clone();
+            if let Some(store) = &self.status.settings_store
+                && let Err(e) = store.save_custom_recalls(&saved)
+            {
+                self.notices.push(format!("ui: saving your recalls: {e}"));
+            }
         }
     }
 
@@ -400,6 +884,7 @@ impl WindowUi {
             now: hud::effects::EffectsOnYou::default(),
             show_times: true,
             read_at: None,
+            soon: hud::effects::DEFAULT_SOON_SECONDS,
         })
     }
 
@@ -417,6 +902,7 @@ impl WindowUi {
             return;
         }
         let show_times = self.show_spell_durations();
+        let soon = f64::from(self.settings().display.modern_hud.effect_warning_minutes) * 60.0;
         let now = self.facts.session_now().unwrap_or(0.0);
         let book = self.facts.numbers().and_then(|n| n.spellbook());
         let key = book.map(|b| (b.enchantment_revision(), now.floor() as i64));
@@ -430,13 +916,14 @@ impl WindowUi {
         let Some(fx) = self.modern.as_mut().and_then(|m| m.effects.as_mut()) else {
             return;
         };
-        let changed = key != fx.read_at || show_times != fx.show_times;
+        let changed = key != fx.read_at || show_times != fx.show_times || soon != fx.soon;
         if changed {
             fx.read_at = key;
             fx.show_times = show_times;
+            fx.soon = soon;
             fx.now = read.unwrap_or_default();
         }
-        let [helpful, harmful, vitae] = effect_chips(&fx.now, show_times);
+        let [helpful, harmful, vitae] = effect_chips(&fx.now, show_times, fx.soon);
         let burden = burden_tone(load).map(|tone| ChipView {
             tone,
             figure: String::new(),
@@ -538,7 +1025,7 @@ impl WindowUi {
             return;
         };
         let harmful = open == fx.chip(hud::effects::ChipKind::Harmful);
-        let view = hud::effects::PaneView::of(&fx.now, harmful, fx.show_times, |spell| {
+        let view = hud::effects::PaneView::of(&fx.now, harmful, fx.show_times, fx.soon, |spell| {
             ac_ui::icons::IconSource::spell_icon(icons, spell)
         });
         let ui = &mut host.root;
@@ -655,23 +1142,43 @@ impl WindowUi {
         }
     }
 
-    /// The vitals' new values, for the modern vitals and the edge glow.
+    /// The vitals' new values, for the modern vitals.
     pub(super) fn feed_modern_vitals(&mut self, vitals: &ac_ui::panels::vitals::VitalsView) {
+        let Some(bars) = self.modern.as_ref().and_then(|m| m.vitals) else {
+            return;
+        };
+        if let Some(hud) = self.host.root.widget_mut::<hud::vitals::VitalsHud>(bars) {
+            hud.apply(vitals);
+        }
+    }
+
+    /// The vitals follow their Options rows (animation, numbers, the low
+    /// health share), and the screen's edge glows while health is low and
+    /// the glow is on. Every frame, so a change shows at once.
+    pub(super) fn follow_modern_vitals_settings(&mut self) {
         let Some(modern) = self.modern.as_ref() else {
             return;
         };
         let (bars, glow) = (modern.vitals, modern.edge_glow);
+        let s = self.settings().display.modern_hud;
+        let threshold = if s.vital_numbers_percent > 0 {
+            s.vital_numbers_percent as f32 / 100.0
+        } else {
+            f32::INFINITY
+        };
         let mut low = false;
         if let Some(bars) = bars
             && let Some(hud) = self.host.root.widget_mut::<hud::vitals::VitalsHud>(bars)
         {
-            hud.apply(vitals);
+            hud.animate = s.animate_vitals;
+            hud.number_threshold = threshold;
+            hud.low_health = s.low_health_percent as f32 / 100.0;
             low = hud.health_is_low();
         }
         if let Some(glow) = glow
             && let Some(edge) = self.host.root.widget_mut::<hud::edge_glow::EdgeGlow>(glow)
         {
-            edge.on = low;
+            edge.on = low && s.low_health_edge_glow;
         }
     }
 

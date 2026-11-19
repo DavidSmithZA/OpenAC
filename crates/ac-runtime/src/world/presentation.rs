@@ -507,6 +507,9 @@ pub struct AttackBarView {
     pub desired_power: f32,
     /// The bar's level now (it fills while an attack key is held), 0..=1.
     pub power_bar: f32,
+    /// The bar is filling: an attack is being charged (it stays at its
+    /// level when the attack is let go).
+    pub charging: bool,
 }
 
 impl PlayerView {

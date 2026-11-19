@@ -269,14 +269,14 @@ fn binding_builds_every_page_and_shows_gameplay() {
     assert_eq!(b.c.page(OptionsPage::Character).len(), 50);
     assert_eq!(b.c.page(OptionsPage::Chat).len(), 7);
     // The game's 39, the UI Scale row, the landscape detail textures row,
-    // the Graphics Enhancements section's 21 and the two modern mouse
-    // turning rows in the input section.
-    assert_eq!(b.c.page(OptionsPage::Configuration).len(), 64);
+    // the Graphics Enhancements section's 21, the two modern mouse turning
+    // rows in the input section and the Modern Interface section's 5.
+    assert_eq!(b.c.page(OptionsPage::Configuration).len(), 69);
     // 6 headers, 50 toggles, 6 separators; 6 + 40 + 6 (the game's 36, the
     // UI Scale row, the landscape detail textures row and the two modern
-    // mouse turning rows) and 1 + 21 + 1; 1 + 2 + 1 + 5 x 3.
+    // mouse turning rows), 1 + 21 + 1 and 1 + 5 + 1; 1 + 2 + 1 + 5 x 3.
     assert_eq!(list_rows(&b, options::CHARACTER_LIST_ID).len(), 62);
-    assert_eq!(list_rows(&b, options::CONFIG_LIST_ID).len(), 75);
+    assert_eq!(list_rows(&b, options::CONFIG_LIST_ID).len(), 82);
     assert_eq!(list_rows(&b, options::CHAT_LIST_ID).len(), 19);
     let notices = b.c.take_notices();
     assert!(notices.is_empty(), "{notices:?}");
@@ -622,8 +622,9 @@ fn the_vsync_and_resolution_rows_write_the_display_section() {
             menus.push(m);
         }
     }
-    // The game's nine, then the atmospheric quality and the shadow filter.
-    assert_eq!(menus.len(), 11);
+    // The game's nine, then the atmospheric quality and the shadow filter,
+    // then the modern interface's three.
+    assert_eq!(menus.len(), 14);
     let resolution = menus[1];
     let items: Vec<String> =
         b.ui.widget::<Menu>(resolution)

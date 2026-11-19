@@ -119,7 +119,32 @@ const PLACES: &[(&str, Place)] = &[
             height: super::hud::radar::HEIGHT,
         },
     ),
+    (
+        // Above the shortcut bars, bottom centre.
+        super::hud::COMBAT,
+        Place {
+            anchor: Anchor::Bottom,
+            dx: 0.0,
+            dy: -COMBAT_ABOVE_BOTTOM,
+            width: super::hud::combat::WIDTH,
+            height: super::hud::combat::HEIGHT,
+        },
+    ),
+    (
+        super::hud::PANELS,
+        Place {
+            anchor: Anchor::BottomRight,
+            dx: -16.0,
+            dy: -14.0,
+            width: super::hud::panels::WIDTH,
+            height: super::hud::panels::HEIGHT,
+        },
+    ),
 ];
+
+/// How far above the screen's bottom the combat strip starts: over three
+/// rows of shortcut slots and the experience line.
+const COMBAT_ABOVE_BOTTOM: f32 = 160.0;
 
 /// Where modern window `name` first appears.
 #[must_use]

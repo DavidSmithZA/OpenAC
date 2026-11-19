@@ -1250,7 +1250,10 @@ fn matches_cells(ui: &UiRoot, list: Option<ElementId>, guids: &[u32], target: us
         .all(|(i, c)| slot(ui, *c).map(|s| s.object_id) == Some(guids.get(i).copied().unwrap_or(0)))
 }
 
-pub(crate) fn count_loose_contents(view: &ItemsView<'_>, container: u32) -> usize {
+/// How many loose items (not worn, not packs) `container` holds: what
+/// counts against its capacity.
+#[must_use]
+pub fn count_loose_contents(view: &ItemsView<'_>, container: u32) -> usize {
     view.objects
         .get_contents(container)
         .iter()

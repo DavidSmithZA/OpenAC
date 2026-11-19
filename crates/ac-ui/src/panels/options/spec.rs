@@ -841,7 +841,95 @@ pub fn config_rows() -> Vec<ConfigRow> {
     ]
     .into_iter()
     .chain(atmospheric_rows())
+    .chain(modern_interface_rows())
     .collect()
+}
+
+/// The modern interface section's header.
+pub const MODERN_INTERFACE_HEADER: &str = "Modern Interface: Vitals and Effects";
+
+const fn choice(id: &'static str, label: &'static str) -> ExplicitChoice {
+    ExplicitChoice {
+        id,
+        label,
+        enabled: true,
+        tooltip: "",
+    }
+}
+
+/// How big a vital change must be to show its number.
+pub const VITAL_NUMBERS_CHOICES: &[ExplicitChoice] = &[
+    choice("0", "Off"),
+    choice("1", "Over 1% of the bar"),
+    choice("5", "Over 5% of the bar"),
+    choice("10", "Over 10% of the bar"),
+    choice("25", "Over 25% of the bar"),
+];
+
+/// The health share the bar pulses below.
+pub const LOW_HEALTH_CHOICES: &[ExplicitChoice] = &[
+    choice("0", "Off"),
+    choice("10", "10%"),
+    choice("20", "20%"),
+    choice("25", "25%"),
+    choice("33", "33%"),
+    choice("50", "50%"),
+];
+
+/// How long before a helpful effect ends its count warns.
+pub const EFFECT_WARNING_CHOICES: &[ExplicitChoice] = &[
+    choice("0", "Off"),
+    choice("1", "1 minute"),
+    choice("2", "2 minutes"),
+    choice("5", "5 minutes"),
+    choice("10", "10 minutes"),
+    choice("15", "15 minutes"),
+];
+
+/// OpenAC's modern interface: how its vitals and effects behave (Retail
+/// ignores these rows).
+fn modern_interface_rows() -> Vec<ConfigRow> {
+    let def = ac_host::settings::ModernHudSettings::default();
+    let menu_default = |choices: &'static [ExplicitChoice], value: i32| {
+        choices
+            .iter()
+            .find(|c| c.id.parse::<i32>().ok() == Some(value))
+            .map_or(choices[0].id, |c| c.id)
+    };
+    vec![
+        ConfigRow::ExplicitHeader(MODERN_INTERFACE_HEADER),
+        explicit_toggle(
+            "Animate the vital bars",
+            def.animate_vitals,
+            display(DisplayField::ModernAnimateVitals),
+            "Losses flash and drain away, gains fill in behind a bright edge. Off, the bars simply move to their new values. Modern interface only.",
+        ),
+        ConfigRow::ExplicitMenu {
+            label: "Damage and healing numbers",
+            choices: VITAL_NUMBERS_CHOICES,
+            default: menu_default(VITAL_NUMBERS_CHOICES, def.vital_numbers_percent),
+            target: display(DisplayField::ModernVitalNumbers),
+        },
+        ConfigRow::ExplicitMenu {
+            label: "Low health warning",
+            choices: LOW_HEALTH_CHOICES,
+            default: menu_default(LOW_HEALTH_CHOICES, def.low_health_percent),
+            target: display(DisplayField::ModernLowHealth),
+        },
+        explicit_toggle(
+            "Glow the screen edge at low health",
+            def.low_health_edge_glow,
+            display(DisplayField::ModernEdgeGlow),
+            "A soft red pulse around the edge of the screen while the health bar warns. Modern interface only.",
+        ),
+        ConfigRow::ExplicitMenu {
+            label: "Warn before a helpful effect ends",
+            choices: EFFECT_WARNING_CHOICES,
+            default: menu_default(EFFECT_WARNING_CHOICES, def.effect_warning_minutes),
+            target: display(DisplayField::ModernEffectWarning),
+        },
+        ConfigRow::Separator,
+    ]
 }
 
 /// The atmospheric rendering's quality: off (the game's own picture) or a
@@ -1203,8 +1291,15 @@ mod tests {
             .count();
         assert_eq!((headers, separators), (6, 6));
         // A header, the quality menu, the 20 settings, a separator.
-        assert_eq!(option_rows(&all[enhancements..]), 21);
-        assert_eq!(all.len() - enhancements, 23);
+        let modern = all
+            .iter()
+            .position(|r| matches!(r, ConfigRow::ExplicitHeader(MODERN_INTERFACE_HEADER)))
+            .expect("the modern interface section");
+        assert_eq!(option_rows(&all[enhancements..modern]), 21);
+        assert_eq!(modern - enhancements, 23);
+        // A header, five rows, a separator.
+        assert_eq!(option_rows(&all[modern..]), 5);
+        assert_eq!(all.len() - modern, 7);
     }
 
     #[test]

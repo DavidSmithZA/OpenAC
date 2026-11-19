@@ -108,7 +108,7 @@ record! {
     PlayScript { guid: u32, script_id: u32 }
     PlayScriptType { guid: u32, script_type: u32, intensity: f32 }
     VitalReading { current: Option<u32>, max: Option<u32>, percent: Option<f32> }
-    AttackBarView { height: AttackHeight, desired_power: f32, power_bar: f32 }
+    AttackBarView { height: AttackHeight, desired_power: f32, power_bar: f32, charging: bool }
     SpellCastCompletion { revision: u64, spell_id: u32, target_id: u32, weenie_error: u32 }
     PlayerView {
         health: VitalReading,

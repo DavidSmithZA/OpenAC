@@ -164,6 +164,7 @@ fn view(mode: CombatMode) -> CombatBarView {
             height: AttackHeight::MEDIUM,
             desired_power: 0.5,
             power_bar: 0.0,
+            charging: false,
         },
         ..CombatBarView::default()
     }

@@ -48,6 +48,7 @@ pub trait SettingsStores {
 
 impl SettingsStores for WindowUi {
     fn set_layout_store(&mut self, store: Option<SettingsStore>) {
+        self.status.settings_store.clone_from(&store);
         let control_state = store
             .clone()
             .map(|s| Box::new(ControlStateSettings(s)) as Box<dyn ControlStateFile>);
