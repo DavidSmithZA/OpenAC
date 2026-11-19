@@ -454,8 +454,10 @@ impl KeyPopover {
 }
 
 impl Widget for KeyPopover {
-    fn hit_test(&self, _element: &Element, _x: f32, _y: f32) -> bool {
-        true
+    fn hit_test(&self, element: &Element, x: f32, y: f32) -> bool {
+        // It does not clip (its parts reach outside), so the toolkit leaves
+        // the bounds to it.
+        element.contains_local(x, y)
     }
 
     fn handles_click(&self, _element: &Element) -> bool {

@@ -577,8 +577,9 @@ pub fn frame_rate_words(frames_per_second: f32, detail: f32) -> String {
 }
 
 impl Widget for ChipRow {
-    fn hit_test(&self, _element: &Element, _x: f32, _y: f32) -> bool {
-        self.quick_move
+    fn hit_test(&self, element: &Element, x: f32, y: f32) -> bool {
+        // It does not clip, so the toolkit leaves its bounds to it.
+        self.quick_move && element.contains_local(x, y)
     }
 
     fn tick(&mut self, ui: &mut UiRoot, _me: ElementId, _dt: f64) {

@@ -463,8 +463,10 @@ impl BarFrame {
 }
 
 impl Widget for BarFrame {
-    fn hit_test(&self, _element: &Element, _x: f32, _y: f32) -> bool {
-        true
+    fn hit_test(&self, element: &Element, x: f32, y: f32) -> bool {
+        // It does not clip (its parts reach outside), so the toolkit leaves
+        // the bounds to it.
+        element.contains_local(x, y)
     }
 
     fn on_event(&mut self, _ui: &mut UiRoot, me: ElementId, e: &UiEvent) -> bool {
