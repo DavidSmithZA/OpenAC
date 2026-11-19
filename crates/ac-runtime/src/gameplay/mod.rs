@@ -719,6 +719,7 @@ impl Gameplay {
             height: self.attack.requested_height(),
             desired_power: self.attack.desired_power(),
             power_bar: self.attack.power_bar_level(now, &ops),
+            charging: self.attack.build_in_progress(),
         }
     }
 
