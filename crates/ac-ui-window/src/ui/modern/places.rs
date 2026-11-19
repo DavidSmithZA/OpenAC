@@ -109,6 +109,16 @@ const PLACES: &[(&str, Place)] = &[
             height: super::hud::effects::CHIP_HEIGHT,
         },
     ),
+    (
+        super::hud::RADAR,
+        Place {
+            anchor: Anchor::TopRight,
+            dx: -6.0,
+            dy: 12.0,
+            width: super::hud::radar::WIDTH,
+            height: super::hud::radar::HEIGHT,
+        },
+    ),
 ];
 
 /// Where modern window `name` first appears.

@@ -4,6 +4,7 @@
 
 pub mod edge_glow;
 pub mod effects;
+pub mod radar;
 pub mod target;
 pub mod vitals;
 
@@ -18,6 +19,9 @@ pub const VITALS: &str = "modern-vitals";
 
 /// The effects counts' and status chips' window name.
 pub const EFFECTS: &str = "modern-effects";
+
+/// The radar's window name.
+pub const RADAR: &str = "modern-radar";
 
 /// The target line's window name.
 pub const TARGET: &str = "modern-target";

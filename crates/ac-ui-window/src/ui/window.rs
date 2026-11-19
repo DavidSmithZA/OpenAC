@@ -1214,6 +1214,7 @@ impl WindowUi {
         let radar = radar_scene(scene, self.player_view.as_ref(), fellowship);
         self.host
             .with_controller::<RadarController, _>(RADAR_WINDOW, |c, _| c.set_scene(&radar));
+        self.feed_modern_radar(&radar);
         self.feed_plugin_ui();
         let mut dirty = self.facts.take_dirty();
         if dirty.chat_entry

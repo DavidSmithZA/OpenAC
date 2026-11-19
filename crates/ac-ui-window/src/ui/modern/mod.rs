@@ -48,6 +48,8 @@ pub struct ModernLayer {
     seen_cast: Option<u64>,
     /// The effects counts and status chips, top left.
     pub effects: Option<EffectsHud>,
+    /// The radar, top right.
+    pub radar: Option<ElementId>,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -145,6 +147,12 @@ const EFFECTS_LABEL_SIZE: f32 = 9.5;
 const EFFECTS_NAME_SIZE: f32 = 12.0;
 const EFFECTS_CAPTION_SIZE: f32 = 10.5;
 
+/// The radar's pill, letters and chip; its ring labels; its coordinates
+/// and names, pixels to the em.
+const RADAR_BOLD_SIZE: f32 = 11.0;
+const RADAR_TINY_SIZE: f32 = 8.0;
+const RADAR_SMALL_SIZE: f32 = 11.0;
+
 /// An item's mana now and at most (property ints).
 const ITEM_CUR_MANA: u32 = 107;
 const ITEM_MAX_MANA: u32 = 108;
@@ -184,6 +192,17 @@ impl WindowUi {
             hud::target::TargetLine::new(Horizon::BRONZE, fonts.0, fonts.1, fonts.2),
         );
         let effects = self.mount_modern_effects();
+        let radar_fonts = hud::radar::RadarFonts {
+            bold: self.modern_font(Weight::SemiBold, RADAR_BOLD_SIZE),
+            tiny: self.modern_font(Weight::Regular, RADAR_TINY_SIZE),
+            small: self.modern_font(Weight::Medium, RADAR_SMALL_SIZE),
+        };
+        let radar = hud::mount_piece(
+            &mut self.host.root,
+            hud::RADAR,
+            (hud::radar::WIDTH, hud::radar::HEIGHT),
+            hud::radar::RadarRing::new(Horizon::BRONZE, radar_fonts),
+        );
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -191,6 +210,13 @@ impl WindowUi {
         match effects {
             Ok(hud) => modern.effects = Some(hud),
             Err(e) => self.notices.push(format!("ui: modern effects: {e}")),
+        }
+        match radar {
+            Ok(id) => {
+                modern.radar = Some(id);
+                modern.replace(super::window::RADAR_WINDOW);
+            }
+            Err(e) => self.notices.push(format!("ui: modern radar: {e}")),
         }
         match target {
             Ok(id) => modern.target = Some(id),
@@ -203,6 +229,16 @@ impl WindowUi {
                 modern.replace(super::window::SIDE_VITALS_WINDOW);
             }
             Err(e) => self.notices.push(format!("ui: modern vitals: {e}")),
+        }
+    }
+
+    /// The modern radar shows `scene`.
+    pub(super) fn feed_modern_radar(&mut self, scene: &ac_ui::panels::radar::RadarScene) {
+        let Some(id) = self.modern.as_ref().and_then(|m| m.radar) else {
+            return;
+        };
+        if let Some(radar) = self.host.root.widget_mut::<hud::radar::RadarRing>(id) {
+            radar.set_scene(scene);
         }
     }
 
