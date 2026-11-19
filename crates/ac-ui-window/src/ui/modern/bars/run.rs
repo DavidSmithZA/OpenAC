@@ -306,17 +306,18 @@ impl WindowUi {
 
     fn run_bars(&mut self, b: &mut BarsUi) {
         let now = self.status.clock.elapsed().as_secs_f64();
-        if b.saved.is_none()
-            && let Some(store) = &self.status.settings_store
-        {
-            b.saved = Some(store.load_modern_bars());
-        }
         let in_world = self.player_view.is_some() && !self.pregame_active();
-        let name = self
-            .status
-            .restored_for
-            .clone()
-            .filter(|_| in_world && b.saved.is_some());
+        let name = self.status.playing.clone().filter(|_| in_world);
+        if b.saved.is_none() && name.is_some() {
+            // Without a settings file the bars last the session.
+            b.saved = Some(
+                self.status
+                    .settings_store
+                    .as_ref()
+                    .map(ac_host::settings::SettingsStore::load_modern_bars)
+                    .unwrap_or_default(),
+            );
+        }
         let who = name
             .as_deref()
             .map(|n| BarsUi::key(self.status.server_world.as_deref(), n));
