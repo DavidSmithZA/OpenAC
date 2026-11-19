@@ -146,6 +146,39 @@ pub struct DisplaySettings {
     pub ui_scale_percent: i32,
     /// The render-pack selection, kept as read (`None`: the retail pack).
     pub render_pack: Option<Node>,
+    /// The modern interface's vitals and effects.
+    pub modern_hud: ModernHudSettings,
+}
+
+/// How the modern interface's vitals and effects behave (OpenAC's own;
+/// Retail ignores them).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ModernHudSettings {
+    /// The vital bars move: losses flash and drain away, gains fill in
+    /// behind a bright edge.
+    pub animate_vitals: bool,
+    /// A number falls off a vital bar for a change of at least this share
+    /// of the bar, percent (0: no numbers).
+    pub vital_numbers_percent: i32,
+    /// The health bar pulses below this share, percent (0: never).
+    pub low_health_percent: i32,
+    /// The screen's edge glows red while health is low.
+    pub low_health_edge_glow: bool,
+    /// The helpful effects' count turns amber this many minutes before one
+    /// ends (0: never).
+    pub effect_warning_minutes: i32,
+}
+
+impl Default for ModernHudSettings {
+    fn default() -> Self {
+        Self {
+            animate_vitals: true,
+            vital_numbers_percent: 5,
+            low_health_percent: 25,
+            low_health_edge_glow: true,
+            effect_warning_minutes: 5,
+        }
+    }
 }
 
 impl Default for DisplaySettings {
@@ -176,6 +209,7 @@ impl Default for DisplaySettings {
             ui_only_when_unfocused: false,
             ui_scale_percent: UI_SCALE_DEFAULT_PERCENT,
             render_pack: None,
+            modern_hud: ModernHudSettings::default(),
         }
     }
 }
@@ -652,6 +686,31 @@ fn read_display(d: &[Member], version: i32) -> Result<DisplaySettings, Unreadabl
         render_pack: member(d, "renderPack")
             .filter(|n| !is_retail_pack(n))
             .cloned(),
+        modern_hud: {
+            let m = def.modern_hud;
+            let percent = |name, fallback| -> Result<i32, Unreadable> {
+                Ok(read_int(d, name, fallback)?.clamp(0, 100))
+            };
+            ModernHudSettings {
+                animate_vitals: read_bool(d, "modernAnimateVitals", m.animate_vitals),
+                vital_numbers_percent: percent(
+                    "modernVitalNumbersPercent",
+                    m.vital_numbers_percent,
+                )?,
+                low_health_percent: percent("modernLowHealthPercent", m.low_health_percent)?,
+                low_health_edge_glow: read_bool(
+                    d,
+                    "modernLowHealthEdgeGlow",
+                    m.low_health_edge_glow,
+                ),
+                effect_warning_minutes: read_int(
+                    d,
+                    "modernEffectWarningMinutes",
+                    m.effect_warning_minutes,
+                )?
+                .clamp(0, 60),
+            }
+        },
     })
 }
 
@@ -711,7 +770,7 @@ fn display_object(d: &DisplaySettings) -> String {
             out
         },
     );
-    let fields: [(&str, String); 25] = [
+    let fields: [(&str, String); 30] = [
         ("automaticDegrades", boolean(d.automatic_degrades)),
         (
             "buildingDetailTextures",
@@ -743,6 +802,23 @@ fn display_object(d: &DisplaySettings) -> String {
         (
             "particleRange",
             string(name_of(&PARTICLE_NAMES, &d.particle_range)),
+        ),
+        ("modernAnimateVitals", boolean(d.modern_hud.animate_vitals)),
+        (
+            "modernEffectWarningMinutes",
+            d.modern_hud.effect_warning_minutes.to_string(),
+        ),
+        (
+            "modernLowHealthEdgeGlow",
+            boolean(d.modern_hud.low_health_edge_glow),
+        ),
+        (
+            "modernLowHealthPercent",
+            d.modern_hud.low_health_percent.to_string(),
+        ),
+        (
+            "modernVitalNumbersPercent",
+            d.modern_hud.vital_numbers_percent.to_string(),
         ),
         ("potatoMode", boolean(d.potato_mode)),
         ("quality", string(name_of(&QUALITY_NAMES, &d.quality))),
@@ -896,6 +972,13 @@ mod tests {
             ui_only_when_unfocused: true,
             ui_scale_percent: 230,
             render_pack: None,
+            modern_hud: ModernHudSettings {
+                animate_vitals: false,
+                vital_numbers_percent: 10,
+                low_health_percent: 33,
+                low_health_edge_glow: false,
+                effect_warning_minutes: 2,
+            },
         };
         t.store().save_display(&original).unwrap();
         let (loaded, warning) = t.store().load_display();

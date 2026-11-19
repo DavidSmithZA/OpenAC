@@ -69,6 +69,17 @@ pub enum DisplayField {
     BuildingDetailTextures,
     LandscapeDetailTextures,
     MultiPassAlpha,
+    /// The modern interface: the vital bars move.
+    ModernAnimateVitals,
+    /// The modern interface: the share a vital change needs for its number.
+    ModernVitalNumbers,
+    /// The modern interface: the health share the bar pulses below.
+    ModernLowHealth,
+    /// The modern interface: the screen's edge glows at low health.
+    ModernEdgeGlow,
+    /// The modern interface: how long before a helpful effect ends its
+    /// count warns.
+    ModernEffectWarning,
 }
 
 /// A chat setting.
@@ -268,6 +279,17 @@ impl LiveValues {
                     DisplayField::BuildingDetailTextures => Bool(d.building_detail_textures),
                     DisplayField::LandscapeDetailTextures => Bool(d.landscape_detail_textures),
                     DisplayField::MultiPassAlpha => Bool(d.multi_pass_alpha),
+                    DisplayField::ModernAnimateVitals => Bool(d.modern_hud.animate_vitals),
+                    DisplayField::ModernVitalNumbers => {
+                        Text(d.modern_hud.vital_numbers_percent.to_string())
+                    }
+                    DisplayField::ModernLowHealth => {
+                        Text(d.modern_hud.low_health_percent.to_string())
+                    }
+                    DisplayField::ModernEdgeGlow => Bool(d.modern_hud.low_health_edge_glow),
+                    DisplayField::ModernEffectWarning => {
+                        Text(d.modern_hud.effect_warning_minutes.to_string())
+                    }
                 }
             }
             OptionKey::Chat(f) => {
@@ -384,6 +406,21 @@ impl LiveValues {
                         d.landscape_detail_textures = *x;
                     }
                     (DisplayField::MultiPassAlpha, Bool(x)) => d.multi_pass_alpha = *x,
+                    (DisplayField::ModernAnimateVitals, Bool(x)) => {
+                        d.modern_hud.animate_vitals = *x;
+                    }
+                    (DisplayField::ModernVitalNumbers, Text(x)) => {
+                        d.modern_hud.vital_numbers_percent = x.parse().ok()?;
+                    }
+                    (DisplayField::ModernLowHealth, Text(x)) => {
+                        d.modern_hud.low_health_percent = x.parse().ok()?;
+                    }
+                    (DisplayField::ModernEdgeGlow, Bool(x)) => {
+                        d.modern_hud.low_health_edge_glow = *x;
+                    }
+                    (DisplayField::ModernEffectWarning, Text(x)) => {
+                        d.modern_hud.effect_warning_minutes = x.parse().ok()?;
+                    }
                     _ => return None,
                 }
                 Some(Section::Display)
