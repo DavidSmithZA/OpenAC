@@ -2,7 +2,8 @@
 
 A second interface for the client, beside the retail one. It must do
 everything the retail interface does; how it looks and works is open.
-This folder holds the design only. There is no code yet.
+This folder holds the design only. There is no code yet. The design
+is complete and approved (2026-11-19); next is planning the build.
 
 - Live canvas (all boards, clickable where marked):
   https://claude.ai/artifact/3c5NpLimjKtfusjYEbWfpQ
@@ -575,7 +576,7 @@ come from the game data.
   links. A name the server refuses shows its words and three near names
   to pick (OPENAC, agreed).
 
-## Small pieces (canvas page "Small pieces")
+## Small pieces (canvas page "Small pieces", approved)
 
 Found by the coverage check below; each had no modern design yet.
 
