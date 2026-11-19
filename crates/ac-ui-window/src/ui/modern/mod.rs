@@ -37,6 +37,8 @@ pub struct ModernLayer {
     pub outlines: Option<ElementId>,
     /// The vitals.
     pub vitals: Option<ElementId>,
+    /// The target line (and the status messages under it).
+    pub target: Option<ElementId>,
     /// The low-health glow round the screen's edge.
     pub edge_glow: Option<ElementId>,
     /// The revision of the last cast answer looked at.
@@ -92,6 +94,15 @@ impl ModernLayer {
 const VITALS_LABEL_SIZE: f32 = 11.0;
 const VITALS_NUMBER_SIZE: f32 = 14.0;
 
+/// The sizes of the target's name, its share, and the line's small text.
+const TARGET_NAME_SIZE: f32 = 14.0;
+const TARGET_SHARE_SIZE: f32 = 12.0;
+const TARGET_SMALL_SIZE: f32 = 11.0;
+
+/// An item's mana now and at most (property ints).
+const ITEM_CUR_MANA: u32 = 107;
+const ITEM_MAX_MANA: u32 = 108;
+
 /// The server's answer to a cast the mana could not pay for ("You don't
 /// have enough Mana to cast this spell.").
 pub const NOT_ENOUGH_MANA: u32 = 0x401;
@@ -115,10 +126,25 @@ impl WindowUi {
             (hud::vitals::WIDTH, hud::vitals::BAR_HEIGHT),
             hud::vitals::VitalsHud::new(Horizon::BRONZE, label, number),
         );
+        let fonts = (
+            self.modern_font(Weight::SemiBold, TARGET_NAME_SIZE),
+            self.modern_font(Weight::SemiBold, TARGET_SHARE_SIZE),
+            self.modern_font(Weight::SemiBold, TARGET_SMALL_SIZE),
+        );
+        let target = hud::mount_piece(
+            &mut self.host.root,
+            hud::TARGET,
+            (hud::target::WIDTH, hud::target::HEIGHT),
+            hud::target::TargetLine::new(Horizon::BRONZE, fonts.0, fonts.1, fonts.2),
+        );
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
         modern.edge_glow = Some(glow);
+        match target {
+            Ok(id) => modern.target = Some(id),
+            Err(e) => self.notices.push(format!("ui: modern target: {e}")),
+        }
         match vitals {
             Ok(id) => {
                 modern.vitals = Some(id);
@@ -157,6 +183,70 @@ impl WindowUi {
             .map_or(0, |spell| u32::try_from(spell.mana_cost).unwrap_or(0));
         if let Some(hud) = self.host.root.widget_mut::<hud::vitals::VitalsHud>(bars) {
             hud.refuse_mana(cost);
+        }
+    }
+
+    /// The modern target line, when it is mounted.
+    pub(super) fn modern_target_line(&mut self) -> Option<&mut hud::target::TargetLine> {
+        let id = self.modern.as_ref()?.target?;
+        self.host.root.widget_mut::<hud::target::TargetLine>(id)
+    }
+
+    /// The target line follows the selection: its name as it shows
+    /// selected, what Use does to it, its health, or an item of the
+    /// player's, its mana.
+    pub(super) fn feed_modern_target(&mut self, scene: &crate::scene::Scene) {
+        if self.modern.as_ref().and_then(|m| m.target).is_none() {
+            return;
+        }
+        let selected = self.player_view.and_then(|v| v.selected);
+        let target = selected.map(|guid| {
+            let facts = super::status::selection_facts(&self.facts.state, selected, &self.status);
+            let resolve = super::facts::composed_names(&self.status.names);
+            let view = self.facts.items_view(selected, &[], None, &resolve);
+            let stack = ac_ui::panels::selected_object::selection_stack(&view, guid);
+            let name = ac_ui::panels::selected_object::selection_name(&view, &facts, guid, stack)
+                .unwrap_or_else(|| format!("0x{guid:08X}"));
+            let own = view.objects.is_owned_by_object(guid, view.player);
+            let (item_type, flags) = match scene.object_by_guid(guid) {
+                Some(o) if o.radar.item_type != 0 => {
+                    (o.radar.item_type, o.radar.public_weenie_bitfield)
+                }
+                _ => view.get(guid).map_or((0, 0), |o| {
+                    (
+                        o.item_type.bits(),
+                        o.public_weenie_bitfield.map_or(0, |f| f.bits()),
+                    )
+                }),
+            };
+            let class = ac_plugin_abi::world::classify(item_type, flags);
+            let health = (facts.health.health_target && stack <= 1)
+                .then_some(facts.health.percent)
+                .flatten();
+            let mana = (own && facts.mana > 0.0).then(|| {
+                let numbers = view.get(guid).and_then(|o| {
+                    let now = o.properties.get_int(ITEM_CUR_MANA, -1);
+                    let max = o.properties.get_int(ITEM_MAX_MANA, -1);
+                    (now >= 0 && max > 0).then_some((now, max))
+                });
+                hud::target::ItemMana {
+                    share: facts.mana,
+                    numbers,
+                }
+            });
+            hud::target::TargetView {
+                guid,
+                name,
+                own,
+                use_kind: hud::target::UseKind::of(class),
+                health,
+                mana,
+            }
+        });
+        if let Some(line) = self.modern_target_line()
+            && line.target != target
+        {
+            line.target = target;
         }
     }
 

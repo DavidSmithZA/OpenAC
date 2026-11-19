@@ -1198,6 +1198,7 @@ impl WindowUi {
         for event in scene.take_interface() {
             self.facts.apply(event);
         }
+        self.feed_modern_target(scene);
         // The examination window follows every selection change while it
         // shows, in order, not only the selection this frame ends on.
         let changes = std::mem::take(&mut self.facts.selection_changes);

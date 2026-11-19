@@ -3,6 +3,7 @@
 //! widget and fed from the session by the window.
 
 pub mod edge_glow;
+pub mod target;
 pub mod vitals;
 
 use ac_ui::UiRoot;
@@ -13,6 +14,9 @@ use super::places;
 
 /// The vitals' window name.
 pub const VITALS: &str = "modern-vitals";
+
+/// The target line's window name.
+pub const TARGET: &str = "modern-target";
 
 /// Mounts `widget` as the HUD piece `name`, at its first place on a screen
 /// of the root's size (or the top left when the table has none); a piece

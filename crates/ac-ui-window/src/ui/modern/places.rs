@@ -78,16 +78,28 @@ impl Place {
 
 /// Every modern window's first place, by window name (filled in as the
 /// windows are built).
-const PLACES: &[(&str, Place)] = &[(
-    super::hud::VITALS,
-    Place {
-        anchor: Anchor::Top,
-        dx: 0.0,
-        dy: 14.0,
-        width: super::hud::vitals::WIDTH,
-        height: super::hud::vitals::BAR_HEIGHT,
-    },
-)];
+const PLACES: &[(&str, Place)] = &[
+    (
+        super::hud::VITALS,
+        Place {
+            anchor: Anchor::Top,
+            dx: 0.0,
+            dy: 14.0,
+            width: super::hud::vitals::WIDTH,
+            height: super::hud::vitals::BAR_HEIGHT,
+        },
+    ),
+    (
+        super::hud::TARGET,
+        Place {
+            anchor: Anchor::Top,
+            dx: 0.0,
+            dy: 46.0,
+            width: super::hud::target::WIDTH,
+            height: super::hud::target::HEIGHT,
+        },
+    ),
+];
 
 /// Where modern window `name` first appears.
 #[must_use]

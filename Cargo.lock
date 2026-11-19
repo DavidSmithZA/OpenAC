@@ -358,6 +358,7 @@ dependencies = [
  "ac-host",
  "ac-motion",
  "ac-physics",
+ "ac-plugin-abi",
  "ac-plugin-ui",
  "ac-proto",
  "ac-runtime",

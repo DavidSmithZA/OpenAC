@@ -275,7 +275,15 @@ impl WindowUi {
         if let Some(link) = scene.link() {
             self.status.link = Some(link);
         }
-        if let Some(spew) = self.status.spew {
+        if self.modern_target_line().is_some() {
+            // The modern interface shows them under the target line.
+            let texts = scene.take_status_text();
+            if let Some(line) = self.modern_target_line() {
+                for text in texts {
+                    line.show_status(text);
+                }
+            }
+        } else if let Some(spew) = self.status.spew {
             let ui = &mut self.host.root;
             spew.set_gameplay_active(ui, in_world);
             for text in scene.take_status_text() {
