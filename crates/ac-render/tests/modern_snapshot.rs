@@ -1,0 +1,429 @@
+//! Pictures of the modern interface without a window: the window's UI
+//! built over the retail dats in Modern, fed a made-up player in the
+//! world, driven by the pointer and keys, and its draw list rasterised on
+//! the CPU into PNGs (the web client's test rasteriser). For looking at a
+//! modern screen when no window can be shown. Ignored by default; run with
+//! `OPENAC_SNAPSHOT_DIR=<dir> cargo test -p ac-render --test modern_snapshot
+//! -- --ignored`.
+
+#![allow(dead_code)]
+
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+use ac_core::items::{ClientObject, ItemType, ShortcutEntry, ShortcutStore};
+use ac_core::spells::Spellbook;
+use ac_dat::DatCollection;
+use ac_proto::{ModelData, Position, Quaternion, Vector3};
+use ac_render::scene::Scene;
+use ac_render::ui::batch::UiTexture;
+use ac_render::ui::input::{self as ui_input, Routed};
+use ac_render::ui::{UiBatch, UiTextureSource, WindowUi};
+use ac_runtime::session::PresentationEvent;
+use ac_runtime::session::interface::{InterfaceEvent, InterfaceState, ItemsUpdate, PlayerFacts};
+use ac_runtime::world::{ObjectKey, ObjectView, PlayerView, RadarFacts, VitalReading, WorldSnapshot};
+use ac_ui::draw::TextureRef;
+use ac_ui::event::{Key, Modifiers};
+
+#[path = "../../ac-ui-web/tests/harness/raster.rs"]
+mod raster;
+
+/// A texture as the rasteriser holds it.
+#[derive(Debug, Clone)]
+pub struct Held {
+    pub width: u32,
+    pub height: u32,
+    pub rgba: Vec<u8>,
+    pub levels: u32,
+}
+
+const PLAYER: u32 = 0x5000_0001;
+const W: u32 = 1440;
+const H: u32 = 900;
+
+fn dats() -> Arc<DatCollection> {
+    let dir = std::env::var_os("OPENAC_DAT_DIR")
+        .map(PathBuf::from)
+        .or_else(ac_dat::default_dat_dir)
+        .expect("no dat directory: set OPENAC_DAT_DIR");
+    Arc::new(DatCollection::open(dir).expect("open the retail dats"))
+}
+
+fn out_dir() -> PathBuf {
+    std::env::var_os("OPENAC_SNAPSHOT_DIR")
+        .map_or_else(|| std::env::temp_dir().join("openac-snapshots"), PathBuf::from)
+}
+
+fn player_object() -> ObjectView {
+    ObjectView {
+        key: ObjectKey {
+            local_id: 1,
+            incarnation: 1,
+        },
+        guid: PLAYER,
+        name: Some("Aerin Vale".to_owned()),
+        setup_id: None,
+        position: Some(Position {
+            cell_id: 0xA9B4_0031,
+            origin: Vector3 {
+                x: 100.0,
+                y: 100.0,
+                z: 0.0,
+            },
+            orientation: Quaternion::IDENTITY,
+        }),
+        parent: None,
+        placement: None,
+        rest_placement: 0,
+        scale: None,
+        translucency: None,
+        state: 0,
+        velocity: None,
+        model: ModelData::default(),
+        motion_table_id: None,
+        sound_table_id: None,
+        radar: RadarFacts {
+            item_type: 0x10,
+            public_weenie_bitfield: 0x8,
+            radar_behavior: Some(4),
+            radar_blip_color: 0,
+            monarch_id: 0,
+        },
+        motion: None,
+        effects: ac_runtime::world::EffectFacts::default(),
+        step_blend: None,
+    }
+}
+
+/// The player's things: (guid, name, item type, icon, stack).
+const ITEMS: &[(u32, &str, ItemType, u32, i32)] = &[
+    (0x8000_0101, "Health Potion", ItemType::FOOD, 0x0600_1A8B, 12),
+    (0x8000_0102, "Mana Potion", ItemType::FOOD, 0x0600_1A8D, 7),
+    (0x8000_0103, "Stamina Elixir", ItemType::FOOD, 0x0600_1A8C, 1),
+    (0x8000_0104, "Healing Kit", ItemType::MISC, 0x0600_1E3B, 1),
+    (0x8000_0105, "Sword", ItemType::MELEE_WEAPON, 0x0600_11CB, 1),
+];
+
+/// A scene with the player in the world, its things, its spells (the
+/// first `spells` of the dats' table, the first eight its favourites) and
+/// `mode`.
+fn scene(dats: &DatCollection, mode: ac_core::combat::CombatMode) -> Scene {
+    let mut scene = Scene::default();
+    scene.apply(PresentationEvent::Snapshot(WorldSnapshot {
+        player_guid: Some(PLAYER),
+        objects: vec![player_object()],
+    }));
+    let vital = |current, max| VitalReading {
+        current: Some(current),
+        max: Some(max),
+        percent: Some(current as f32 / max as f32),
+    };
+    scene.apply(PresentationEvent::Player(PlayerView {
+        health: vital(310, 400),
+        stamina: vital(380, 400),
+        mana: vital(290, 420),
+        ..PlayerView::default()
+    }));
+    let mut player = ClientObject::new(PLAYER);
+    player.name = "Aerin Vale".to_owned();
+    player.item_type = ItemType::CREATURE;
+    let mut objects = vec![player];
+    let mut shortcuts = ShortcutStore::new();
+    for (i, &(guid, name, item_type, icon, stack)) in ITEMS.iter().enumerate() {
+        let mut o = ClientObject::new(guid);
+        o.name = name.to_owned();
+        o.item_type = item_type;
+        o.icon_id = icon;
+        o.stack_size = stack;
+        o.container_id = PLAYER;
+        objects.push(o);
+        shortcuts.set(ShortcutEntry {
+            index: i as i32,
+            object_id: guid,
+            spell_id: 0,
+        });
+    }
+    let guids: Vec<u32> = ITEMS.iter().map(|i| i.0).collect();
+    scene.apply(PresentationEvent::Interface(InterfaceEvent::Items(ItemsUpdate {
+        reset: true,
+        objects,
+        removed: Vec::new(),
+        contents: vec![(PLAYER, Some(guids))],
+    })));
+    let tables = ac_runtime::gameplay::GameTables::load(dats).expect("the game tables");
+    let mut book = Spellbook::new(Some(Arc::clone(tables.spells())));
+    let ids: Vec<u32> = tables.spells().spell_ids().take(40).collect();
+    for (i, &id) in ids.iter().enumerate() {
+        book.on_spell_learned(id, 1.0);
+        if i < 8 {
+            book.set_favorite(0, i, id);
+        } else if i < 14 {
+            book.set_favorite(2, i - 8, id);
+        }
+    }
+    scene.apply(PresentationEvent::Interface(InterfaceEvent::Player(Box::new(
+        PlayerFacts {
+            revision: 2,
+            numbers: ac_core::player::LocalPlayerState::new(Some(book)),
+            session_seconds: 0.0,
+        },
+    ))));
+    scene.apply(PresentationEvent::Interface(InterfaceEvent::State(Box::new(
+        InterfaceState {
+            player: PLAYER,
+            can_make_request: true,
+            combat_mode: mode,
+            shortcuts,
+            ..InterfaceState::default()
+        },
+    ))));
+    scene
+}
+
+struct Shot {
+    ui: WindowUi,
+    scene: Scene,
+    now: Instant,
+    textures: HashMap<(u32, u32), Held>,
+}
+
+impl Shot {
+    fn new(mode: ac_core::combat::CombatMode) -> Self {
+        let dats = dats();
+        let mut ui = WindowUi::build(Arc::clone(&dats), (W, H)).expect("the UI builds");
+        ui.set_interface(ac_host::Interface::Modern);
+        let scene = scene(&dats, mode);
+        let mut shot = Self {
+            ui,
+            scene,
+            now: Instant::now(),
+            textures: HashMap::new(),
+        };
+        // Long enough for the fonts, the layout and the first bars.
+        for _ in 0..10 {
+            shot.step();
+        }
+        shot
+    }
+
+    fn step(&mut self) {
+        self.ui.feed(&mut self.scene);
+        self.now += Duration::from_millis(50);
+        let _ = self.ui.frame(self.now, (W, H));
+        let _ = self.ui.drain();
+    }
+
+    fn set_mode(&mut self, mode: ac_core::combat::CombatMode) {
+        let shortcuts = {
+            let mut s = ShortcutStore::new();
+            for (i, item) in ITEMS.iter().enumerate() {
+                s.set(ShortcutEntry {
+                    index: i as i32,
+                    object_id: item.0,
+                    spell_id: 0,
+                });
+            }
+            s
+        };
+        self.scene
+            .apply(PresentationEvent::Interface(InterfaceEvent::State(Box::new(
+                InterfaceState {
+                    player: PLAYER,
+                    can_make_request: true,
+                    combat_mode: mode,
+                    shortcuts,
+                    ..InterfaceState::default()
+                },
+            ))));
+        self.step();
+        self.step();
+    }
+
+    fn moved(&mut self, x: i32, y: i32) {
+        let r: Routed<u32> = ui_input::moved(self.ui.host_mut(), x, y, false);
+        let _ = self.ui.handle(r.outputs);
+        self.step();
+    }
+
+    fn click(&mut self, button: u16, x: i32, y: i32, modifiers: Modifiers) {
+        self.moved(x, y);
+        let flags = ui_input::mouse_flags(&[button], modifiers);
+        let r: Routed<u32> = ui_input::button(self.ui.host_mut(), button, true, x, y, flags, false);
+        let _ = self.ui.handle(r.outputs);
+        let flags = ui_input::mouse_flags(&[], modifiers);
+        let r: Routed<u32> =
+            ui_input::button(self.ui.host_mut(), button, false, x, y, flags, false);
+        let _ = self.ui.handle(r.outputs);
+        self.step();
+    }
+
+    /// Presses the left button at `from`, moves to `to` in steps and lets
+    /// go there.
+    fn drag(&mut self, from: (i32, i32), to: (i32, i32)) {
+        self.moved(from.0, from.1);
+        let held = ui_input::mouse_flags(&[0], Modifiers::NONE);
+        let r: Routed<u32> =
+            ui_input::button(self.ui.host_mut(), 0, true, from.0, from.1, held, false);
+        let _ = self.ui.handle(r.outputs);
+        self.step();
+        for i in 1..=8 {
+            let x = from.0 + (to.0 - from.0) * i / 8;
+            let y = from.1 + (to.1 - from.1) * i / 8;
+            self.moved(x, y);
+        }
+        let none = ui_input::mouse_flags(&[], Modifiers::NONE);
+        let r: Routed<u32> =
+            ui_input::button(self.ui.host_mut(), 0, false, to.0, to.1, none, false);
+        let _ = self.ui.handle(r.outputs);
+        self.step();
+        self.step();
+    }
+
+    fn key(&mut self, key: Key, modifiers: Modifiers, pressed: bool) {
+        let r: Routed<u32> = self.ui.key(0, key, pressed, false, modifiers, None);
+        let _ = self.ui.handle(r.outputs);
+        self.step();
+    }
+
+    fn save(&mut self, name: &str) {
+        self.now += Duration::from_millis(50);
+        let list = self.ui.frame(self.now, (W, H));
+        let batch = UiBatch::build(&list);
+        let mut surfaces = self.ui.surfaces();
+        for run in &batch.runs {
+            let UiTexture::Named(texture) = run.key.texture else {
+                continue;
+            };
+            let key = match texture {
+                TextureRef::Surface(id) => (1, id),
+                TextureRef::Runtime(h) => (2, h),
+            };
+            if self.textures.contains_key(&key) {
+                continue;
+            }
+            let Some(pixels) = surfaces.decode(texture) else {
+                continue;
+            };
+            let (width, height) = pixels.size();
+            let rgba = match pixels {
+                ac_render::ui::gpu::UiPixels::Rgba(t) => t.rgba,
+                ac_render::ui::gpu::UiPixels::Coverage { alpha, .. } => {
+                    alpha.iter().flat_map(|&a| [255, 255, 255, a]).collect()
+                }
+                ac_render::ui::gpu::UiPixels::Plugin(levels) => {
+                    levels.into_iter().next().map(|t| t.rgba).unwrap_or_default()
+                }
+            };
+            self.textures.insert(
+                key,
+                Held {
+                    width,
+                    height,
+                    rgba,
+                    levels: 1,
+                },
+            );
+        }
+        let corners: Vec<raster::Corner> = batch
+            .vertices
+            .iter()
+            .map(|v| raster::Corner {
+                position: v.position,
+                uv: v.uv,
+                color: v.color,
+            })
+            .collect();
+        let runs: Vec<[u32; 5]> = batch
+            .runs
+            .iter()
+            .map(|r| {
+                let (kind, id) = match r.key.texture {
+                    UiTexture::White => (0, 0),
+                    UiTexture::Named(TextureRef::Surface(id)) => (1, id),
+                    UiTexture::Named(TextureRef::Runtime(h)) => (2, h as u32),
+                };
+                let filter = u32::from(matches!(r.key.filter, ac_ui::draw::Filter::Nearest));
+                [kind, id, filter, r.first, r.count]
+            })
+            .collect();
+        let rgba = raster::render(W, H, &corners, &runs, &self.textures);
+        let dir = out_dir();
+        std::fs::create_dir_all(&dir).expect("the snapshot folder");
+        let path = dir.join(format!("{name}.png"));
+        std::fs::write(&path, ac_bits::png::encode_rgba(W, H, &rgba)).expect("the PNG");
+        println!("saved {}", path.display());
+        for notice in self.ui.take_notices() {
+            println!("notice: {notice}");
+        }
+    }
+}
+
+/// The Main bar's first slot's centre on a 1440 x 900 screen.
+const MAIN_SLOT: (i32, i32) = (484, 820);
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_bars() {
+    use ac_core::combat::CombatMode;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    s.save("bars-peace");
+    s.set_mode(CombatMode::MAGIC);
+    s.save("bars-magic");
+    s.set_mode(CombatMode::NON_COMBAT);
+    // Hover a slot: its label.
+    s.moved(MAIN_SLOT.0, MAIN_SLOT.1);
+    for _ in 0..14 {
+        s.step();
+    }
+    s.save("bars-hover");
+    // Quick move's menu on the Main bar: Ctrl + right-click.
+    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
+    s.click(1, MAIN_SLOT.0, MAIN_SLOT.1, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(Modifiers::NONE);
+    s.save("bars-quick-menu");
+    // Its last row opens Edit layout (the menu is kept on the screen, so
+    // it sits above the click: its foot at 900 - 6).
+    s.click(0, MAIN_SLOT.0 + 40, 900 - 6 - 20, Modifiers::NONE);
+    s.save("bars-edit");
+    // A slot clicked in Edit layout: its keys.
+    s.click(0, MAIN_SLOT.0, MAIN_SLOT.1, Modifiers::NONE);
+    s.save("bars-keys");
+    // The Magic key box, then Shift+Q.
+    s.click(0, 570, 674, Modifiers::NONE);
+    s.save("bars-keys-listening");
+    s.key(Key::Q, Modifiers::SHIFT, true);
+    s.key(Key::Q, Modifiers::SHIFT, false);
+    s.save("bars-keys-set");
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    s.save("bars-after-edit");
+    // Drag the potion from slot 1 to slot 8 (43 units a slot); then the
+    // elixir off the bar into the world.
+    s.drag(MAIN_SLOT, (MAIN_SLOT.0 + 43 * 7, MAIN_SLOT.1));
+    s.drag((MAIN_SLOT.0 + 43 * 2, MAIN_SLOT.1), (700, 400));
+    s.save("bars-dragged");
+    s.set_mode(CombatMode::MELEE);
+    s.save("bars-melee");
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_bars_move_and_turn() {
+    use ac_core::combat::CombatMode;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    // Edit layout from the empty slot's menu (right-click on slot 12).
+    let last = (MAIN_SLOT.0 + 43 * 11, MAIN_SLOT.1);
+    s.click(1, last.0, last.1, Modifiers::NONE);
+    s.save("move-empty-menu");
+    s.click(0, last.0 + 40, 900 - 6 - 20, Modifiers::NONE);
+    // The Main bar's tab is under it: drag it by its grip up and left.
+    s.drag((MAIN_SLOT.0 - 10, 862), (300, 500));
+    s.save("move-dragged");
+    // Turn it with the tab's turn button (the tab is now above the bar,
+    // its buttons at its right end).
+    s.save("move-before-turn");
+}
