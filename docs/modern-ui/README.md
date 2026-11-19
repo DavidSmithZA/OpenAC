@@ -3,8 +3,10 @@
 A second interface for the client, beside the retail one. It must do
 everything the retail interface does; how it looks and works is open.
 This folder holds the design only. There is no code yet. The design
-is complete and approved (2026-11-19); the build plan is in
-`build-plan.md`.
+is complete and approved (2026-11-19, including the radar, recall,
+quick move and plugin hooks added that day); the build plan is in
+`build-plan.md`. `canvas-tools/` holds the script that drew the radar,
+recall, quick move and plugin hook boards.
 
 - Live canvas (all boards, clickable where marked):
   https://claude.ai/artifact/3c5NpLimjKtfusjYEbWfpQ
@@ -607,10 +609,11 @@ Found by the coverage check below; each had no modern design yet.
   the right over the dimmed dusk of character selection; any key, click
   or "Back to your characters" returns.
 
-## Radar (five ways drawn 2026-11-19, choice pending)
+## Radar (B, the bearing ring, chosen 2026-11-19)
 
 Canvas page "Radar and recalls". The radar had only been drawn once
-(A). All five show the same moment so they compare directly.
+(A). All five show the same moment so they compare directly. **B is the
+radar we build**; the others stay on the page for the record.
 
 - A, as designed: north up, plain dots in colours of its own, bronze
   rim, + and − zoom.
@@ -641,6 +644,12 @@ allegiance, × player killer, + everyone else) and colours.
   and secondary portal recalls), greyed outside Magic mode like spells
   on a bar.
 - Any row can be dragged onto a shortcut bar.
+- Your own (user, 2026-11-19): "Add your own…" at the foot adds a
+  recall a server has that retail did not, such as Dreamweave's
+  Driftnet (`/dn`): a name, the command (sent as if typed in chat), an
+  icon, and whether it shows on this server only (default) or every
+  server. Right-click one to edit, move or remove it. Saved on this
+  computer, keyed by server.
 
 ## Quick move (drawn 2026-11-19)
 
@@ -653,8 +662,8 @@ allegiance, × player killer, + everyone else) and colours.
   Open Edit layout. Slot keys, new bars and layouts stay in Edit layout.
 - Options › Controls › Moving the interface: Quick move on/off (OPENAC),
   the key, snapping, and retail's lock.
-- Open: on a Mac, Ctrl + click often means right-click, so the Mac
-  default may need another key.
+- On a Mac, Ctrl + click often means right-click, so the Mac default
+  may need another key; decided at implementation (user, 2026-11-19).
 
 ## Plugin hooks (drawn 2026-11-19)
 
@@ -673,6 +682,14 @@ entry. Hook points:
   drawn in the Options style with Apply, Revert and Defaults.
 - Buttons in a window's foot (for example "Loot 4 kept"), and buttons
   on the panel strip and dock.
+
+## Mac keys (user, 2026-11-19)
+
+On a Mac the client follows Mac conventions: Cmd+C, Cmd+V, Cmd+X,
+Cmd+A and Cmd+Z in text fields (today they are Ctrl, as on Windows),
+with the other Mac text keys (Option+arrows by word, Cmd+arrows to the
+line's ends, Cmd+Backspace). Both interfaces get this; it is how the
+platform works, not a retail behaviour.
 
 ## Coverage
 

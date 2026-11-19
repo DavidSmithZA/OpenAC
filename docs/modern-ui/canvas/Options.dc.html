@@ -188,7 +188,6 @@ class Component extends DCLogic {
         title: 'Interface', intro: 'How the game looks around the world: style, size, HUD and windows.',
         groups: [
           group('STYLE', [
-            seg('Interface', 'Switch between this interface and the original one. Each keeps its own layout, so you can go back and forth.', ['Modern', 'Retail'], 'Modern', OA),
             seg('Trim', 'The edging on windows, bars and the radar.', ['Bronze', 'Neutral'], 'Bronze', OA),
             sld('UI scale', 'Windows, text and controls together. The world is not scaled.', 55, '110%', Object.assign({ dot: GOLD }, OA)),
             seg('Item details', 'Docked inside the inventory window, or as a card beside the item. Auto docks when there is room.', ['Auto', 'Docked', 'Pop-up'], 'Auto', OA)

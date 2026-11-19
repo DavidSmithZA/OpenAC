@@ -1570,7 +1570,7 @@
    "w": 520,
    "h": 440,
    "page": "radar",
-   "title": "B · Bearing ring: heading up, a turning compass ring, retail blip shapes"
+   "title": "B · Bearing ring: CHOSEN. Heading up, a turning compass ring, retail blip shapes"
   },
   "RadarLens.dc.html": {
    "x": 1200,
@@ -1599,10 +1599,10 @@
   "Recalls.dc.html": {
    "x": 1120,
    "y": 560,
-   "w": 760,
-   "h": 560,
+   "w": 1000,
+   "h": 800,
    "page": "radar",
-   "title": "Recall: one button on the radar, every recall command and spell"
+   "title": "Recall: one button on the radar; every recall command and spell, plus your own per server"
   },
   "QuickMove.dc.html": {
    "x": 0,
@@ -1921,7 +1921,7 @@
    "y": 0,
    "w": 520,
    "page": "radar",
-   "text": "The radar had only ever been drawn one way. A is what the Horizon boards show; B to E are alternatives. All five show the same moment (facing north-east, nine things nearby) so they compare directly.\n\nB to D keep retail's rules: you face the top, 75 m outdoors and 25 m indoors, retail's blip shapes and colours, the selected one ringed. A used plain dots and colours of its own.\n\nPick one, or mix (for example B's ring on C's lens). E can also sit beside a round radar."
+   "text": "CHOSEN (2026-11-19): B, the bearing ring.\n\nThe radar had only ever been drawn one way. A is what the Horizon boards show; B to E are alternatives. All five show the same moment (facing north-east, nine things nearby) so they compare directly.\n\nB to D keep retail's rules: you face the top, 75 m outdoors and 25 m indoors, retail's blip shapes and colours, the selected one ringed. A used plain dots and colours of its own.\n\nPick one, or mix (for example B's ring on C's lens). E can also sit beside a round radar."
   },
   "t_quick": {
    "kind": "title1",
@@ -1936,7 +1936,7 @@
    "y": 0,
    "w": 520,
    "page": "quickmove",
-   "text": "Like HUD overlays in other clients: while the key is held (Ctrl by default, changeable), every piece of the HUD and every window can be dragged, with no unlocking. It snaps to screen edges and other pieces. Ctrl + right-click gives the quick edits for that piece. Edit layout stays for slot keys, new bars and layouts.\n\nOpen point: on a Mac, Ctrl + click often means right-click (trackpads, one-button mice). Ctrl may need to be a different default there."
+   "text": "Like HUD overlays in other clients: while the key is held (Ctrl by default, changeable), every piece of the HUD and every window can be dragged, with no unlocking. It snaps to screen edges and other pieces. Ctrl + right-click gives the quick edits for that piece. Edit layout stays for slot keys, new bars and layouts.\n\nOpen point: on a Mac, Ctrl + click often means right-click (trackpads, one-button mice). Ctrl may need to be a different default there; decided at implementation."
   },
   "t_hooks": {
    "kind": "title1",

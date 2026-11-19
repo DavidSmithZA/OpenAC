@@ -1,7 +1,8 @@
 # Modern UI: build plan
 
 Draft, 2026-11-19. The design is in `README.md` and on the canvas; this
-file is how we build it. Nothing here is started yet.
+file is how we build it. Nothing here is started yet: the user will
+start implementation in a later session.
 
 ## What the code gives us
 
@@ -82,6 +83,10 @@ the `.dc.html` copy before building each.
 - Drawing: arc and ring shapes; textured triangles so the radar and
   map can be clipped to a circle; cache tessellated shapes that do not
   change.
+- Mac keys: Cmd for copy, paste, cut, select all and undo in text
+  fields on macOS, plus Option/Cmd arrow and backspace moves. Touches
+  the shared text field, so retail gets it too; could go up as its own
+  small PR first.
 - Small helpers: an eased-value tween, compact numbers (1.2B) next to
   `group_thousands`, a native flex adapter (a measure trait over
   `FlexTree`, not tied to markup), a themed hover pane that can hold
@@ -105,9 +110,10 @@ retail UI with an empty modern layer.
   the yellow spew box.
 - Effects counts top left and their hover pane; burden and chess chips;
   frame rate.
-- The radar as chosen (page "Radar and recalls") with the connection
-  status line and card, and the Recall button and list (the recall
-  requests already exist in the client).
+- Radar B, the bearing ring (page "Radar and recalls"), with the
+  connection status line and card, and the Recall button and list (the
+  recall requests already exist in the client; custom recalls per
+  server saved on this computer).
 - Combat strip and the jump meter.
 - Panel strip bottom right (opens the retail windows for now), drop on
   Inventory puts in the main pack.
@@ -217,9 +223,8 @@ PR says what retail does).
 
 ## Open points
 
-- Which radar (A to E, or a mix); needed before M1.
 - Quick move's default key on a Mac (Ctrl + click is often right-click
-  there).
+  there); decide during M0.
 - Server level cap: XP bar says "Max level" or keeps counting
   (from the design).
 - Officers and bans in Manage allegiance: revisit at M8 (from the
