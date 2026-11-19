@@ -618,6 +618,133 @@ pub fn stroke_ellipse(
     );
 }
 
+/// Part of a circle's outline, `thickness` wide and centred on the circle
+/// of `radius` round `centre`, from angle `start` sweeping `sweep` radians
+/// (clockwise on screen from the right; a negative sweep runs the other
+/// way). Its sides and its flat ends all have soft edges. A sweep of a whole
+/// turn or more is the full ring.
+#[allow(clippy::too_many_arguments)]
+pub fn stroke_arc(
+    centre: (f32, f32),
+    radius: f32,
+    start: f32,
+    sweep: f32,
+    color: Color,
+    thickness: f32,
+    pixel: f32,
+    out: &mut Vec<ColorVertex>,
+) {
+    if !centre.0.is_finite()
+        || !centre.1.is_finite()
+        || !positive(radius)
+        || !positive(thickness)
+        || !start.is_finite()
+        || !sweep.is_finite()
+        || sweep == 0.0
+    {
+        return;
+    }
+    if sweep.abs() >= TAU {
+        let side = radius * 2.0;
+        stroke_ellipse(
+            (centre.0 - radius, centre.1 - radius, side, side),
+            color,
+            thickness,
+            pixel,
+            out,
+        );
+        return;
+    }
+    let (start, sweep) = if sweep < 0.0 {
+        (start + sweep, -sweep)
+    } else {
+        (start, sweep)
+    };
+    let (half_width, ink) = stroke_profile(thickness, color, pixel);
+    let fringe = pixel * 0.5;
+    let outer = radius + half_width;
+    // Across the band: clear, solid, solid, clear (the inner side stops at
+    // the centre).
+    let radii = [
+        outer + fringe,
+        outer - fringe,
+        (radius - half_width + fringe).max(0.0),
+        (radius - half_width - fringe).max(0.0),
+    ];
+    let across = [0.0, 1.0, 1.0, 0.0];
+    // Along it: each end gets its own soft edge, a pixel wide at the
+    // outside of the band, centred on the true end. An arc shorter than its
+    // soft edges is dimmed to cover what it would.
+    let end = (fringe / outer).min(sweep * 0.5);
+    let length_alpha = (sweep * outer / pixel).min(1.0);
+    let ink = Color {
+        a: ink.a * length_alpha,
+        ..ink
+    };
+    let segments = arc_segments(outer + fringe, sweep, pixel).max(1);
+    let mut stations = Vec::with_capacity(segments as usize + 3);
+    stations.push((start - end, 0.0));
+    for i in 0..=segments {
+        let angle = start + end + (sweep - 2.0 * end) * i as f32 / segments as f32;
+        stations.push((angle, 1.0));
+    }
+    stations.push((start + sweep + end, 0.0));
+    let point = |(angle, along): (f32, f32), ring: usize| {
+        let r = radii[ring];
+        let a = ink.a * along * across[ring];
+        ColorVertex::new(
+            centre.0 + r * angle.cos(),
+            centre.1 + r * angle.sin(),
+            Color { a, ..ink },
+        )
+    };
+    for pair in stations.windows(2) {
+        for ring in 0..radii.len() - 1 {
+            let (a, b) = (point(pair[0], ring), point(pair[1], ring));
+            let (c, d) = (point(pair[1], ring + 1), point(pair[0], ring + 1));
+            out.extend_from_slice(&[a, b, c, a, c, d]);
+        }
+    }
+}
+
+/// Triangles built once and kept while what they were built from stays the
+/// same: a widget whose shapes rarely change (a ring, a frame) keys them by
+/// its size, colours and the device pixel, and draws the kept triangles
+/// every frame instead of cutting the curves again.
+#[derive(Debug, Clone)]
+pub struct ShapeCache<K> {
+    key: Option<K>,
+    triangles: Vec<ColorVertex>,
+}
+
+impl<K> Default for ShapeCache<K> {
+    fn default() -> Self {
+        Self {
+            key: None,
+            triangles: Vec::new(),
+        }
+    }
+}
+
+impl<K: PartialEq> ShapeCache<K> {
+    /// The triangles for `key`: the kept ones when it is the key they were
+    /// built for, otherwise what `build` writes (kept for next time).
+    pub fn get(&mut self, key: K, build: impl FnOnce(&mut Vec<ColorVertex>)) -> &[ColorVertex] {
+        if self.key.as_ref() != Some(&key) {
+            self.triangles.clear();
+            build(&mut self.triangles);
+            self.key = Some(key);
+        }
+        &self.triangles
+    }
+
+    /// Forgets the kept triangles.
+    pub fn clear(&mut self) {
+        self.key = None;
+        self.triangles.clear();
+    }
+}
+
 /// False for zero, a negative, infinity or not a number.
 fn positive(value: f32) -> bool {
     value > 0.0 && value.is_finite()

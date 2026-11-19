@@ -164,6 +164,33 @@ impl ColorVertex {
     }
 }
 
+/// Which texel shows at each point of a textured disc: the texel at the
+/// centre, how many texture units one UI unit spans, and a turn (radians,
+/// clockwise on screen) of the texture about the centre.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DiscUv {
+    /// The texture coordinates at the disc's centre.
+    pub centre: (f32, f32),
+    /// Texture units per UI unit, across and down.
+    pub scale: (f32, f32),
+    /// How far the texture is turned, radians clockwise on screen.
+    pub rotation: f32,
+}
+
+impl DiscUv {
+    /// The texture coordinates at (`dx`, `dy`) UI units from the centre.
+    #[must_use]
+    pub fn at(&self, dx: f32, dy: f32) -> (f32, f32) {
+        // Turning the picture clockwise turns the lookup the other way.
+        let (sin, cos) = (-self.rotation).sin_cos();
+        let (rx, ry) = (dx * cos - dy * sin, dx * sin + dy * cos);
+        (
+            self.centre.0 + rx * self.scale.0,
+            self.centre.1 + ry * self.scale.1,
+        )
+    }
+}
+
 /// One drawing command, in screen pixels, already clipped.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DrawCmd {
@@ -974,6 +1001,91 @@ impl<'a> RenderContext<'a> {
         self.triangles(&shape);
     }
 
+    /// Part of the outline, `thickness` wide, of the circle of `radius`
+    /// round local (`cx`, `cy`): from angle `start` sweeping `sweep`
+    /// radians, clockwise on screen from the right (see
+    /// [`shapes::stroke_arc`]).
+    #[allow(clippy::too_many_arguments)]
+    pub fn stroke_arc(
+        &mut self,
+        cx: f32,
+        cy: f32,
+        radius: f32,
+        start: f32,
+        sweep: f32,
+        color: Color,
+        thickness: f32,
+    ) {
+        let mut shape = Vec::new();
+        shapes::stroke_arc(
+            (cx, cy),
+            radius,
+            start,
+            sweep,
+            color,
+            thickness,
+            self.device_pixel,
+            &mut shape,
+        );
+        self.triangles(&shape);
+    }
+
+    /// Local textured triangles, three corners each, all with one tint,
+    /// following the origin, the opacity and the clip. A triangle with
+    /// anything but finite numbers in it is dropped.
+    pub fn textured_triangles(&mut self, texture: TextureRef, corners: &[Vertex], tint: Color) {
+        if self.current_clip_is_empty() {
+            return;
+        }
+        let tint = self.apply_alpha(tint);
+        for t in corners.chunks_exact(3) {
+            let placed = [t[0], t[1], t[2]]
+                .map(|v| Vertex::new(self.origin.0 + v.x, self.origin.1 + v.y, v.u, v.v));
+            if placed
+                .iter()
+                .all(|v| v.x.is_finite() && v.y.is_finite() && v.u.is_finite() && v.v.is_finite())
+            {
+                self.emit_convex(Some(texture), &placed, tint);
+            }
+        }
+    }
+
+    /// A texture seen through a round window of `radius` round local
+    /// (`cx`, `cy`): `uv` says which texel lands at each point. Its rim is
+    /// cut sharp (no soft edge), so a ring is drawn over it.
+    pub fn fill_textured_disc(
+        &mut self,
+        texture: TextureRef,
+        cx: f32,
+        cy: f32,
+        radius: f32,
+        uv: DiscUv,
+        tint: Color,
+    ) {
+        if !(radius > 0.0 && radius.is_finite()) {
+            return;
+        }
+        let segments = shapes::arc_segments(radius, std::f32::consts::TAU, self.device_pixel)
+            .clamp(shapes::MIN_ELLIPSE_SEGMENTS, shapes::MAX_ELLIPSE_SEGMENTS);
+        let corner = |angle: f32| {
+            let (dx, dy) = (radius * angle.cos(), radius * angle.sin());
+            let (u, v) = uv.at(dx, dy);
+            Vertex::new(cx + dx, cy + dy, u, v)
+        };
+        let (cu, cv) = uv.at(0.0, 0.0);
+        let centre = Vertex::new(cx, cy, cu, cv);
+        let step = std::f32::consts::TAU / segments as f32;
+        let mut corners = Vec::with_capacity(segments as usize * 3);
+        for i in 0..segments {
+            corners.extend_from_slice(&[
+                centre,
+                corner(step * i as f32),
+                corner(step * (i + 1) as f32),
+            ]);
+        }
+        self.textured_triangles(texture, &corners, tint);
+    }
+
     /// A convex polygon with a colour at each corner and a smooth edge; what
     /// it came to says why nothing was drawn.
     pub fn fill_convex_polygon(&mut self, corners: &[ColorVertex]) -> ShapeOutcome {
@@ -1474,6 +1586,82 @@ mod tests {
             } => (*texture, *tint, quads),
             other => panic!("not glyphs: {other:?}"),
         }
+    }
+
+    #[test]
+    fn a_textured_disc_is_a_fan_of_textured_triangles_round_its_centre() {
+        let uv = DiscUv {
+            centre: (0.5, 0.5),
+            scale: (0.01, 0.01),
+            rotation: 0.0,
+        };
+        let list = with_ctx(|c| c.fill_textured_disc(A, 100.0, 100.0, 40.0, uv, Color::WHITE));
+        assert!(list.main.len() >= 8);
+        for cmd in &list.main {
+            let DrawCmd::Polygon {
+                texture: Some(t),
+                vertices,
+                ..
+            } = cmd
+            else {
+                panic!("not a textured polygon: {cmd:?}");
+            };
+            assert_eq!(*t, A);
+            assert_eq!(vertices.len(), 3);
+            assert!(has_corner(vertices, 100.0, 100.0));
+            for v in vertices {
+                let (dx, dy) = (v.x - 100.0, v.y - 100.0);
+                assert!((dx * dx + dy * dy).sqrt() <= 40.001);
+                // The texel follows the point: 40 units is 0.4 of the texture.
+                assert!((v.u - (0.5 + dx * 0.01)).abs() < 1e-4);
+                assert!((v.v - (0.5 + dy * 0.01)).abs() < 1e-4);
+            }
+        }
+    }
+
+    #[test]
+    fn a_turned_disc_shows_the_texture_turned() {
+        let uv = DiscUv {
+            centre: (0.0, 0.0),
+            scale: (1.0, 1.0),
+            rotation: PI / 2.0,
+        };
+        // Turned a quarter clockwise, what was up (negative v) now shows to
+        // the right.
+        let (u, v) = uv.at(1.0, 0.0);
+        assert!(u.abs() < 1e-6 && (v + 1.0).abs() < 1e-6, "{u} {v}");
+    }
+
+    #[test]
+    fn textured_triangles_follow_the_clip() {
+        let list = with_ctx(|c| {
+            c.push_clip(0.0, 0.0, 50.0, 50.0);
+            c.textured_triangles(
+                A,
+                &[
+                    Vertex::new(0.0, 0.0, 0.0, 0.0),
+                    Vertex::new(100.0, 0.0, 1.0, 0.0),
+                    Vertex::new(0.0, 100.0, 0.0, 1.0),
+                    Vertex::new(f32::NAN, 0.0, 0.0, 0.0),
+                    Vertex::new(1.0, 0.0, 0.0, 0.0),
+                    Vertex::new(0.0, 1.0, 0.0, 0.0),
+                ],
+                Color::WHITE,
+            );
+        });
+        assert_eq!(list.main.len(), 1);
+        assert!(polygon(&list).iter().all(|v| v.x <= 50.0 && v.y <= 50.0));
+    }
+
+    #[test]
+    fn an_arc_is_drawn_as_soft_edged_triangles() {
+        let list = with_ctx(|c| {
+            c.stroke_arc(100.0, 100.0, 30.0, 0.0, PI, Color::WHITE, 2.0);
+        });
+        let DrawCmd::Triangles { vertices } = &list.main[0] else {
+            panic!("not triangles");
+        };
+        assert!(vertices.iter().all(|v| v.y >= 100.0 - 2.0));
     }
 
     #[test]
