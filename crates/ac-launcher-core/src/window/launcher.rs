@@ -50,14 +50,15 @@ use crate::plugins::{
 };
 use crate::profiles::{
     LaunchMode, LauncherCheckedAccount, LauncherCheckedAccountStore, LauncherConsoleSettings,
-    LauncherConsoleSettingsStore, LauncherRelaunchSettings, LauncherRelaunchSettingsStore,
-    LauncherTextEditorKind, find_account, same_account,
+    LauncherConsoleSettingsStore, LauncherInterfaceSettingsStore, LauncherRelaunchSettings,
+    LauncherRelaunchSettingsStore, LauncherTextEditorKind, find_account, same_account,
 };
 use crate::status::{KnownServerCatalog, KnownServerList};
 use crate::updates::{
     ClientVersionResolution, LauncherUpdateCheckResult, LauncherUpdateProgress, LauncherUpdater,
     LauncherVersion,
 };
+use ac_host_core::Interface;
 use ac_host_core::local_time::LocalZone;
 
 /// How long Stop waits for a graceful logout before killing the process.
@@ -165,6 +166,9 @@ pub struct LauncherWindowParts {
     /// Whether session consoles show every line (Verbose), remembered across
     /// restarts; `None` keeps it for this run only.
     pub console_settings: Option<LauncherConsoleSettingsStore>,
+    /// Which interface the clients show, remembered across restarts (the
+    /// launch reads the same file); `None` keeps it for this run only.
+    pub interface_settings: Option<LauncherInterfaceSettingsStore>,
     /// The clock automatic relaunch times its delay on; `None`: the
     /// system's monotonic clock.
     pub relaunch_clock: Option<MonotonicClock>,
@@ -358,6 +362,8 @@ pub struct LauncherWindow {
     relaunch_settings: Option<LauncherRelaunchSettingsStore>,
     console_settings: Option<LauncherConsoleSettingsStore>,
     console_verbose: bool,
+    interface_settings: Option<LauncherInterfaceSettingsStore>,
+    interface: Interface,
     /// The session log dialog is open.
     pub is_session_log_open: bool,
     /// The settings dialog is open.
@@ -665,6 +671,8 @@ impl LauncherWindow {
             relaunch_settings: parts.relaunch_settings,
             console_settings: parts.console_settings,
             console_verbose: false,
+            interface_settings: parts.interface_settings,
+            interface: Interface::Retail,
             is_session_log_open: false,
             is_settings_open: false,
             install_folder: parts
@@ -759,6 +767,7 @@ impl LauncherWindow {
                 // After the clear: a settings file that cannot be read says so.
                 self.restore_relaunch_settings();
                 self.restore_console_settings();
+                self.restore_interface();
             }
             Err(error) => self.last_error = Some(error_text(&error)),
         }
@@ -2723,6 +2732,36 @@ impl LauncherWindow {
         };
         match store.load() {
             Ok(settings) => self.console_verbose = settings.verbose,
+            Err(error) => self.last_error = Some(error.0),
+        }
+    }
+
+    /// The interface the clients this launcher starts show.
+    pub fn interface(&self) -> Interface {
+        self.interface
+    }
+
+    /// Picks the interface the clients started from now on show, and
+    /// remembers it (running clients keep theirs).
+    pub fn set_interface(&mut self, interface: Interface) {
+        if self.interface == interface {
+            return;
+        }
+        self.interface = interface;
+        if let Some(store) = &self.interface_settings
+            && let Err(error) = store.save(interface)
+        {
+            self.last_error = Some(error.0);
+        }
+    }
+
+    /// Takes the remembered interface (at start-up).
+    fn restore_interface(&mut self) {
+        let Some(store) = &self.interface_settings else {
+            return;
+        };
+        match store.load() {
+            Ok(interface) => self.interface = interface,
             Err(error) => self.last_error = Some(error.0),
         }
     }

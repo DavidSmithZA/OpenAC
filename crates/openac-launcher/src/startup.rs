@@ -442,6 +442,9 @@ impl Prepared {
             console_settings: Some(
                 ac_launcher_core::profiles::LauncherConsoleSettingsStore::for_paths(&paths),
             ),
+            interface_settings: Some(
+                ac_launcher_core::profiles::LauncherInterfaceSettingsStore::for_paths(&paths),
+            ),
             checked_accounts: Some(
                 ac_launcher_core::profiles::LauncherCheckedAccountStore::for_paths(&paths),
             ),

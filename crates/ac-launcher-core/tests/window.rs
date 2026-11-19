@@ -598,6 +598,7 @@ fn parts(fake: Arc<dyn Orchestration>, spawner: Arc<dyn Spawner>) -> LauncherWin
         install_folder: None,
         checked_accounts: None,
         relaunch_settings: None,
+        interface_settings: None,
         console_settings: None,
         relaunch_clock: None,
         known_servers: None,

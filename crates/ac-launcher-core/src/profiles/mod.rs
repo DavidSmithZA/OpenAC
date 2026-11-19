@@ -15,6 +15,7 @@ mod account_name;
 mod checked_accounts;
 mod console_settings;
 mod document;
+mod interface_settings;
 mod migration;
 mod relaunch_settings;
 mod store;
@@ -32,6 +33,9 @@ pub use console_settings::{
 };
 pub use document::{
     AccountProfile, CharacterProfile, LaunchMode, LauncherProfileDocument, ServerProfile,
+};
+pub use interface_settings::{
+    INTERFACE_SETTINGS_FILE_NAME, InterfaceSettingsError, LauncherInterfaceSettingsStore,
 };
 pub use relaunch_settings::{
     LauncherRelaunchSettings, LauncherRelaunchSettingsStore, RELAUNCH_SETTINGS_FILE_NAME,
