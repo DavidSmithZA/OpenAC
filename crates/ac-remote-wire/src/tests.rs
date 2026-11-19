@@ -275,6 +275,12 @@ fn player_view() -> PlayerView {
             desired_power: 0.6,
             power_bar: 0.4,
         },
+        last_cast: ac_runtime::gameplay::magic::SpellCastCompletion {
+            revision: 7,
+            spell_id: 1640,
+            target_id: 0x5000_0001,
+            weenie_error: 0x401,
+        },
     }
 }
 
@@ -2846,7 +2852,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "3919adf2a553653f", "{:#x}", shape());
+    assert_eq!(shape_hex(), "09abf6e984ccb90b", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full

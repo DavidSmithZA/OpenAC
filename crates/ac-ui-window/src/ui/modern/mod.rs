@@ -39,6 +39,8 @@ pub struct ModernLayer {
     pub vitals: Option<ElementId>,
     /// The low-health glow round the screen's edge.
     pub edge_glow: Option<ElementId>,
+    /// The revision of the last cast answer looked at.
+    seen_cast: Option<u64>,
 }
 
 impl ModernLayer {
@@ -90,6 +92,10 @@ impl ModernLayer {
 const VITALS_LABEL_SIZE: f32 = 11.0;
 const VITALS_NUMBER_SIZE: f32 = 14.0;
 
+/// The server's answer to a cast the mana could not pay for ("You don't
+/// have enough Mana to cast this spell.").
+pub const NOT_ENOUGH_MANA: u32 = 0x401;
+
 /// The key that, held, lets modern pieces be moved whatever the lock says.
 pub const QUICK_MOVE_KEY: Modifiers = Modifiers::CTRL;
 
@@ -120,6 +126,37 @@ impl WindowUi {
                 modern.replace(super::window::SIDE_VITALS_WINDOW);
             }
             Err(e) => self.notices.push(format!("ui: modern vitals: {e}")),
+        }
+    }
+
+    /// The player's last cast answered: one the mana could not pay for
+    /// shakes the modern mana bar and marks what the spell costs. Each
+    /// answer is looked at once; the first one seen is only noted.
+    pub(super) fn feed_modern_cast(
+        &mut self,
+        cast: ac_runtime::gameplay::magic::SpellCastCompletion,
+    ) {
+        let Some(modern) = self.modern.as_mut() else {
+            return;
+        };
+        let first = modern.seen_cast.is_none();
+        if modern.seen_cast.replace(cast.revision) == Some(cast.revision)
+            || first
+            || cast.weenie_error != NOT_ENOUGH_MANA
+        {
+            return;
+        }
+        let Some(bars) = modern.vitals else {
+            return;
+        };
+        let cost = self
+            .facts
+            .numbers()
+            .and_then(|n| n.spellbook())
+            .and_then(|b| b.try_get_metadata(cast.spell_id))
+            .map_or(0, |spell| u32::try_from(spell.mana_cost).unwrap_or(0));
+        if let Some(hud) = self.host.root.widget_mut::<hud::vitals::VitalsHud>(bars) {
+            hud.refuse_mana(cost);
         }
     }
 

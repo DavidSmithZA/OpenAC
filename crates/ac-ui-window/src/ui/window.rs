@@ -1170,6 +1170,9 @@ impl WindowUi {
             }
             self.feed_modern_vitals(&vitals);
             if let Some(view) = view {
+                self.feed_modern_cast(view.last_cast);
+            }
+            if let Some(view) = view {
                 self.host.root.set_ui_locked(view.ui_locked);
             }
         }

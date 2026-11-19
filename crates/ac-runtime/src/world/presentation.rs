@@ -493,6 +493,9 @@ pub struct PlayerView {
     pub combat_camera_target: Option<u32>,
     /// The combat bar: the attack height, the power setting and its level.
     pub attack: AttackBarView,
+    /// The server's answer to the player's last cast (its revision counts
+    /// answers, so a window sees each one once).
+    pub last_cast: crate::gameplay::magic::SpellCastCompletion,
 }
 
 /// What the combat bar shows of the attack request.

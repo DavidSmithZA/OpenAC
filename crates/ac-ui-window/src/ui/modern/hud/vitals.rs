@@ -455,6 +455,7 @@ impl VitalsHud {
         let max = bar.max.unwrap_or(0);
         if let Some((need, _)) = bar.need
             && max > 0
+            && need > 0
         {
             let at = ix + iw * (need as f32 / max as f32).clamp(0.0, 1.0);
             rc.fill(at - 1.0, -1.0, 2.0, h + 2.0, p.bad);
@@ -484,7 +485,14 @@ impl VitalsHud {
             let after = start + text::measure(font, word, 1.1) + gap;
             text::draw(rc, font, &numbers, after, ty, value);
             let note = match (bar.need, tired) {
-                (Some((need, _)), _) => Some((format!("Needs {need} mana"), hex(0xFF_9A9D, 1.0))),
+                (Some((need, _)), _) => {
+                    let text = if need > 0 {
+                        format!("Needs {need} mana")
+                    } else {
+                        "Not enough mana".to_owned()
+                    };
+                    Some((text, hex(0xFF_9A9D, 1.0)))
+                }
                 (None, true) => Some(("Out of stamina".to_owned(), hex(0xFF_C870, 1.0))),
                 _ => None,
             };
