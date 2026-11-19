@@ -15,8 +15,9 @@ is complete and approved (2026-11-19); the build plan is in
 
 - **Switch:** Modern / Retail is held and set in the OpenAC launcher,
   not in the game (changed 2026-11-19; the Options board on the canvas
-  still shows the old in-game row, which is dropped). The client reads
-  it when it starts. Each interface keeps its own layout.
+  still shows the old in-game row, which is dropped). It is one setting
+  for the whole launcher. The client reads it when it starts. Each
+  interface keeps its own layout.
 - **Look:** "Horizon", bronze trim. The world comes first and the chrome
   stays thin: slim vitals top centre, target under them, counts of the
   effects on you top left, round radar top right, chat with no panel behind it bottom left, and a small strip of
@@ -605,6 +606,73 @@ Found by the coverage check below; each had no modern design yet.
 - Credits: the game's pictures rise on the left and its credit text on
   the right over the dimmed dusk of character selection; any key, click
   or "Back to your characters" returns.
+
+## Radar (five ways drawn 2026-11-19, choice pending)
+
+Canvas page "Radar and recalls". The radar had only been drawn once
+(A). All five show the same moment so they compare directly.
+
+- A, as designed: north up, plain dots in colours of its own, bronze
+  rim, + and − zoom.
+- B, bearing ring: heading up (retail), a compass ring with ticks turns
+  around you, heading above it, retail blip shapes and colours, faint
+  25 and 50 m rings, a soft view cone, hover names a blip, range chip.
+- C, lens: no disc or rim, a dark pool fading into the world, glowing
+  blips, only a bronze N on the edge; coordinates and range on hover.
+- D, terrain: a rounded square with the land itself under the blips,
+  place and coordinates in its foot; indoors the walls at 25 m.
+- E, compass strip: no round radar, a strip across the top with blips
+  at their bearing and counts of what is behind.
+
+Whatever is chosen keeps retail's rules: heading up, 75 m outdoors and
+25 m indoors, the blip shapes (▲ fellowship leader, ▼ fellow, □
+allegiance, × player killer, + everyone else) and colours.
+
+## Recall (drawn 2026-11-19)
+
+- A Recall button on the radar's rim; hover names it, a click opens the
+  list. A key can be set for it.
+- Places: Lifestone (@ls), House (@hr), Allegiance mansion (@hom),
+  Allegiance hometown (@ah), Marketplace (@mp), Player killer arena
+  (@pkarena), PK lite arena (@pklarena). Each sends the same request
+  as its @ command, which is shown beside it. Ones you cannot use are
+  greyed with the reason (no house, no allegiance, not a player killer).
+- Your recall spells follow (Portal Recall, Lifestone Recall, primary
+  and secondary portal recalls), greyed outside Magic mode like spells
+  on a bar.
+- Any row can be dragged onto a shortcut bar.
+
+## Quick move (drawn 2026-11-19)
+
+- Holding a key (Ctrl by default, changeable) lets you drag any HUD
+  piece or window without unlocking the interface. Every piece shows a
+  dashed outline and its name; it snaps to screen edges and other
+  pieces (Shift as well places freely).
+- Ctrl + right-click a piece: quick edits (a bar turns, gains or loses
+  slots; anything can be locked, hidden or sent back to its place) and
+  Open Edit layout. Slot keys, new bars and layouts stay in Edit layout.
+- Options › Controls › Moving the interface: Quick move on/off (OPENAC),
+  the key, snapping, and retail's lock.
+- Open: on a Mac, Ctrl + click often means right-click, so the Mac
+  default may need another key.
+
+## Plugin hooks (drawn 2026-11-19)
+
+Plugins answer, the client shows. The client asks plugins about what is
+on screen and draws their answers in its own style; it never acts on
+them. Anything that does something is the plugin's own button or menu
+entry. Hook points:
+
+- A card per plugin on the Inspect sheet and in the inventory's item
+  details (for example a loot verdict: Keep, with the rule that
+  matched).
+- A mark beside items in the loot window, inventory, trade and the
+  vendor's sell list (Keep, Salvage, Sell), and a summary line.
+- Entries in item menus, under the plugin's name.
+- A page per plugin in Options › Plugins, from the plugin's own markup,
+  drawn in the Options style with Apply, Revert and Defaults.
+- Buttons in a window's foot (for example "Loot 4 kept"), and buttons
+  on the panel strip and dock.
 
 ## Coverage
 

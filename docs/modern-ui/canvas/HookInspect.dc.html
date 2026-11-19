@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Plugin hook: inspect</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{cursor:default}
+
+</style>
+</helmet>
+<div style="width: 360px; height: 640px; background: #3B4A2E;"><div style="width: 360px; height: 640px; position: relative; box-sizing: border-box; display: flex; flex-direction: column; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.94); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.5); overflow: hidden; "><div style="flex: none; height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 14px; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <span style="width: 34px; height: 34px; flex: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: linear-gradient(160deg, rgba(224,176,104,0.2), rgba(0,0,0,0.5)); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path></svg></span>
+    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+      <h1 style="margin: 0; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Gold Scale Hauberk</h1>
+      <span style="font-size: 11px; color: #C8B89C; font-variant-numeric: tabular-nums;">Armor · Workmanship 8 · Gold</span>
+    </span>
+    <button aria-label="Close" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+  </div>
+  <div role="tablist" style="flex: none; display: flex; gap: 2px; padding: 0 8px; border-bottom: 1px solid rgba(201,160,98,0.35);"><button role="tab" aria-selected="true" style="height: 30px; padding: 0 10px; border: 0; border-bottom: 2px solid #E0B068; background: transparent; font-size: 12px; font-weight: 600; color: #F4EBDC; cursor: pointer;">Overview</button><button role="tab" aria-selected="false" style="height: 30px; padding: 0 10px; border: 0; border-bottom: 2px solid transparent; background: transparent; font-size: 12px; font-weight: 600; color: #C8B89C; cursor: pointer;">Spells</button><button role="tab" aria-selected="false" style="height: 30px; padding: 0 10px; border: 0; border-bottom: 2px solid transparent; background: transparent; font-size: 12px; font-weight: 600; color: #C8B89C; cursor: pointer;">Needs</button><button role="tab" aria-selected="false" style="height: 30px; padding: 0 10px; border: 0; border-bottom: 2px solid transparent; background: transparent; font-size: 12px; font-weight: 600; color: #C8B89C; cursor: pointer;">Details</button></div>
+  <div style="flex: 1; min-height: 0; overflow: hidden; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="display: flex; align-items: center; gap: 6px; padding: 4px 10px 2px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6v3a2 2 0 0 0 4 0h2v6h-2a2 2 0 0 0 0 4h2v5h-6v-2a2 2 0 0 0-4 0v2H5v-5H3a2 2 0 0 1 0-4h2V3z"></path></svg>FROM YOUR PLUGINS</span>
+      <div style="padding: 8px 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 4px;">
+      <div style="display: flex; align-items: center; gap: 6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6v3a2 2 0 0 0 4 0h2v6h-2a2 2 0 0 0 0 4h2v5h-6v-2a2 2 0 0 0-4 0v2H5v-5H3a2 2 0 0 1 0-4h2V3z"></path></svg><span style="flex: 1; font-size: 12px; font-weight: 600;">Looter</span><span style="padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(127,208,138,0.6); background: rgba(127,208,138,0.14); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #7FD08A;">KEEP</span></div>
+      <span style="font-size: 11px; color: #C8B89C; line-height: 1.45;">Profile “Mule run”, rule “Armor, AL 600+, wk 7+”.</span><span style="font-size: 11px; color: #C8B89C; line-height: 1.45;">Armor level 612 ≥ 600 · workmanship 8 ≥ 7</span><button style="align-self: flex-start; height: 24px; padding: 0 8px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.5); background: rgba(0,0,0,0.3); font-size: 11px; font-weight: 600; cursor: pointer;">Change the rule…</button>
+    </div>
+      <div style="padding: 8px 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 4px;">
+      <div style="display: flex; align-items: center; gap: 6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6v3a2 2 0 0 0 4 0h2v6h-2a2 2 0 0 0 0 4h2v5h-6v-2a2 2 0 0 0-4 0v2H5v-5H3a2 2 0 0 1 0-4h2V3z"></path></svg><span style="flex: 1; font-size: 12px; font-weight: 600;">Value Check</span></div>
+      <span style="font-size: 11px; color: #C8B89C; line-height: 1.45;">Seen for 40,000 to 55,000 in trade chat this week.</span>
+    </div>
+    </div>
+    <div style="display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid rgba(201,160,98,0.12);"><span style="color: #C8B89C;">Armor level</span><span style="font-weight: 600; font-variant-numeric: tabular-nums; color: #7FD08A;">612 ▲</span></div>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid rgba(201,160,98,0.12);"><span style="color: #C8B89C;">Value</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">12,400</span></div>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid rgba(201,160,98,0.12);"><span style="color: #C8B89C;">Burden</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">1,250</span></div>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid rgba(201,160,98,0.12);"><span style="color: #C8B89C;">Covers</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">Chest, abdomen, upper arms</span></div>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid rgba(201,160,98,0.12);"><span style="color: #C8B89C;">Slashing / piercing</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">1.00 / 0.80</span></div>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid rgba(201,160,98,0.12);"><span style="color: #C8B89C;">Magic</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">Major Invulnerability, +2 more</span></div>
+    </div>
+  </div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 360, "height": 640}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -57,7 +57,7 @@ When every retail window is replaced (milestone 10), the modern layer
 stops mounting retail panels at all and the host-facing methods are
 pulled into a trait both interfaces implement.
 
-**The switch:** a launcher setting (agreed 2026-11-19). The launcher
+**The switch:** one launcher-wide setting (agreed 2026-11-19). The launcher
 passes it to the client at start (the process spec already carries
 environment, `crates/ac-launcher-core/src/launching/process.rs`); the
 client reads it once. No in-game row, no hot swap, Retail by default.
@@ -87,6 +87,11 @@ the `.dc.html` copy before building each.
   `FlexTree`, not tied to markup), a themed hover pane that can hold
   any widget.
 
+- Quick move in `UiRoot`: while the quick-move key is held, any modern
+  piece or window can be dragged (outlines, names, snapping) whatever
+  the lock says; Ctrl + right-click opens the piece's menu. Built here
+  so every later piece gets it for free.
+
 Done when: Retail launches exactly as before; Modern launches into the
 retail UI with an empty modern layer.
 
@@ -100,7 +105,9 @@ retail UI with an empty modern layer.
   the yellow spew box.
 - Effects counts top left and their hover pane; burden and chess chips;
   frame rate.
-- Round radar top right with the connection status line and card.
+- The radar as chosen (page "Radar and recalls") with the connection
+  status line and card, and the Recall button and list (the recall
+  requests already exist in the client).
 - Combat strip and the jump meter.
 - Panel strip bottom right (opens the retail windows for now), drop on
   Inventory puts in the main pack.
@@ -184,6 +191,15 @@ per-computer character memory; Studio character creation.
 After this nothing retail is mounted on Modern: pull the host-facing
 methods into a trait, check the web client, remove the hiding list.
 
+### Plugin hooks (alongside M4 and M6)
+
+A new plugin API version: the client asks plugins about an item (when
+it is inspected, shown in a loot window, inventory, trade or sell list)
+and draws what they return (a verdict, a few lines, menu entries, foot
+buttons); Options › Plugins hosts each plugin's markup page. The item
+hooks land with M4, the Options pages with M6. Retail never calls them;
+the plugin API is shared, so retail could show the same answers later.
+
 ### Later, not blocking
 
 - Backdrop blur behind glass panels (needs the renderer to copy and blur
@@ -201,8 +217,9 @@ PR says what retail does).
 
 ## Open points
 
-- Launcher setting: one for the whole launcher, or per account with a
-  per-character override (as plugins are)?
+- Which radar (A to E, or a mix); needed before M1.
+- Quick move's default key on a Mac (Ctrl + click is often right-click
+  there).
 - Server level cap: XP bar says "Max level" or keeps counting
   (from the design).
 - Officers and bans in Manage allegiance: revisit at M8 (from the

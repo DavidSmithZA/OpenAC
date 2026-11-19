@@ -1555,6 +1555,102 @@
    "h": 900,
    "page": "small",
    "title": "Credits: the game's pictures and text rise over the dimmed dusk; any key goes back"
+  },
+  "RadarNow.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 520,
+   "h": 440,
+   "page": "radar",
+   "title": "A · As designed: north up, dots, a bronze rim"
+  },
+  "RadarBearing.dc.html": {
+   "x": 600,
+   "y": 0,
+   "w": 520,
+   "h": 440,
+   "page": "radar",
+   "title": "B · Bearing ring: heading up, a turning compass ring, retail blip shapes"
+  },
+  "RadarLens.dc.html": {
+   "x": 1200,
+   "y": 0,
+   "w": 520,
+   "h": 440,
+   "page": "radar",
+   "title": "C · Lens: no disc, glowing blips fade into the world"
+  },
+  "RadarTerrain.dc.html": {
+   "x": 1800,
+   "y": 0,
+   "w": 520,
+   "h": 440,
+   "page": "radar",
+   "title": "D · Terrain: the land itself under the blips; walls indoors"
+  },
+  "RadarStrip.dc.html": {
+   "x": 0,
+   "y": 560,
+   "w": 1040,
+   "h": 340,
+   "page": "radar",
+   "title": "E · Compass strip: no round radar, a strip across the top"
+  },
+  "Recalls.dc.html": {
+   "x": 1120,
+   "y": 560,
+   "w": 760,
+   "h": 560,
+   "page": "radar",
+   "title": "Recall: one button on the radar, every recall command and spell"
+  },
+  "QuickMove.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "quickmove",
+   "title": "Hold Ctrl: every piece shows its outline and moves, with snapping"
+  },
+  "QuickMoveMenu.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 900,
+   "h": 460,
+   "page": "quickmove",
+   "title": "Ctrl + right-click: quick edits for one piece; the key in Options"
+  },
+  "HookInspect.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 360,
+   "h": 640,
+   "page": "hooks",
+   "title": "Inspect: a card per plugin with its verdict and words"
+  },
+  "HookLoot.dc.html": {
+   "x": 440,
+   "y": 0,
+   "w": 400,
+   "h": 600,
+   "page": "hooks",
+   "title": "Loot window: plugin marks beside items, its own button in the foot"
+  },
+  "HookMenu.dc.html": {
+   "x": 920,
+   "y": 0,
+   "w": 480,
+   "h": 420,
+   "page": "hooks",
+   "title": "Item menus: plugin entries under the plugin name"
+  },
+  "HookOptions.dc.html": {
+   "x": 1480,
+   "y": 0,
+   "w": 1000,
+   "h": 620,
+   "page": "hooks",
+   "title": "Options: each plugin gets a page under Plugins"
   }
  },
  "createdOnFiles": {
@@ -1811,6 +1907,51 @@
    "w": 520,
    "page": "small",
    "text": "Every retail panel and pre-game screen was checked against the design (README, \"Coverage\"). These are the pieces that had no modern design yet.\n\nAlso: Options › Graphics gains \"Show frame rate\"."
+  },
+  "t_radar": {
+   "kind": "title1",
+   "maxW": 2320,
+   "text": "Radar: five ways, and the recall menu",
+   "x": 0,
+   "y": -300,
+   "page": "radar"
+  },
+  "s_radar": {
+   "x": -620,
+   "y": 0,
+   "w": 520,
+   "page": "radar",
+   "text": "The radar had only ever been drawn one way. A is what the Horizon boards show; B to E are alternatives. All five show the same moment (facing north-east, nine things nearby) so they compare directly.\n\nB to D keep retail's rules: you face the top, 75 m outdoors and 25 m indoors, retail's blip shapes and colours, the selected one ringed. A used plain dots and colours of its own.\n\nPick one, or mix (for example B's ring on C's lens). E can also sit beside a round radar."
+  },
+  "t_quick": {
+   "kind": "title1",
+   "maxW": 2420,
+   "text": "Quick move: hold a key, drag, done",
+   "x": 0,
+   "y": -300,
+   "page": "quickmove"
+  },
+  "s_quick": {
+   "x": -620,
+   "y": 0,
+   "w": 520,
+   "page": "quickmove",
+   "text": "Like HUD overlays in other clients: while the key is held (Ctrl by default, changeable), every piece of the HUD and every window can be dragged, with no unlocking. It snaps to screen edges and other pieces. Ctrl + right-click gives the quick edits for that piece. Edit layout stays for slot keys, new bars and layouts.\n\nOpen point: on a Mac, Ctrl + click often means right-click (trackpads, one-button mice). Ctrl may need to be a different default there."
+  },
+  "t_hooks": {
+   "kind": "title1",
+   "maxW": 2480,
+   "text": "Plugin hooks: plugins answer, the client shows",
+   "x": 0,
+   "y": -300,
+   "page": "hooks"
+  },
+  "s_hooks": {
+   "x": -620,
+   "y": 0,
+   "w": 520,
+   "page": "hooks",
+   "text": "The client asks plugins about what is on screen and draws their answers in its own style. It never acts on them itself: anything that does something (loot the kept items) is the plugin's own button or menu entry.\n\nHook points: a card on Inspect and in the inventory's item details; a mark beside items in loot, inventory, trade and the vendor's sell list; entries in item menus; a page in Options › Plugins; buttons in a window's foot; buttons on the panel strip and dock.\n\nLooter and Value Check are made-up plugins for the example."
   }
  },
  "order": [
@@ -1996,7 +2137,19 @@
   "SmallStatus.dc.html",
   "SmallTarget.dc.html",
   "SmallDrop.dc.html",
-  "Credits.dc.html"
+  "Credits.dc.html",
+  "RadarNow.dc.html",
+  "RadarBearing.dc.html",
+  "RadarLens.dc.html",
+  "RadarTerrain.dc.html",
+  "RadarStrip.dc.html",
+  "Recalls.dc.html",
+  "QuickMove.dc.html",
+  "QuickMoveMenu.dc.html",
+  "HookInspect.dc.html",
+  "HookLoot.dc.html",
+  "HookMenu.dc.html",
+  "HookOptions.dc.html"
  ],
  "pages": [
   {
@@ -2086,6 +2239,18 @@
   {
    "id": "small",
    "name": "Small pieces"
+  },
+  {
+   "id": "radar",
+   "name": "Radar and recalls"
+  },
+  {
+   "id": "quickmove",
+   "name": "Quick move"
+  },
+  {
+   "id": "hooks",
+   "name": "Plugin hooks"
   },
   {
    "id": "pregame-alt",

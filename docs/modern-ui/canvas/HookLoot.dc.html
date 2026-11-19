@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Plugin hook: loot window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{cursor:default}
+
+</style>
+</helmet>
+<div style="width: 400px; height: 600px; background: #3B4A2E;"><div style="width: 400px; height: 600px; position: relative; box-sizing: border-box; display: flex; flex-direction: column; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.94); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.5); overflow: hidden; "><div style="flex: none; height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 14px; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <span style="width: 34px; height: 34px; flex: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: linear-gradient(160deg, rgba(224,176,104,0.2), rgba(0,0,0,0.5)); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg></span>
+    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+      <h1 style="margin: 0; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Corpse of Drudge Skulker</h1>
+      <span style="font-size: 11px; color: #C8B89C; font-variant-numeric: tabular-nums;">9 items</span>
+    </span>
+    <button aria-label="Close" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+  </div>
+  <div style="flex: none; margin: 8px 12px 0; padding: 6px 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.25); display: flex; align-items: center; gap: 8px; font-size: 11px; color: #C8B89C;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6v3a2 2 0 0 0 4 0h2v6h-2a2 2 0 0 0 0 4h2v5h-6v-2a2 2 0 0 0-4 0v2H5v-5H3a2 2 0 0 1 0-4h2V3z"></path></svg><span style="flex: 1;"><strong style="color: #F4EBDC; font-weight: 600;">Looter</strong> · 4 keep · 2 salvage · 1 sell · 2 leave</span></div>
+  <div style="flex: 1; min-height: 0; padding: 8px 8px 4px; display: flex; flex-direction: column; gap: 2px; overflow: hidden;"><div style="flex: none; height: 44px; padding: 0 6px; border-radius: 4px; display: flex; align-items: center; gap: 10px; ">
+        <span style="width: 32px; height: 32px; flex: none; border-radius: 4px; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600;">Gold Scale Hauberk</span><span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">Armor · wk 8 · 12,400</span></span>
+        <span style="padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(127,208,138,0.6); background: rgba(127,208,138,0.14); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #7FD08A;">KEEP</span>
+      </div><div style="flex: none; height: 44px; padding: 0 6px; border-radius: 4px; display: flex; align-items: center; gap: 10px; ">
+        <span style="width: 32px; height: 32px; flex: none; border-radius: 4px; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4H20v5.5L9 20.5 3.5 15zM6 13l5 5"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600;">Fire Spadone</span><span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">Weapon · wk 6 · 8,100</span></span>
+        <span style="padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(227,179,65,0.6); background: rgba(227,179,65,0.14); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E3B341;">SALVAGE</span>
+      </div><div style="flex: none; height: 44px; padding: 0 6px; border-radius: 4px; display: flex; align-items: center; gap: 10px; ">
+        <span style="width: 32px; height: 32px; flex: none; border-radius: 4px; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12l3 6-9 12L3 9z"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600;">Black Opal</span><span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">Gem · 2,500</span></span>
+        <span style="padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(124,183,255,0.6); background: rgba(124,183,255,0.14); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #7CB7FF;">SELL</span>
+      </div><div style="flex: none; height: 44px; padding: 0 6px; border-radius: 4px; display: flex; align-items: center; gap: 10px; ">
+        <span style="width: 32px; height: 32px; flex: none; border-radius: 4px; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9h4.5a2 2 0 0 1 0 4H10a2 2 0 0 0 0 4h5M12 6v12"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600;">Pyreals</span><span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">x 1,240</span></span>
+        <span style="padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(127,208,138,0.6); background: rgba(127,208,138,0.14); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #7FD08A;">KEEP</span>
+      </div><div style="flex: none; height: 44px; padding: 0 6px; border-radius: 4px; display: flex; align-items: center; gap: 10px; opacity: 0.6;">
+        <span style="width: 32px; height: 32px; flex: none; border-radius: 4px; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12l3 6-9 12L3 9z"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600;">Small Ruby</span><span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">Gem · 120</span></span>
+        <span style="font-size: 10px; color: #A89A82;">leave</span>
+      </div><div style="flex: none; height: 44px; padding: 0 6px; border-radius: 4px; display: flex; align-items: center; gap: 10px; opacity: 0.6;">
+        <span style="width: 32px; height: 32px; flex: none; border-radius: 4px; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4H20v5.5L9 20.5 3.5 15zM6 13l5 5"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600;">Yari</span><span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">Weapon · wk 3 · 300</span></span>
+        <span style="font-size: 10px; color: #A89A82;">leave</span>
+      </div><div style="flex: none; height: 44px; padding: 0 6px; border-radius: 4px; display: flex; align-items: center; gap: 10px; opacity: 0.6;">
+        <span style="width: 32px; height: 32px; flex: none; border-radius: 4px; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600;">Leather Leggings</span><span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">Armor · wk 2 · 90</span></span>
+        <span style="font-size: 10px; color: #A89A82;">leave</span>
+      </div><div style="flex: none; height: 44px; padding: 0 6px; border-radius: 4px; display: flex; align-items: center; gap: 10px; ">
+        <span style="width: 32px; height: 32px; flex: none; border-radius: 4px; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4H20v5.5L9 20.5 3.5 15zM6 13l5 5"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600;">Iron Dagger</span><span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">Weapon · wk 5 · 1,900</span></span>
+        <span style="padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(227,179,65,0.6); background: rgba(227,179,65,0.14); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E3B341;">SALVAGE</span>
+      </div><div style="flex: none; height: 44px; padding: 0 6px; border-radius: 4px; display: flex; align-items: center; gap: 10px; ">
+        <span style="width: 32px; height: 32px; flex: none; border-radius: 4px; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12l3 6-9 12L3 9z"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600;">Prismatic Taper</span><span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">x 12 · 60</span></span>
+        <span style="padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(127,208,138,0.6); background: rgba(127,208,138,0.14); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #7FD08A;">KEEP</span>
+      </div></div>
+  <div style="flex: none; height: 56px; padding: 0 12px; border-top: 1px solid rgba(201,160,98,0.3); display: flex; align-items: center; gap: 8px;">
+    <span style="flex: 1; font-size: 10.5px; color: #C8B89C;">Burden 61% → 74%</span>
+    <button style="height: 32px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; ">Loot all</button>
+    <button style="height: 32px; padding: 0 14px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1A140D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6v3a2 2 0 0 0 4 0h2v6h-2a2 2 0 0 0 0 4h2v5h-6v-2a2 2 0 0 0-4 0v2H5v-5H3a2 2 0 0 1 0-4h2V3z"></path></svg>Loot 4 kept</button>
+  </div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 400, "height": 600}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

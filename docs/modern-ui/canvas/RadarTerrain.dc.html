@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Radar: terrain</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{cursor:default}
+
+</style>
+</helmet>
+<div style="width: 520px; height: 440px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: linear-gradient(180deg, #8FB3C9 0%, #A9C4C2 40%, #6F8A55 100%);">
+  <div style="position: absolute; left: 0; right: 0; top: 46%; height: 34%; background: linear-gradient(180deg, rgba(40,62,36,0) 0%, rgba(40,62,36,0.55) 60%, rgba(40,62,36,0) 100%);"></div>
+
+  <div style="position: absolute; right: 24px; top: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">
+      <span>Holtburg</span><span style="opacity: 0.5;">|</span><span>6:01 AM</span><span style="opacity: 0.5;">|</span><span>38 ms</span><span style="width: 7px; height: 7px; border-radius: 50%; background: #6BD47A;"></span>
+    </div>
+    <div role="img" aria-label="Radar over the land, heading up" style="width: 204px; height: 204px; position: relative; border-radius: 14px; overflow: hidden; border: 1.5px solid rgba(201,160,98,0.8); box-shadow: 0 4px 14px rgba(0,0,0,0.4);">
+      <svg width="204" height="204" viewBox="0 0 204 204" style="position: absolute; inset: 0;" aria-hidden="true">
+        <g transform="rotate(-42 102.0 102.0)">
+          <rect x="-80" y="-80" width="364" height="364" fill="#5D7A46"></rect>
+          <path d="M-80 132.0C20 112.0 60 42.0 284 62.0" stroke="#4E7FA6" stroke-width="9" fill="none" opacity="0.9"></path>
+          <path d="M92.0 -80C96.0 40 120.0 120 108.0 284" stroke="#CDB98C" stroke-width="5" fill="none" opacity="0.85"></path>
+          <path d="M-80 82.0H284" stroke="#CDB98C" stroke-width="3" fill="none" opacity="0.6"></path>
+          <ellipse cx="42.0" cy="162.0" rx="34" ry="22" fill="#45612F"></ellipse>
+          <ellipse cx="172.0" cy="32.0" rx="40" ry="26" fill="#45612F"></ellipse>
+          <ellipse cx="162.0" cy="172.0" rx="22" ry="16" fill="#4A6733"></ellipse>
+          <rect x="116.0" y="72.0" width="12" height="10" fill="#8C7A60"></rect>
+          <rect x="132.0" y="88.0" width="10" height="12" fill="#8C7A60"></rect>
+          <rect x="68.0" y="56.0" width="14" height="10" fill="#8C7A60"></rect>
+        </g>
+        <rect width="204" height="204" fill="rgba(0,0,0,0.12)"></rect>
+        <path d="M127.9 61.5H135.9M131.9 57.5V65.5" stroke="#FFAB00" stroke-width="2.2" stroke-linecap="round"></path>
+<circle cx="131.9" cy="61.5" r="9" fill="none" stroke="#E0B068" stroke-width="1.5"></circle>
+<path d="M149.0 86.2H157.0M153.0 82.2V90.2" stroke="#FFAB00" stroke-width="2.2" stroke-linecap="round"></path>
+<path d="M43.4 128.4H51.4M47.4 124.4V132.4" stroke="#FFAB00" stroke-width="2.2" stroke-linecap="round"></path>
+<path d="M86.2 129.9L91.2 120.9H81.2z" fill="#00FF00"></path>
+<path d="M72.1 102.3L77.1 111.3H67.1z" fill="#00FF00"></path>
+<rect x="120.9" y="147.3" width="8" height="8" fill="none" stroke="#FFFFFF" stroke-width="2"></rect>
+<path d="M49.6 56.2H57.6M53.6 52.2V60.2" stroke="#FFFF80" stroke-width="2.2" stroke-linecap="round"></path>
+<path d="M105.0 31.6H113.0M109.0 27.6V35.6" stroke="#BF63FF" stroke-width="2.2" stroke-linecap="round"></path>
+<path d="M161.4 137.2H169.4M165.4 133.2V141.2" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"></path>
+        <path d="M102.0 93.0L107.6 109.0L102.0 105.0L96.4 109.0z" fill="#FFFFFF" stroke="rgba(0,0,0,0.6)" stroke-width="1"></path>
+        <circle cx="41.8" cy="35.1" r="8" fill="rgba(20,16,12,0.85)" stroke="#E0B068" stroke-width="1"></circle>
+        <text x="41.8" y="35.1" fill="#E0B068" font-size="9.5" font-weight="700" text-anchor="middle" dominant-baseline="central" font-family="Inter, sans-serif">N</text>
+      </svg>
+      <span style="position: absolute; right: 8px; top: 7px; padding: 1px 6px; border-radius: 999px; background: rgba(0,0,0,0.55); font-size: 10px; font-weight: 600;">75 m</span>
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 26px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.7)); font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums;">
+        <span>Holtburg</span><span>42.1N 33.6E</span>
+      </div>
+    </div>
+    <div style="position: relative; width: 204px; height: 0;"><button aria-label="Recall" title="Recall: lifestone, house, mansion, hometown, market" style="position: absolute; left: -14px; top: -46px; width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid rgba(201,160,98,0.8); background: rgba(0,0,0,0.62); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9M12 7a5 5 0 1 0 5 5M12 11a1 1 0 1 0 1 1"></path></svg></button></div>
+  </div>
+  <div style="position: absolute; left: 24px; top: 20px; display: flex; flex-direction: column; gap: 6px;">
+    <div role="img" aria-label="Indoors" style="width: 120px; height: 120px; position: relative; border-radius: 10px; overflow: hidden; border: 1.5px solid rgba(201,160,98,0.8);"><svg width="120" height="120" viewBox="0 0 120 120" style="position: absolute; inset: 0;" aria-hidden="true">
+        <rect width="120" height="120" fill="#17130F"></rect>
+        <path d="M20 0V50H0M44 0V36H76V0M100 0V50H120M0 76H44V120M76 120V76H120M44 76V64M76 76V64" stroke="#8C7A60" stroke-width="3" fill="none"></path>
+        <rect x="44" y="50" width="32" height="14" fill="#2A231B"></rect>
+        <path d="M95 92h8M99 88v8" stroke="#FFAB00" stroke-width="2" stroke-linecap="round"></path>
+        <path d="M60 50l5 10-5-3-5 3z" fill="#FFFFFF"></path>
+      </svg></div>
+    <span style="font-size: 10.5px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">Indoors: walls, 25 m</span>
+  </div>
+  <p style="position: absolute; left: 24px; top: 250px; width: 250px; margin: 0; padding: 10px 12px; border-radius: 6px; background: rgba(0,0,0,0.42); font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.92); text-shadow: 0 1px 2px rgba(0,0,0,0.7);">Terrain: a rounded square showing the land itself (roads, water, trees, buildings, from the game's own data) turning heading up, blips on top. Place and coordinates sit in its foot. Indoors it draws the walls around you at retail's 25 m range. The most to read and the most to build.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 520, "height": 440}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

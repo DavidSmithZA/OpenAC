@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Radar: as designed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{cursor:default}
+
+</style>
+</helmet>
+<div style="width: 520px; height: 440px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: linear-gradient(180deg, #8FB3C9 0%, #A9C4C2 40%, #6F8A55 100%);">
+  <div style="position: absolute; left: 0; right: 0; top: 46%; height: 34%; background: linear-gradient(180deg, rgba(40,62,36,0) 0%, rgba(40,62,36,0.55) 60%, rgba(40,62,36,0) 100%);"></div>
+
+  <div style="position: absolute; right: 24px; top: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+    <div style="align-self: flex-end;"><div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">
+      <span>Holtburg</span><span style="opacity: 0.5;">|</span><span>6:01 AM</span><span style="opacity: 0.5;">|</span><span>38 ms</span><span style="width: 7px; height: 7px; border-radius: 50%; background: #6BD47A;"></span>
+    </div></div>
+    <div role="img" aria-label="Radar" style="width: 160px; height: 160px; position: relative; border-radius: 50%; border: 2px solid rgba(201,160,98,0.8); background: rgba(0,0,0,0.38); box-shadow: 0 2px 10px rgba(0,0,0,0.35);">
+      <div style="position: absolute; inset: 26px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.12);"></div>
+      <svg width="160" height="160" viewBox="0 0 160 160" style="position: absolute; inset: 0;" aria-hidden="true">
+        <circle cx="107.2" cy="43.2" r="3.5" fill="#FFAB00"></circle>
+<circle cx="126.4" cy="65.6" r="3.5" fill="#FFAB00"></circle>
+<circle cx="30.4" cy="104.0" r="3.5" fill="#FFAB00"></circle>
+<circle cx="65.6" cy="100.8" r="3.5" fill="#00FF00"></circle>
+<circle cx="52.8" cy="84.8" r="3.5" fill="#00FF00"></circle>
+<circle cx="100.8" cy="124.8" r="3.5" fill="#FFFFFF"></circle>
+<circle cx="36.0" cy="38.4" r="3.5" fill="#FFFF80"></circle>
+<circle cx="86.4" cy="16.0" r="3.5" fill="#BF63FF"></circle>
+<circle cx="137.6" cy="112.0" r="3.5" fill="#FFFFFF"></circle>
+        <path d="M80 72L84.8 86L80 82L75.2 86z" fill="#FFFFFF" stroke="rgba(0,0,0,0.6)" stroke-width="1"></path>
+      </svg>
+      <span style="position: absolute; left: 50%; top: 3px; transform: translateX(-50%); font-size: 11px; font-weight: 700; color: #E0B068;">N</span>
+      <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); font-size: 10px; font-weight: 600; opacity: 0.8;">E</span>
+      <span style="position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%); font-size: 10px; font-weight: 600; opacity: 0.8;">S</span>
+      <span style="position: absolute; left: 5px; top: 50%; transform: translateY(-50%); font-size: 10px; font-weight: 600; opacity: 0.8;">W</span>
+      <div style="position: absolute; right: -6px; bottom: 4px; display: flex; flex-direction: column; gap: 4px;">
+        <button aria-label="Zoom radar in" style="width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(201,160,98,0.8); background: rgba(0,0,0,0.6); font-size: 13px; line-height: 1; padding: 0; cursor: pointer;">+</button>
+        <button aria-label="Zoom radar out" style="width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(201,160,98,0.8); background: rgba(0,0,0,0.6); font-size: 13px; line-height: 1; padding: 0; cursor: pointer;">−</button>
+      </div>
+    </div>
+    <span style="font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">42.1N 33.6E</span>
+  </div>
+  <p style="position: absolute; left: 24px; top: 300px; width: 300px; margin: 0; padding: 10px 12px; border-radius: 6px; background: rgba(0,0,0,0.42); font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.92); text-shadow: 0 1px 2px rgba(0,0,0,0.7);">As designed so far: a dark disc with a bronze rim, north always up, round dots in three colours, + and − to zoom, coordinates under it. The dots lose retail's shapes (fellow, leader, allegiance, PK), and the colours were not retail's.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 520, "height": 440}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

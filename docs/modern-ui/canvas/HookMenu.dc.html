@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Plugin hook: item menu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{cursor:default}
+
+</style>
+</helmet>
+<div style="width: 480px; height: 420px; position: relative; background: #3B4A2E; font-family: Inter, system-ui, sans-serif; color: #F4EBDC;"><div style="position: absolute; left: 20px; top: 20px; width: 400px; height: 44px; box-sizing: border-box; padding: 0 6px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.12); display: flex; align-items: center; gap: 10px; color: #F4EBDC; font-family: Inter, system-ui, sans-serif;">
+      <span style="width: 32px; height: 32px; border-radius: 4px; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4H20v5.5L9 20.5 3.5 15zM6 13l5 5"></path></svg></span>
+      <span style="flex: 1; font-size: 12.5px; font-weight: 600;">Fire Spadone</span><span style="padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(227,179,65,0.6); background: rgba(227,179,65,0.14); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #E3B341;">SALVAGE</span>
+    </div><div role="menu" aria-label="Fire Spadone" style="position: absolute; left: 150px; top: 40px; width: 280px; box-sizing: border-box; padding: 4px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.99); box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column;">
+      <button role="menuitem" style="height: 30px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg><span style="flex: 1;">Inspect</span><span style="font-size: 10.5px; color: #A89A82; font-weight: 500;"></span></button>
+      <button role="menuitem" style="height: 30px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg><span style="flex: 1;">Loot</span><span style="font-size: 10.5px; color: #A89A82; font-weight: 500;">double-click</span></button>
+      <button role="menuitem" style="height: 30px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg><span style="flex: 1;">Loot into</span><span style="font-size: 10.5px; color: #A89A82; font-weight: 500;">Main pack…</span></button>
+      <span style="height: 1px; margin: 4px 6px; background: rgba(201,160,98,0.25);"></span>
+      <span style="display: flex; align-items: center; gap: 6px; padding: 4px 10px 2px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6v3a2 2 0 0 0 4 0h2v6h-2a2 2 0 0 0 0 4h2v5h-6v-2a2 2 0 0 0-4 0v2H5v-5H3a2 2 0 0 1 0-4h2V3z"></path></svg>LOOTER</span>
+      <button role="menuitem" style="height: 30px; padding: 0 10px; border: 0; border-radius: 4px; background: rgba(224,176,104,0.14); display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span style="flex: 1;">Keep items like this…</span><span style="font-size: 10.5px; color: #A89A82; font-weight: 500;"></span></button>
+      <button role="menuitem" style="height: 30px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg><span style="flex: 1;">Never loot items like this</span><span style="font-size: 10.5px; color: #A89A82; font-weight: 500;"></span></button>
+      <span style="display: flex; align-items: center; gap: 6px; padding: 4px 10px 2px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6v3a2 2 0 0 0 4 0h2v6h-2a2 2 0 0 0 0 4h2v5h-6v-2a2 2 0 0 0-4 0v2H5v-5H3a2 2 0 0 1 0-4h2V3z"></path></svg>VALUE CHECK</span>
+      <button role="menuitem" style="height: 30px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: left;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9h4.5a2 2 0 0 1 0 4H10a2 2 0 0 0 0 4h5M12 6v12"></path></svg><span style="flex: 1;">Recent prices…</span><span style="font-size: 10.5px; color: #A89A82; font-weight: 500;"></span></button>
+    </div>
+  <p style="position: absolute; left: 20px; bottom: 16px; width: 440px; margin: 0; font-size: 11px; color: rgba(255,255,255,0.85); line-height: 1.5;">A plugin can add its own entries to an item's right-click menu (and the inventory's More menu), under its own name. They run the plugin, never the client.</p></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 480, "height": 420}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

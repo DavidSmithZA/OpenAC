@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Recall menu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{cursor:default}
+
+</style>
+</helmet>
+<div style="width: 760px; height: 560px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: linear-gradient(180deg, #8FB3C9 0%, #A9C4C2 40%, #6F8A55 100%);">
+  <div style="position: absolute; left: 0; right: 0; top: 46%; height: 34%; background: linear-gradient(180deg, rgba(40,62,36,0) 0%, rgba(40,62,36,0.55) 60%, rgba(40,62,36,0) 100%);"></div>
+<div style="position: absolute; right: 24px; top: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+    <div style="align-self: flex-end;"><div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">
+      <span>Holtburg</span><span style="opacity: 0.5;">|</span><span>6:01 AM</span><span style="opacity: 0.5;">|</span><span>38 ms</span><span style="width: 7px; height: 7px; border-radius: 50%; background: #6BD47A;"></span>
+    </div></div>
+    <div style="width: 160px; height: 160px; position: relative; border-radius: 50%; border: 2px solid rgba(201,160,98,0.8); background: rgba(0,0,0,0.38);">
+      <svg width="160" height="160" viewBox="0 0 160 160" style="position: absolute; inset: 0;" aria-hidden="true"><path d="M100.5 46.9H108.5M104.5 42.9V50.9" stroke="#FFAB00" stroke-width="2.2" stroke-linecap="round"></path>
+<circle cx="104.5" cy="46.9" r="9" fill="none" stroke="#E0B068" stroke-width="1.5"></circle>
+<path d="M117.8 67.0H125.8M121.8 63.0V71.0" stroke="#FFAB00" stroke-width="2.2" stroke-linecap="round"></path>
+<path d="M31.4 101.6H39.4M35.4 97.6V105.6" stroke="#FFAB00" stroke-width="2.2" stroke-linecap="round"></path>
+<path d="M67.0 103.7L72.0 94.7H62.0z" fill="#00FF00"></path>
+<path d="M55.5 79.3L60.5 88.3H50.5z" fill="#00FF00"></path>
+<rect x="94.7" y="116.3" width="8" height="8" fill="none" stroke="#FFFFFF" stroke-width="2"></rect>
+<path d="M36.4 42.6H44.4M40.4 38.6V46.6" stroke="#FFFF80" stroke-width="2.2" stroke-linecap="round"></path>
+<path d="M81.8 22.4H89.8M85.8 18.4V26.4" stroke="#BF63FF" stroke-width="2.2" stroke-linecap="round"></path>
+<path d="M127.80000000000001 108.8H135.8M131.8 104.8V112.8" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"></path><path d="M80 72L84.8 86L80 82L75.2 86z" fill="#FFFFFF" stroke="rgba(0,0,0,0.6)" stroke-width="1"></path></svg>
+      <button aria-label="Recall" aria-expanded="true" style="position: absolute; left: -8px; bottom: 2px; width: 28px; height: 28px; padding: 0; border-radius: 50%; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1A140D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9M12 7a5 5 0 1 0 5 5M12 11a1 1 0 1 0 1 1"></path></svg></button>
+    </div>
+    <span style="font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">42.1N 33.6E</span>
+  </div><div role="menu" aria-label="Recall" style="position: absolute; left: 236px; top: 40px; width: 316px; box-sizing: border-box; padding: 4px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.97); box-shadow: 0 14px 34px rgba(0,0,0,0.6); display: flex; flex-direction: column;">
+      <div style="height: 34px; padding: 0 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(201,160,98,0.35); margin-bottom: 4px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9M12 7a5 5 0 1 0 5 5M12 11a1 1 0 1 0 1 1"></path></svg><span style="flex: 1; font-size: 13px; font-weight: 700;">Recall</span>
+        <span style="font-size: 10.5px; color: #A89A82;">Key: none set</span>
+      </div>
+      <span style="display: flex; align-items: center; gap: 6px; padding: 4px 10px 2px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">PLACES</span>
+      <button role="menuitem" title="The last lifestone you tied to" style="height: 40px; padding: 0 10px; border: 0; border-radius: 4px; background: rgba(224,176,104,0.14);  display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l5 7-5 13-5-13z"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 600;">Lifestone</span><span style="font-size: 10.5px; color: #A89A82;">The last lifestone you tied to</span></span>
+        <span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">@ls</span>
+      </button><button role="menuitem" title="Cottage, 12.4N 40.1E" style="height: 40px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent;  display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 600;">House</span><span style="font-size: 10.5px; color: #A89A82;">Cottage, 12.4N 40.1E</span></span>
+        <span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">@hr</span>
+      </button><button role="menuitem" title="Your monarch's mansion" style="height: 40px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent;  display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l3 2V7l3 2V5l3-2 3 2v4l3-2v4l3-2v12zM10 21v-5h4v5"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 600;">Allegiance mansion</span><span style="font-size: 10.5px; color: #A89A82;">Your monarch's mansion</span></span>
+        <span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">@hom</span>
+      </button><button role="menuitem" title="Set by your monarch" style="height: 40px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent;  display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 600;">Allegiance hometown</span><span style="font-size: 10.5px; color: #A89A82;">Set by your monarch</span></span>
+        <span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">@ah</span>
+      </button><button role="menuitem" title="The Marketplace" style="height: 40px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent;  display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9l2-5h12l2 5M4 9v11h16V9M4 9h16M9 20v-6h6v6"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 600;">Marketplace</span><span style="font-size: 10.5px; color: #A89A82;">The Marketplace</span></span>
+        <span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">@mp</span>
+      </button><button role="menuitem" disabled title="Player killers only" style="height: 40px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; opacity: 0.45; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 15 9M13 5h6v6M20 20 9 9M11 5H5v6"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 600;">Player killer arena</span><span style="font-size: 10.5px; color: #A89A82;">Player killers only</span></span>
+        <span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">@pkarena</span>
+      </button><button role="menuitem" disabled title="PK lite only" style="height: 40px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; opacity: 0.45; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 15 9M13 5h6v6M20 20 9 9M11 5H5v6"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 600;">PK lite arena</span><span style="font-size: 10.5px; color: #A89A82;">PK lite only</span></span>
+        <span style="font-size: 10.5px; color: #A89A82; font-variant-numeric: tabular-nums;">@pklarena</span>
+      </button>
+      <span style="height: 1px; margin: 4px 6px; background: rgba(201,160,98,0.25);"></span>
+      <span style="display: flex; align-items: center; gap: 6px; padding: 4px 10px 2px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">YOUR RECALL SPELLS</span>
+      <button role="menuitem" disabled title="Switch to Magic mode to cast" style="height: 40px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; opacity: 0.55; display: flex; align-items: center; gap: 10px; text-align: left;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9A2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 16 8M14 4l1.5 3L19 8.5 15.5 10 14 13l-1.5-3L9 8.5 12.5 7z"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 600;">Portal Recall</span><span style="font-size: 10.5px; color: #A89A82;">The last portal you went through</span></span>
+        <span style="font-size: 10px; color: #A89A82;">Magic mode</span>
+      </button><button role="menuitem" disabled title="Switch to Magic mode to cast" style="height: 40px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; opacity: 0.55; display: flex; align-items: center; gap: 10px; text-align: left;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9A2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 16 8M14 4l1.5 3L19 8.5 15.5 10 14 13l-1.5-3L9 8.5 12.5 7z"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 600;">Lifestone Recall</span><span style="font-size: 10.5px; color: #A89A82;">As @ls, cast as a spell</span></span>
+        <span style="font-size: 10px; color: #A89A82;">Magic mode</span>
+      </button><button role="menuitem" disabled title="Switch to Magic mode to cast" style="height: 40px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; opacity: 0.55; display: flex; align-items: center; gap: 10px; text-align: left;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9A2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 16 8M14 4l1.5 3L19 8.5 15.5 10 14 13l-1.5-3L9 8.5 12.5 7z"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 600;">Primary Portal Recall</span><span style="font-size: 10.5px; color: #A89A82;">Your primary portal tie</span></span>
+        <span style="font-size: 10px; color: #A89A82;">Magic mode</span>
+      </button><button role="menuitem" disabled title="Switch to Magic mode to cast" style="height: 40px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; opacity: 0.55; display: flex; align-items: center; gap: 10px; text-align: left;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9A2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20 16 8M14 4l1.5 3L19 8.5 15.5 10 14 13l-1.5-3L9 8.5 12.5 7z"></path></svg>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 600;">Secondary Portal Recall</span><span style="font-size: 10.5px; color: #A89A82;">Your secondary portal tie</span></span>
+        <span style="font-size: 10px; color: #A89A82;">Magic mode</span>
+      </button>
+    </div><p style="position: absolute; left: 24px; top: 40px; width: 190px; margin: 0; padding: 10px 12px; border-radius: 6px; background: rgba(0,0,0,0.42); font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,0.92); text-shadow: 0 1px 2px rgba(0,0,0,0.7);">The Recall button sits on the radar's rim. Hover shows what it holds; a click opens the list. Each place sends the same request as typing its @ command (shown on the right, so players learn them). Places you cannot use are greyed with the reason. Your recall spells follow, greyed outside Magic mode like spells on a bar. Drag any row onto a shortcut bar to make it a slot. A recall the server refuses says why under the target.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 760, "height": 560}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
