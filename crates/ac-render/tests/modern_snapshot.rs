@@ -342,7 +342,7 @@ impl Shot {
                 let (kind, id) = match r.key.texture {
                     UiTexture::White => (0, 0),
                     UiTexture::Named(TextureRef::Surface(id)) => (1, id),
-                    UiTexture::Named(TextureRef::Runtime(h)) => (2, h as u32),
+                    UiTexture::Named(TextureRef::Runtime(h)) => (2, h),
                 };
                 let filter = u32::from(matches!(r.key.filter, ac_ui::draw::Filter::Nearest));
                 [kind, id, filter, r.first, r.count]
@@ -408,6 +408,47 @@ fn the_modern_bars() {
     s.save("bars-dragged");
     s.set_mode(CombatMode::MELEE);
     s.save("bars-melee");
+    s.set_mode(CombatMode::NON_COMBAT);
+    // The spellbook open; its first spell carried to the Main bar's tenth
+    // slot (empty), a picture on the way.
+    use ac_render::ui::window::{Hotkey, SPELLBOOK_WINDOW};
+    use ac_ui::panels::magic::{SpellbookPage, SpellbookWindowController};
+    assert!(s.ui.run_hotkey(Hotkey::Spellbook(SpellbookPage::Spells)));
+    s.step();
+    s.step();
+    let list = s
+        .ui
+        .host_mut()
+        .with_controller::<SpellbookWindowController, _>(SPELLBOOK_WINDOW, |c, _| c.list())
+        .expect("the spellbook");
+    let row = {
+        let root = &s.ui.host().root;
+        let cell = root
+            .widget::<ac_ui::widgets::ItemList>(list)
+            .and_then(|l| l.item(0))
+            .expect("a spell row");
+        let (x, y) = root.screen_position(cell);
+        let e = root.element(cell).unwrap();
+        ((x + e.width * 0.3) as i32, (y + e.height * 0.5) as i32)
+    };
+    println!("spell row at {row:?}");
+    s.save("spell-book-open");
+    let to = (MAIN_SLOT.0 + 43 * 9, MAIN_SLOT.1);
+    s.moved(row.0, row.1);
+    let held = ui_input::mouse_flags(&[0], Modifiers::NONE);
+    let r: Routed<u32> = ui_input::button(s.ui.host_mut(), 0, true, row.0, row.1, held, false);
+    let _ = s.ui.handle(r.outputs);
+    s.step();
+    for i in 1..=8 {
+        s.moved(row.0 + (to.0 - row.0) * i / 8, row.1 + (to.1 - row.1) * i / 8);
+    }
+    s.save("spell-dragging");
+    let none = ui_input::mouse_flags(&[], Modifiers::NONE);
+    let r: Routed<u32> = ui_input::button(s.ui.host_mut(), 0, false, to.0, to.1, none, false);
+    let _ = s.ui.handle(r.outputs);
+    s.step();
+    s.step();
+    s.save("spell-dropped");
 }
 
 #[test]

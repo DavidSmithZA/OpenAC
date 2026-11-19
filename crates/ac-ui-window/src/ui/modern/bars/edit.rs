@@ -138,6 +138,57 @@ impl Widget for Dim {
     }
 }
 
+/// The line over the screen while a spell is carried out of the
+/// spellbook. Clicks go through it.
+#[derive(Debug)]
+pub struct DragHint {
+    theme: Horizon,
+    font: Option<std::sync::Arc<UiFont>>,
+}
+
+/// The drag hint's height and its words.
+pub const HINT_HEIGHT: f32 = 32.0;
+const DRAG_WORDS: &str = "Release over a slot to place it \u{b7} release anywhere else to cancel";
+
+impl DragHint {
+    /// The hint in `theme`, its words in `font`.
+    #[must_use]
+    pub fn new(theme: Horizon, font: Option<std::sync::Arc<UiFont>>) -> Self {
+        Self { theme, font }
+    }
+
+    /// The width its words need.
+    #[must_use]
+    pub fn width(&self) -> f32 {
+        self.font
+            .as_deref()
+            .map_or(420.0, |f| text::measure(f, DRAG_WORDS, 0.0))
+            .ceil()
+            + 28.0
+    }
+}
+
+impl Widget for DragHint {
+    fn hit_test(&self, _element: &Element, _x: f32, _y: f32) -> bool {
+        false
+    }
+
+    fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
+        let p = self.theme.palette;
+        let Some((w, h)) = ui.element(me).map(|e| (e.width, e.height)) else {
+            return;
+        };
+        let round = CornerRadii::all(self.theme.metrics.window_radius);
+        rc.soft_shadow(0.0, 0.0, w, h, 6.0, 8.0, 24.0, p.shadow);
+        rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x18_130E, 0.92));
+        rc.stroke_rounded_rect(0.0, 0.0, w, h, round, hex(0xC9_A062, 0.8), 1.0);
+        if let Some(f) = &self.font {
+            let ty = ((h - f.line_height) * 0.5).round();
+            text::draw(rc, f, DRAG_WORDS, 14.0, ty, TextStyle::plain(p.text));
+        }
+    }
+}
+
 /// A button of the edit toolbar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolbarPart {

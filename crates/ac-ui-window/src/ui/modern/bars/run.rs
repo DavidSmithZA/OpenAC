@@ -20,7 +20,7 @@ use ac_ui::tree::{Element, ElementId};
 use ac_ui::{Key, Modifiers, MouseButton};
 
 use super::edit::{
-    Dim, EditToolbar, KeyPopover, Menu, MenuAction, MenuFor, MenuRow, POPOVER_HEIGHT,
+    Dim, DragHint, EditToolbar, HINT_HEIGHT, KeyPopover, Menu, MenuAction, MenuFor, MenuRow, POPOVER_HEIGHT,
     POPOVER_WIDTH, PopoverRequest, RenameBox, TOOLBAR_HEIGHT, ToolbarPart,
 };
 use super::keys;
@@ -99,6 +99,11 @@ pub struct BarsUi {
     bindings: Option<KeyBindings>,
     /// The bars were shown last frame.
     shown: bool,
+    /// The line shown while a spell is carried out of the spellbook.
+    hint: ElementId,
+    /// A spell is being carried out of the spellbook: the book's opacity
+    /// before it faded.
+    spell_drag: Option<f32>,
 }
 
 impl BarsUi {
@@ -263,6 +268,11 @@ impl WindowUi {
             Menu::new(theme, fonts.clone()),
         );
         let rename = RenameBox::mount(ui, theme, fonts.clone());
+        let hint = ui.add(
+            root,
+            hidden(0.0, TOOLBAR_TOP, 400.0, HINT_HEIGHT),
+            DragHint::new(theme, fonts.body.clone()),
+        );
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -287,6 +297,8 @@ impl WindowUi {
             dirty_since: None,
             bindings: None,
             shown: false,
+            hint,
+            spell_drag: None,
         });
         modern.replace(crate::ui::window::TOOLBAR_WINDOW);
         modern.replace(crate::ui::window::COMBAT_WINDOW);
@@ -363,6 +375,7 @@ impl WindowUi {
             }
             return;
         }
+        self.follow_spell_drag(b);
         self.bar_requests(b, now);
         self.build_bars(b);
         self.place_bars(b, now);
@@ -375,6 +388,55 @@ impl WindowUi {
             && !self.host.root.button_down(MouseButton::Left)
         {
             self.save_bars(b, false);
+        }
+    }
+
+    /// A spell carried out of the spellbook: the book fades to 12% and the
+    /// bars come in front of it (so a slot behind it takes the drop), with
+    /// a line saying where to let go; when the drag ends the book and the
+    /// bars go back.
+    fn follow_spell_drag(&mut self, b: &mut BarsUi) {
+        use ac_ui::panels::magic::{SpellFavoritePayload, SpellbookShortcutPayload};
+        const FADED: f32 = 0.12;
+        let book = crate::ui::window::SPELLBOOK_WINDOW;
+        let ui = &mut self.host.root;
+        let carrying = ui.drag_payload().is_some_and(|p| {
+            p.get::<SpellbookShortcutPayload>().is_some()
+                || p.get::<SpellFavoritePayload>().is_some()
+        });
+        match (carrying, b.spell_drag) {
+            (true, None) => {
+                let before = ui
+                    .window(book)
+                    .and_then(|w| ui.element(w.frame))
+                    .map_or(1.0, |e| e.opacity);
+                ui.set_window_opacity(book, FADED);
+                b.spell_drag = Some(before);
+                for built in &b.built {
+                    ui.bring_to_front(built.frame);
+                }
+                let screen = ui.size();
+                let width = ui.widget::<DragHint>(b.hint).map_or(400.0, DragHint::width);
+                if let Some(e) = ui.element_mut(b.hint) {
+                    e.width = width;
+                    e.left = ((screen.0 - width) * 0.5).round().max(0.0);
+                    e.top = TOOLBAR_TOP;
+                }
+                ui.set_visible(b.hint, true);
+                ui.bring_to_front(b.hint);
+            }
+            (false, Some(before)) => {
+                ui.set_window_opacity(book, before);
+                b.spell_drag = None;
+                ui.set_visible(b.hint, false);
+                // Back under the windows, unless Edit layout holds them up.
+                if !b.edit {
+                    for built in &b.built {
+                        ui.set_z_order(built.frame, 0);
+                    }
+                }
+            }
+            _ => {}
         }
     }
 
