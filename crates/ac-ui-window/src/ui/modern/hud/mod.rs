@@ -3,6 +3,7 @@
 //! widget and fed from the session by the window.
 
 pub mod edge_glow;
+pub mod effects;
 pub mod target;
 pub mod vitals;
 
@@ -14,6 +15,9 @@ use super::places;
 
 /// The vitals' window name.
 pub const VITALS: &str = "modern-vitals";
+
+/// The effects counts' and status chips' window name.
+pub const EFFECTS: &str = "modern-effects";
 
 /// The target line's window name.
 pub const TARGET: &str = "modern-target";

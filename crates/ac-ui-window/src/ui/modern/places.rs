@@ -99,6 +99,16 @@ const PLACES: &[(&str, Place)] = &[
             height: super::hud::target::HEIGHT,
         },
     ),
+    (
+        super::hud::EFFECTS,
+        Place {
+            anchor: Anchor::TopLeft,
+            dx: 16.0,
+            dy: 14.0,
+            width: super::hud::effects::CHIP_HEIGHT,
+            height: super::hud::effects::CHIP_HEIGHT,
+        },
+    ),
 ];
 
 /// Where modern window `name` first appears.

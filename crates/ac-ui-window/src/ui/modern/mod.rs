@@ -19,9 +19,12 @@ pub mod places;
 use std::sync::Arc;
 
 use ac_ui::bundled_font::Weight;
+use ac_ui::geometry::AnchorEdges;
 use ac_ui::layout_persistence::LayoutPersistence;
 use ac_ui::modern::Horizon;
+use ac_ui::modern::hover::HoverPane;
 use ac_ui::modern::quick_move::QuickMoveOutlines;
+use ac_ui::tree::Element;
 use ac_ui::{ElementId, Modifiers, UiFont, UiHost};
 
 use super::window::WindowUi;
@@ -43,6 +46,40 @@ pub struct ModernLayer {
     pub edge_glow: Option<ElementId>,
     /// The revision of the last cast answer looked at.
     seen_cast: Option<u64>,
+    /// The effects counts and status chips, top left.
+    pub effects: Option<EffectsHud>,
+}
+
+/// The effects counts and status chips, and the pane their counts open.
+#[derive(Debug)]
+pub struct EffectsHud {
+    /// The row holding the chips (the HUD piece).
+    pub row: ElementId,
+    /// The chips, in [`hud::effects::ChipKind::ALL`]'s order.
+    pub chips: [ElementId; 5],
+    /// The pane the helpful and harmful counts open.
+    pub hover: HoverPane,
+    /// The list inside it.
+    pub list: ElementId,
+    /// The effects as last read.
+    pub now: hud::effects::EffectsOnYou,
+    /// Times shown (the "show spell durations" option).
+    pub show_times: bool,
+    /// What the last read was made of: the enchantments' revision and
+    /// the whole second.
+    read_at: Option<(u64, i64)>,
+}
+
+impl EffectsHud {
+    /// The chip of `kind`.
+    #[must_use]
+    pub fn chip(&self, kind: hud::effects::ChipKind) -> ElementId {
+        let index = hud::effects::ChipKind::ALL
+            .iter()
+            .position(|k| *k == kind)
+            .unwrap_or(0);
+        self.chips[index]
+    }
 }
 
 impl ModernLayer {
@@ -99,6 +136,15 @@ const TARGET_NAME_SIZE: f32 = 14.0;
 const TARGET_SHARE_SIZE: f32 = 12.0;
 const TARGET_SMALL_SIZE: f32 = 11.0;
 
+/// The effects chips' counts, words and small text, and the pane's
+/// headings, names and captions, pixels to the em.
+const EFFECTS_FIGURE_SIZE: f32 = 13.0;
+const EFFECTS_WORDS_SIZE: f32 = 12.0;
+const EFFECTS_SMALL_SIZE: f32 = 11.0;
+const EFFECTS_LABEL_SIZE: f32 = 9.5;
+const EFFECTS_NAME_SIZE: f32 = 12.0;
+const EFFECTS_CAPTION_SIZE: f32 = 10.5;
+
 /// An item's mana now and at most (property ints).
 const ITEM_CUR_MANA: u32 = 107;
 const ITEM_MAX_MANA: u32 = 108;
@@ -137,10 +183,15 @@ impl WindowUi {
             (hud::target::WIDTH, hud::target::HEIGHT),
             hud::target::TargetLine::new(Horizon::BRONZE, fonts.0, fonts.1, fonts.2),
         );
+        let effects = self.mount_modern_effects();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
         modern.edge_glow = Some(glow);
+        match effects {
+            Ok(hud) => modern.effects = Some(hud),
+            Err(e) => self.notices.push(format!("ui: modern effects: {e}")),
+        }
         match target {
             Ok(id) => modern.target = Some(id),
             Err(e) => self.notices.push(format!("ui: modern target: {e}")),
@@ -152,6 +203,194 @@ impl WindowUi {
                 modern.replace(super::window::SIDE_VITALS_WINDOW);
             }
             Err(e) => self.notices.push(format!("ui: modern vitals: {e}")),
+        }
+    }
+
+    /// The effects counts and status chips, each a child of one HUD piece,
+    /// and the pane the counts open.
+    fn mount_modern_effects(&mut self) -> Result<EffectsHud, String> {
+        use hud::effects::{
+            CHIP_HEIGHT, Chip, ChipFonts, ChipKind, ChipRow, EffectsPane, PANE_WIDTH, PaneFonts,
+        };
+        let chip_fonts = ChipFonts {
+            figure: self.modern_font(Weight::SemiBold, EFFECTS_FIGURE_SIZE),
+            words: self.modern_font(Weight::SemiBold, EFFECTS_WORDS_SIZE),
+            small: self.modern_font(Weight::SemiBold, EFFECTS_SMALL_SIZE),
+        };
+        let pane_fonts = PaneFonts {
+            label: self.modern_font(Weight::SemiBold, EFFECTS_LABEL_SIZE),
+            name: self.modern_font(Weight::Medium, EFFECTS_NAME_SIZE),
+            figure: chip_fonts.words.clone(),
+            caption: self.modern_font(Weight::Regular, EFFECTS_CAPTION_SIZE),
+        };
+        let ui = &mut self.host.root;
+        let row = hud::mount_piece(
+            ui,
+            hud::EFFECTS,
+            (CHIP_HEIGHT, CHIP_HEIGHT),
+            ChipRow::default(),
+        )?;
+        let chips = ChipKind::ALL.map(|kind| {
+            let element = Element::at(0.0, 0.0, 0.0, CHIP_HEIGHT)
+                .with_visible(false)
+                .with_anchors(AnchorEdges::NONE);
+            ui.add(
+                row,
+                element,
+                Chip::new(Horizon::BRONZE, chip_fonts.clone(), kind),
+            )
+        });
+        let hover = HoverPane::mount(ui, Horizon::BRONZE, PANE_WIDTH, 100.0);
+        let list = ui.add(
+            hover.element(),
+            Element::at(0.0, 0.0, PANE_WIDTH, 100.0).with_anchors(AnchorEdges::NONE),
+            EffectsPane::new(Horizon::BRONZE, pane_fonts),
+        );
+        Ok(EffectsHud {
+            row,
+            chips,
+            hover,
+            list,
+            now: hud::effects::EffectsOnYou::default(),
+            show_times: true,
+            read_at: None,
+        })
+    }
+
+    /// The effects counts and the status chips follow the player: the
+    /// effects (read again when they change, and each second for the times
+    /// left), vitae, the load and a chess game.
+    pub(super) fn feed_modern_effects(&mut self) {
+        use hud::effects::{ChipView, Tone, burden_tone, burden_words, chess_words, effect_chips};
+        if self
+            .modern
+            .as_ref()
+            .and_then(|m| m.effects.as_ref())
+            .is_none()
+        {
+            return;
+        }
+        let show_times = self.show_spell_durations();
+        let now = self.facts.session_now().unwrap_or(0.0);
+        let book = self.facts.numbers().and_then(|n| n.spellbook());
+        let key = book.map(|b| (b.enchantment_revision(), now.floor() as i64));
+        let read = book.map(|b| hud::effects::EffectsOnYou::read(b, now));
+        let load = ac_ui::panels::indicators::burden_load(
+            &self.facts.objects,
+            self.facts.state.player,
+            self.facts.strength(),
+        );
+        let chess = self.facts.chess.as_ref().map(|c| c.stage);
+        let Some(fx) = self.modern.as_mut().and_then(|m| m.effects.as_mut()) else {
+            return;
+        };
+        let changed = key != fx.read_at || show_times != fx.show_times;
+        if changed {
+            fx.read_at = key;
+            fx.show_times = show_times;
+            fx.now = read.unwrap_or_default();
+        }
+        let [helpful, harmful, vitae] = effect_chips(&fx.now, show_times);
+        let burden = burden_tone(load).map(|tone| ChipView {
+            tone,
+            figure: String::new(),
+            words: burden_words(load),
+        });
+        let chess = chess.and_then(chess_words).map(|words| ChipView {
+            tone: Tone::Calm,
+            figure: String::new(),
+            words: words.to_owned(),
+        });
+        let views = [helpful, harmful, vitae, burden, chess];
+        let (row, chips, open_for) = (fx.row, fx.chips, fx.hover.open_for());
+        let mut moved = false;
+        let ui = &mut self.host.root;
+        for (id, view) in chips.into_iter().zip(views) {
+            if let Some(chip) = ui.widget_mut::<hud::effects::Chip>(id) {
+                let open = open_for == Some(id);
+                if chip.view != view || chip.open != open {
+                    chip.view = view;
+                    chip.open = open;
+                    moved = true;
+                }
+            }
+        }
+        if moved {
+            hud::effects::lay_out(ui, row, &chips);
+        }
+        // A count that went away takes its pane with it.
+        if let Some(fx) = self.modern.as_mut().and_then(|m| m.effects.as_mut())
+            && let Some(open) = fx.hover.open_for()
+            && !self.host.root.element(open).is_some_and(|e| e.visible())
+        {
+            fx.hover.close(&mut self.host.root);
+        }
+        if changed {
+            self.fill_effects_pane(false);
+        }
+    }
+
+    /// One frame of the effects pane: opens, moves or closes it for the
+    /// count the pointer rests on, and fills it when it opens.
+    pub(super) fn tick_modern_effects(&mut self, dt: f64) {
+        let Some(fx) = self.modern.as_mut().and_then(|m| m.effects.as_mut()) else {
+            return;
+        };
+        let counts = [
+            fx.chip(hud::effects::ChipKind::Helpful),
+            fx.chip(hud::effects::ChipKind::Harmful),
+        ];
+        let was = fx.hover.open_for();
+        let opened = fx.hover.tick(&mut self.host.root, &counts, dt as f32);
+        let now = fx.hover.open_for();
+        if opened.is_some() {
+            self.fill_effects_pane(true);
+        }
+        if was != now {
+            let ui = &mut self.host.root;
+            for id in counts {
+                if let Some(chip) = ui.widget_mut::<hud::effects::Chip>(id) {
+                    chip.open = now == Some(id);
+                }
+            }
+        }
+    }
+
+    /// Fills the open pane with the effects of its count's kind, sized to
+    /// them (`fresh`: it has just opened, so the list starts at the top).
+    fn fill_effects_pane(&mut self, fresh: bool) {
+        let Self {
+            modern,
+            host,
+            icons,
+            ..
+        } = self;
+        let Some(fx) = modern.as_mut().and_then(|m| m.effects.as_mut()) else {
+            return;
+        };
+        let Some(open) = fx.hover.open_for() else {
+            return;
+        };
+        let harmful = open == fx.chip(hud::effects::ChipKind::Harmful);
+        let view = hud::effects::PaneView::of(&fx.now, harmful, fx.show_times, |spell| {
+            ac_ui::icons::IconSource::spell_icon(icons, spell)
+        });
+        let ui = &mut host.root;
+        let height = ui
+            .widget_mut::<hud::effects::EffectsPane>(fx.list)
+            .map(|pane| {
+                if fresh {
+                    pane.scroll_to_top();
+                }
+                pane.show(view);
+                pane.height()
+            });
+        if let Some(height) = height {
+            for id in [fx.hover.element(), fx.list] {
+                if let Some(e) = ui.element_mut(id) {
+                    e.height = height;
+                }
+            }
         }
     }
 
@@ -307,7 +546,6 @@ impl WindowUi {
 
 #[cfg(test)]
 mod tests {
-    use ac_ui::tree::Element;
     use ac_ui::widgets::Panel;
 
     use super::*;

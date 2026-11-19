@@ -1250,6 +1250,7 @@ impl WindowUi {
         });
         self.update_indicator_panels(link);
         self.update_mini_game();
+        self.feed_modern_effects();
     }
 
     /// The panels' views from the window's copy of the facts, and each
@@ -1503,6 +1504,7 @@ impl WindowUi {
         self.tick_examination(dt);
         self.tick_keyboard_dialogs();
         self.tick_tooltips(dt, now_ms);
+        self.tick_modern_effects(dt);
         if let Some(modern) = &self.modern {
             modern.hide_replaced(&mut self.host);
         }
