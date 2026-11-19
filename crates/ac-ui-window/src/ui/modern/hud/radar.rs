@@ -46,6 +46,8 @@ const LETTERS: f32 = 84.0;
 const COORDS_TOP: f32 = DISC_TOP + 2.0 * (OUTER + 1.0) + 6.0;
 /// The range chip.
 const CHIP_HEIGHT: f32 = 22.0;
+/// The Recall button's side.
+const RECALL: f32 = 26.0;
 /// How near the pointer must be to a blip to name it, units.
 const HOVER_REACH: f32 = 7.0;
 /// Half the view cone, radians.
@@ -111,6 +113,10 @@ pub struct RadarRing {
     pub status: super::connection::StatusLine,
     /// The connection card should show (its button toggles it).
     pub card_open: bool,
+    /// The Recall list (a child of the piece) the rim button opens.
+    pub recall_list: Option<ElementId>,
+    /// The pointer is on the Recall button.
+    on_recall: bool,
 }
 
 impl RadarRing {
@@ -131,6 +137,8 @@ impl RadarRing {
             quick_move: false,
             status: super::connection::StatusLine::default(),
             card_open: false,
+            recall_list: None,
+            on_recall: false,
         }
     }
 
@@ -200,6 +208,62 @@ impl RadarRing {
     fn on_chip_at(&self, x: f32, y: f32) -> bool {
         let (cx, cy, w, h) = self.chip_rect();
         (cx..cx + w).contains(&x) && (cy..cy + h).contains(&y)
+    }
+
+    /// The Recall button's centre, on the rim's lower left.
+    fn recall_centre() -> Vec2 {
+        Vec2::new(
+            DISC_LEFT - 8.0 + RECALL * 0.5,
+            DISC_TOP + 154.0 + RECALL * 0.5,
+        )
+    }
+
+    fn on_recall_at(x: f32, y: f32) -> bool {
+        Vec2::new(x, y).distance(Self::recall_centre()) <= RECALL * 0.5
+    }
+
+    /// Opens the Recall list beside the radar, on whichever side has room
+    /// (the rim button; a key can do the same).
+    pub fn open_recall(&self, ui: &mut UiRoot, me: ElementId) {
+        let Some(list) = self.recall_list else {
+            return;
+        };
+        let (x, y) = ui.screen_position(me);
+        let screen = ui.size();
+        let height = ui
+            .widget::<super::recall::RecallList>(list)
+            .map_or(0.0, super::recall::RecallList::height);
+        let left = if x >= super::recall::WIDTH + 4.0 {
+            -super::recall::WIDTH - 4.0
+        } else {
+            WIDTH + 4.0
+        };
+        let top = DISC_TOP.min(screen.1 - y - height).max(-y);
+        if let Some(e) = ui.element_mut(list) {
+            e.left = left;
+            e.top = top;
+        }
+        ui.with::<super::recall::RecallList, _>(list, |l, ui| l.open(ui, list));
+        ui.bring_to_front(me);
+    }
+
+    fn draw_recall(&self, rc: &mut RenderContext<'_>) {
+        let p = self.theme.palette;
+        let c = Self::recall_centre();
+        let r = RECALL * 0.5;
+        let fill = if self.on_recall {
+            hex(0x2A_2116, 0.9)
+        } else {
+            hex(0, 0.62)
+        };
+        rc.fill_ellipse(c.x - r, c.y - r, RECALL, RECALL, fill);
+        let edge = if self.on_recall {
+            p.accent
+        } else {
+            hex(0xC9_A062, 0.8)
+        };
+        rc.stroke_ellipse(c.x - r, c.y - r, RECALL, RECALL, edge, 1.0);
+        super::recall::recall_mark(rc, c.x - 7.0, c.y - 7.0, p.accent);
     }
 
     fn on_disc(x: f32, y: f32) -> bool {
@@ -523,6 +587,7 @@ impl Widget for RadarRing {
             || Self::on_disc(x, y)
             || self.on_chip_at(x, y)
             || self.status.on_button(x, y)
+            || Self::on_recall_at(x, y)
     }
 
     fn handles_click(&self, _element: &Element) -> bool {
@@ -545,6 +610,7 @@ impl Widget for RadarRing {
         match e.kind {
             kind::MOUSE_MOVE | kind::HOVER_ENTER => {
                 self.on_chip = self.on_chip_at(x, y);
+                self.on_recall = Self::on_recall_at(x, y);
                 let next = if self.on_chip {
                     None
                 } else {
@@ -555,11 +621,14 @@ impl Widget for RadarRing {
             }
             kind::HOVER_LEAVE => {
                 self.on_chip = false;
+                self.on_recall = false;
                 self.hover(ui, None);
                 true
             }
             kind::CLICK => {
-                if self.status.on_button(x, y) {
+                if Self::on_recall_at(x, y) {
+                    self.open_recall(ui, me);
+                } else if self.status.on_button(x, y) {
                     self.card_open = !self.card_open;
                 } else if self.on_chip_at(x, y) {
                     self.step_range();
@@ -593,6 +662,11 @@ impl Widget for RadarRing {
         false
     }
 
+    fn tooltip_text(&self, _element: &Element) -> Option<String> {
+        self.on_recall
+            .then(|| "Recall: lifestone, house, mansion, hometown, market".to_owned())
+    }
+
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
         let p = self.theme.palette;
         if let Some(f) = self.fonts.small.clone() {
@@ -615,6 +689,7 @@ impl Widget for RadarRing {
         }
         Self::draw_player(rc);
         self.draw_chip(rc);
+        self.draw_recall(rc);
         if let (Some(words), Some(f)) = (&self.coordinates, &self.fonts.small) {
             let w = text::measure(f, words, 0.0);
             text::draw(

@@ -6,6 +6,7 @@ pub mod connection;
 pub mod edge_glow;
 pub mod effects;
 pub mod radar;
+pub mod recall;
 pub mod target;
 pub mod vitals;
 

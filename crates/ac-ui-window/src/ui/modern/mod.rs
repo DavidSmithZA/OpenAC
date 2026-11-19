@@ -159,6 +159,10 @@ const RADAR_BOLD_SIZE: f32 = 11.0;
 const RADAR_TINY_SIZE: f32 = 8.0;
 const RADAR_SMALL_SIZE: f32 = 11.0;
 
+/// The Recall list's names and small text, pixels to the em.
+const RECALL_NAME_SIZE: f32 = 12.5;
+const RECALL_SMALL_SIZE: f32 = 11.0;
+
 /// The connection card's title and body, pixels to the em.
 const CARD_TITLE_SIZE: f32 = 13.5;
 const CARD_BODY_SIZE: f32 = 12.0;
@@ -218,6 +222,25 @@ impl WindowUi {
             (hud::radar::WIDTH, hud::radar::HEIGHT),
             hud::radar::RadarRing::new(Horizon::BRONZE, radar_fonts),
         );
+        let recall_fonts = hud::recall::RecallFonts {
+            name: self.modern_font(Weight::SemiBold, RECALL_NAME_SIZE),
+            small: self.modern_font(Weight::Regular, RECALL_SMALL_SIZE),
+            label: self.modern_font(Weight::SemiBold, EFFECTS_LABEL_SIZE),
+        };
+        if let Ok(radar) = &radar {
+            let ui = &mut self.host.root;
+            let element = Element::at(0.0, 0.0, hud::recall::WIDTH, 100.0)
+                .with_visible(false)
+                .with_anchors(AnchorEdges::NONE);
+            let list = ui.add(
+                *radar,
+                element,
+                hud::recall::RecallList::new(Horizon::BRONZE, recall_fonts),
+            );
+            if let Some(r) = ui.widget_mut::<hud::radar::RadarRing>(*radar) {
+                r.recall_list = Some(list);
+            }
+        }
         let card = {
             let ui = &mut self.host.root;
             let root = ui.root();
@@ -342,13 +365,71 @@ impl WindowUi {
         }
     }
 
-    /// The modern radar shows `scene`.
+    /// The modern radar shows `scene`, and its Recall list what the
+    /// player can use.
     pub(super) fn feed_modern_radar(&mut self, scene: &ac_ui::panels::radar::RadarScene) {
         let Some(id) = self.modern.as_ref().and_then(|m| m.radar) else {
             return;
         };
-        if let Some(radar) = self.host.root.widget_mut::<hud::radar::RadarRing>(id) {
-            radar.set_scene(scene);
+        let facts = self.recall_facts(scene);
+        let Self { host, icons, .. } = self;
+        let ui = &mut host.root;
+        let list = ui
+            .widget_mut::<hud::radar::RadarRing>(id)
+            .and_then(|radar| {
+                radar.set_scene(scene);
+                radar.recall_list
+            });
+        if let Some(list) = list
+            && let Some(l) = ui.widget_mut::<hud::recall::RecallList>(list)
+        {
+            l.set_facts(facts, &mut |spell| {
+                ac_ui::icons::IconSource::spell_icon(icons, spell)
+            });
+            // The list may have grown or shrunk while open.
+            let height = l.height();
+            if let Some(e) = ui.element_mut(list)
+                && e.height != height
+            {
+                e.height = height;
+            }
+        }
+    }
+
+    /// What decides which recalls the player can use.
+    fn recall_facts(&self, scene: &ac_ui::panels::radar::RadarScene) -> hud::recall::RecallFacts {
+        let traits = scene.player.map(|p| {
+            ac_ui::radar::ObjectTraits::from_public_weenie_description(
+                p.item_type,
+                p.pwd_bitfield,
+                0,
+            )
+        });
+        let social = self.facts.social.as_ref().filter(|s| s.in_world);
+        let spells = self
+            .facts
+            .numbers()
+            .and_then(|n| n.spellbook())
+            .map(|book| {
+                hud::recall::recall_spells(
+                    book.learned_spells()
+                        .filter_map(|id| book.try_get_metadata(id).map(|m| (id, m.name.clone()))),
+                )
+            })
+            .unwrap_or_default();
+        hud::recall::RecallFacts {
+            owns_house: self
+                .facts
+                .house
+                .as_ref()
+                .filter(|h| h.has_received_notice)
+                .map(|h| h.owns_house),
+            in_allegiance: social
+                .map(|s| s.allegiance.as_ref().is_some_and(|a| a.monarch.is_some())),
+            player_killer: traits.is_some_and(|t| t.is_player_killer),
+            pk_lite: traits.is_some_and(|t| t.is_pk_lite),
+            magic: self.facts.state.combat_mode == ac_core::combat::CombatMode::MAGIC,
+            spells,
         }
     }
 
