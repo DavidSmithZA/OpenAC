@@ -25,7 +25,7 @@ pub const MAP_HOUSE_WINDOW: &str = "map-house";
 /// renderer's calendar) and when it was last fed.
 #[derive(Debug, Default)]
 pub struct MapWindowState {
-    calendar: Option<CalendarDate>,
+    pub(in crate::ui) calendar: Option<CalendarDate>,
     last_fed: Option<Instant>,
 }
 

@@ -2,6 +2,7 @@
 //! own (so its place is saved, and quick move can carry it), drawn by one
 //! widget and fed from the session by the window.
 
+pub mod connection;
 pub mod edge_glow;
 pub mod effects;
 pub mod radar;

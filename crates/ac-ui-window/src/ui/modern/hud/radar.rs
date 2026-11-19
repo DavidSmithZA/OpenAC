@@ -107,6 +107,10 @@ pub struct RadarRing {
     on_chip: bool,
     /// Quick move is held.
     quick_move: bool,
+    /// The status line above the pill.
+    pub status: super::connection::StatusLine,
+    /// The connection card should show (its button toggles it).
+    pub card_open: bool,
 }
 
 impl RadarRing {
@@ -125,6 +129,8 @@ impl RadarRing {
             hovered: None,
             on_chip: false,
             quick_move: false,
+            status: super::connection::StatusLine::default(),
+            card_open: false,
         }
     }
 
@@ -513,7 +519,10 @@ impl RadarRing {
 
 impl Widget for RadarRing {
     fn hit_test(&self, _element: &Element, x: f32, y: f32) -> bool {
-        self.quick_move || Self::on_disc(x, y) || self.on_chip_at(x, y)
+        self.quick_move
+            || Self::on_disc(x, y)
+            || self.on_chip_at(x, y)
+            || self.status.on_button(x, y)
     }
 
     fn handles_click(&self, _element: &Element) -> bool {
@@ -550,7 +559,9 @@ impl Widget for RadarRing {
                 true
             }
             kind::CLICK => {
-                if self.on_chip_at(x, y) {
+                if self.status.on_button(x, y) {
+                    self.card_open = !self.card_open;
+                } else if self.on_chip_at(x, y) {
                     self.step_range();
                 } else if let Some(id) = self.blip_at(x, y).map(|b| b.object_id) {
                     emit(ui, PanelOutput::SelectObject(id));
@@ -584,6 +595,9 @@ impl Widget for RadarRing {
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
         let p = self.theme.palette;
+        if let Some(f) = self.fonts.small.clone() {
+            self.status.draw(rc, &self.theme, &f, WIDTH);
+        }
         self.draw_pill(rc);
         self.draw_ring(rc);
         for blip in &self.blips {

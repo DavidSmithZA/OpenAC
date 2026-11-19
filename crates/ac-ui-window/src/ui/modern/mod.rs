@@ -50,6 +50,12 @@ pub struct ModernLayer {
     pub effects: Option<EffectsHud>,
     /// The radar, top right.
     pub radar: Option<ElementId>,
+    /// The connection card the status line opens.
+    pub connection_card: Option<ElementId>,
+    /// When the round trip was last asked for (the window's clock).
+    last_ping: Option<f64>,
+    /// The card was open last frame.
+    card_was_open: bool,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -153,6 +159,10 @@ const RADAR_BOLD_SIZE: f32 = 11.0;
 const RADAR_TINY_SIZE: f32 = 8.0;
 const RADAR_SMALL_SIZE: f32 = 11.0;
 
+/// The connection card's title and body, pixels to the em.
+const CARD_TITLE_SIZE: f32 = 13.5;
+const CARD_BODY_SIZE: f32 = 12.0;
+
 /// An item's mana now and at most (property ints).
 const ITEM_CUR_MANA: u32 = 107;
 const ITEM_MAX_MANA: u32 = 108;
@@ -192,6 +202,11 @@ impl WindowUi {
             hud::target::TargetLine::new(Horizon::BRONZE, fonts.0, fonts.1, fonts.2),
         );
         let effects = self.mount_modern_effects();
+        let card_fonts = hud::connection::CardFonts {
+            title: self.modern_font(Weight::SemiBold, CARD_TITLE_SIZE),
+            body: self.modern_font(Weight::Medium, CARD_BODY_SIZE),
+            caption: self.modern_font(Weight::Regular, EFFECTS_CAPTION_SIZE),
+        };
         let radar_fonts = hud::radar::RadarFonts {
             bold: self.modern_font(Weight::SemiBold, RADAR_BOLD_SIZE),
             tiny: self.modern_font(Weight::Regular, RADAR_TINY_SIZE),
@@ -203,6 +218,23 @@ impl WindowUi {
             (hud::radar::WIDTH, hud::radar::HEIGHT),
             hud::radar::RadarRing::new(Horizon::BRONZE, radar_fonts),
         );
+        let card = {
+            let ui = &mut self.host.root;
+            let root = ui.root();
+            let element = Element::at(
+                0.0,
+                0.0,
+                hud::connection::CARD_WIDTH,
+                hud::connection::CARD_HEIGHT,
+            )
+            .with_visible(false)
+            .with_anchors(AnchorEdges::NONE);
+            Some(ui.add(
+                root,
+                element,
+                hud::connection::ConnectionCard::new(Horizon::BRONZE, card_fonts),
+            ))
+        };
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -211,6 +243,7 @@ impl WindowUi {
             Ok(hud) => modern.effects = Some(hud),
             Err(e) => self.notices.push(format!("ui: modern effects: {e}")),
         }
+        modern.connection_card = card;
         match radar {
             Ok(id) => {
                 modern.radar = Some(id);
@@ -229,6 +262,83 @@ impl WindowUi {
                 modern.replace(super::window::SIDE_VITALS_WINDOW);
             }
             Err(e) => self.notices.push(format!("ui: modern vitals: {e}")),
+        }
+    }
+
+    /// The status line above the radar and its card follow the link and
+    /// the game's hour; the round trip is asked for on arrival and every
+    /// [`hud::connection::PING_SECONDS`], and again when the card opens.
+    pub(super) fn tick_modern_connection(&mut self) {
+        let Some(modern) = self.modern.as_ref() else {
+            return;
+        };
+        let (Some(radar), Some(card)) = (modern.radar, modern.connection_card) else {
+            return;
+        };
+        let now = self.status.clock.elapsed().as_secs_f64();
+        let link = self.status.link.unwrap_or(ac_runtime::session::LinkStatus {
+            connected: true,
+            ..Default::default()
+        });
+        let hour = self
+            .map_state
+            .calendar
+            .map(|date| ac_ui::panels::map_house::hour_text(date.hour));
+        let in_world = self.player_view.is_some();
+        let ui = &mut self.host.root;
+        // The card's close button closes it.
+        let closed = ui
+            .widget_mut::<hud::connection::ConnectionCard>(card)
+            .is_some_and(|c| std::mem::take(&mut c.closed));
+        let open = ui
+            .widget_mut::<hud::radar::RadarRing>(radar)
+            .is_some_and(|r| {
+                if closed {
+                    r.card_open = false;
+                }
+                r.status.hour = hour;
+                r.status.link = link;
+                r.status.dot_lit = (now / hud::connection::FLASH_SECONDS).floor() as i64 % 2 == 0;
+                r.card_open
+            });
+        if open {
+            let (x, y) = ui.screen_position(radar);
+            let screen = ui.size();
+            // Beside the radar (on the side with room), under the line.
+            let beside = x - hud::connection::CARD_WIDTH - 4.0;
+            let left = if beside >= 0.0 {
+                beside
+            } else {
+                (x + hud::radar::WIDTH + 4.0).min((screen.0 - hud::connection::CARD_WIDTH).max(0.0))
+            };
+            if let Some(e) = ui.element_mut(card) {
+                e.left = left;
+                e.top = y + hud::connection::BAND + 6.0;
+            }
+            if let Some(c) = ui.widget_mut::<hud::connection::ConnectionCard>(card) {
+                c.link = link;
+            }
+        }
+        if ui.element(card).is_some_and(|e| e.visible()) != open {
+            ui.set_visible(card, open);
+            if open {
+                ui.bring_to_front(card);
+            }
+        }
+        let Some(modern) = self.modern.as_mut() else {
+            return;
+        };
+        let just_opened = open && !modern.card_was_open;
+        modern.card_was_open = open;
+        let due = modern
+            .last_ping
+            .is_none_or(|t| now - t >= hud::connection::PING_SECONDS);
+        if in_world && link.connected && (due || just_opened) {
+            modern.last_ping = Some(now);
+            ac_ui::panels::items::emit(
+                &mut self.host.root,
+                ac_ui::panels::PanelOutput::RequestLinkPing,
+            );
         }
     }
 
