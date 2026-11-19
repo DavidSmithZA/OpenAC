@@ -182,6 +182,10 @@ pub struct Element {
     pub enabled: bool,
     /// Hit testing passes through to what is below.
     pub click_through: bool,
+    /// A modern piece: while the quick-move key is held it can be dragged
+    /// (and snaps to the screen's edges and other such pieces) whatever the
+    /// UI lock says (see [`UiRoot::set_quick_move_key`]).
+    pub quick_move: bool,
     /// A left press here takes keyboard focus.
     pub accepts_focus: bool,
     /// A left press takes keyboard focus when it accepts focus (a plugin's
@@ -265,6 +269,7 @@ impl Default for Element {
             held: false,
             enabled: true,
             click_through: false,
+            quick_move: false,
             accepts_focus: false,
             focus_on_mouse_click: true,
             tab_stop: false,

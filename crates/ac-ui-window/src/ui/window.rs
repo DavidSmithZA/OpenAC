@@ -1518,13 +1518,15 @@ impl WindowUi {
         match interface {
             ac_host::Interface::Retail => {}
             ac_host::Interface::Modern => {
-                let modern = self
-                    .modern
-                    .get_or_insert_with(super::modern::ModernLayer::new);
+                if self.modern.is_some() {
+                    return;
+                }
+                let modern = self.modern.insert(super::modern::ModernLayer::new());
                 if let Some(layouts) = self.status.layouts.as_mut() {
                     modern.leave_alone(&mut self.host, layouts);
                 }
                 modern.hide_replaced(&mut self.host);
+                self.mount_quick_move();
             }
         }
     }

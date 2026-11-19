@@ -19,7 +19,9 @@ use std::sync::Arc;
 
 use ac_ui::bundled_font::Weight;
 use ac_ui::layout_persistence::LayoutPersistence;
-use ac_ui::{UiFont, UiHost};
+use ac_ui::modern::Horizon;
+use ac_ui::modern::quick_move::QuickMoveOutlines;
+use ac_ui::{ElementId, Modifiers, UiFont, UiHost};
 
 use super::window::WindowUi;
 
@@ -30,6 +32,8 @@ pub struct ModernLayer {
     replaced: Vec<&'static str>,
     /// The Inter fonts baked so far.
     pub fonts: fonts::HorizonFonts,
+    /// The layer quick move outlines the pieces in.
+    pub outlines: Option<ElementId>,
 }
 
 impl ModernLayer {
@@ -70,7 +74,24 @@ impl ModernLayer {
     }
 }
 
+/// The key that, held, lets modern pieces be moved whatever the lock says.
+pub const QUICK_MOVE_KEY: Modifiers = Modifiers::CTRL;
+
+/// The size of the names quick move shows, pixels to the em.
+const QUICK_MOVE_NAME_SIZE: f32 = 11.0;
+
 impl WindowUi {
+    /// Quick move on: its key, and the layer that outlines and names every
+    /// modern piece while the key is held.
+    pub(super) fn mount_quick_move(&mut self) {
+        self.host.root.set_quick_move_key(Some(QUICK_MOVE_KEY));
+        let font = self.modern_font(Weight::SemiBold, QUICK_MOVE_NAME_SIZE);
+        let outlines = QuickMoveOutlines::mount(&mut self.host.root, Horizon::BRONZE, font);
+        if let Some(modern) = self.modern.as_mut() {
+            modern.outlines = Some(outlines);
+        }
+    }
+
     /// Inter in `weight` at `em` pixels to the em, for a modern piece:
     /// baked the first time it is asked for, its sharper bake following
     /// for a high-density display. None without the modern layer, or when
