@@ -507,73 +507,78 @@ This folder holds the design only. There is no code yet.
   warning (25%), screen edge glow (on), and the warning before a helpful
   effect ends (5 minutes).
 
-## Login (three directions, not yet chosen)
+## Login (Stage, with Lineup's connecting screen)
 
 Signing in to an account stays in the OpenAC launcher. In the client,
 "login" is the connecting screen and then choosing a character (retail
-calls it the Character Login Screen). Canvas page "Login"; each
-direction has Choose (playable), Connecting, Delete and New account
-boards, and a `screen` tweak that also shows a failed connection.
+calls it the Character Login Screen). Canvas page "Login"; the three
+directions drawn and the two not chosen are on the page "Login and
+creation: not chosen".
 
-- Shared by all three:
-  - The server sends only names, sorted, pending deletions last. Level,
-    heritage, look, last place and when last played are remembered by
-    OpenAC on this computer (OPENAC, "remembered from your last visit").
-    A character never played here shows its name only.
-  - A character pending deletion is red with its countdown and Restore,
-    which warns that allegiance is lost and that it fails if the name
-    was taken.
-  - Enter world is the one gold button (Enter, or double-click).
-    Delete still wants DELETE typed, as in retail. Create shows the free
-    slots. Credits, Exit (asks) and the version line sit quietly at the
-    edge.
-- A · Stage: a slim roster on the left; the picked character stands
-  centre stage in a sky tinted for its last place, its name large above
-  it, Enter world under it.
-- B · Lineup: everyone stands side by side on one lit stage; the picked
-  one steps forward under a spotlight; a free slot is a dashed figure
-  with +. Connecting is a portal ring charging, the two meters on its
-  arcs.
-- C · Atlas: a stylised map of Dereth with a pin at each character's
-  last place; picking one flies the map to it and opens a card with
-  Enter world; the list sits in a panel on the right. Connecting draws
-  the map in. The map is approximate, not the real geography.
+- Connecting: a portal ring charges in a dark hall, "Connecting to
+  Leafcull" in its centre. The outer arc is the connection meter, the
+  inner arc the data update; their status lines sit under it with
+  Cancel. A failure turns the outer arc red and shows the reason.
+- Choose: a slim roster on the left (level plate, name, heritage, last
+  place). The picked character stands centre stage in a sky tinted for
+  the place it was last, its name large above it, and one gold Enter
+  world button under it (Enter, or double-click a row). World name,
+  population and account across the top; Credits, Exit (asks) and the
+  version line quiet in a corner.
+- The server sends only names, sorted, pending deletions last. Level,
+  heritage, look, last place and when last played are remembered by
+  OpenAC on this computer (OPENAC, agreed). A character never played
+  here shows its name only, with "Not played on this computer yet".
+- A character pending deletion is red with its countdown and Restore,
+  which warns that allegiance is lost and that it fails if the name
+  was taken.
+- Delete keeps retail's rule: type DELETE (agreed). Create character
+  shows the free slots; a new account gets one "Create your first
+  character" button.
 
-## Character creation (three directions, not yet chosen)
+## Character creation (Studio)
 
-The same retail content in each: 13 heritages with their masteries,
-gender, seven professions (templates), six attributes from a 330-point
-budget (10 to 100 each, locks), the vitals they give, 50 skill credits
-in four groups (70 at most specialized; unspent credits carry over),
-face and clothes, four starting towns, a name of up to 32 characters
-with the heritage's suggestions. Olthoi skip profession, skills and
-town; Gear Knights pick a whole body look. Only War Mage's numbers are
-real on the boards; the rest come from the game data. Canvas page
-"Character creation"; the first board of each row is playable.
+Canvas page "Character creation"; the first board can be played. The
+retail content: 13 heritages with their masteries, gender, seven
+professions (templates), six attributes from a 330-point budget (10 to
+100 each, locks), the vitals they give, 50 skill credits in four groups
+(70 at most specialized; unspent credits carry over), face and clothes,
+four starting towns, a name of up to 32 characters with the heritage's
+suggestions. Only War Mage's numbers are real on the boards; the rest
+come from the game data.
 
-- A · Studio: a polished six-step wizard. The figure stands centre on a
-  lit plinth; a numbered step rail across the top (done steps ticked,
-  Olthoi greys three out); choices in a glass panel on the left; a live
-  "So far" card on the right that becomes the summary on the last step.
-  A refused name offers three near names (OPENAC).
-- B · Sheet: no wizard. One screen with sections (Name, Heritage, Look,
-  Profession, Attributes, Skills, Starting town), each folded to one
-  line stating the choice ("326 of 330 points · 4 left"), one open at a
-  time, any order. A character card beside the figure fills in as you
-  go; Create character is always there and lists what is still missing.
-- C · Journey: one big question per screen ("Who are you?", "How do you
-  fight?" …), six dots along the bottom showing each choice. Heritages
-  as 13 tall panels (the picked one widens); attributes as a hexagon you
-  shape, with exact rows beside it; skills as chips in three trays with
-  a credit purse that shows a move's cost first; the look with handles
-  around the figure; towns on the map; the name in large type over one
-  sentence that tells the whole build, each part a link back.
+- The figure stands centre on a lit plinth with Turn and Zoom under it,
+  then Back · Step N of 6 · Next (Finish on the last step).
+- A numbered step rail across the top: Heritage, Profession, Skills,
+  Appearance, Town, Name; done steps are ticked. Olthoi switch off
+  Profession, Skills and Town and the count reads "of 3".
+- Each step's choices sit in a glass panel on the left with a quiet
+  Random for that step. Randomize all and Exit (both ask) top right.
+- A live "So far" card on the right: heritage, profession, town, name,
+  attribute bars, vitals, credits left. A line jumps to its step; on
+  the Name step the card becomes the summary, skills included.
+- Heritage: 13 tiles with the gender switch beside them (agreed: gender
+  goes with heritage, not appearance as in retail).
+- Profession: templates; each attribute a slider, a typed value and a
+  lock; moving one takes from the unlocked others so the total stays
+  330. Changing a template warns that a big change makes you Custom,
+  titled Adventurer.
+- Skills: four groups, each row its score, lower (credits back) and
+  raise (cost); a credits meter, the 70-credit specialize limit, and an
+  info pane with description, formula, cost and training bonus.
+- Appearance: as the Barber window, with Face and Clothes tabs. Gear
+  Knights get one Body part.
+- Town: four cards with a small skyline; the backdrop takes the town's
+  colours on the Town and Name steps.
+- Name: a large field with a counter and the allowed characters, the
+  heritage's name suggestions, and a "Before you finish" list with Fix
+  links. A name the server refuses shows its words and three near names
+  to pick (OPENAC, agreed).
 
 ## Still to design
 
-Pick one login and one creation direction (or a mix). Then a check of
-every retail panel in `crates/ac-ui/src/panels` and `src/pregame`
-against this design.
+A check of every retail panel in `crates/ac-ui/src/panels` and
+`crates/ac-ui/src/pregame` against this design.
 
 Open question: at a server's level cap, does the XP bar say "Max level"
 or keep counting total XP?

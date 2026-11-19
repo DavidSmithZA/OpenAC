@@ -1237,7 +1237,7 @@
    "w": 1440,
    "h": 900,
    "page": "login",
-   "title": "Stage · Connecting: the world's name and two meters over the dusk"
+   "title": "Stage · Connecting: the portal ring charges, two meters on its arcs (from Lineup)"
   },
   "LoginStageDelete.dc.html": {
    "x": 3040,
@@ -1257,68 +1257,68 @@
   },
   "LoginLineup.dc.html": {
    "x": 0,
-   "y": 1300,
+   "y": 0,
    "w": 1440,
    "h": 900,
-   "page": "login",
+   "page": "pregame-alt",
    "title": "Lineup · Choose: the picked one steps forward into the light",
    "is_interactive": true
   },
   "LoginLineupConnecting.dc.html": {
    "x": 1520,
-   "y": 1300,
+   "y": 0,
    "w": 1440,
    "h": 900,
-   "page": "login",
+   "page": "pregame-alt",
    "title": "Lineup · Connecting: the portal ring charges, two meters on its arcs"
   },
   "LoginLineupDelete.dc.html": {
    "x": 3040,
-   "y": 1300,
+   "y": 0,
    "w": 1440,
    "h": 900,
-   "page": "login",
+   "page": "pregame-alt",
    "title": "Lineup · Delete: type DELETE"
   },
   "LoginLineupEmpty.dc.html": {
    "x": 4560,
-   "y": 1300,
+   "y": 0,
    "w": 1440,
    "h": 900,
-   "page": "login",
+   "page": "pregame-alt",
    "title": "Lineup · New account: an empty stage with one lit slot"
   },
   "LoginAtlas.dc.html": {
    "x": 0,
-   "y": 2600,
+   "y": 1300,
    "w": 1440,
    "h": 900,
-   "page": "login",
+   "page": "pregame-alt",
    "title": "Atlas · Choose: the map flies to the picked character's last place",
    "is_interactive": true
   },
   "LoginAtlasConnecting.dc.html": {
    "x": 1520,
-   "y": 2600,
+   "y": 1300,
    "w": 1440,
    "h": 900,
-   "page": "login",
+   "page": "pregame-alt",
    "title": "Atlas · Connecting: the map draws itself in, meters in a slim bar"
   },
   "LoginAtlasDelete.dc.html": {
    "x": 3040,
-   "y": 2600,
+   "y": 1300,
    "w": 1440,
    "h": 900,
-   "page": "login",
+   "page": "pregame-alt",
    "title": "Atlas · Delete: type DELETE"
   },
   "LoginAtlasEmpty.dc.html": {
    "x": 4560,
-   "y": 2600,
+   "y": 1300,
    "w": 1440,
    "h": 900,
-   "page": "login",
+   "page": "pregame-alt",
    "title": "Atlas · New account: the four starting towns and a welcome card"
   },
   "CreateStudio.dc.html": {
@@ -1380,140 +1380,140 @@
   },
   "CreateSheet.dc.html": {
    "x": 0,
-   "y": 1300,
+   "y": 2600,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Sheet · Heritage open; only the name is still needed",
    "is_interactive": true
   },
   "CreateSheetLook.dc.html": {
    "x": 1520,
-   "y": 1300,
+   "y": 2600,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Sheet · Look open: face and clothes, part, style, colour, shade"
   },
   "CreateSheetProfession.dc.html": {
    "x": 3040,
-   "y": 1300,
+   "y": 2600,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Sheet · Profession open: seven templates with a line each"
   },
   "CreateSheetAttributes.dc.html": {
    "x": 4560,
-   "y": 1300,
+   "y": 2600,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Sheet · Attributes moved off War Mage: 4 points left, now Custom"
   },
   "CreateSheetSkills.dc.html": {
    "x": 6080,
-   "y": 1300,
+   "y": 2600,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Sheet · Skills open: credits, the four groups, info box"
   },
   "CreateSheetTown.dc.html": {
    "x": 7600,
-   "y": 1300,
+   "y": 2600,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Sheet · Starting town open: four town cards"
   },
   "CreateSheetFinish.dc.html": {
    "x": 9120,
-   "y": 1300,
+   "y": 2600,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Sheet · Named Aerin Vale, ready to create"
   },
   "CreateSheetRefused.dc.html": {
    "x": 10640,
-   "y": 1300,
+   "y": 2600,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Sheet · The server refused the name"
   },
   "CreateSheetGearKnight.dc.html": {
    "x": 12160,
-   "y": 1300,
+   "y": 2600,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Sheet · Gear Knight: Look picks the whole body"
   },
   "CreateSheetOlthoi.dc.html": {
    "x": 13680,
-   "y": 1300,
+   "y": 2600,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Sheet · Olthoi: four sections fold into one line"
   },
   "CreateJourney.dc.html": {
    "x": 0,
-   "y": 2600,
+   "y": 3900,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Journey · Who are you? 13 heritage panels, the picked one opens",
    "is_interactive": true
   },
   "CreateJourneyProfession.dc.html": {
    "x": 1520,
-   "y": 2600,
+   "y": 3900,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Journey · How do you fight? Template cards over an attribute hexagon"
   },
   "CreateJourneySkills.dc.html": {
    "x": 3040,
-   "y": 2600,
+   "y": 3900,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Journey · What have you learned? A 50-credit purse and three skill trays"
   },
   "CreateJourneyAppearance.dc.html": {
    "x": 4560,
-   "y": 2600,
+   "y": 3900,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Journey · How do you look? The figure large, parts around it"
   },
   "CreateJourneyTown.dc.html": {
    "x": 6080,
-   "y": 2600,
+   "y": 3900,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Journey · Where does it begin? Four towns on the map, a view of the picked one"
   },
   "CreateJourneyName.dc.html": {
    "x": 7600,
-   "y": 2600,
+   "y": 3900,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Journey · What is your name? One sentence tells the whole build"
   },
   "CreateJourneyOlthoi.dc.html": {
    "x": 9120,
-   "y": 2600,
+   "y": 3900,
    "w": 1440,
    "h": 900,
-   "page": "create",
+   "page": "pregame-alt",
    "title": "Journey · Olthoi Spitter: the journey drops to three steps"
   }
  },
@@ -1691,7 +1691,7 @@
   "t21": {
    "kind": "title1",
    "maxW": 6000,
-   "text": "A · Stage: your character standing where you left it",
+   "text": "Login: Stage (chosen), connecting from Lineup",
    "x": 0,
    "y": -300,
    "page": "login"
@@ -1699,23 +1699,23 @@
   "t22": {
    "kind": "title1",
    "maxW": 6000,
-   "text": "B · Lineup: everyone on one stage",
+   "text": "Login B · Lineup (not chosen; its connecting screen went to Stage)",
    "x": 0,
-   "y": 1000,
-   "page": "login"
+   "y": -300,
+   "page": "pregame-alt"
   },
   "t23": {
    "kind": "title1",
    "maxW": 6000,
-   "text": "C · Atlas: your characters on the map of Dereth",
+   "text": "Login C · Atlas (not chosen)",
    "x": 0,
-   "y": 2300,
-   "page": "login"
+   "y": 1000,
+   "page": "pregame-alt"
   },
   "t24": {
    "kind": "title1",
    "maxW": 10560,
-   "text": "A · Studio: a polished six-step wizard around the figure",
+   "text": "Character creation: Studio (chosen)",
    "x": 0,
    "y": -300,
    "page": "create"
@@ -1723,32 +1723,39 @@
   "t25": {
    "kind": "title1",
    "maxW": 15120,
-   "text": "B · Sheet: no wizard, one living character sheet",
+   "text": "Creation B · Sheet (not chosen)",
    "x": 0,
-   "y": 1000,
-   "page": "create"
+   "y": 2300,
+   "page": "pregame-alt"
   },
   "t26": {
    "kind": "title1",
    "maxW": 10560,
-   "text": "C · Journey: one big question per screen",
+   "text": "Creation C · Journey (not chosen)",
    "x": 0,
-   "y": 2300,
-   "page": "create"
+   "y": 3600,
+   "page": "pregame-alt"
   },
   "s_login": {
    "x": -620,
    "y": 0,
    "w": 520,
    "page": "login",
-   "text": "Signing in to an account stays in the OpenAC launcher. In the client, \"login\" is the connecting screen and then choosing a character (retail calls it the Character Login Screen).\n\nThe server only sends names. Level, look and last place are remembered by OpenAC on this computer (OPENAC). Quill was never played here, so it shows a name only."
+   "text": "Chosen: Stage, with the portal connecting screen from Lineup.\n\nSigning in to an account stays in the OpenAC launcher. In the client, \"login\" is the connecting screen and then choosing a character.\n\nThe server only sends names. Level, look and last place are remembered by OpenAC on this computer (OPENAC, agreed). Quill was never played here, so it shows a name only. Delete keeps retail's typed DELETE."
   },
   "s_create": {
    "x": -620,
    "y": 0,
    "w": 520,
    "page": "create",
-   "text": "Three directions for the same retail wizard: heritage, profession and attributes, skills, appearance, town, name.\n\nOnly War Mage's numbers are real (50/40/10/30/100/100). Other templates' numbers and skill costs are made up: the client reads them from the game data.\n\nThe first board of each row can be played."
+   "text": "Chosen: Studio.\n\nGender sits with heritage. A name the server refuses offers near names (OPENAC, agreed).\n\nOnly War Mage's numbers are real (50/40/10/30/100/100). Other templates' numbers and skill costs are made up: the client reads them from the game data."
+  },
+  "s_alt": {
+   "x": -620,
+   "y": 0,
+   "w": 520,
+   "page": "pregame-alt",
+   "text": "The login and creation directions not chosen (2026-11-19), kept for reference."
   }
  },
  "order": [
@@ -2015,6 +2022,10 @@
   {
    "id": "create",
    "name": "Character creation"
+  },
+  {
+   "id": "pregame-alt",
+   "name": "Login and creation: not chosen"
   },
   {
    "id": "r1",
