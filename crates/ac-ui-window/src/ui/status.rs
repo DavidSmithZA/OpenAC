@@ -417,6 +417,10 @@ impl WindowUi {
             .level_of_detail
             .unwrap_or((self.status.frame_rate.fps(), 0.0));
         let show_fps = self.settings().display.show_fps;
+        let modern = self.feed_modern_frame_rate(show_fps.then(|| {
+            super::modern::hud::effects::frame_rate_words(frames_per_second, degrade_multiplier)
+        }));
+        let show_fps = show_fps && !modern;
         if let Some(fps) = self.status.fps {
             fps.update(
                 &mut self.host.root,

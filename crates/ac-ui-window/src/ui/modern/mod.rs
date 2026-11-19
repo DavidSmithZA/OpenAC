@@ -228,7 +228,7 @@ impl WindowUi {
             ui,
             hud::EFFECTS,
             (CHIP_HEIGHT, CHIP_HEIGHT),
-            ChipRow::default(),
+            ChipRow::new(Horizon::BRONZE, chip_fonts.small.clone()),
         )?;
         let chips = ChipKind::ALL.map(|kind| {
             let element = Element::at(0.0, 0.0, 0.0, CHIP_HEIGHT)
@@ -328,6 +328,26 @@ impl WindowUi {
         if changed {
             self.fill_effects_pane(false);
         }
+    }
+
+    /// The frame rate line under the effects counts: `words` while it is
+    /// asked for, else none. False without the modern effects piece (the
+    /// retail display shows it then).
+    pub(super) fn feed_modern_frame_rate(&mut self, words: Option<String>) -> bool {
+        let Some(row) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.effects.as_ref())
+            .map(|fx| fx.row)
+        else {
+            return false;
+        };
+        if let Some(r) = self.host.root.widget_mut::<hud::effects::ChipRow>(row)
+            && r.frame_rate != words
+        {
+            r.frame_rate = words;
+        }
+        true
     }
 
     /// One frame of the effects pane: opens, moves or closes it for the

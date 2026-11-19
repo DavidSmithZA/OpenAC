@@ -538,11 +538,41 @@ impl Widget for Chip {
     }
 }
 
-/// The row of chips: draws nothing of its own, takes the pointer only while
-/// quick move is held (so the row can be carried by any chip or gap).
+/// The row of chips, and under it the frame rate when it is asked for
+/// (Show frame rate, or /framerate). Takes the pointer only while quick
+/// move is held (so the row can be carried by any chip or gap).
 #[derive(Debug, Default)]
 pub struct ChipRow {
     quick_move: bool,
+    /// Some chip shows (the frame rate goes under them, else at the top).
+    any_chip: bool,
+    /// The frame rate's font.
+    pub font: Option<Arc<UiFont>>,
+    /// The frame rate line, when shown.
+    pub frame_rate: Option<String>,
+    theme: Horizon,
+}
+
+impl ChipRow {
+    /// A row in `theme`, its frame rate in `font`.
+    #[must_use]
+    pub fn new(theme: Horizon, font: Option<Arc<UiFont>>) -> Self {
+        Self {
+            theme,
+            font,
+            ..Self::default()
+        }
+    }
+}
+
+/// The frame rate line's words: whole frames a second and the detail
+/// level (retail's two lines, "FPS" and "DEG").
+#[must_use]
+pub fn frame_rate_words(frames_per_second: f32, detail: f32) -> String {
+    format!(
+        "{:.0} fps \u{b7} detail {detail:.2}",
+        frames_per_second.max(0.0)
+    )
 }
 
 impl Widget for ChipRow {
@@ -558,7 +588,25 @@ impl Widget for ChipRow {
         false
     }
 
-    fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, _rc: &mut RenderContext<'_>) {}
+    fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
+        let (Some(words), Some(font)) = (&self.frame_rate, &self.font) else {
+            return;
+        };
+        let p = self.theme.palette;
+        let y = if self.any_chip {
+            CHIP_HEIGHT + CHIP_GAP
+        } else {
+            0.0
+        };
+        text::draw(
+            rc,
+            font,
+            words,
+            0.0,
+            y,
+            TextStyle::plain(p.text).shadowed(p.text_shadow),
+        );
+    }
 }
 
 /// Lays out `chips` left to right in `row`, hiding those with nothing to
@@ -581,6 +629,9 @@ pub fn lay_out(ui: &mut UiRoot, row: ElementId, chips: &[ElementId]) {
         if shown {
             x += width + CHIP_GAP;
         }
+    }
+    if let Some(r) = ui.widget_mut::<ChipRow>(row) {
+        r.any_chip = x > 0.0;
     }
     let width = (x - CHIP_GAP).max(CHIP_HEIGHT);
     if let Some(e) = ui.element_mut(row)
@@ -1360,6 +1411,11 @@ mod tests {
         assert_eq!(burden_tone(1.42), Some(Tone::Heavy));
         assert_eq!(burden_tone(2.15), Some(Tone::VeryHeavy));
         assert_eq!(burden_words(1.42), "Burden 142%");
+    }
+
+    #[test]
+    fn the_frame_rate_is_one_line() {
+        assert_eq!(frame_rate_words(61.7, 1.0), "62 fps \u{b7} detail 1.00");
     }
 
     #[test]
