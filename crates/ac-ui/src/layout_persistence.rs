@@ -442,6 +442,9 @@ pub struct LayoutPersistence {
     character: String,
     screen: (i32, i32),
     state_managed: HashSet<String>,
+    /// Windows another interface stands in for: never attached, so never
+    /// saved or restored while it does.
+    left_alone: HashSet<String>,
     attached: Vec<String>,
     defaults: HashMap<String, UiWindowLayout>,
     placements: HashMap<String, UiWindowPlacement>,
@@ -480,6 +483,7 @@ impl LayoutPersistence {
             character: character.to_owned(),
             screen,
             state_managed: state_managed.iter().map(|s| (*s).to_owned()).collect(),
+            left_alone: HashSet::new(),
             attached: Vec::new(),
             defaults: HashMap::new(),
             placements: HashMap::new(),
@@ -547,7 +551,13 @@ impl LayoutPersistence {
     }
 
     fn attach_new(&mut self, host: &mut UiHost) {
-        let registered: Vec<String> = host.root.windows().iter().map(|w| w.name.clone()).collect();
+        let registered: Vec<String> = host
+            .root
+            .windows()
+            .iter()
+            .map(|w| w.name.clone())
+            .filter(|name| !self.left_alone.contains(name))
+            .collect();
         self.attached.retain(|name| {
             let keep = registered.contains(name);
             if !keep {
@@ -848,6 +858,19 @@ impl LayoutPersistence {
         self.gameplay_active
             && can_persist(&self.character)
             && self.restored_character.as_deref() == Some(self.character.as_str())
+    }
+
+    /// Leaves windows `names` alone from now on: another interface stands
+    /// in for them and keeps them hidden, which is not the player's change,
+    /// so nothing about them is saved or restored (what was saved before
+    /// stays saved for when they come back). Replaces the previous list.
+    pub fn set_left_alone<'a>(
+        &mut self,
+        host: &mut UiHost,
+        names: impl IntoIterator<Item = &'a str>,
+    ) {
+        self.left_alone = names.into_iter().map(str::to_owned).collect();
+        self.attach_new(host);
     }
 
     /// Whether the game shows and hides window `name` by itself (its

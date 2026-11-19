@@ -539,6 +539,10 @@ impl AttachedWindow {
                 Ok(mut ui) => {
                     ui.set_clipboard(Box::new(crate::ui::clipboard::SystemClipboard::new()));
                     ui.set_os_key_names(crate::platform::key_name_provider);
+                    // The interface the launcher asked for, read once.
+                    let interface = ac_host::Interface::requested(|name| std::env::var(name).ok());
+                    ui.set_interface(interface);
+                    notices.push(format!("ui: {} interface", interface.name()));
                     notices.extend(ui.take_notices());
                     notices.push(format!("ui: mounted {}", ui.mounted().join(", ")));
                     Some(ui)

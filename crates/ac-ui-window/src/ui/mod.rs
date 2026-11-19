@@ -25,6 +25,7 @@ pub mod input;
 mod journal_window;
 pub mod keyboard_window;
 pub mod map_window;
+pub mod modern;
 pub mod mount;
 pub mod options;
 pub mod overlays;

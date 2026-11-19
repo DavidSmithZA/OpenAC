@@ -1212,3 +1212,35 @@ fn the_layout_is_restored_only_for_a_character_in_the_game() {
     p.set_gameplay_active(&mut host, true);
     assert!(p.is_restored());
 }
+
+#[test]
+fn a_window_left_alone_is_neither_saved_nor_restored() {
+    let dir = Dir::new();
+    dir.store()
+        .save_window_layout(
+            "Alice",
+            "800x600",
+            "radar",
+            &layout(500.0, 30.0, 200.0, 100.0, true, false, false),
+        )
+        .unwrap();
+    let mut host = host(800.0, 600.0);
+    mount_default(&mut host, "chat");
+    mount_default(&mut host, "radar");
+    let mut p = persist(&mut host, Some(dir.store()), "Alice", (800, 600));
+    p.set_left_alone(&mut host, ["radar"]);
+    host.root.hide_window("radar");
+    p.follow(&mut host);
+    p.restore_all(&mut host);
+    // Hiding it was not the player's: the saved radar is as it was, and
+    // the restore did not show it again.
+    let s = saved(&dir.store(), "Alice", "800x600", "radar").unwrap();
+    assert!(s.visible);
+    assert_eq!((s.x, s.y), (500.0, 30.0));
+    assert!(!host.root.is_window_visible("radar"));
+    // The other windows are kept as before.
+    host.root.move_window("chat", 44.0, 55.0);
+    p.follow(&mut host);
+    let s = saved(&dir.store(), "Alice", "800x600", "chat").unwrap();
+    assert_eq!((s.x, s.y), (44.0, 55.0));
+}
