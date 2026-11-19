@@ -42,6 +42,11 @@ impl Kerning {
     pub(crate) fn get(&self, left: u16, right: u16) -> i32 {
         self.pairs.get(&(left, right)).copied().unwrap_or(0)
     }
+
+    /// Every pair, font units.
+    pub(crate) fn into_pairs(self) -> HashMap<(u16, u16), i32> {
+        self.pairs
+    }
 }
 
 /// The steps taken, and whether the budget ran out.

@@ -1,7 +1,15 @@
-//! The bundled sans font (Noto Sans Regular and SemiBold, SIL OFL 1.1; the
-//! files and their licence are in `assets/fonts/NotoSans/`): a glyph atlas
-//! baked from the TrueType outlines, used by the modern plugin themes in
-//! place of the dat font, with no operating-system font needed.
+//! The bundled sans fonts, baked into glyph atlases from their TrueType
+//! outlines, with no operating-system font needed: Noto Sans Regular and
+//! SemiBold (`assets/fonts/NotoSans/`), which the modern plugin themes draw
+//! in place of the dat font, and Inter Regular, Medium and SemiBold
+//! (`assets/fonts/Inter/`), the modern interface's typeface. Both are under
+//! SIL OFL 1.1.
+//!
+//! Inter is baked with two things Noto is not, so plugin windows keep the
+//! look they have: its kerning (pairs moved closer or apart, whole pixels),
+//! and digits all as wide as the widest, so a number that changes does not
+//! shift (what a font's tabular figures do; the rasteriser cannot apply
+//! that feature itself).
 //!
 //! The atlas is laid out the way stb_truetype's simple baker lays it out
 //! (OpenAC bakes with it): three code-point ranges, each baked into its own
@@ -22,22 +30,35 @@ use crate::font::{Atlas, UiFont};
 
 pub use ac_plugin_ui::fonts::{NOTO_SANS_REGULAR, NOTO_SANS_SEMIBOLD};
 
-/// The weights of the bundled font.
+/// Inter Regular, compiled in.
+pub static INTER_REGULAR: &[u8] = include_bytes!("../../../assets/fonts/Inter/Inter-Regular.ttf");
+
+/// Inter Medium, compiled in.
+pub static INTER_MEDIUM: &[u8] = include_bytes!("../../../assets/fonts/Inter/Inter-Medium.ttf");
+
+/// Inter SemiBold, compiled in.
+pub static INTER_SEMIBOLD: &[u8] = include_bytes!("../../../assets/fonts/Inter/Inter-SemiBold.ttf");
+
+/// The weights of the bundled fonts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Weight {
     /// Body text.
     #[default]
     Regular,
+    /// Between the two (Inter only): labels and values that stand out a
+    /// little.
+    Medium,
     /// Titles and headings.
     SemiBold,
 }
 
 impl Weight {
-    /// The font file of this weight.
+    /// The Noto Sans file of this weight (Medium is the Regular file; Noto
+    /// is bundled without one).
     #[must_use]
     pub fn file(self) -> &'static [u8] {
         match self {
-            Self::Regular => NOTO_SANS_REGULAR,
+            Self::Regular | Self::Medium => NOTO_SANS_REGULAR,
             Self::SemiBold => NOTO_SANS_SEMIBOLD,
         }
     }
@@ -48,7 +69,86 @@ impl Weight {
         match self {
             Self::Regular => 0,
             Self::SemiBold => 0x0100_0000,
+            Self::Medium => 0x0200_0000,
         }
+    }
+}
+
+/// The bundled typefaces.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum Family {
+    /// Noto Sans: the plugin themes' font.
+    #[default]
+    NotoSans,
+    /// Inter: the modern interface's font.
+    Inter,
+}
+
+impl Family {
+    /// The font file of `weight`.
+    #[must_use]
+    pub fn file(self, weight: Weight) -> &'static [u8] {
+        match self {
+            Self::NotoSans => weight.file(),
+            Self::Inter => match weight {
+                Weight::Regular => INTER_REGULAR,
+                Weight::Medium => INTER_MEDIUM,
+                Weight::SemiBold => INTER_SEMIBOLD,
+            },
+        }
+    }
+
+    /// Added to a bundled font's id, above its weight's, so no two
+    /// families share a cache key.
+    fn id_offset(self) -> u32 {
+        match self {
+            Self::NotoSans => 0,
+            Self::Inter => 0x0400_0000,
+        }
+    }
+
+    /// Baked with its kerning and with digits of one width.
+    fn typesets(self) -> bool {
+        self == Self::Inter
+    }
+}
+
+/// One bundled font file: a family in a weight.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct FontFace {
+    /// The typeface.
+    pub family: Family,
+    /// The weight.
+    pub weight: Weight,
+}
+
+impl FontFace {
+    /// Noto Sans in `weight` (what [`bake`] bakes).
+    #[must_use]
+    pub const fn noto(weight: Weight) -> Self {
+        Self {
+            family: Family::NotoSans,
+            weight,
+        }
+    }
+
+    /// Inter in `weight`.
+    #[must_use]
+    pub const fn inter(weight: Weight) -> Self {
+        Self {
+            family: Family::Inter,
+            weight,
+        }
+    }
+
+    /// The font file.
+    #[must_use]
+    pub fn file(self) -> &'static [u8] {
+        self.family.file(self.weight)
+    }
+
+    fn id_offset(self) -> u32 {
+        self.family.id_offset() + self.weight.id_offset()
     }
 }
 
@@ -56,8 +156,16 @@ impl Weight {
 /// lowest descender).
 pub const DEFAULT_PIXEL_HEIGHT: f32 = 16.0;
 
-/// The width and height of one atlas page, pixels.
+/// The width and height of one atlas page, pixels, up to
+/// [`SMALL_PAGE_LIMIT`] pixels high.
 pub const ATLAS_SIZE: u32 = 512;
+
+/// The width and height of one atlas page of a bake taller than
+/// [`SMALL_PAGE_LIMIT`], pixels.
+pub const LARGE_ATLAS_SIZE: u32 = 1024;
+
+/// The tallest bake whose ranges fit [`ATLAS_SIZE`] pages, pixels.
+pub const SMALL_PAGE_LIMIT: f32 = 32.0;
 
 /// The code points baked, one page each: first and count. Latin with its
 /// extensions (U+0020..U+024F), Greek and Cyrillic (U+0370..U+052F), and
@@ -67,8 +175,9 @@ pub const RANGES: [(u32, u32); 3] = [(32, 560), (0x370, 448), (0x2000, 112)];
 /// The smallest size [`bake`] accepts, pixels.
 pub const MINIMUM_PIXEL_HEIGHT: f32 = 8.0;
 
-/// The largest size [`bake`] accepts, pixels.
-pub const MAXIMUM_PIXEL_HEIGHT: f32 = 32.0;
+/// The largest size [`bake`] accepts, pixels (a sharper bake of the largest
+/// interface text for a display of twice the density).
+pub const MAXIMUM_PIXEL_HEIGHT: f32 = 48.0;
 
 /// A sharper bake's scale goes up in steps this size.
 const SHARP_SCALE_STEP: f32 = 0.25;
@@ -84,11 +193,11 @@ pub const BUNDLED_FONT_ID_BASE: u32 = 0xF000_0000;
 /// Why the atlas could not be baked.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum BundledFontError {
-    /// The size is outside 8..=32 pixels (or not a number).
-    #[error("font size must be between 8 and 32 pixels, not {0}")]
+    /// The size is outside 8..=48 pixels (or not a number).
+    #[error("font size must be between 8 and 48 pixels, not {0}")]
     SizeOutOfRange(f32),
     /// The font file could not be read.
-    #[error("bundled Noto Sans font could not be read: {0}")]
+    #[error("bundled font could not be read: {0}")]
     Unreadable(String),
     /// Not even the first glyph of a range fits its page.
     #[error("bundled font atlas does not fit the requested size")]
@@ -110,14 +219,17 @@ pub struct BakedFont {
     pub height: u32,
     /// The size baked.
     pub pixel_height: f32,
-    /// The weight baked.
-    pub weight: Weight,
+    /// The font baked.
+    pub face: FontFace,
     /// Line height, pixels.
     pub line_height: f32,
     /// The baseline below the line top, pixels.
     pub ascent: f32,
     /// One record per baked code point the font has a glyph for.
     pub glyphs: Vec<FontCharDesc>,
+    /// The pairs the pen moves closer (negative) or apart between, whole
+    /// pixels; empty for a family baked without kerning.
+    pub kerning: Vec<(char, char, i8)>,
 }
 
 impl BakedFont {
@@ -126,7 +238,7 @@ impl BakedFont {
     #[must_use]
     pub fn create_font(&self, texture: TextureRef) -> UiFont {
         UiFont::new(
-            BUNDLED_FONT_ID_BASE + self.weight.id_offset() + (self.pixel_height * 256.0) as u32,
+            BUNDLED_FONT_ID_BASE + self.face.id_offset() + (self.pixel_height * 256.0) as u32,
             Atlas {
                 texture,
                 width: self.width,
@@ -140,6 +252,7 @@ impl BakedFont {
             0,
         )
         .with_fallback(FALLBACK_CHARACTER)
+        .with_kerning(self.kerning.iter().copied())
     }
 }
 
@@ -153,31 +266,78 @@ pub struct ModernFonts {
     pub semibold: Arc<UiFont>,
 }
 
-/// The scale a sharper bake of a font of `pixel_height` is made at for a
-/// display with `pixels_per_unit`: that density rounded down to a quarter step,
-/// so each texel lands on one framebuffer pixel, and no larger than the largest
-/// bake allows. 1 or below means no sharper bake.
+/// The tallest sharper bake the plugin themes' fonts are made at, pixels
+/// (their atlases stay on small pages).
+pub const PLUGIN_SHARP_LIMIT: f32 = SMALL_PAGE_LIMIT;
+
+/// The scale a sharper bake of a plugin theme font of `pixel_height` is made
+/// at for a display with `pixels_per_unit`: that density rounded down to a
+/// quarter step, so each texel lands on one framebuffer pixel, and no larger
+/// than [`PLUGIN_SHARP_LIMIT`] allows. 1 or below means no sharper bake.
 #[must_use]
 pub fn sharp_scale_for(pixel_height: f32, pixels_per_unit: f32) -> f32 {
+    sharp_scale_within(pixel_height, pixels_per_unit, PLUGIN_SHARP_LIMIT)
+}
+
+/// [`sharp_scale_for`] with the tallest bake allowed given: the modern
+/// interface's fonts take [`MAXIMUM_PIXEL_HEIGHT`], so its text is sharp on a
+/// display of twice the density at every size it uses.
+#[must_use]
+pub fn sharp_scale_within(pixel_height: f32, pixels_per_unit: f32, tallest: f32) -> f32 {
     if !pixels_per_unit.is_finite() {
         return 1.0;
     }
-    let limit = pixels_per_unit.min(MAXIMUM_PIXEL_HEIGHT / pixel_height);
+    let limit = pixels_per_unit.min(tallest.min(MAXIMUM_PIXEL_HEIGHT) / pixel_height);
     (limit / SHARP_SCALE_STEP + 1e-3).floor() * SHARP_SCALE_STEP
 }
 
-/// Bakes the bundled font at `pixel_height` (8..=32 pixels) in `weight`.
+/// Bakes Noto Sans at `pixel_height` (8..=48 pixels) in `weight`.
 ///
 /// # Errors
 ///
 /// The size is out of range, or the atlas or a glyph record cannot hold it.
 pub fn bake(pixel_height: f32, weight: Weight) -> Result<BakedFont, BundledFontError> {
+    bake_face(pixel_height, FontFace::noto(weight))
+}
+
+/// The pixel height (highest ascender to lowest descender, what [`bake`]
+/// takes) of `font` set at `em` pixels to the em: what a design's font size
+/// is.
+///
+/// # Errors
+///
+/// The font file could not be read.
+pub fn pixel_height_for_em(font: FontFace, em: f32) -> Result<f32, BundledFontError> {
+    let face =
+        Face::parse(font.file(), 0).map_err(|e| BundledFontError::Unreadable(e.to_string()))?;
+    let hhea = face.tables().hhea;
+    let span = (i32::from(hhea.ascender) - i32::from(hhea.descender)) as f32;
+    Ok(em * span / f32::from(face.units_per_em()))
+}
+
+/// The width and height of each atlas page of a bake `pixel_height` high.
+#[must_use]
+pub fn page_size(pixel_height: f32) -> u32 {
+    if pixel_height <= SMALL_PAGE_LIMIT {
+        ATLAS_SIZE
+    } else {
+        LARGE_ATLAS_SIZE
+    }
+}
+
+/// Bakes a bundled font at `pixel_height` (8..=48 pixels).
+///
+/// # Errors
+///
+/// The size is out of range, or the atlas or a glyph record cannot hold it.
+pub fn bake_face(pixel_height: f32, font: FontFace) -> Result<BakedFont, BundledFontError> {
     if !pixel_height.is_finite()
         || !(MINIMUM_PIXEL_HEIGHT..=MAXIMUM_PIXEL_HEIGHT).contains(&pixel_height)
     {
         return Err(BundledFontError::SizeOutOfRange(pixel_height));
     }
-    let file = weight.file();
+    let file = font.file();
+    let page_side = page_size(pixel_height);
     let face = Face::parse(file, 0).map_err(|e| BundledFontError::Unreadable(e.to_string()))?;
     let hhea = face.tables().hhea;
     let (ascent, descent, gap) = (
@@ -187,13 +347,13 @@ pub fn bake(pixel_height: f32, weight: Weight) -> Result<BakedFont, BundledFontE
     );
     let baker = Baker::new(file, &face, pixel_height)?;
     let baseline = (ascent as f32 * baker.scale).round_ties_even();
-    let page = (ATLAS_SIZE * ATLAS_SIZE) as usize;
+    let page = (page_side * page_side) as usize;
     let mut coverage = vec![0u8; page * RANGES.len()];
     let mut glyphs = Vec::new();
     for (range, &(first, count)) in RANGES.iter().enumerate() {
         let page_coverage = &mut coverage[range * page..(range + 1) * page];
-        let baked = baker.bake_range(page_coverage, ATLAS_SIZE as i32, first, count)?;
-        let page_top = range as i32 * ATLAS_SIZE as i32;
+        let baked = baker.bake_range(page_coverage, page_side as i32, first, count)?;
+        let page_top = range as i32 * page_side as i32;
         for (i, g) in baked.iter().enumerate() {
             let codepoint = first + i as u32;
             if char::from_u32(codepoint)
@@ -205,16 +365,88 @@ pub fn bake(pixel_height: f32, weight: Weight) -> Result<BakedFont, BundledFontE
             glyphs.push(glyph_record(codepoint, g, page_top, baseline)?);
         }
     }
+    let kerning = if font.family.typesets() {
+        one_width_digits(&mut glyphs);
+        kerning(&face, &glyphs, baker.scale)
+    } else {
+        Vec::new()
+    };
     Ok(BakedFont {
         coverage,
-        width: ATLAS_SIZE,
-        height: ATLAS_SIZE * RANGES.len() as u32,
+        width: page_side,
+        height: page_side * RANGES.len() as u32,
         pixel_height,
-        weight,
+        face: font,
         line_height: ((ascent - descent + gap) as f32 * baker.scale).ceil(),
         ascent: baseline,
         glyphs,
+        kerning,
     })
+}
+
+/// Widens every digit to the widest one's advance, the extra split either
+/// side, so numbers keep their place as they change.
+fn one_width_digits(glyphs: &mut [FontCharDesc]) {
+    let is_digit = |g: &FontCharDesc| (u16::from(b'0')..=u16::from(b'9')).contains(&g.unicode);
+    let Some(widest) = glyphs
+        .iter()
+        .filter(|g| is_digit(g))
+        .map(|g| g.advance())
+        .max()
+    else {
+        return;
+    };
+    for g in glyphs.iter_mut().filter(|g| is_digit(g)) {
+        let extra = widest - g.advance();
+        let before = extra / 2;
+        let (Ok(new_before), Ok(new_after)) = (
+            i8::try_from(i32::from(g.horizontal_offset_before) + before),
+            i8::try_from(i32::from(g.horizontal_offset_after) + extra - before),
+        ) else {
+            continue;
+        };
+        g.horizontal_offset_before = new_before;
+        g.horizontal_offset_after = new_after;
+    }
+}
+
+/// The font's kerning among the baked characters, rounded to whole pixels;
+/// pairs that round to nothing, and any with a digit (whose widths are
+/// fixed), are left out.
+fn kerning(face: &Face<'_>, glyphs: &[FontCharDesc], scale: f32) -> Vec<(char, char, i8)> {
+    let mut by_glyph: std::collections::HashMap<u16, Vec<char>> = std::collections::HashMap::new();
+    for record in glyphs {
+        let Some(c) = char::from_u32(u32::from(record.unicode)) else {
+            continue;
+        };
+        if c.is_ascii_digit() {
+            continue;
+        }
+        if let Some(id) = face.glyph_index(c) {
+            by_glyph.entry(id.0).or_default().push(c);
+        }
+    }
+    let ids: Vec<GlyphId> = by_glyph.keys().map(|&id| GlyphId(id)).collect();
+    let mut pairs = Vec::new();
+    for ((left, right), units) in ac_plugin_ui::fonts::kerning_pairs(face, &ids) {
+        let pixels = (units as f32 * scale).round_ties_even();
+        let Ok(pixels) = i8::try_from(pixels as i32) else {
+            continue;
+        };
+        if pixels == 0 {
+            continue;
+        }
+        let (Some(lefts), Some(rights)) = (by_glyph.get(&left), by_glyph.get(&right)) else {
+            continue;
+        };
+        for &a in lefts {
+            for &b in rights {
+                pairs.push((a, b, pixels));
+            }
+        }
+    }
+    pairs.sort_unstable();
+    pairs
 }
 
 /// One baked glyph's place in its page and its placement, as the simple

@@ -26,7 +26,7 @@ use ac_plugin_ui::{
 use ac_proto::Quaternion;
 use ac_runtime::session::SessionCommand;
 use ac_ui::DatContent;
-use ac_ui::bundled_font::{self, BundledFontError, ModernFonts, Weight};
+use ac_ui::bundled_font::{self, BundledFontError, FontFace, ModernFonts, Weight};
 use ac_ui::draw::{Color, SpriteSizes, TextureRef};
 use ac_ui::font::{DEFAULT_FONT_ID, SharpFont, SharpFonts, UiFont};
 use ac_ui::icons::{IconComposer, IconSource};
@@ -102,12 +102,12 @@ pub fn client_window_name(window: ClientWindow) -> &'static str {
 /// The first cell number inside a building or dungeon.
 const FIRST_INDOOR_CELL: u32 = 0x0100;
 
-/// A sharper bake of the bundled font a display wants: the font, its weight
+/// A sharper bake of a bundled font a display wants: the font, its face
 /// and size, and the scale to bake it at.
 #[derive(Debug)]
 struct SharpWanted {
     font: Arc<UiFont>,
-    weight: Weight,
+    face: FontFace,
     size: f32,
     scale: f32,
 }
@@ -685,9 +685,9 @@ impl WindowUi {
         // texture of this window (OpenAC `BundledUiFont.Load`).
         let size = bundled_font::DEFAULT_PIXEL_HEIGHT;
         match self
-            .bake_bundled_font(size, Weight::Regular)
+            .bake_bundled_font(size, FontFace::noto(Weight::Regular))
             .and_then(|regular| {
-                let semibold = self.bake_bundled_font(size, Weight::SemiBold)?;
+                let semibold = self.bake_bundled_font(size, FontFace::noto(Weight::SemiBold))?;
                 Ok(ModernFonts { regular, semibold })
             }) {
             Ok(fonts) => self.plugins.modern_fonts = Some(fonts),
@@ -751,7 +751,7 @@ impl WindowUi {
 
     /// The bundled SemiBold at one of the dock's sizes.
     fn dock_font(&mut self, size: f32) -> Option<Arc<UiFont>> {
-        match self.bake_bundled_font(size, Weight::SemiBold) {
+        match self.bake_bundled_font(size, FontFace::noto(Weight::SemiBold)) {
             Ok(font) => {
                 self.plugins.dock_fonts.push((Arc::clone(&font), size));
                 Some(font)
@@ -781,25 +781,41 @@ impl WindowUi {
         self.bake_one_sharp_font();
     }
 
+    /// Lists the sharper bakes again for the display in use (a font was
+    /// added); before the first frame there is no display yet.
+    pub(super) fn want_sharp_fonts_again(&mut self) {
+        if let Some(pixels) = self.plugins.sharp_density {
+            self.want_sharp_fonts(pixels);
+        }
+    }
+
     /// Lists the sharper bakes a display with `pixels` a UI unit wants, and
     /// lets go of every other.
     fn want_sharp_fonts(&mut self, pixels: f32) {
         let mut wanted = Vec::new();
+        let plugin_limit = bundled_font::PLUGIN_SHARP_LIMIT;
         if let Some(fonts) = self.plugins.modern_fonts.clone() {
             let size = bundled_font::DEFAULT_PIXEL_HEIGHT;
-            wanted.push((fonts.regular, Weight::Regular, size));
-            wanted.push((fonts.semibold, Weight::SemiBold, size));
+            let (regular, semibold) = (Weight::Regular, Weight::SemiBold);
+            wanted.push((fonts.regular, FontFace::noto(regular), size, plugin_limit));
+            wanted.push((fonts.semibold, FontFace::noto(semibold), size, plugin_limit));
             for (font, size) in self.plugins.dock_fonts.clone() {
-                wanted.push((font, Weight::SemiBold, size));
+                wanted.push((font, FontFace::noto(semibold), size, plugin_limit));
+            }
+        }
+        // The modern interface's fonts are made sharp at every size it uses.
+        if let Some(modern) = &self.modern {
+            for (face, size, font) in modern.fonts.baked() {
+                wanted.push((font, face, size, bundled_font::MAXIMUM_PIXEL_HEIGHT));
             }
         }
         let wanted: Vec<SharpWanted> = wanted
             .into_iter()
-            .filter_map(|(font, weight, size)| {
-                let scale = bundled_font::sharp_scale_for(size, pixels);
+            .filter_map(|(font, face, size, tallest)| {
+                let scale = bundled_font::sharp_scale_within(size, pixels, tallest);
                 (scale > 1.0).then_some(SharpWanted {
                     font,
-                    weight,
+                    face,
                     size,
                     scale,
                 })
@@ -826,7 +842,7 @@ impl WindowUi {
         let Some(next) = self.plugins.sharp_pending.pop() else {
             return;
         };
-        match self.bake_bundled_font(next.size * next.scale, next.weight) {
+        match self.bake_bundled_font(next.size * next.scale, next.face) {
             Ok(font) => {
                 let sharp = SharpFont {
                     font,
@@ -850,14 +866,14 @@ impl WindowUi {
         let chosen = (!chosen.is_empty()).then(|| Arc::new(chosen));
         self.host.root.set_sharp_fonts(chosen);
     }
-    /// The bundled font in `weight` at `pixel_height`, as a font over a new
-    /// atlas texture.
-    fn bake_bundled_font(
+    /// A bundled font at `pixel_height`, as a font over a new atlas
+    /// texture.
+    pub(super) fn bake_bundled_font(
         &self,
         pixel_height: f32,
-        weight: Weight,
+        face: FontFace,
     ) -> Result<Arc<UiFont>, BundledFontError> {
-        let mut atlas = bundled_font::bake(pixel_height, weight)?;
+        let mut atlas = bundled_font::bake_face(pixel_height, face)?;
         let coverage = std::mem::take(&mut atlas.coverage);
         let texture = self
             .images

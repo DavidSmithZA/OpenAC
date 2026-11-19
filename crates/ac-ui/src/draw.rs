@@ -1301,10 +1301,14 @@ impl<'a> RenderContext<'a> {
         let mut quads = Vec::new();
         let mut sharp_quads = Vec::new();
         let mut pen = origin_x;
+        let mut previous = None;
         for c in text.chars() {
             let Some(g) = font.glyph(c) else {
                 continue;
             };
+            if let Some(p) = previous.replace(c) {
+                pen += font.kern(p, c);
+            }
             if let Some(s) = &sharp
                 && let Some(fine) = s.font.glyph(c)
                 && fine.width > 0

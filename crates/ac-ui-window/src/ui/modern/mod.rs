@@ -12,16 +12,24 @@
 //! from the retail windows'; where each one first appears is in
 //! [`places`].
 
+pub mod fonts;
 pub mod places;
 
-use ac_ui::UiHost;
+use std::sync::Arc;
+
+use ac_ui::bundled_font::Weight;
 use ac_ui::layout_persistence::LayoutPersistence;
+use ac_ui::{UiFont, UiHost};
+
+use super::window::WindowUi;
 
 /// The modern interface of one game window.
 #[derive(Debug, Default)]
 pub struct ModernLayer {
     /// The retail windows the built modern pieces stand in for.
     replaced: Vec<&'static str>,
+    /// The Inter fonts baked so far.
+    pub fonts: fonts::HorizonFonts,
 }
 
 impl ModernLayer {
@@ -59,6 +67,31 @@ impl ModernLayer {
                 host.root.hide_window(name);
             }
         }
+    }
+}
+
+impl WindowUi {
+    /// Inter in `weight` at `em` pixels to the em, for a modern piece:
+    /// baked the first time it is asked for, its sharper bake following
+    /// for a high-density display. None without the modern layer, or when
+    /// the size cannot be baked (said in the notices).
+    pub fn modern_font(&mut self, weight: Weight, em: f32) -> Option<Arc<UiFont>> {
+        let modern = self.modern.as_mut()?;
+        let known = modern.fonts.baked().count();
+        let images = &self.images;
+        let font = modern.fonts.get(weight, em, |height, face| {
+            let mut atlas = ac_ui::bundled_font::bake_face(height, face)?;
+            let coverage = std::mem::take(&mut atlas.coverage);
+            let texture = images.add_coverage(atlas.width, atlas.height, coverage);
+            Ok(Arc::new(atlas.create_font(texture)))
+        });
+        let baked_now = modern.fonts.baked().count() != known;
+        let failures = modern.fonts.take_failures();
+        self.notices.extend(failures);
+        if baked_now {
+            self.want_sharp_fonts_again();
+        }
+        font
     }
 }
 
