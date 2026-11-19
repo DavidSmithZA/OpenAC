@@ -3,7 +3,8 @@
 A second interface for the client, beside the retail one. It must do
 everything the retail interface does; how it looks and works is open.
 This folder holds the design only. There is no code yet. The design
-is complete and approved (2026-11-19); next is planning the build.
+is complete and approved (2026-11-19); the build plan is in
+`build-plan.md`.
 
 - Live canvas (all boards, clickable where marked):
   https://claude.ai/artifact/3c5NpLimjKtfusjYEbWfpQ
@@ -12,9 +13,10 @@ is complete and approved (2026-11-19); next is planning the build.
 
 ## Direction
 
-- **Switch:** Options › Interface › Interface: Modern / Retail. It
-  switches at once, with a short "Switch back" notice. Each interface
-  keeps its own layout.
+- **Switch:** Modern / Retail is held and set in the OpenAC launcher,
+  not in the game (changed 2026-11-19; the Options board on the canvas
+  still shows the old in-game row, which is dropped). The client reads
+  it when it starts. Each interface keeps its own layout.
 - **Look:** "Horizon", bronze trim. The world comes first and the chrome
   stays thin: slim vitals top centre, target under them, counts of the
   effects on you top left, round radar top right, chat with no panel behind it bottom left, and a small strip of
