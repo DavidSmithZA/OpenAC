@@ -2,6 +2,7 @@
 //! own (so its place is saved, and quick move can carry it), drawn by one
 //! widget and fed from the session by the window.
 
+pub mod combat;
 pub mod connection;
 pub mod edge_glow;
 pub mod effects;
@@ -28,6 +29,9 @@ pub const RADAR: &str = "modern-radar";
 
 /// The target line's window name.
 pub const TARGET: &str = "modern-target";
+
+/// The combat strip's (and the jump meter's) window name.
+pub const COMBAT: &str = "modern-combat";
 
 /// Mounts `widget` as the HUD piece `name`, at its first place on a screen
 /// of the root's size (or the top left when the table has none); a piece

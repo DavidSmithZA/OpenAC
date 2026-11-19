@@ -60,6 +60,8 @@ pub struct ModernLayer {
     pub recall_dialog: Option<ElementId>,
     /// The player's own recalls (all servers), loaded once.
     own_recalls: Option<Vec<ac_host::settings::CustomRecall>>,
+    /// The combat strip (and the jump meter), above the shortcut bars.
+    pub combat: Option<ElementId>,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -166,6 +168,12 @@ const RADAR_SMALL_SIZE: f32 = 11.0;
 /// The Recall list's names and small text, pixels to the em.
 const RECALL_NAME_SIZE: f32 = 12.5;
 const RECALL_SMALL_SIZE: f32 = 11.0;
+
+/// The combat strip's mode, its heights and ammunition, and its Power or
+/// Accuracy, pixels to the em.
+const COMBAT_MODE_SIZE: f32 = 12.0;
+const COMBAT_SMALL_SIZE: f32 = 11.0;
+const COMBAT_WORD_SIZE: f32 = 10.5;
 
 /// The connection card's title and body, pixels to the em.
 const CARD_TITLE_SIZE: f32 = 13.5;
@@ -274,10 +282,21 @@ impl WindowUi {
                 hud::connection::ConnectionCard::new(Horizon::BRONZE, card_fonts),
             ))
         };
+        let combat = self.mount_modern_combat();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
         modern.edge_glow = Some(glow);
+        match combat {
+            Ok(id) => {
+                modern.combat = Some(id);
+                // The retail combat window still carries the spell bars,
+                // so it shows in Magic (until the shortcut bars come);
+                // `follow_modern_combat_window` keeps it to that.
+                modern.replace(super::status::JUMP_POWERBAR_WINDOW);
+            }
+            Err(e) => self.notices.push(format!("ui: modern combat strip: {e}")),
+        }
         match effects {
             Ok(hud) => modern.effects = Some(hud),
             Err(e) => self.notices.push(format!("ui: modern effects: {e}")),
@@ -303,6 +322,84 @@ impl WindowUi {
             }
             Err(e) => self.notices.push(format!("ui: modern vitals: {e}")),
         }
+    }
+
+    /// The combat strip and the menu its mode button opens.
+    fn mount_modern_combat(&mut self) -> Result<ElementId, String> {
+        let fonts = hud::combat::StripFonts {
+            mode: self.modern_font(Weight::SemiBold, COMBAT_MODE_SIZE),
+            small: self.modern_font(Weight::SemiBold, COMBAT_SMALL_SIZE),
+            word: self.modern_font(Weight::SemiBold, COMBAT_WORD_SIZE),
+        };
+        let menu_font = fonts.mode.clone();
+        let ui = &mut self.host.root;
+        let strip = hud::mount_piece(
+            ui,
+            hud::COMBAT,
+            (hud::combat::WIDTH, hud::combat::HEIGHT),
+            hud::combat::CombatStrip::new(Horizon::BRONZE, fonts),
+        )?;
+        let element = Element::at(
+            0.0,
+            0.0,
+            hud::combat::MENU_WIDTH,
+            hud::combat::ModeMenu::height(),
+        )
+        .with_visible(false)
+        .with_anchors(AnchorEdges::NONE);
+        let menu = ui.add(
+            strip,
+            element,
+            hud::combat::ModeMenu::new(Horizon::BRONZE, menu_font),
+        );
+        if let Some(s) = ui.widget_mut::<hud::combat::CombatStrip>(strip) {
+            s.menu = Some(menu);
+        }
+        Ok(strip)
+    }
+
+    /// The combat strip follows the mode, the attack, a jump being charged
+    /// and, in Missile, the ammunition. False without the strip.
+    pub(super) fn feed_modern_combat(&mut self, mode: ac_core::combat::CombatMode) -> bool {
+        use hud::combat::{Ammo, CombatStrip, CombatView};
+        let Some(id) = self.modern.as_ref().and_then(|m| m.combat) else {
+            return false;
+        };
+        let view = self.player_view;
+        let ammo = (mode == ac_core::combat::CombatMode::MISSILE).then(|| {
+            let player = self.facts.state.player;
+            let equipped = if player != 0 {
+                self.facts.objects.get_equipped_by(player)
+            } else {
+                Vec::new()
+            };
+            let ammo = ac_core::items::ToolbarAmmo::resolve(&equipped);
+            if ammo.is_visible() {
+                Ammo::Loaded {
+                    count: ammo.display_count,
+                    name: self
+                        .facts
+                        .objects
+                        .get(ammo.object_id)
+                        .map(|o| o.name.clone())
+                        .unwrap_or_default(),
+                }
+            } else {
+                Ammo::Out
+            }
+        });
+        let next = CombatView {
+            mode: view.map(|_| mode),
+            attack: view.map(|v| v.attack).unwrap_or_default(),
+            jump: view.and_then(|v| v.jump_charge),
+            ammo,
+        };
+        if let Some(strip) = self.host.root.widget_mut::<CombatStrip>(id)
+            && strip.view != next
+        {
+            strip.set_view(next);
+        }
+        true
     }
 
     /// The status line above the radar and its card follow the link and
