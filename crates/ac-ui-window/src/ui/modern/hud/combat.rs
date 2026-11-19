@@ -29,6 +29,8 @@ use ac_ui::shapes::CornerRadii;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
 
+use super::lines::stroke;
+
 /// The piece's width: room for the widest strip (Missile with its
 /// ammunition); what shows is centred in it.
 pub const WIDTH: f32 = 600.0;
@@ -907,33 +909,6 @@ impl Widget for ModeMenu {
                 rc.smooth_line(cx, cy, cx + 3.5, cy + 3.5, p.accent, 1.6);
                 rc.smooth_line(cx + 3.5, cy + 3.5, cx + 10.0, cy - 3.5, p.accent, 1.6);
             }
-        }
-    }
-}
-
-/// Strokes `lines` (each a run of points in a 24-unit box) scaled into a
-/// `size` box at (`x`, `y`).
-fn stroke(
-    rc: &mut RenderContext<'_>,
-    x: f32,
-    y: f32,
-    size: f32,
-    lines: &[&[(f32, f32)]],
-    color: Color,
-    width: f32,
-) {
-    let k = size / 24.0;
-    for line in lines {
-        for pair in line.windows(2) {
-            let (a, b) = (pair[0], pair[1]);
-            rc.smooth_line(
-                x + a.0 * k,
-                y + a.1 * k,
-                x + b.0 * k,
-                y + b.1 * k,
-                color,
-                width,
-            );
         }
     }
 }

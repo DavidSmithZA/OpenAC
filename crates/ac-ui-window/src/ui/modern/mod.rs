@@ -62,6 +62,9 @@ pub struct ModernLayer {
     own_recalls: Option<Vec<ac_host::settings::CustomRecall>>,
     /// The combat strip (and the jump meter), above the shortcut bars.
     pub combat: Option<ElementId>,
+    /// The panel strip, bottom right: the band and its buttons in
+    /// [`hud::panels::Panel::ALL`]'s order.
+    pub panels: Option<(ElementId, [ElementId; 8])>,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -175,6 +178,9 @@ const COMBAT_MODE_SIZE: f32 = 12.0;
 const COMBAT_SMALL_SIZE: f32 = 11.0;
 const COMBAT_WORD_SIZE: f32 = 10.5;
 
+/// The panel strip's drop note, pixels to the em.
+const PANEL_NOTE_SIZE: f32 = 11.5;
+
 /// The connection card's title and body, pixels to the em.
 const CARD_TITLE_SIZE: f32 = 13.5;
 const CARD_BODY_SIZE: f32 = 12.0;
@@ -283,6 +289,7 @@ impl WindowUi {
             ))
         };
         let combat = self.mount_modern_combat();
+        let panels = self.mount_modern_panels();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -296,6 +303,10 @@ impl WindowUi {
                 modern.replace(super::status::JUMP_POWERBAR_WINDOW);
             }
             Err(e) => self.notices.push(format!("ui: modern combat strip: {e}")),
+        }
+        match panels {
+            Ok(ids) => modern.panels = Some(ids),
+            Err(e) => self.notices.push(format!("ui: modern panel strip: {e}")),
         }
         match effects {
             Ok(hud) => modern.effects = Some(hud),
@@ -321,6 +332,161 @@ impl WindowUi {
                 modern.replace(super::window::SIDE_VITALS_WINDOW);
             }
             Err(e) => self.notices.push(format!("ui: modern vitals: {e}")),
+        }
+    }
+
+    /// The panel strip: the band and a button for each panel.
+    fn mount_modern_panels(&mut self) -> Result<(ElementId, [ElementId; 8]), String> {
+        use hud::panels::{BUTTON, Panel, PanelButton, PanelStrip};
+        let font = self.modern_font(Weight::SemiBold, PANEL_NOTE_SIZE);
+        let ui = &mut self.host.root;
+        let strip = hud::mount_piece(
+            ui,
+            hud::PANELS,
+            (hud::panels::WIDTH, hud::panels::HEIGHT),
+            PanelStrip::new(Horizon::BRONZE),
+        )?;
+        let top = (hud::panels::HEIGHT - BUTTON) * 0.5;
+        let mut index = 0;
+        let buttons = Panel::ALL.map(|panel| {
+            let element = Element::at(PanelStrip::button_left(index), top, BUTTON, BUTTON)
+                .with_anchors(AnchorEdges::NONE);
+            index += 1;
+            ui.add(
+                strip,
+                element,
+                PanelButton::new(Horizon::BRONZE, font.clone(), panel),
+            )
+        });
+        Ok((strip, buttons))
+    }
+
+    /// The panel strip's buttons name the keys bound to their actions.
+    pub(super) fn feed_modern_panel_keys(&mut self, bindings: &ac_ui::input::KeyBindings) {
+        use ac_dat::objects::StringTable;
+        let Some((_, buttons)) = self.modern.as_ref().and_then(|m| m.panels) else {
+            return;
+        };
+        let dats = self.content.dats().clone();
+        let strings = ac_ui::strings::StringResolver::new(move |id| {
+            dats.get::<StringTable>(id).ok().flatten()
+        });
+        let names = ac_ui::input::key_names::RetailKeyNames::new(
+            Box::new(move |table, hash| strings.resolve(table, hash, 0)),
+            (self.os_key_names)(),
+        );
+        let ui = &mut self.host.root;
+        for id in buttons {
+            if let Some(b) = ui.widget_mut::<hud::panels::PanelButton>(id) {
+                b.key = bindings
+                    .for_action(b.panel.action())
+                    .map(|binding| names.describe(binding.chord))
+                    .find(|name| !name.is_empty());
+            }
+        }
+    }
+
+    /// One frame of the panel strip: what was clicked or dropped is done,
+    /// and the buttons follow their panels, the house's maintenance and an
+    /// item dragged over Inventory.
+    pub(super) fn tick_modern_panels(&mut self) {
+        use hud::panels::{Panel, PanelButton, drop_note};
+        let Some((_, buttons)) = self.modern.as_ref().and_then(|m| m.panels) else {
+            return;
+        };
+        let mut clicked = Vec::new();
+        let mut dropped = Vec::new();
+        let mut over = false;
+        for &id in &buttons {
+            if let Some(b) = self.host.root.widget_mut::<PanelButton>(id) {
+                if std::mem::take(&mut b.clicked) {
+                    clicked.push(b.panel);
+                }
+                if let Some(item) = b.dropped.take() {
+                    dropped.push(item);
+                }
+                over |= b.over.is_some();
+            }
+        }
+        let target_mode = self.facts.state.mode != ac_runtime::inventory::InteractionMode::None;
+        for panel in clicked {
+            if panel == Panel::Inventory && target_mode {
+                // In a use or examine mode, Inventory targets the player.
+                ac_ui::panels::items::offer_target(
+                    &mut self.host.root,
+                    ac_runtime::inventory::ObjectRef::Player,
+                );
+            } else {
+                self.handle_input_action(panel.action());
+            }
+        }
+        let player = self.facts.state.player;
+        for item in dropped {
+            // The player's own item goes into the preferred pack, anything
+            // else straight into the main pack; the session tells them
+            // apart (retail's backpack button).
+            if player != 0 && self.facts.objects.get(item).is_some() {
+                ac_ui::panels::items::emit(
+                    &mut self.host.root,
+                    ac_ui::panels::PanelOutput::Session(ac_runtime::session::SessionCommand::Item(
+                        ac_runtime::inventory::ItemCommand::DropOnBackpack(
+                            ac_runtime::inventory::ObjectRef::Guid(item),
+                        ),
+                    )),
+                );
+            }
+        }
+        let note = over.then(|| {
+            let resolve = super::facts::composed_names(&self.status.names);
+            let view = self.facts.items_view(None, &[], None, &resolve);
+            let capacity = view.get(player).map_or(0, |o| o.items_capacity);
+            let held = ac_ui::panels::inventory::count_loose_contents(&view, player);
+            drop_note(held, capacity)
+        });
+        let world_open = self
+            .host
+            .root
+            .is_window_visible(super::map_window::MAP_HOUSE_WINDOW);
+        let on_house = world_open
+            && self
+                .host
+                .with_controller::<ac_ui::panels::map_house::MapHousePanelController, _>(
+                    super::map_window::MAP_HOUSE_WINDOW,
+                    |c, ui| c.is_showing_house(ui),
+                )
+                .unwrap_or(false);
+        let due = self.facts.house.as_ref().is_some_and(|h| {
+            h.owns_house
+                && h.lines
+                    .iter()
+                    .any(|(_, c)| *c == ac_runtime::gameplay::HouseLineColor::RentNotPaid)
+        });
+        let ui = &mut self.host.root;
+        for id in buttons {
+            let Some(panel) = ui.widget::<PanelButton>(id).map(|b| b.panel) else {
+                continue;
+            };
+            let open = match panel {
+                Panel::Character => ui.is_window_visible(super::window::CHARACTER_WINDOW),
+                Panel::Inventory => ui.is_window_visible(super::window::INVENTORY_WINDOW),
+                Panel::Spellbook => ui.is_window_visible(super::window::SPELLBOOK_WINDOW),
+                Panel::Journal => ui.is_window_visible(super::social_panels::JOURNAL_WINDOW),
+                Panel::Map => world_open && !on_house,
+                Panel::House => on_house,
+                Panel::Social => ui.is_window_visible(super::social_panels::SOCIAL_WINDOW),
+                Panel::Options => ui.is_window_visible(super::options::OPTIONS_WINDOW),
+            };
+            if let Some(b) = ui.widget_mut::<PanelButton>(id) {
+                b.open = open;
+                b.dot = panel == Panel::House && due;
+                if b.over.is_some() {
+                    if b.note != note {
+                        b.note.clone_from(&note);
+                    }
+                } else {
+                    b.note = None;
+                }
+            }
         }
     }
 

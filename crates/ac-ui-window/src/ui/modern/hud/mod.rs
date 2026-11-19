@@ -6,6 +6,8 @@ pub mod combat;
 pub mod connection;
 pub mod edge_glow;
 pub mod effects;
+pub mod lines;
+pub mod panels;
 pub mod radar;
 pub mod recall;
 pub mod recall_dialog;
@@ -29,6 +31,9 @@ pub const RADAR: &str = "modern-radar";
 
 /// The target line's window name.
 pub const TARGET: &str = "modern-target";
+
+/// The panel strip's window name.
+pub const PANELS: &str = "modern-panels";
 
 /// The combat strip's (and the jump meter's) window name.
 pub const COMBAT: &str = "modern-combat";

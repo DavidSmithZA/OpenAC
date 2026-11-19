@@ -130,6 +130,16 @@ const PLACES: &[(&str, Place)] = &[
             height: super::hud::combat::HEIGHT,
         },
     ),
+    (
+        super::hud::PANELS,
+        Place {
+            anchor: Anchor::BottomRight,
+            dx: -16.0,
+            dy: -14.0,
+            width: super::hud::panels::WIDTH,
+            height: super::hud::panels::HEIGHT,
+        },
+    ),
 ];
 
 /// How far above the screen's bottom the combat strip starts: over three

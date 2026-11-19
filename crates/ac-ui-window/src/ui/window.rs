@@ -1252,6 +1252,7 @@ impl WindowUi {
         self.update_indicator_panels(link);
         self.update_mini_game();
         self.feed_modern_effects();
+        self.tick_modern_panels();
     }
 
     /// The panels' views from the window's copy of the facts, and each
