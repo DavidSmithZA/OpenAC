@@ -85,7 +85,7 @@ pub struct StatusUi {
     /// The lock presentation.
     pub lock: ac_ui::window_chrome::LockPresentation,
     /// The character whose layout was restored.
-    restored_for: Option<String>,
+    pub(super) restored_for: Option<String>,
     /// The screen the layouts were last placed on.
     screen: Option<(i32, i32)>,
     /// The UI's own clock (the link indicator's timers).

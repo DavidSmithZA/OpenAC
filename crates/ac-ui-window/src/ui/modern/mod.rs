@@ -12,6 +12,7 @@
 //! from the retail windows'; where each one first appears is in
 //! [`places`].
 
+pub mod bars;
 pub mod fonts;
 pub mod hud;
 pub mod places;
@@ -65,6 +66,8 @@ pub struct ModernLayer {
     /// The panel strip, bottom right: the band and its buttons in
     /// [`hud::panels::Panel::ALL`]'s order.
     pub panels: Option<(ElementId, [ElementId; 8])>,
+    /// The player's own shortcut bars.
+    pub bars: Option<bars::run::BarsUi>,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -296,6 +299,7 @@ impl WindowUi {
         };
         let combat = self.mount_modern_combat();
         let panels = self.mount_modern_panels();
+        self.mount_modern_bars();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -303,9 +307,6 @@ impl WindowUi {
         match combat {
             Ok(id) => {
                 modern.combat = Some(id);
-                // The retail combat window still carries the spell bars,
-                // so it shows in Magic (until the shortcut bars come);
-                // `follow_modern_combat_window` keeps it to that.
                 modern.replace(super::status::JUMP_POWERBAR_WINDOW);
             }
             Err(e) => self.notices.push(format!("ui: modern combat strip: {e}")),

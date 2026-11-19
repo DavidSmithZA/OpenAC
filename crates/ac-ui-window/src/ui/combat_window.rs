@@ -3,7 +3,8 @@
 //! the mode decides which controls show and whether the window does, the
 //! player view carries the height, the power setting and the bar's level,
 //! and the three combat options. With the modern interface the combat
-//! strip takes the attack controls and the window shows only in Magic.
+//! strip takes the attack controls and the player's own bars the spells,
+//! so the window stays hidden.
 
 use ac_core::combat::CombatMode;
 use ac_runtime::character::option_id;
@@ -28,16 +29,8 @@ impl WindowUi {
             .with_controller::<CombatBarController, _>(COMBAT_WINDOW, |c, ui| c.update(ui, &bar))
             .flatten();
         if self.feed_modern_combat(mode) {
-            // The modern strip holds the attack controls; the retail window
-            // shows only for its spell bars, in Magic.
-            let magic = mode == CombatMode::MAGIC;
-            if self.host.root.is_window_visible(COMBAT_WINDOW) != magic {
-                if magic {
-                    self.host.root.show_window(COMBAT_WINDOW);
-                } else {
-                    self.host.root.hide_window(COMBAT_WINDOW);
-                }
-            }
+            // The modern strip holds the attack controls and the player's
+            // own bars the spells: the retail window stays hidden.
             return;
         }
         match visible {
