@@ -373,6 +373,13 @@ impl WindowUi {
         }
         self.follow_spell_drag(b);
         self.bar_requests(b, now);
+        // A slot taken off (fewer slots, a bar deleted) takes its key
+        // pop-up with it.
+        if let Some(at) = b.popover_for
+            && b.layout.as_ref().and_then(|l| l.slot(at)).is_none()
+        {
+            self.close_key_popover(b);
+        }
         self.build_bars(b);
         self.place_bars(b, now);
         self.feed_bar_slots(b);
