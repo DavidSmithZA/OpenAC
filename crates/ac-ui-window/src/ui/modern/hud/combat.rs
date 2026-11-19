@@ -662,6 +662,12 @@ impl Widget for CombatStrip {
         true
     }
 
+    fn receives_hover_mouse_move(&self) -> bool {
+        // The parts sit side by side: a move from one to the next must
+        // reach the strip.
+        true
+    }
+
     fn on_event(&mut self, ui: &mut UiRoot, me: ElementId, e: &UiEvent) -> bool {
         if e.target != Some(me) {
             return false;
@@ -822,6 +828,10 @@ impl Widget for ModeMenu {
 
     fn on_popup_dismissed(&mut self, ui: &mut UiRoot, me: ElementId, _popup: ElementId) {
         ui.set_visible(me, false);
+    }
+
+    fn receives_hover_mouse_move(&self) -> bool {
+        true
     }
 
     fn on_event(&mut self, ui: &mut UiRoot, me: ElementId, e: &UiEvent) -> bool {
