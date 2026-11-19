@@ -199,6 +199,9 @@ pub const NOT_ENOUGH_MANA: u32 = 0x401;
 /// The key that, held, lets modern pieces be moved whatever the lock says.
 pub const QUICK_MOVE_KEY: Modifiers = Modifiers::CTRL;
 
+/// The hover labels' words, pixels to the em.
+const TIP_SIZE: f32 = 12.0;
+
 /// The size of the names quick move shows, pixels to the em.
 const QUICK_MOVE_NAME_SIZE: f32 = 11.0;
 
@@ -1183,11 +1186,15 @@ impl WindowUi {
     }
 
     /// Quick move on: its key, and the layer that outlines and names every
-    /// modern piece while the key is held.
+    /// modern piece while the key is held; and the pieces' hover labels.
     pub(super) fn mount_quick_move(&mut self) {
         self.host.root.set_quick_move_key(Some(QUICK_MOVE_KEY));
         let font = self.modern_font(Weight::SemiBold, QUICK_MOVE_NAME_SIZE);
         let outlines = QuickMoveOutlines::mount(&mut self.host.root, Horizon::BRONZE, font);
+        // The modern pieces' hover labels (the retail tooltip needs a dat
+        // layout the pieces do not name).
+        let tip_font = self.modern_font(Weight::Medium, TIP_SIZE);
+        ac_ui::modern::tip::TipLayer::mount(&mut self.host.root, Horizon::BRONZE, tip_font);
         if let Some(modern) = self.modern.as_mut() {
             modern.outlines = Some(outlines);
         }
