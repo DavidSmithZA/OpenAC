@@ -32,7 +32,7 @@ pub enum Anchor {
 impl Anchor {
     /// How far across and down the point is, as fractions of a width and
     /// a height.
-    const fn fractions(self) -> (f32, f32) {
+    pub const fn fractions(self) -> (f32, f32) {
         match self {
             Self::TopLeft => (0.0, 0.0),
             Self::Top => (0.5, 0.0),
