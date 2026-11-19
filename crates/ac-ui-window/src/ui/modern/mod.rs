@@ -85,6 +85,9 @@ pub struct EffectsHud {
     /// What the last read was made of: the enchantments' revision and
     /// the whole second.
     read_at: Option<(u64, i64)>,
+    /// How long before a helpful effect ends its count warns, seconds (0:
+    /// never; Options sets it).
+    pub soon: f64,
 }
 
 impl EffectsHud {
@@ -881,6 +884,7 @@ impl WindowUi {
             now: hud::effects::EffectsOnYou::default(),
             show_times: true,
             read_at: None,
+            soon: hud::effects::DEFAULT_SOON_SECONDS,
         })
     }
 
@@ -898,6 +902,7 @@ impl WindowUi {
             return;
         }
         let show_times = self.show_spell_durations();
+        let soon = f64::from(self.settings().display.modern_hud.effect_warning_minutes) * 60.0;
         let now = self.facts.session_now().unwrap_or(0.0);
         let book = self.facts.numbers().and_then(|n| n.spellbook());
         let key = book.map(|b| (b.enchantment_revision(), now.floor() as i64));
@@ -911,13 +916,14 @@ impl WindowUi {
         let Some(fx) = self.modern.as_mut().and_then(|m| m.effects.as_mut()) else {
             return;
         };
-        let changed = key != fx.read_at || show_times != fx.show_times;
+        let changed = key != fx.read_at || show_times != fx.show_times || soon != fx.soon;
         if changed {
             fx.read_at = key;
             fx.show_times = show_times;
+            fx.soon = soon;
             fx.now = read.unwrap_or_default();
         }
-        let [helpful, harmful, vitae] = effect_chips(&fx.now, show_times);
+        let [helpful, harmful, vitae] = effect_chips(&fx.now, show_times, fx.soon);
         let burden = burden_tone(load).map(|tone| ChipView {
             tone,
             figure: String::new(),
@@ -1019,7 +1025,7 @@ impl WindowUi {
             return;
         };
         let harmful = open == fx.chip(hud::effects::ChipKind::Harmful);
-        let view = hud::effects::PaneView::of(&fx.now, harmful, fx.show_times, |spell| {
+        let view = hud::effects::PaneView::of(&fx.now, harmful, fx.show_times, fx.soon, |spell| {
             ac_ui::icons::IconSource::spell_icon(icons, spell)
         });
         let ui = &mut host.root;
@@ -1136,23 +1142,43 @@ impl WindowUi {
         }
     }
 
-    /// The vitals' new values, for the modern vitals and the edge glow.
+    /// The vitals' new values, for the modern vitals.
     pub(super) fn feed_modern_vitals(&mut self, vitals: &ac_ui::panels::vitals::VitalsView) {
+        let Some(bars) = self.modern.as_ref().and_then(|m| m.vitals) else {
+            return;
+        };
+        if let Some(hud) = self.host.root.widget_mut::<hud::vitals::VitalsHud>(bars) {
+            hud.apply(vitals);
+        }
+    }
+
+    /// The vitals follow their Options rows (animation, numbers, the low
+    /// health share), and the screen's edge glows while health is low and
+    /// the glow is on. Every frame, so a change shows at once.
+    pub(super) fn follow_modern_vitals_settings(&mut self) {
         let Some(modern) = self.modern.as_ref() else {
             return;
         };
         let (bars, glow) = (modern.vitals, modern.edge_glow);
+        let s = self.settings().display.modern_hud;
+        let threshold = if s.vital_numbers_percent > 0 {
+            s.vital_numbers_percent as f32 / 100.0
+        } else {
+            f32::INFINITY
+        };
         let mut low = false;
         if let Some(bars) = bars
             && let Some(hud) = self.host.root.widget_mut::<hud::vitals::VitalsHud>(bars)
         {
-            hud.apply(vitals);
+            hud.animate = s.animate_vitals;
+            hud.number_threshold = threshold;
+            hud.low_health = s.low_health_percent as f32 / 100.0;
             low = hud.health_is_low();
         }
         if let Some(glow) = glow
             && let Some(edge) = self.host.root.widget_mut::<hud::edge_glow::EdgeGlow>(glow)
         {
-            edge.on = low;
+            edge.on = low && s.low_health_edge_glow;
         }
     }
 
