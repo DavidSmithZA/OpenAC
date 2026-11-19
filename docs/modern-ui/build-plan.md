@@ -1,8 +1,7 @@
 # Modern UI: build plan
 
 Draft, 2026-11-19. The design is in `README.md` and on the canvas; this
-file is how we build it. Nothing here is started yet: the user will
-start implementation in a later session.
+file is how we build it. M0 was built on 2026-11-19 (see "Progress").
 
 ## What the code gives us
 
@@ -30,6 +29,47 @@ Read from the tree on 2026-11-19 (paths relative to the repo root).
   call through about 55 concrete methods.
 - **The web client runs the same `WindowUi`**, so anything built inside
   it works in the browser too.
+
+## Progress
+
+**M0 built 2026-11-19** on branch `feat/modern-ui-m0` (off upstream-main
+0.2.15), one commit per piece:
+
+1. Launcher: Settings › Interface (Retail / Modern), saved in
+   `launcher-interface.json` (its own file, so an older launcher still
+   reads the profiles); every client started gets `OPENAC_INTERFACE`.
+2. Client: reads it once; Modern mounts `ui/modern` (`ModernLayer`): the
+   replaced-windows list, kept hidden before each frame is drawn, and
+   left alone by the layout persistence (`set_left_alone`), so the retail
+   layout survives; modern default places (`modern/places.rs`).
+3. `ac_ui::modern`: Horizon palette, sizes and text sizes; `Tween`;
+   `numbers::compact`.
+4. Drawing: `stroke_arc` (soft sides and ends), `textured_triangles`,
+   `fill_textured_disc` (`DiscUv`: centre, scale, turn), `ShapeCache`.
+5. Fonts: Inter 4.1 Regular, Medium, SemiBold (`assets/fonts/Inter`),
+   kerned (whole pixels) with even digits; Noto unchanged. Bakes up to
+   48 px (1024 pages above 32) so modern text is sharp at 2x; the plugin
+   themes keep their 32 px sharp limit. `WindowUi::modern_font(weight,
+   em)` bakes on first use and queues the sharp bake.
+6. `ac_ui::modern::flex::ElementFlex` (FlexTree over elements, `Measure`:
+   `TextLine`, `Fixed`) and `hover::HoverPane`.
+7. Quick move in `UiRoot`: `Element::quick_move`, `set_quick_move_key`
+   (Ctrl for now), drag whatever the lock, snap 8 units to screen and
+   piece edges (Shift: free), `UiOutput::QuickMoveMenu` on right-click
+   (the menu itself comes with Edit layout in M2); dashed outlines and
+   names drawn by `modern::quick_move::QuickMoveOutlines`.
+
+Mac text keys went on their own branch `feat/mac-text-keys` (Cmd with
+A/C/X/V/Z, Shift+Z or Y redo, undo history, Option/Ctrl word moves and
+deletes, Cmd line moves), as a small PR of its own.
+
+Toolkit pieces that know nothing of the game went into `ac-ui`
+(`ac_ui::modern`), not `ac-ui-window`; the screens still go in
+`ac-ui-window/src/ui/modern/`.
+
+Still open after M0: the quick-move Mac key; Erik and one PR per
+milestone; a live look at both interfaces (the first live run's window
+was covered, so nothing was drawn).
 
 ## Shape of the build
 
