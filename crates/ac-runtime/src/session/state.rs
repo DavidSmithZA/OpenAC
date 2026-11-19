@@ -1413,6 +1413,7 @@ impl SessionState {
                 Some(&self.movement),
                 self.session_seconds(),
             ),
+            last_cast: self.gameplay.spell_cast().last_completion(),
             ..self.world.player_view(self.gameplay.selection().selected())
         }
     }

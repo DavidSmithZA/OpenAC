@@ -12,6 +12,7 @@ use ac_proto::{
     Vector3,
 };
 use ac_runtime::communication::{ChatLine, WindowRequest};
+use ac_runtime::gameplay::magic::SpellCastCompletion;
 use ac_runtime::navigation::NavigationView;
 use ac_runtime::session::LinkStatus;
 use ac_runtime::world::transit::{DestinationReadiness, DestinationShown, PortalSpaceEvent};
@@ -108,6 +109,7 @@ record! {
     PlayScriptType { guid: u32, script_type: u32, intensity: f32 }
     VitalReading { current: Option<u32>, max: Option<u32>, percent: Option<f32> }
     AttackBarView { height: AttackHeight, desired_power: f32, power_bar: f32 }
+    SpellCastCompletion { revision: u64, spell_id: u32, target_id: u32, weenie_error: u32 }
     PlayerView {
         health: VitalReading,
         stamina: VitalReading,
@@ -123,6 +125,7 @@ record! {
         jump_charge: Option<f32>,
         combat_camera_target: Option<u32>,
         attack: AttackBarView,
+        last_cast: SpellCastCompletion,
     }
     ChatTextTag { tag_type: String, format: String, data: String }
     ChatTextSpan { text: String, tag: Option<ChatTextTag>, role: ChatSpanRole }

@@ -1168,6 +1168,10 @@ impl WindowUi {
                         c.apply(ui, &vitals);
                     });
             }
+            self.feed_modern_vitals(&vitals);
+            if let Some(view) = view {
+                self.feed_modern_cast(view.last_cast);
+            }
             if let Some(view) = view {
                 self.host.root.set_ui_locked(view.ui_locked);
             }
@@ -1194,6 +1198,7 @@ impl WindowUi {
         for event in scene.take_interface() {
             self.facts.apply(event);
         }
+        self.feed_modern_target(scene);
         // The examination window follows every selection change while it
         // shows, in order, not only the selection this frame ends on.
         let changes = std::mem::take(&mut self.facts.selection_changes);
@@ -1521,11 +1526,14 @@ impl WindowUi {
                 if self.modern.is_some() {
                     return;
                 }
-                let modern = self.modern.insert(super::modern::ModernLayer::new());
-                if let Some(layouts) = self.status.layouts.as_mut() {
-                    modern.leave_alone(&mut self.host, layouts);
+                self.modern = Some(super::modern::ModernLayer::new());
+                self.mount_hud();
+                if let Some(modern) = self.modern.as_mut() {
+                    if let Some(layouts) = self.status.layouts.as_mut() {
+                        modern.leave_alone(&mut self.host, layouts);
+                    }
+                    modern.hide_replaced(&mut self.host);
                 }
-                modern.hide_replaced(&mut self.host);
                 self.mount_quick_move();
             }
         }

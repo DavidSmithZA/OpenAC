@@ -73,6 +73,47 @@ pub struct SelectionFacts {
     pub mana: f32,
 }
 
+/// What the selected object `id` (a stack of `stack`) is called where it
+/// is shown selected: its name, the stack size before it when there is more
+/// than one, and for the player's own pyreals the total carried after it
+/// ("25 Pyreal (of 4000)"). A world object not in the item table takes the
+/// facts' name.
+#[must_use]
+pub fn selection_name(
+    view: &ItemsView<'_>,
+    facts: &SelectionFacts,
+    id: u32,
+    stack: u32,
+) -> Option<String> {
+    let object_name = match view.get(id) {
+        Some(o) => Some(view.name_of(o)),
+        None => facts.world_name.clone(),
+    };
+    let coinstack = view
+        .get(id)
+        .is_some_and(|o| o.weenie_class_id == COINSTACK_WEENIE_CLASS);
+    let owned = view.objects.is_owned_by_object(id, view.player);
+    if coinstack && owned {
+        let total = view
+            .get(view.player)
+            .map_or(0, |p| p.properties.get_int(COIN_VALUE_PROPERTY, 0));
+        Some(format!(
+            "{stack} {} (of {total})",
+            object_name.unwrap_or_default()
+        ))
+    } else if stack > 1 && object_name.as_deref().is_some_and(|n| !n.is_empty()) {
+        Some(format!("{stack} {}", object_name.unwrap_or_default()))
+    } else {
+        object_name
+    }
+}
+
+/// How many are in the stack `id` (0 for an object not in the item table).
+#[must_use]
+pub fn selection_stack(view: &ItemsView<'_>, id: u32) -> u32 {
+    stack_of(view, id)
+}
+
 /// Split `name` onto two lines at the last space before it overflows
 /// `width` (`font` measures; without a font, one line).
 #[must_use]
@@ -212,27 +253,7 @@ impl SelectedObjectController {
     }
 
     fn refresh_name(&mut self, view: &ItemsView<'_>, facts: &SelectionFacts, id: u32, stack: u32) {
-        let object_name = match view.get(id) {
-            Some(o) => Some(view.name_of(o)),
-            None => facts.world_name.clone(),
-        };
-        let coinstack = view
-            .get(id)
-            .is_some_and(|o| o.weenie_class_id == COINSTACK_WEENIE_CLASS);
-        let owned = view.objects.is_owned_by_object(id, view.player);
-        self.current_name = if coinstack && owned {
-            let total = view
-                .get(view.player)
-                .map_or(0, |p| p.properties.get_int(COIN_VALUE_PROPERTY, 0));
-            Some(format!(
-                "{stack} {} (of {total})",
-                object_name.unwrap_or_default()
-            ))
-        } else if stack > 1 && object_name.as_deref().is_some_and(|n| !n.is_empty()) {
-            Some(format!("{stack} {}", object_name.unwrap_or_default()))
-        } else {
-            object_name
-        };
+        self.current_name = selection_name(view, facts, id, stack);
     }
 
     fn apply_selection(

@@ -38,6 +38,8 @@ pub struct Tween {
     from: f32,
     to: f32,
     elapsed: f32,
+    /// How long it waits before it sets off.
+    delay: f32,
     duration: f32,
     ease: Ease,
 }
@@ -50,6 +52,7 @@ impl Tween {
             from: value,
             to: value,
             elapsed: 0.0,
+            delay: 0.0,
             duration: 0.0,
             ease: Ease::Out,
         }
@@ -61,7 +64,10 @@ impl Tween {
         if self.is_settled() {
             return self.to;
         }
-        let k = self.ease.at(self.elapsed / self.duration);
+        if self.elapsed <= self.delay {
+            return self.from;
+        }
+        let k = self.ease.at((self.elapsed - self.delay) / self.duration);
         self.from + (self.to - self.from) * k
     }
 
@@ -74,18 +80,24 @@ impl Tween {
     /// True when the value has arrived.
     #[must_use]
     pub fn is_settled(&self) -> bool {
-        self.elapsed >= self.duration
+        self.elapsed >= self.delay + self.duration
     }
 
     /// Sets off from where the value is now towards `target`, arriving
     /// after `seconds`; a target it is already going to changes nothing.
     pub fn go_to(&mut self, target: f32, seconds: f32, ease: Ease) {
+        self.go_to_after(target, 0.0, seconds, ease);
+    }
+
+    /// [`Tween::go_to`], holding still for `delay` seconds first.
+    pub fn go_to_after(&mut self, target: f32, delay: f32, seconds: f32, ease: Ease) {
         if target == self.to {
             return;
         }
         self.from = self.value();
         self.to = target;
         self.elapsed = 0.0;
+        self.delay = delay.max(0.0);
         self.duration = seconds.max(0.0);
         self.ease = ease;
     }
@@ -98,7 +110,7 @@ impl Tween {
     /// Moves on by `seconds`.
     pub fn tick(&mut self, seconds: f32) {
         if !self.is_settled() {
-            self.elapsed = (self.elapsed + seconds.max(0.0)).min(self.duration);
+            self.elapsed = (self.elapsed + seconds.max(0.0)).min(self.delay + self.duration);
         }
     }
 }
@@ -148,6 +160,19 @@ mod tests {
         // The same target again does not restart it.
         t.go_to(0.0, 1.0, Ease::Linear);
         assert_eq!(t.value(), 0.25);
+    }
+
+    #[test]
+    fn a_delayed_tween_holds_then_moves() {
+        let mut t = Tween::new(1.0);
+        t.go_to_after(0.0, 0.5, 0.5, Ease::Linear);
+        t.tick(0.4);
+        assert_eq!(t.value(), 1.0);
+        t.tick(0.35);
+        assert_eq!(t.value(), 0.5);
+        t.tick(1.0);
+        assert!(t.is_settled());
+        assert_eq!(t.value(), 0.0);
     }
 
     #[test]

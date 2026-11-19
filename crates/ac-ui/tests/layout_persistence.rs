@@ -1244,3 +1244,29 @@ fn a_window_left_alone_is_neither_saved_nor_restored() {
     let s = saved(&dir.store(), "Alice", "800x600", "chat").unwrap();
     assert_eq!((s.x, s.y), (44.0, 55.0));
 }
+
+#[test]
+fn a_window_with_a_default_place_starts_there_and_resets_there() {
+    let dir = Dir::new();
+    let mut host = host(800.0, 600.0);
+    mount_default(&mut host, "modern-vitals");
+    mount_default(&mut host, "other");
+    let mut p = persist(&mut host, Some(dir.store()), "Alice", (800, 600));
+    p.set_default_places(Box::new(|name, (w, _)| {
+        (name == "modern-vitals").then(|| ((w as f32 - 200.0) / 2.0, 14.0))
+    }));
+    p.restore_all(&mut host);
+    assert_eq!(
+        geometry(&host, "modern-vitals"),
+        (300.0, 14.0, 200.0, 100.0)
+    );
+    // A window the places do not know is centred as before.
+    assert_eq!(geometry(&host, "other"), (300.0, 250.0, 200.0, 100.0));
+    host.root.move_window("modern-vitals", 40.0, 60.0);
+    p.follow(&mut host);
+    p.reset_to_defaults(&mut host);
+    assert_eq!(
+        geometry(&host, "modern-vitals"),
+        (300.0, 14.0, 200.0, 100.0)
+    );
+}

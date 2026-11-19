@@ -153,6 +153,11 @@ impl LayoutStore for SettingsStore {
     }
 }
 
+/// Where a window not in the default placement's own list first goes on a
+/// screen of the given size: its left and top, or none to leave it to the
+/// default placement.
+pub type DefaultPlaces = Box<dyn Fn(&str, (i32, i32)) -> Option<(f32, f32)>>;
+
 /// The window names the default placement knows.
 pub mod window_names {
     /// The main chat window.
@@ -445,6 +450,8 @@ pub struct LayoutPersistence {
     /// Windows another interface stands in for: never attached, so never
     /// saved or restored while it does.
     left_alone: HashSet<String>,
+    /// Default places for windows the default placement does not know.
+    default_places: Option<DefaultPlaces>,
     attached: Vec<String>,
     defaults: HashMap<String, UiWindowLayout>,
     placements: HashMap<String, UiWindowPlacement>,
@@ -484,6 +491,7 @@ impl LayoutPersistence {
             screen,
             state_managed: state_managed.iter().map(|s| (*s).to_owned()).collect(),
             left_alone: HashSet::new(),
+            default_places: None,
             attached: Vec::new(),
             defaults: HashMap::new(),
             placements: HashMap::new(),
@@ -674,6 +682,14 @@ impl LayoutPersistence {
     /// attached).
     fn fallback(&self, name: &str, screen: (i32, i32)) -> Option<UiWindowLayout> {
         let authored = self.defaults.get(name)?;
+        if let Some((x, y)) = self.default_places.as_ref().and_then(|f| f(name, screen)) {
+            let (w, h) = (screen.0 as f32, screen.1 as f32);
+            return Some(UiWindowLayout {
+                x: clamp(finite_or(x, 0.0), 0.0, (w - authored.width).max(0.0)),
+                y: clamp(finite_or(y, 0.0), 0.0, (h - authored.height).max(0.0)),
+                ..*authored
+            });
+        }
         Some(default_layout(
             name,
             authored,
@@ -786,10 +802,9 @@ impl LayoutPersistence {
         self.follow(host);
         let screen = self.valid_screen();
         for name in self.attached.clone() {
-            let Some(authored) = self.defaults.get(&name).copied() else {
+            let Some(layout) = self.fallback(&name, screen) else {
                 continue;
             };
-            let layout = default_layout(&name, &authored, screen.0, screen.1, &self.defaults);
             let placement = UiWindowPlacement {
                 layout,
                 screen_width: screen.0,
@@ -871,6 +886,13 @@ impl LayoutPersistence {
     ) {
         self.left_alone = names.into_iter().map(str::to_owned).collect();
         self.attach_new(host);
+    }
+
+    /// Where windows the default placement does not know first go (and go
+    /// back to on a reset): `places` answers a window's left and top for a
+    /// screen, or none to leave it to the default placement.
+    pub fn set_default_places(&mut self, places: DefaultPlaces) {
+        self.default_places = Some(places);
     }
 
     /// Whether the game shows and hides window `name` by itself (its
