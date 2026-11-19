@@ -425,3 +425,121 @@ fn max_characters_and_shift_selection() {
     f.insert_char('z');
     assert_eq!(f.text(), "z");
 }
+
+/// A focused, selectable field holding `text`, caret at the end.
+fn focused_field(text: &str) -> (UiRoot, ElementId) {
+    let mut ui = root(400.0, 400.0);
+    let mut f = Field::default();
+    f.selectable = true;
+    f.set_text(text);
+    let id = field_in(&mut ui, f, 300.0, 20.0);
+    ui.set_keyboard_focus(Some(id));
+    ui.drain_output();
+    (ui, id)
+}
+
+#[test]
+fn command_letters_work_as_ctrl_letters() {
+    let (mut ui, id) = focused_field("hello");
+    ui.on_key_down(Key::A, Modifiers::WIN);
+    ui.on_key_down(Key::C, Modifiers::WIN);
+    assert!(
+        ui.drain_output()
+            .iter()
+            .any(|o| matches!(o, UiOutput::SetClipboard(s) if s == "hello"))
+    );
+    ui.on_key_down(Key::X, Modifiers::WIN);
+    assert_eq!(field(&ui, id).text(), "");
+    ui.drain_output();
+    ui.on_key_down(Key::V, Modifiers::WIN);
+    assert!(
+        ui.drain_output()
+            .iter()
+            .any(|o| matches!(o, UiOutput::PasteRequest(e) if *e == id))
+    );
+}
+
+#[test]
+fn undo_takes_back_typing_a_run_at_a_time_and_redo_puts_it_back() {
+    let (mut ui, id) = focused_field("");
+    for c in "hello".chars() {
+        ui.on_char(c);
+    }
+    ui.on_key_down(Key::Left, Modifiers::NONE);
+    ui.on_char('!');
+    assert_eq!(field(&ui, id).text(), "hell!o");
+    // Moving the caret ended the first run: the "!" goes first.
+    ui.on_key_down(Key::Z, Modifiers::WIN);
+    assert_eq!(field(&ui, id).text(), "hello");
+    ui.on_key_down(Key::Z, Modifiers::CTRL);
+    assert_eq!(field(&ui, id).text(), "");
+    ui.on_key_down(Key::Z, Modifiers::WIN | Modifiers::SHIFT);
+    assert_eq!(field(&ui, id).text(), "hello");
+    ui.on_key_down(Key::Y, Modifiers::CTRL);
+    assert_eq!(field(&ui, id).text(), "hell!o");
+    // Nothing left to redo.
+    ui.on_key_down(Key::Y, Modifiers::CTRL);
+    assert_eq!(field(&ui, id).text(), "hell!o");
+}
+
+#[test]
+fn undo_takes_back_cuts_pastes_and_deletes() {
+    let (mut ui, id) = focused_field("one two");
+    ui.on_key_down(Key::Backspace, Modifiers::ALT);
+    assert_eq!(field(&ui, id).text(), "one ");
+    ui.paste(id, "three");
+    assert_eq!(field(&ui, id).text(), "one three");
+    ui.on_key_down(Key::Z, Modifiers::WIN);
+    assert_eq!(field(&ui, id).text(), "one ");
+    ui.on_key_down(Key::Z, Modifiers::WIN);
+    assert_eq!(field(&ui, id).text(), "one two");
+    assert!(
+        messages(&mut ui)
+            .iter()
+            .any(|m| matches!(m, ElementMessage::TextChanged(t) if t == "one two"))
+    );
+}
+
+#[test]
+fn a_sent_line_cannot_be_undone_back_into_the_field() {
+    let (mut ui, id) = focused_field("");
+    for c in "hi".chars() {
+        ui.on_char(c);
+    }
+    ui.on_key_down(Key::Enter, Modifiers::NONE);
+    ui.set_keyboard_focus(Some(id));
+    ui.on_key_down(Key::Z, Modifiers::WIN);
+    assert_eq!(field(&ui, id).text(), "");
+}
+
+#[test]
+fn option_and_ctrl_move_and_delete_a_word_at_a_time() {
+    let (mut ui, id) = focused_field("cast flame bolt");
+    ui.on_key_down(Key::Left, Modifiers::ALT);
+    assert_eq!(field(&ui, id).caret_pos(), 11);
+    ui.on_key_down(Key::Left, Modifiers::CTRL);
+    assert_eq!(field(&ui, id).caret_pos(), 5);
+    ui.on_key_down(Key::Right, Modifiers::ALT);
+    assert_eq!(field(&ui, id).caret_pos(), 10);
+    ui.on_key_down(Key::Delete, Modifiers::ALT);
+    assert_eq!(field(&ui, id).text(), "cast flame");
+    ui.on_key_down(Key::Backspace, Modifiers::CTRL);
+    assert_eq!(field(&ui, id).text(), "cast ");
+    // Shift extends the selection a word at a time.
+    ui.on_key_down(Key::Left, Modifiers::ALT | Modifiers::SHIFT);
+    assert_eq!(field(&ui, id).selected_text(), "cast ");
+}
+
+#[test]
+fn command_moves_and_deletes_to_the_line_ends() {
+    let (mut ui, id) = focused_field("tell Osk hello");
+    ui.on_key_down(Key::Left, Modifiers::WIN);
+    assert_eq!(field(&ui, id).caret_pos(), 0);
+    ui.on_key_down(Key::Right, Modifiers::WIN | Modifiers::SHIFT);
+    assert_eq!(field(&ui, id).selected_text(), "tell Osk hello");
+    ui.on_key_down(Key::Right, Modifiers::NONE);
+    ui.on_key_down(Key::Left, Modifiers::ALT);
+    ui.on_key_down(Key::Backspace, Modifiers::WIN);
+    assert_eq!(field(&ui, id).text(), "hello");
+    assert_eq!(field(&ui, id).caret_pos(), 0);
+}

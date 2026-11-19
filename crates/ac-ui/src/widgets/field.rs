@@ -6,6 +6,12 @@
 //! [`UiOutput::SetClipboard`]; Ctrl+V emits [`UiOutput::PasteRequest`] and
 //! the client answers with [`UiRoot::paste`]. Key repeat comes from the
 //! window (a held key arrives as repeated key-downs), as it does for retail.
+//!
+//! The editing keys follow the computer's habits (an OpenAC addition; the
+//! retail field knew only the Ctrl letters): Ctrl or Command with A, C, X,
+//! V, Z (Shift+Z or Y redoes); Alt (Option) or Ctrl with the arrows,
+//! Backspace or Delete works a word at a time; Command with them works to
+//! the start or end of the line.
 
 use std::sync::Arc;
 
@@ -27,6 +33,24 @@ pub type TextReplacer = Box<dyn FnMut(&str) -> Option<String>>;
 
 /// How many sent lines the field remembers.
 pub const HISTORY_CAPACITY: usize = 100;
+
+/// How many edits Undo can take back.
+pub const UNDO_CAPACITY: usize = 100;
+
+/// The text and caret before an edit, and which run of edits it belongs to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Snapshot {
+    text: Vec<char>,
+    caret: usize,
+    /// The undo history's generation when it was taken (text set from
+    /// outside starts a new one).
+    generation: u64,
+}
+
+/// Whether `c` is part of a word for the word-wise keys.
+fn is_word_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_' || c == '\''
+}
 
 /// Fallback glyph width when the field has no font (wrapping only).
 const FALLBACK_GLYPH_WIDTH: f32 = 8.0;
@@ -134,6 +158,14 @@ pub struct Field {
     /// An Enter submit that handed the text over (or cleared it) is under
     /// way, including the focus loss that ends it.
     losing_focus_to_submit: bool,
+    /// Edits Undo takes back, the latest last.
+    undo: Vec<Snapshot>,
+    /// Edits Undo took back, for Redo, the latest last.
+    redo: Vec<Snapshot>,
+    /// The last edit was typing, so more typing joins its undo step.
+    typing_run: bool,
+    /// Bumped whenever text set from outside clears the undo history.
+    undo_generation: u64,
 }
 
 impl std::fmt::Debug for Field {
@@ -200,6 +232,10 @@ impl Default for Field {
             suppress_next_newline_char: false,
             last_bound_text: None,
             losing_focus_to_submit: false,
+            undo: Vec::new(),
+            redo: Vec::new(),
+            typing_run: false,
+            undo_generation: 0,
         }
     }
 }
@@ -393,6 +429,130 @@ impl Field {
         true
     }
 
+    /// Delete the characters between two caret positions (either order).
+    fn delete_between(&mut self, a: usize, b: usize) {
+        let (lo, hi) = (a.min(b), a.max(b).min(self.text.len()));
+        if lo >= hi {
+            return;
+        }
+        let mut chars = self.text.clone();
+        chars.drain(lo..hi);
+        self.set_chars(chars);
+        self.caret = lo;
+        self.sel_anchor = None;
+    }
+
+    /// Where the word before the caret starts (spaces and marks before it
+    /// skipped first).
+    fn word_start(&self) -> usize {
+        let mut i = self.caret.min(self.text.len());
+        while i > 0 && !is_word_char(self.text[i - 1]) {
+            i -= 1;
+        }
+        while i > 0 && is_word_char(self.text[i - 1]) {
+            i -= 1;
+        }
+        i
+    }
+
+    /// Where the word after the caret ends (spaces and marks before it
+    /// skipped first).
+    fn word_end(&self) -> usize {
+        let n = self.text.len();
+        let mut i = self.caret.min(n);
+        while i < n && !is_word_char(self.text[i]) {
+            i += 1;
+        }
+        while i < n && is_word_char(self.text[i]) {
+            i += 1;
+        }
+        i
+    }
+
+    /// Where the caret's line starts (after the line break before it).
+    fn line_start(&self) -> usize {
+        let caret = self.caret.min(self.text.len());
+        self.text[..caret]
+            .iter()
+            .rposition(|&c| c == '\n')
+            .map_or(0, |i| i + 1)
+    }
+
+    /// Where the caret's line ends (at the line break after it).
+    fn line_end(&self) -> usize {
+        let caret = self.caret.min(self.text.len());
+        self.text[caret..]
+            .iter()
+            .position(|&c| c == '\n')
+            .map_or(self.text.len(), |i| caret + i)
+    }
+
+    // ── Undo ────────────────────────────────────────────────────────────
+
+    fn snapshot(&self) -> Snapshot {
+        Snapshot {
+            text: self.text.clone(),
+            caret: self.caret,
+            generation: self.undo_generation,
+        }
+    }
+
+    /// Remembers the text as it was `before` an edit for Undo, when the
+    /// edit changed it; typing joins the step of the typing before it.
+    fn record(&mut self, before: Snapshot, typing: bool) {
+        if before.generation != self.undo_generation {
+            // The text was set from outside meanwhile: nothing to take back.
+            return;
+        }
+        if before.text == self.text {
+            if !typing {
+                self.typing_run = false;
+            }
+            return;
+        }
+        if !(typing && self.typing_run) {
+            self.undo.push(before);
+            if self.undo.len() > UNDO_CAPACITY {
+                self.undo.remove(0);
+            }
+        }
+        self.redo.clear();
+        self.typing_run = typing;
+    }
+
+    /// Text set from outside (a sent line, a recalled one, the owner's
+    /// value) cannot be undone into.
+    fn forget_undo(&mut self) {
+        self.undo.clear();
+        self.redo.clear();
+        self.typing_run = false;
+        self.undo_generation += 1;
+    }
+
+    fn restore(&mut self, snapshot: Snapshot) {
+        self.set_chars(snapshot.text);
+        self.caret = snapshot.caret.min(self.text.len());
+        self.sel_anchor = None;
+        self.typing_run = false;
+        self.reset_recall();
+    }
+
+    /// Takes back the last edit.
+    pub fn undo(&mut self) {
+        if let Some(previous) = self.undo.pop() {
+            self.redo.push(self.snapshot());
+            self.restore(previous);
+        }
+    }
+
+    /// Puts back the last edit Undo took back.
+    pub fn redo(&mut self) {
+        if let Some(next) = self.redo.pop() {
+            self.undo.push(self.snapshot());
+            self.restore(next);
+        }
+    }
+
     /// Select everything.
     pub fn select_all_text(&mut self) {
         if self.text.is_empty() {
@@ -411,6 +571,7 @@ impl Field {
         self.caret = self.text.len();
         self.sel_anchor = None;
         self.reset_recall();
+        self.forget_undo();
     }
 
     /// Show text that came from elsewhere (a recalled or composed line)
@@ -419,6 +580,7 @@ impl Field {
         self.set_chars(line.chars().collect());
         self.caret = self.text.len();
         self.sel_anchor = None;
+        self.forget_undo();
     }
 
     /// Follow a value the owner keeps: while nobody is typing in the field,
@@ -456,6 +618,12 @@ impl Field {
         if !self.editable || clip.is_empty() {
             return;
         }
+        let before = self.snapshot();
+        self.paste_text_unrecorded(clip);
+        self.record(before, false);
+    }
+
+    fn paste_text_unrecorded(&mut self, clip: &str) {
         let mut accepted = Vec::new();
         let mut previous_cr = false;
         for ch in clip.chars() {
@@ -567,6 +735,7 @@ impl Field {
         self.caret = 0;
         self.sel_anchor = None;
         self.reset_recall();
+        self.forget_undo();
     }
 
     fn reset_recall(&mut self) {
@@ -1082,7 +1251,9 @@ impl Field {
                     return true;
                 }
                 self.suppress_next_newline_char = false;
+                let before = self.snapshot();
                 self.insert_char(value);
+                self.record(before, true);
                 true
             }
             kind::MOUSE_DOWN => {
@@ -1130,7 +1301,68 @@ impl Field {
         if !self.editable {
             return true;
         }
-        if modifiers.contains(Modifiers::CTRL) {
+        let command = modifiers.contains(Modifiers::CTRL) || modifiers.contains(Modifiers::WIN);
+        let shift_held = modifiers.contains(Modifiers::SHIFT);
+        match key {
+            Key::Z if command && shift_held => {
+                self.redo();
+                return true;
+            }
+            Key::Z if command => {
+                self.undo();
+                return true;
+            }
+            Key::Y if command => {
+                self.redo();
+                return true;
+            }
+            _ => {}
+        }
+        let before = self.snapshot();
+        let handled = self.edit_key(ui, me, key, modifiers);
+        self.record(before, false);
+        handled
+    }
+
+    fn edit_key(&mut self, ui: &mut UiRoot, me: ElementId, key: Key, modifiers: Modifiers) -> bool {
+        let shift = self.selectable && modifiers.contains(Modifiers::SHIFT);
+        // Command (Win on a PC keyboard) works to the line's ends; Alt
+        // (Option), or Ctrl without Command, a word at a time.
+        let line_wise = modifiers.contains(Modifiers::WIN);
+        let word_wise = !line_wise
+            && (modifiers.contains(Modifiers::ALT) || modifiers.contains(Modifiers::CTRL));
+        let reach = |field: &Self, forward: bool| {
+            if line_wise {
+                if forward {
+                    field.line_end()
+                } else {
+                    field.line_start()
+                }
+            } else if forward {
+                field.word_end()
+            } else {
+                field.word_start()
+            }
+        };
+        if line_wise || word_wise {
+            match key {
+                Key::Left | Key::Right => {
+                    let target = reach(self, key == Key::Right);
+                    self.move_caret_to(target, shift);
+                    return true;
+                }
+                Key::Backspace | Key::Delete => {
+                    if !self.delete_selection() {
+                        let target = reach(self, key == Key::Delete);
+                        self.delete_between(self.caret, target);
+                    }
+                    self.reset_recall();
+                    return true;
+                }
+                _ => {}
+            }
+        }
+        if modifiers.contains(Modifiers::CTRL) || modifiers.contains(Modifiers::WIN) {
             match key {
                 Key::A if self.selectable => self.select_all_text(),
                 Key::C if self.selectable => self.copy_selection(ui),
