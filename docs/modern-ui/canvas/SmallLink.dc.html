@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Connection status</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+@keyframes sl-flash{0%,100%{opacity:1}50%{opacity:0.25}}
+</style>
+</helmet>
+<div style="width: 900px; height: 440px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: linear-gradient(180deg, #8FB3C9 0%, #A9C4C2 40%, #6F8A55 100%);">
+
+  <!-- the four states of the status line, top right of the HUD -->
+  <div style="position: absolute; left: 24px; top: 20px; width: 420px; display: flex; flex-direction: column; gap: 10px;">
+    <sc-for list="{{states}}" as="s" hint-placeholder-count="4">
+      <div style="height: 82px; box-sizing: border-box; padding: 10px 14px; border-radius: 6px; background: rgba(0,0,0,0.28); display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #F4EBDC; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">{{s.label}}</span>
+        <div style="align-self: flex-end; display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.9);">
+          <span>Holtburg</span><span style="opacity: 0.5;">|</span><span>6:01 AM</span><span style="opacity: 0.5;">|</span>
+          <button title="Connection. Click for details." style="height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid {{s.edge}}; background: {{s.bg}}; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: {{s.fg}}; cursor: pointer;">
+            {{s.text}}
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: {{s.dot}}; animation: {{s.anim}};"></span>
+          </button>
+        </div>
+        <span style="font-size: 10.5px; color: rgba(255,255,255,0.85); text-shadow: 0 1px 2px rgba(0,0,0,0.8);">{{s.note}}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- clicking it: the connection card -->
+  <div role="dialog" aria-label="Connection" style="position: absolute; left: 500px; top: 20px; width: 376px; box-sizing: border-box; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(20,16,12,0.95); backdrop-filter: blur(14px); box-shadow: 0 12px 30px rgba(0,0,0,0.55);">
+    <div style="height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 14px; border-bottom: 1px solid rgba(201,160,98,0.35);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01"></path></svg>
+      <h2 style="flex: 1; margin: 0; font-size: 13.5px; font-weight: 600;">Connection to Leafcull</h2>
+      <button aria-label="Close" style="width: 28px; height: 28px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+    </div>
+    <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 4px; background: rgba(224,170,60,0.12); border: 1px solid rgba(224,170,60,0.5);">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #F0B44C;"></span>
+        <span style="font-size: 12.5px; font-weight: 600;">Slow</span>
+        <span style="flex: 1; text-align: right; font-size: 11.5px; color: #E9D3AE;">Nothing heard for 7 s</span>
+      </div>
+      <sc-for list="{{facts}}" as="f" hint-placeholder-count="4">
+        <div style="display: flex; align-items: baseline; gap: 8px; font-size: 12px;">
+          <span style="flex: 1; color: #A89A82;">{{f.k}}</span>
+          <span style="font-weight: 600; font-variant-numeric: tabular-nums;">{{f.v}}</span>
+        </div>
+      </sc-for>
+      <p style="margin: 4px 0 0; font-size: 11px; line-height: 1.5; color: #A89A82;">Slow after 5 s with no word from the server, bad after 20 s, lost after 40 s. The game keeps trying on its own.</p>
+    </div>
+  </div>
+
+  <span style="position: absolute; left: 500px; top: 300px; width: 376px; font-size: 11px; line-height: 1.5; color: #1A140D;">Retail's link indicator and link-status panel. The dot and round trip already sit in the status line above the radar; it only gets loud when the link goes wrong.</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":900,"height":440}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const quiet = { edge: 'rgba(0,0,0,0)', bg: 'rgba(0,0,0,0)', fg: '#F4EBDC' };
+    return {
+      states: [
+        Object.assign({ label: 'GOOD', text: '38 ms', dot: '#6BD47A', anim: 'none', note: 'Normal: just the round trip and a green dot.' }, quiet),
+        { label: 'SLOW · 5 S AND OVER', text: 'Slow · 7 s', dot: '#F0B44C', anim: 'none', edge: 'rgba(240,180,76,0.8)', bg: 'rgba(40,28,8,0.7)', fg: '#FFD99A', note: 'Amber, with how long since the server last answered.' },
+        { label: 'BAD · 20 S AND OVER', text: 'No answer · 24 s', dot: '#FF6B70', anim: 'sl-flash 0.75s step-end infinite', edge: 'rgba(255,107,112,0.85)', bg: 'rgba(50,12,14,0.75)', fg: '#FFC2C4', note: 'Red, the dot flashes (retail flashes it too).' },
+        { label: 'LOST · 40 S, OR THE LINK DROPPED', text: 'Connection lost', dot: '#FF6B70', anim: 'none', edge: '#FF6B70', bg: 'rgba(90,16,20,0.85)', fg: '#FFFFFF', note: 'Stays until the link comes back or the session ends.' }
+      ],
+      facts: [
+        { k: 'Round trip', v: '41 ms' },
+        { k: 'Packets lost', v: '0.4%' },
+        { k: 'Last heard', v: '7 s ago' },
+        { k: 'Server', v: 'Leafcull' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Credits</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+@keyframes cr-rise{from{transform:translateY(0)}to{transform:translateY(-220px)}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: linear-gradient(180deg, #100C0A 0%, #2E2118 38%, #7A5432 58%, #B98448 64%, #3A2818 66%, #120D09 100%);">
+
+  <!-- the same dusk as character selection, dimmed -->
+  <svg aria-hidden="true" width="1440" height="900" viewBox="0 0 1440 900" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0;">
+    <path d="M0 560 C160 520 300 540 420 510 C560 470 700 520 820 500 C960 476 1100 520 1240 496 C1340 480 1400 500 1440 492 L1440 900 L0 900 Z" fill="#2A1E15"></path>
+    <path d="M0 668 C200 636 380 654 560 646 C760 634 940 664 1120 646 C1260 632 1380 652 1440 648 L1440 900 L0 900 Z" fill="#140F0B"></path>
+  </svg>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(8,6,4,0.55);"></div>
+
+  <!-- left: the game's pictures rise slowly -->
+  <div aria-hidden="true" style="position: absolute; left: 160px; top: 0; bottom: 0; width: 440px; overflow: hidden; -webkit-mask: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent); mask: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);">
+    <div style="padding-top: 90px; display: flex; flex-direction: column; gap: 28px; animation: cr-rise 30s linear infinite alternate;">
+      <sc-for list="{{pics}}" as="p" hint-placeholder-count="4">
+        <div style="height: 250px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: {{p.bg}}; display: flex; align-items: flex-end; padding: 10px 12px; box-sizing: border-box;">
+          <span style="font-size: 10px; color: rgba(244,235,220,0.6);">A picture from the game data</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- right: the credit text rises -->
+  <div style="position: absolute; left: 700px; top: 0; bottom: 0; width: 560px; overflow: hidden; -webkit-mask: linear-gradient(180deg, transparent, #000 20%, #000 80%, transparent); mask: linear-gradient(180deg, transparent, #000 20%, #000 80%, transparent);">
+    <div style="padding-top: 150px; display: flex; flex-direction: column; align-items: center; gap: 34px; text-align: center; animation: cr-rise 30s linear infinite alternate;">
+      <sc-for list="{{sections}}" as="s" hint-placeholder-count="4">
+        <section style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+          <h2 style="margin: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.24em; color: #E0B068;">{{s.title}}</h2>
+          <sc-for list="{{s.lines}}" as="l" hint-placeholder-count="3">
+            <span aria-hidden="true" style="display: block; width: {{l}}; height: 10px; border-radius: 5px; background: rgba(244,235,220,0.55);"></span>
+          </sc-for>
+        </section>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- top: what this is, bottom: how to leave -->
+  <div style="position: absolute; left: 32px; right: 32px; top: 22px; height: 36px; display: flex; align-items: center; gap: 14px;">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 21 12 12 22 3 12z"></path><path d="M12 7 16 12 12 17 8 12z"></path></svg>
+    <span style="font-size: 16px; font-weight: 700;">Credits</span>
+    <span style="flex: 1;"></span>
+    <button style="height: 34px; padding: 0 14px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.5); background: rgba(20,16,12,0.6); font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+      Back to your characters
+    </button>
+  </div>
+  <span style="position: absolute; left: 0; right: 0; bottom: 26px; text-align: center; font-size: 11.5px; color: #C8B89C;">Any key or click goes back. The text and pictures are the game's own, as retail shows them.</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tones = ['linear-gradient(160deg, #3B4A2E, #1A2014)', 'linear-gradient(160deg, #4A3420, #1E140C)', 'linear-gradient(160deg, #2A3A4A, #10161C)', 'linear-gradient(160deg, #4A2A3A, #1C1016)', 'linear-gradient(160deg, #3A3A2A, #16160E)'];
+    const w = ['180px', '220px', '150px', '200px', '170px', '240px'];
+    return {
+      pics: tones.map(bg => ({ bg })),
+      sections: ['THE CREDIT TEXT', 'SECTION BY SECTION', 'AS THE GAME DATA HAS IT', 'SCROLLING UP SLOWLY', 'THEN BACK TO YOUR CHARACTERS'].map((title, i) => ({ title, lines: w.slice(0, 3 + (i % 3)).map((x, j) => w[(i + j) % w.length]) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

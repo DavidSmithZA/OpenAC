@@ -293,6 +293,7 @@ class Component extends DCLogic {
             sel('Resolution', '', '2560 × 1440'),
             seg('Mode', '', ['Full screen', 'Window'], 'Full screen'),
             tog('Sync to display', 'Stops tearing. Caps the frame rate at the display rate.', true),
+            tog('Show frame rate', 'Frames per second and the detail level, top left. /framerate does the same.', false),
             sld('Brightness', '', 50, '50%')
           ]),
           group('QUALITY', [

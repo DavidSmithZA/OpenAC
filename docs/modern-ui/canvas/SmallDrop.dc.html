@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Drop on the Inventory button</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 600px; height: 300px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: linear-gradient(180deg, #6F8A55 0%, #4A6338 50%, #2E3F22 100%);">
+
+  <p style="position: absolute; left: 20px; top: 16px; width: 360px; margin: 0; font-size: 11.5px; line-height: 1.5; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">Retail lets you drop an item on its backpack button to put it in your main pack. Here the Inventory button in the panel strip does the same: while you drag an item it lights up and says where the item goes. Works for loot from a corpse, a chest or the ground.</p>
+
+  <!-- the tooltip above the lit button -->
+  <div role="status" style="position: absolute; right: 230px; bottom: 66px; height: 28px; padding: 0 10px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(20,16,12,0.95); display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 600; white-space: nowrap;">
+    Put in main pack
+    <span style="font-weight: 500; color: #A89A82;">38 of 102 free</span>
+  </div>
+
+  <!-- the item being dragged -->
+  <div aria-hidden="true" style="position: absolute; right: 268px; bottom: 32px; width: 40px; height: 40px; border-radius: 4px; border: 1px solid rgba(224,176,104,0.9); background: rgba(70,52,30,0.85); box-shadow: 0 8px 18px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; transform: rotate(-6deg); z-index: 2;">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5l6 6M13 5l6 6-9 9H4v-6z"></path></svg>
+  </div>
+
+  <!-- panel strip, bottom right -->
+  <nav aria-label="Panels" style="position: absolute; right: 16px; bottom: 14px; display: flex; gap: 2px; padding: 4px; border-radius: 8px; border: 1px solid rgba(201,160,98,0.8); background: rgba(0,0,0,0.5);">
+    <sc-for list="{{panels}}" as="p" hint-placeholder-count="8">
+      <button aria-label="{{p.label}}" title="{{p.label}}" style="width: 36px; height: 36px; padding: 0; border: 1px solid {{p.edge}}; border-radius: 6px; background: {{p.bg}}; box-shadow: {{p.glow}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{p.c}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.d}}"></path></svg>
+      </button>
+    </sc-for>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":600,"height":300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const list = [
+      ['Character', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0'],
+      ['Inventory', 'M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2', true],
+      ['Spellbook', 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5'],
+      ['Journal', 'M6 3h12v14a4 4 0 0 1-4 4H6M6 3a3 3 0 0 0-3 3v2h3M10 8h5M10 12h5'],
+      ['Map', 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14'],
+      ['House', 'M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5'],
+      ['Social', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3a4 4 0 0 1 0 8M22 21a7 7 0 0 0-5-6.7'],
+      ['Options', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z']
+    ];
+    return {
+      panels: list.map(([label, d, lit]) => ({
+        label, d,
+        edge: lit ? '#E0B068' : 'rgba(0,0,0,0)',
+        bg: lit ? 'rgba(224,176,104,0.25)' : 'transparent',
+        glow: lit ? '0 0 14px rgba(224,176,104,0.7)' : 'none',
+        c: lit ? '#FFE7BF' : 'rgba(233,211,174,0.45)'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

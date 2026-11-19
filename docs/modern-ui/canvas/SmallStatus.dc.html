@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Status chips, top left</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 900px; height: 440px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: linear-gradient(180deg, #8FB3C9 0%, #A9C4C2 40%, #6F8A55 100%);">
+
+  <div style="position: absolute; left: 16px; top: 16px; right: 16px; display: flex; flex-direction: column; gap: 10px;">
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+      <div style="height: 86px; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; background: rgba(0,0,0,0.26); display: flex; gap: 18px;">
+        <div style="width: 470px; flex: none; display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; gap: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
+            <span style="height: 28px; padding: 0 10px 0 8px; border-radius: 4px; border: 1px solid rgba(127,208,138,0.55); background: rgba(10,30,14,0.45); display: flex; align-items: center; gap: 7px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7FD08A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM12 16V9M9 12l3-3 3 3"></path></svg>
+              <span style="font-size: 13px; font-weight: 700;">42</span><span style="font-size: 11px; font-weight: 600; color: #E9D3AE;">12:40</span>
+            </span>
+            <sc-for list="{{r.chips}}" as="c" hint-placeholder-count="1">
+              <button title="{{c.tip}}" style="height: 28px; padding: 0 10px 0 8px; border-radius: 4px; border: 1px solid {{c.edge}}; background: {{c.bg}}; display: flex; align-items: center; gap: 7px; cursor: pointer;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{c.fg}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.d}}"></path></svg>
+                <span style="font-size: 12px; font-weight: 700; color: {{c.fg}}; font-variant-numeric: tabular-nums;">{{c.text}}</span>
+              </button>
+            </sc-for>
+          </div>
+          <sc-if value="{{r.fps}}" hint-placeholder-val="{{false}}">
+            <span style="font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0,0,0,0.9);">62 fps · detail 1.00</span>
+          </sc-if>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 3px; justify-content: center;">
+          <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">{{r.label}}</span>
+          <span style="font-size: 11.5px; line-height: 1.45; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">{{r.note}}</span>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":900,"height":440}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const BAG = 'M6 8h12l-1 12H7zM9 8V6a3 3 0 0 1 6 0v2';
+    const BOARD = 'M4 4h16v16H4zM4 12h16M12 4v16M8 8h.01M16 16h.01';
+    const amber = { edge: 'rgba(240,180,76,0.85)', bg: 'rgba(40,28,8,0.7)', fg: '#FFD99A' };
+    const red = { edge: 'rgba(255,107,112,0.85)', bg: 'rgba(50,12,14,0.75)', fg: '#FFC2C4' };
+    const calm = { edge: 'rgba(201,160,98,0.7)', bg: 'rgba(20,16,12,0.6)', fg: '#E9D3AE' };
+    return {
+      rows: [
+        { label: 'HEAVY · OVER YOUR CAPACITY', note: 'Burden shows only once you carry more than you can. Click it to open the inventory. Retail’s burden indicator.', chips: [Object.assign({ text: 'Burden 142%', d: BAG, tip: 'Burden 142% of what you can carry. Click to open the inventory.' }, amber)] },
+        { label: 'VERY HEAVY · OVER TWICE YOUR CAPACITY', note: 'Red past twice your capacity (retail’s third step).', chips: [Object.assign({ text: 'Burden 215%', d: BAG, tip: 'Burden 215% of what you can carry. Click to open the inventory.' }, red)] },
+        { label: 'IN A GAME', note: 'While you sit at a chess board: whose move it is. Click to bring the board back. Retail’s mini-game indicator.', chips: [Object.assign({ text: 'Chess · your move', d: BOARD, tip: 'Chess with Rook. Click to show the board.' }, calm)] },
+        { label: 'SHOW FRAME RATE (OPTIONS › GRAPHICS, OR /FRAMERATE)', note: 'Frames per second and the detail level, as retail’s two lines, under the counts.', fps: true, chips: [] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

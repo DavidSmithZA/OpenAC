@@ -575,10 +575,72 @@ come from the game data.
   links. A name the server refuses shows its words and three near names
   to pick (OPENAC, agreed).
 
-## Still to design
+## Small pieces (canvas page "Small pieces")
 
-A check of every retail panel in `crates/ac-ui/src/panels` and
-`crates/ac-ui/src/pregame` against this design.
+Found by the coverage check below; each had no modern design yet.
+
+- Connection: the status line above the radar (place, time, round
+  trip, dot) is quiet while the link is good. With no word from the
+  server for 5 s it turns amber ("Slow · 7 s"), from 20 s red with a
+  flashing dot ("No answer · 24 s"), from 40 s or when the link drops
+  "Connection lost". Clicking it opens a small card: state, round trip,
+  packets lost, last heard, server. Retail's link indicator and panel.
+- Top left, beside the effects counts, chips that show only when
+  needed: Burden over 100% (amber) and over 200% (red), click opens the
+  inventory; "Chess · your move" while at a board, click brings the
+  board back. Retail's burden and mini-game indicators.
+- Show frame rate (Options › Graphics, or /framerate): retail's two
+  lines, frames per second and detail level, under the counts.
+- Target line: two small buttons, Use and Inspect, for any selected
+  object (retail's toolbar Use and Examine). Use is named for what it
+  does: Talk, Open, Loot, Use (OPENAC wording). An item of yours with
+  mana shows a blue mana bar and "Mana 1,840 / 3,000" in place of
+  health (retail's selection strip).
+- Dragging an item onto the Inventory button in the panel strip puts
+  it in the main pack, with "Put in main pack, 38 of 102 free" (retail's
+  backpack button).
+- Credits: the game's pictures rise on the left and its credit text on
+  the right over the dimmed dusk of character selection; any key, click
+  or "Back to your characters" returns.
+
+## Coverage
+
+Every retail panel (`crates/ac-ui/src/panels`) and pre-game screen
+(`crates/ac-ui/src/pregame`) against this design:
+
+| Retail | Modern |
+| --- | --- |
+| appraisal, appraisal_creature, appraisal_sections, appraisal_inscription | Inspect sheet; inscription editable by its owner |
+| barber | Barber |
+| book | Journal › book reader |
+| cell_template, item_cooldown, items | Item cells in inventory, bars, loot, trade; cooldown sweep on bar slots |
+| character, character_info, character_titles | Character sheet: attributes and skills, Information, Titles |
+| chat, transcript, floating_chat | Chat: tabs, popped-out windows, colours per channel |
+| spew_box | Chat: status line under the target |
+| combat_bar, jump_powerbar | Combat strip; jump uses its meter |
+| magic (spellbook, spell bars), spell_components | Spellbook and Components; spell bars merged into your bars |
+| toolbar | Your bars, combat pill, panel strip; Use and Examine on the target line; backpack drop on the Inventory button; ammo on the combat strip |
+| selected_object | Target line under the vitals (health, an owned item's mana) |
+| vitals | Vitals top centre (stacked and side-by-side switch dropped: one fixed place) |
+| radar | Radar top right; its UI lock is Edit layout |
+| indicators: helpful, harmful, vitae | Effects on you counts, hover list, Effects window |
+| indicators: link, burden, mini-game | Small pieces: connection, burden and chess chips |
+| indicators: end of session | Options › Exit game and Character select |
+| inventory, paperdoll, external_container | Inventory (equipment, Aetheria, packs); Loot window |
+| vendor, trade, salvage | Vendor, Trade, Salvage |
+| house_purchase, map_house | House sale window, Map (full screen), House window |
+| journal, contracts, journal_notes, journal_pages | Journal: Quests, Notes (pages list inside) |
+| social: allegiance, fellowship, friends, rank_titles | Social: Allegiance, Fellowship, Friends, Ignored |
+| mini_game | Chess (retail's hidden Pass stays out) |
+| dialog, dialog_factory | Dialogs: one card style, queue, text entry and menu kinds |
+| options (Gameplay, Character, Chat, Configuration), keyboard_config | Options' eight sections; Controls holds the key bindings; mouse-turning in Controls › Mouse |
+| main_panels | Panel strip: one window per panel, own keys |
+| fps | Small pieces: Show frame rate |
+| projectile_debug | Diagnostic overlay, unchanged |
+| pregame: connection, characters, credits | Login (Stage, portal connecting), Credits |
+| pregame: chargen (heritage, profession, skills, appearance, town, summary) | Character creation (Studio) |
+
+Nothing retail does is left without a place.
 
 Open question: at a server's level cap, does the XP bar say "Max level"
 or keep counting total XP?

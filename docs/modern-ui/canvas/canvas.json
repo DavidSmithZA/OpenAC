@@ -1515,6 +1515,46 @@
    "h": 900,
    "page": "pregame-alt",
    "title": "Journey · Olthoi Spitter: the journey drops to three steps"
+  },
+  "SmallLink.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 900,
+   "h": 440,
+   "page": "small",
+   "title": "Connection: the status line goes amber, red, then lost; click for details"
+  },
+  "SmallStatus.dc.html": {
+   "x": 980,
+   "y": 0,
+   "w": 900,
+   "h": 440,
+   "page": "small",
+   "title": "Top left: burden and chess chips appear only when needed; frame rate lines"
+  },
+  "SmallTarget.dc.html": {
+   "x": 1960,
+   "y": 0,
+   "w": 900,
+   "h": 440,
+   "page": "small",
+   "title": "Target line: Use (named for what it does) and Inspect; an owned item shows its mana"
+  },
+  "SmallDrop.dc.html": {
+   "x": 2940,
+   "y": 0,
+   "w": 600,
+   "h": 300,
+   "page": "small",
+   "title": "Drag an item onto the Inventory button: it goes in the main pack"
+  },
+  "Credits.dc.html": {
+   "x": 0,
+   "y": 560,
+   "w": 1440,
+   "h": 900,
+   "page": "small",
+   "title": "Credits: the game's pictures and text rise over the dimmed dusk; any key goes back"
   }
  },
  "createdOnFiles": {
@@ -1756,6 +1796,21 @@
    "w": 520,
    "page": "pregame-alt",
    "text": "The login and creation directions not chosen (2026-11-19), kept for reference."
+  },
+  "t_small": {
+   "kind": "title1",
+   "maxW": 3540,
+   "text": "Small pieces the coverage check found",
+   "x": 0,
+   "y": -300,
+   "page": "small"
+  },
+  "s_small": {
+   "x": -620,
+   "y": 0,
+   "w": 520,
+   "page": "small",
+   "text": "Every retail panel and pre-game screen was checked against the design (README, \"Coverage\"). These are the pieces that had no modern design yet.\n\nAlso: Options › Graphics gains \"Show frame rate\"."
   }
  },
  "order": [
@@ -1936,7 +1991,12 @@
   "CreateJourneyAppearance.dc.html",
   "CreateJourneyTown.dc.html",
   "CreateJourneyName.dc.html",
-  "CreateJourneyOlthoi.dc.html"
+  "CreateJourneyOlthoi.dc.html",
+  "SmallLink.dc.html",
+  "SmallStatus.dc.html",
+  "SmallTarget.dc.html",
+  "SmallDrop.dc.html",
+  "Credits.dc.html"
  ],
  "pages": [
   {
@@ -2022,6 +2082,10 @@
   {
    "id": "create",
    "name": "Character creation"
+  },
+  {
+   "id": "small",
+   "name": "Small pieces"
   },
   {
    "id": "pregame-alt",

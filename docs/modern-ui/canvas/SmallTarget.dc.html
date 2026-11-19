@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Target: use and inspect</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 900px; height: 440px; position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: linear-gradient(180deg, #8FB3C9 0%, #A9C4C2 40%, #6F8A55 100%);">
+  <div style="position: absolute; left: 16px; top: 16px; right: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+    <sc-for list="{{cases}}" as="c" hint-placeholder-count="4">
+      <div style="height: 196px; box-sizing: border-box; padding: 12px 14px; border-radius: 6px; background: rgba(0,0,0,0.26); display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">{{c.label}}</span>
+
+        <!-- the target line, as under the vitals, with its two actions -->
+        <div style="display: flex; flex-direction: column; gap: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.85);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="flex: 1; font-size: 14px; font-weight: 600; color: {{c.nameColor}};">{{c.name}}</span>
+            <sc-if value="{{c.hasPct}}" hint-placeholder-val="{{true}}"><span style="font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;">{{c.pct}}</span></sc-if>
+            <button title="{{c.useTip}}" style="height: 24px; padding: 0 9px 0 7px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.7); background: rgba(20,16,12,0.7); display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; cursor: pointer; text-shadow: none;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.useIcon}}"></path></svg>{{c.use}}
+            </button>
+            <button aria-label="Inspect {{c.name}}" title="Inspect" style="width: 24px; height: 24px; padding: 0; border-radius: 4px; border: 1px solid rgba(201,160,98,0.7); background: rgba(20,16,12,0.7); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"></path></svg>
+            </button>
+          </div>
+          <sc-if value="{{c.hasBar}}" hint-placeholder-val="{{true}}">
+            <div style="height: 4px; border-radius: 2px; background: rgba(0,0,0,0.5);"><div style="width: {{c.barW}}; height: 100%; border-radius: 2px; background: {{c.barC}};"></div></div>
+          </sc-if>
+          <sc-if value="{{c.hasSub}}" hint-placeholder-val="{{false}}">
+            <span style="font-size: 11px; font-weight: 600; color: #BFD8FF; font-variant-numeric: tabular-nums;">{{c.sub}}</span>
+          </sc-if>
+        </div>
+        <span style="margin-top: auto; font-size: 11px; line-height: 1.45; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">{{c.note}}</span>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":900,"height":440}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const HAND = 'M8 13V5a1.5 1.5 0 0 1 3 0v6M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V5.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7L3 14a1.5 1.5 0 0 1 2.5-1.6L8 15';
+    const TALK = 'M4 5h16v11H9l-5 4z';
+    const DOOR = 'M6 21V4h12v17M3 21h18M14 12h.01';
+    const cases = [
+      { label: 'A CREATURE', name: 'Drudge Ravener', nameColor: '#E0B068', pct: '68%', hasPct: true, hasBar: true, barW: '68%', barC: '#E5484D', use: 'Use', useIcon: HAND, useTip: 'Use', note: 'Inspect shows its page on the inspect sheet. Use does what retail’s Use button does.' },
+      { label: 'A PERSON TO TALK TO', name: 'Royal Guard Iven', nameColor: '#E0B068', pct: '', hasPct: false, hasBar: false, use: 'Talk', useIcon: TALK, useTip: 'Use: talk', note: 'The Use button says what using it does: Talk, Open, Loot, Use (OPENAC wording; the action is retail’s Use).' },
+      { label: 'A DOOR OR CHEST', name: 'Door', nameColor: '#E0B068', pct: '', hasPct: false, hasBar: false, use: 'Open', useIcon: DOOR, useTip: 'Use: open', note: 'Same two buttons for any selected object. The keys for Use and Inspect work as before.' },
+      { label: 'AN ITEM YOU OWN', name: 'Gold Hollow Wand', nameColor: '#F4EBDC', pct: '61%', hasPct: true, hasBar: true, barW: '61%', barC: '#5B9BFF', use: 'Use', useIcon: HAND, useTip: 'Use', hasSub: true, sub: 'Mana 1,840 / 3,000', note: 'An item of yours with mana shows a blue mana bar in place of health (retail shows it in the selection strip).' }
+    ];
+    return { cases: cases.map(c => Object.assign({ hasSub: false, sub: '' }, c)) };
+  }
+}
+</script>
+</body>
+</html>
