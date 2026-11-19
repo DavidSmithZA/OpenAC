@@ -7,6 +7,7 @@ pub mod edge_glow;
 pub mod effects;
 pub mod radar;
 pub mod recall;
+pub mod recall_dialog;
 pub mod target;
 pub mod vitals;
 

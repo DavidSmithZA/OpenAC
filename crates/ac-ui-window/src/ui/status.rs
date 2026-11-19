@@ -95,6 +95,11 @@ pub struct StatusUi {
     /// The selected object's name in the world (for one not in the item
     /// table).
     selected_world_name: Option<String>,
+    /// The world (server) played on, as character selection named it.
+    pub(super) server_world: Option<String>,
+    /// The settings file, for what the modern interface keeps there (its
+    /// own recalls); none: those last the session.
+    pub(super) settings_store: Option<ac_host::settings::SettingsStore>,
     /// The mouse cursor's decision.
     pub cursor: ac_ui::cursor::CursorFeedbackController,
     /// The overlays over the world.

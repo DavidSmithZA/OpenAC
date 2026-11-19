@@ -56,6 +56,10 @@ pub struct ModernLayer {
     last_ping: Option<f64>,
     /// The card was open last frame.
     card_was_open: bool,
+    /// The dialog that adds or changes a recall of the player's own.
+    pub recall_dialog: Option<ElementId>,
+    /// The player's own recalls (all servers), loaded once.
+    own_recalls: Option<Vec<ac_host::settings::CustomRecall>>,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -227,6 +231,12 @@ impl WindowUi {
             small: self.modern_font(Weight::Regular, RECALL_SMALL_SIZE),
             label: self.modern_font(Weight::SemiBold, EFFECTS_LABEL_SIZE),
         };
+        let dialog_fonts = hud::recall_dialog::DialogFonts {
+            title: self.modern_font(Weight::SemiBold, CARD_BODY_SIZE),
+            body: self.modern_font(Weight::Medium, CARD_BODY_SIZE),
+            caption: self.modern_font(Weight::Regular, EFFECTS_CAPTION_SIZE),
+        };
+        let mut recall_dialog = None;
         if let Ok(radar) = &radar {
             let ui = &mut self.host.root;
             let element = Element::at(0.0, 0.0, hud::recall::WIDTH, 100.0)
@@ -240,6 +250,12 @@ impl WindowUi {
             if let Some(r) = ui.widget_mut::<hud::radar::RadarRing>(*radar) {
                 r.recall_list = Some(list);
             }
+            recall_dialog = Some(hud::recall_dialog::RecallDialog::mount(
+                ui,
+                *radar,
+                Horizon::BRONZE,
+                dialog_fonts,
+            ));
         }
         let card = {
             let ui = &mut self.host.root;
@@ -267,6 +283,7 @@ impl WindowUi {
             Err(e) => self.notices.push(format!("ui: modern effects: {e}")),
         }
         modern.connection_card = card;
+        modern.recall_dialog = recall_dialog;
         match radar {
             Ok(id) => {
                 modern.radar = Some(id);
@@ -430,6 +447,126 @@ impl WindowUi {
             pk_lite: traits.is_some_and(|t| t.is_pk_lite),
             magic: self.facts.state.combat_mode == ac_core::combat::CombatMode::MAGIC,
             spells,
+            server: self.status.server_world.clone(),
+            own: self.shown_own_recalls(),
+        }
+    }
+
+    /// The player's own recalls shown on this server, with their place in
+    /// the saved list.
+    fn shown_own_recalls(&self) -> Vec<(usize, ac_host::settings::CustomRecall)> {
+        let server = self.status.server_world.as_deref();
+        self.modern
+            .as_ref()
+            .and_then(|m| m.own_recalls.as_ref())
+            .map(|all| {
+                all.iter()
+                    .enumerate()
+                    .filter(|(_, r)| r.server.is_none() || r.server.as_deref() == server)
+                    .map(|(i, r)| (i, r.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// One frame of the player's own recalls: loaded once the settings
+    /// file is known; what the list and the dialog asked for is done and
+    /// saved.
+    pub(super) fn tick_modern_recalls(&mut self) {
+        use hud::recall::OwnRequest;
+        use hud::recall_dialog::{DialogOutcome, RecallDialog};
+        let Some(modern) = self.modern.as_mut() else {
+            return;
+        };
+        if modern.own_recalls.is_none()
+            && let Some(store) = &self.status.settings_store
+        {
+            modern.own_recalls = Some(store.load_custom_recalls());
+        }
+        let (Some(radar), Some(dialog)) = (modern.radar, modern.recall_dialog) else {
+            return;
+        };
+        let ui = &mut self.host.root;
+        let list = ui
+            .widget::<hud::radar::RadarRing>(radar)
+            .and_then(|r| r.recall_list);
+        let requests = list
+            .and_then(|l| ui.widget_mut::<hud::recall::RecallList>(l))
+            .map(|l| std::mem::take(&mut l.requests))
+            .unwrap_or_default();
+        let outcome = ui
+            .widget_mut::<RecallDialog>(dialog)
+            .and_then(|d| d.outcome.take());
+        if requests.is_empty() && outcome.is_none() {
+            return;
+        }
+        let server = self.status.server_world.clone();
+        let shown: Vec<usize> = self
+            .shown_own_recalls()
+            .into_iter()
+            .map(|(i, _)| i)
+            .collect();
+        let Some(modern) = self.modern.as_mut() else {
+            return;
+        };
+        let all = modern.own_recalls.get_or_insert_with(Vec::new);
+        let mut changed = false;
+        for request in requests {
+            match request {
+                OwnRequest::Add | OwnRequest::Edit(_) => {
+                    let (editing, recall) = match request {
+                        OwnRequest::Edit(i) => (Some(i), all.get(i).cloned().unwrap_or_default()),
+                        _ => (None, ac_host::settings::CustomRecall::default()),
+                    };
+                    let ui = &mut self.host.root;
+                    let (left, top) = hud::radar::beside(
+                        ui,
+                        radar,
+                        hud::recall_dialog::WIDTH,
+                        hud::recall_dialog::HEIGHT,
+                    );
+                    if let Some(e) = ui.element_mut(dialog) {
+                        e.left = left;
+                        e.top = top;
+                    }
+                    RecallDialog::show(ui, dialog, editing, &recall, server.clone());
+                    ui.bring_to_front(radar);
+                }
+                OwnRequest::Remove(i) if i < all.len() => {
+                    all.remove(i);
+                    changed = true;
+                }
+                OwnRequest::Move(i, step) => {
+                    // Swap with the neighbour shown on this server.
+                    let at = shown.iter().position(|&s| s == i);
+                    let other = at
+                        .and_then(|a| a.checked_add_signed(step as isize))
+                        .and_then(|b| shown.get(b).copied());
+                    if let Some(j) = other
+                        && i < all.len()
+                        && j < all.len()
+                    {
+                        all.swap(i, j);
+                        changed = true;
+                    }
+                }
+                OwnRequest::Remove(_) => {}
+            }
+        }
+        if let Some(DialogOutcome::Done(editing, recall)) = outcome {
+            match editing {
+                Some(i) if i < all.len() => all[i] = recall,
+                _ => all.push(recall),
+            }
+            changed = true;
+        }
+        if changed {
+            let saved = all.clone();
+            if let Some(store) = &self.status.settings_store
+                && let Err(e) = store.save_custom_recalls(&saved)
+            {
+                self.notices.push(format!("ui: saving your recalls: {e}"));
+            }
         }
     }
 

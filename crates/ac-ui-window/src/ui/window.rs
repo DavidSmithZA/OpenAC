@@ -1507,6 +1507,7 @@ impl WindowUi {
         self.tick_tooltips(dt, now_ms);
         self.tick_modern_effects(dt);
         self.tick_modern_connection();
+        self.tick_modern_recalls();
         if let Some(modern) = &self.modern {
             modern.hide_replaced(&mut self.host);
         }

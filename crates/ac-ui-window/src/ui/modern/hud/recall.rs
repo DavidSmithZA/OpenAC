@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 
+use ac_host::settings::CustomRecall;
 use ac_runtime::gameplay::GameplayCommand;
 use ac_runtime::session::SessionCommand;
 use ac_ui::draw::{Color, RenderContext, TextureRef};
@@ -32,6 +33,7 @@ const ROW: f32 = 40.0;
 const PAD: f32 = 6.0;
 const TILE: f32 = 26.0;
 const WHEEL_STEP: f32 = 2.0 * ROW;
+const ADD_ROW: f32 = 32.0;
 
 /// A place a recall goes to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -123,6 +125,11 @@ pub struct RecallFacts {
     pub magic: bool,
     /// The recall spells the player knows: id and name.
     pub spells: Vec<(u32, String)>,
+    /// The server (world) played on, when known.
+    pub server: Option<String>,
+    /// The player's own recalls shown on it, with their place in the
+    /// saved list.
+    pub own: Vec<(usize, CustomRecall)>,
 }
 
 impl RecallFacts {
@@ -182,13 +189,61 @@ fn spell_about(name: &str) -> &'static str {
 /// A row of the list.
 #[derive(Debug, Clone, PartialEq)]
 enum Row {
-    Section(&'static str),
+    Section(String),
     Place(Place),
     Spell {
         name: String,
         icon: Option<TextureRef>,
     },
+    Own {
+        index: usize,
+        recall: CustomRecall,
+    },
+    AddOwn,
 }
+
+/// What the player asked of their own recalls.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OwnRequest {
+    /// Add one.
+    Add,
+    /// Change the one at this place in the saved list.
+    Edit(usize),
+    /// Move it up (-1) or down (+1) among those shown.
+    Move(usize, i32),
+    /// Remove it.
+    Remove(usize),
+}
+
+/// The icons a recall of the player's own can have, by saved name.
+pub const OWN_ICONS: [&str; 7] = [
+    "recall",
+    "lifestone",
+    "house",
+    "flag",
+    "coin",
+    "swords",
+    "mansion",
+];
+
+/// Draws own-recall icon `name` (the recall mark for an unknown one) in a
+/// 14-unit box.
+pub fn own_icon(rc: &mut RenderContext<'_>, name: &str, x: f32, y: f32, color: Color) {
+    let place = match name {
+        "lifestone" => Place::Lifestone,
+        "house" => Place::House,
+        "mansion" => Place::Mansion,
+        "flag" => Place::Hometown,
+        "coin" => Place::Marketplace,
+        "swords" => Place::PkArena,
+        _ => return recall_mark(rc, x, y, color),
+    };
+    place_icon(rc, place, x, y, color);
+}
+
+/// The action buttons a right-clicked own recall shows: what each does
+/// and its word.
+const ARMED: [(&str, i32); 4] = [("Edit", 0), ("Up", -1), ("Down", 1), ("Remove", 2)];
 
 /// The fonts the list uses.
 #[derive(Debug, Clone, Default)]
@@ -210,6 +265,10 @@ pub struct RecallList {
     rows: Vec<Row>,
     hovered: Option<usize>,
     scroll: f32,
+    /// The own recall showing its action buttons (a row index).
+    armed: Option<usize>,
+    /// What the player asked of their own recalls, for the window to do.
+    pub requests: Vec<OwnRequest>,
 }
 
 impl RecallList {
@@ -223,6 +282,8 @@ impl RecallList {
             rows: Vec::new(),
             hovered: None,
             scroll: 0.0,
+            armed: None,
+            requests: Vec::new(),
         };
         list.build(&mut |_| None);
         list
@@ -241,10 +302,10 @@ impl RecallList {
     }
 
     fn build(&mut self, icon: &mut dyn FnMut(u32) -> Option<TextureRef>) {
-        let mut rows = vec![Row::Section("PLACES")];
+        let mut rows = vec![Row::Section("PLACES".to_owned())];
         rows.extend(Place::ALL.map(Row::Place));
         if !self.facts.spells.is_empty() {
-            rows.push(Row::Section("YOUR RECALL SPELLS"));
+            rows.push(Row::Section("YOUR RECALL SPELLS".to_owned()));
             for (id, name) in &self.facts.spells {
                 rows.push(Row::Spell {
                     name: name.clone(),
@@ -252,13 +313,27 @@ impl RecallList {
                 });
             }
         }
+        let title = match &self.facts.server {
+            Some(server) => format!("YOUR OWN \u{b7} {}", server.to_uppercase()),
+            None => "YOUR OWN".to_owned(),
+        };
+        rows.push(Row::Section(title));
+        for (index, recall) in &self.facts.own {
+            rows.push(Row::Own {
+                index: *index,
+                recall: recall.clone(),
+            });
+        }
+        rows.push(Row::AddOwn);
         self.rows = rows;
+        self.armed = None;
         self.scroll = self.scroll.clamp(0.0, self.scroll_max());
     }
 
     fn row_height(row: &Row) -> f32 {
         match row {
             Row::Section(_) => SECTION,
+            Row::AddOwn => ADD_ROW,
             _ => ROW,
         }
     }
@@ -287,6 +362,24 @@ impl RecallList {
     pub fn reset(&mut self) {
         self.scroll = 0.0;
         self.hovered = None;
+        self.armed = None;
+    }
+
+    /// The armed row's buttons: what each asks and its left and width.
+    fn armed_buttons(&self) -> Vec<(i32, &'static str, f32, f32)> {
+        let Some(f) = &self.fonts.small else {
+            return Vec::new();
+        };
+        let mut right = WIDTH - 12.0;
+        let mut out = Vec::new();
+        for (word, action) in ARMED.iter().rev() {
+            let w = text::measure(f, word, 0.0) + 12.0;
+            right -= w;
+            out.push((*action, *word, right, w));
+            right -= 4.0;
+        }
+        out.reverse();
+        out
     }
 
     fn row_at(&self, y: f32) -> Option<usize> {
@@ -309,12 +402,14 @@ impl RecallList {
             Row::Section(_) => false,
             Row::Place(place) => self.facts.refusal(*place).is_none(),
             Row::Spell { .. } => self.facts.magic,
+            Row::Own { .. } | Row::AddOwn => true,
         }
     }
 
     fn go(&self, ui: &mut UiRoot, row: &Row) {
         let command = match row {
-            Row::Section(_) => return,
+            Row::Section(_) | Row::AddOwn => return,
+            Row::Own { recall, .. } => SessionCommand::Chat(recall.command.clone()),
             Row::Place(place) => SessionCommand::Chat(place.command().to_owned()),
             Row::Spell { name, .. } => SessionCommand::Gameplay(GameplayCommand::Cast {
                 spell: name.clone(),
@@ -374,12 +469,47 @@ impl Widget for RecallList {
                 self.hovered = self.row_at(y);
                 true
             }
+            kind::RIGHT_CLICK => {
+                let at = self.row_at(y);
+                self.armed = at.filter(|&i| matches!(self.rows[i], Row::Own { .. }));
+                true
+            }
             kind::CLICK => {
-                if let Some(row) = self.row_at(y).map(|i| self.rows[i].clone())
-                    && self.enabled(&row)
+                let x = e.data1 as f32;
+                let Some(i) = self.row_at(y) else {
+                    return true;
+                };
+                let row = self.rows[i].clone();
+                if self.armed == Some(i)
+                    && let Row::Own { index, .. } = row
                 {
-                    self.go(ui, &row);
-                    Self::close(ui, me);
+                    let action = self
+                        .armed_buttons()
+                        .into_iter()
+                        .find(|(_, _, left, w)| (*left..left + w).contains(&x))
+                        .map(|(a, ..)| a);
+                    match action {
+                        Some(0) => {
+                            self.requests.push(OwnRequest::Edit(index));
+                            Self::close(ui, me);
+                        }
+                        Some(2) => self.requests.push(OwnRequest::Remove(index)),
+                        Some(d) => self.requests.push(OwnRequest::Move(index, d)),
+                        None => self.armed = None,
+                    }
+                    return true;
+                }
+                self.armed = None;
+                match row {
+                    Row::AddOwn => {
+                        self.requests.push(OwnRequest::Add);
+                        Self::close(ui, me);
+                    }
+                    _ if self.enabled(&row) => {
+                        self.go(ui, &row);
+                        Self::close(ui, me);
+                    }
+                    _ => {}
                 }
                 true
             }
@@ -407,7 +537,7 @@ impl Widget for RecallList {
         for (i, row) in self.rows.iter().enumerate() {
             let rh = Self::row_height(row);
             if top + rh > HEAD && top < HEAD + room {
-                self.draw_row(rc, row, top, self.hovered == Some(i));
+                self.draw_row(rc, row, top, self.hovered == Some(i), self.armed == Some(i));
             }
             top += rh;
         }
@@ -422,7 +552,14 @@ impl Widget for RecallList {
 }
 
 impl RecallList {
-    fn draw_row(&self, rc: &mut RenderContext<'_>, row: &Row, top: f32, hovered: bool) {
+    fn draw_row(
+        &self,
+        rc: &mut RenderContext<'_>,
+        row: &Row,
+        top: f32,
+        hovered: bool,
+        armed: bool,
+    ) {
         let p = self.theme.palette;
         let w = WIDTH;
         match row {
@@ -439,7 +576,33 @@ impl RecallList {
                     );
                 }
             }
-            Row::Place(_) | Row::Spell { .. } => {
+            Row::AddOwn => {
+                if hovered {
+                    rc.fill_rounded_rect(
+                        4.0,
+                        top + 1.0,
+                        w - 8.0,
+                        ADD_ROW - 2.0,
+                        CornerRadii::all(4.0),
+                        p.accent_tint,
+                    );
+                }
+                if let Some(f) = &self.fonts.name {
+                    let ty = top + ((ADD_ROW - f.line_height) * 0.5).round();
+                    let (cx, cy) = (12.0 + TILE * 0.5, top + ADD_ROW * 0.5);
+                    rc.smooth_line(cx - 5.0, cy, cx + 5.0, cy, p.accent, 1.6);
+                    rc.smooth_line(cx, cy - 5.0, cx, cy + 5.0, p.accent, 1.6);
+                    text::draw(
+                        rc,
+                        f,
+                        "Add your own\u{2026}",
+                        12.0 + TILE + 10.0,
+                        ty,
+                        TextStyle::plain(p.accent),
+                    );
+                }
+            }
+            Row::Place(_) | Row::Spell { .. } | Row::Own { .. } => {
                 let enabled = self.enabled(row);
                 if hovered && enabled {
                     rc.fill_rounded_rect(
@@ -503,9 +666,50 @@ impl RecallList {
                         };
                         (name.clone(), about, right)
                     }
-                    Row::Section(_) => unreachable!(),
+                    Row::Own { recall, .. } => {
+                        own_icon(rc, &recall.icon, 12.0 + 6.0, tile_y + 6.0, p.accent);
+                        let about = if recall.server.is_some() {
+                            "This server only \u{b7} right-click to change"
+                        } else {
+                            "Every server \u{b7} right-click to change"
+                        };
+                        let right = if armed {
+                            String::new()
+                        } else {
+                            recall.command.clone()
+                        };
+                        (recall.name.clone(), about, right)
+                    }
+                    Row::Section(_) | Row::AddOwn => unreachable!(),
                 };
                 let mut right_left = w - 12.0;
+                if armed && let Some(f) = &self.fonts.small {
+                    let buttons = self.armed_buttons();
+                    for (action, word, left, bw) in &buttons {
+                        let (bh, by) = (22.0, top + (ROW - 22.0) * 0.5);
+                        let edge = if *action == 2 { p.bad } else { p.trim_soft };
+                        rc.fill_rounded_rect(
+                            *left,
+                            by,
+                            *bw,
+                            bh,
+                            CornerRadii::all(3.0),
+                            hex(0x14_100C, 0.9),
+                        );
+                        rc.stroke_rounded_rect(
+                            *left,
+                            by,
+                            *bw,
+                            bh,
+                            CornerRadii::all(3.0),
+                            edge,
+                            1.0,
+                        );
+                        let ty = by + ((bh - f.line_height) * 0.5).round();
+                        text::draw(rc, f, word, left + 6.0, ty, TextStyle::plain(p.text));
+                    }
+                    right_left = buttons.first().map_or(right_left, |b| b.2);
+                }
                 if let Some(f) = &self.fonts.small
                     && !right.is_empty()
                 {
@@ -644,6 +848,33 @@ mod tests {
     }
 
     #[test]
+    fn your_own_follow_the_spells_with_the_server_named() {
+        let mut list = RecallList::new(Horizon::BRONZE, RecallFonts::default());
+        let facts = RecallFacts {
+            server: Some("Dreamweave".to_owned()),
+            own: vec![(
+                3,
+                CustomRecall {
+                    name: "Driftnet".to_owned(),
+                    command: "/dn".to_owned(),
+                    icon: "recall".to_owned(),
+                    server: Some("Dreamweave".to_owned()),
+                },
+            )],
+            ..RecallFacts::default()
+        };
+        list.set_facts(facts, &mut |_| None);
+        let tail = &list.rows[list.rows.len() - 3..];
+        assert_eq!(
+            tail[0],
+            Row::Section("YOUR OWN \u{b7} DREAMWEAVE".to_owned())
+        );
+        assert!(matches!(&tail[1], Row::Own { index: 3, recall } if recall.command == "/dn"));
+        assert_eq!(tail[2], Row::AddOwn);
+        assert!(list.enabled(&tail[1]));
+    }
+
+    #[test]
     fn spells_need_magic_mode() {
         let mut list = RecallList::new(Horizon::BRONZE, RecallFonts::default());
         let spell = Row::Spell {
@@ -654,6 +885,6 @@ mod tests {
         list.facts.magic = true;
         assert!(list.enabled(&spell));
         assert!(list.enabled(&Row::Place(Place::Lifestone)));
-        assert!(!list.enabled(&Row::Section("PLACES")));
+        assert!(!list.enabled(&Row::Section("PLACES".to_owned())));
     }
 }

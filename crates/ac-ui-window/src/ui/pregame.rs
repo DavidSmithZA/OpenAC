@@ -65,6 +65,16 @@ impl WindowUi {
     /// out with the window's next requests. While a screen shows, Enter
     /// and Tab do not open the chat entry.
     pub(super) fn feed_pregame(&mut self, scene: &mut Scene) {
+        if let Some(world) = scene
+            .pregame_mut()
+            .selection
+            .as_ref()
+            .map(|s| s.world_name.trim())
+            .filter(|w| !w.is_empty())
+            && self.status.server_world.as_deref() != Some(world)
+        {
+            self.status.server_world = Some(world.to_owned());
+        }
         let Some(screens) = self.pregame.as_mut() else {
             return;
         };

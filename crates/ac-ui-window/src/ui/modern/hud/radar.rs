@@ -61,6 +61,22 @@ pub fn centre() -> Vec2 {
     Vec2::new(DISC_LEFT + OUTER + 1.0, DISC_TOP + OUTER + 1.0)
 }
 
+/// Where something `width` by `height` goes beside the radar piece `me`,
+/// relative to it: to its left when there is room, else to its right,
+/// level with the disc and kept on the screen.
+#[must_use]
+pub fn beside(ui: &UiRoot, me: ElementId, width: f32, height: f32) -> (f32, f32) {
+    let (x, y) = ui.screen_position(me);
+    let screen = ui.size();
+    let left = if x >= width + 4.0 {
+        -width - 4.0
+    } else {
+        WIDTH + 4.0
+    };
+    let top = DISC_TOP.min(screen.1 - y - height).max(-y);
+    (left, top)
+}
+
 /// The compass word for a heading in degrees (north 0, east 90).
 #[must_use]
 pub fn compass_word(heading: f32) -> &'static str {
@@ -228,17 +244,10 @@ impl RadarRing {
         let Some(list) = self.recall_list else {
             return;
         };
-        let (x, y) = ui.screen_position(me);
-        let screen = ui.size();
         let height = ui
             .widget::<super::recall::RecallList>(list)
             .map_or(0.0, super::recall::RecallList::height);
-        let left = if x >= super::recall::WIDTH + 4.0 {
-            -super::recall::WIDTH - 4.0
-        } else {
-            WIDTH + 4.0
-        };
-        let top = DISC_TOP.min(screen.1 - y - height).max(-y);
+        let (left, top) = beside(ui, me, super::recall::WIDTH, height);
         if let Some(e) = ui.element_mut(list) {
             e.left = left;
             e.top = top;
