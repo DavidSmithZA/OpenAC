@@ -314,11 +314,9 @@ impl WindowUi {
             .map_err(|e| e.to_string())
     }
 
-    /// One frame of the indicator bar and its panels.
-    pub(super) fn update_indicator_panels(&mut self, link: LinkStatus) {
-        let now = self.status.clock.elapsed().as_secs_f64();
-        let session_now = self.facts.session_now().unwrap_or(0.0);
-        let show_duration = self.player_view.is_some_and(|v| {
+    /// The "show spell durations" character option.
+    pub(super) fn show_spell_durations(&self) -> bool {
+        self.player_view.is_some_and(|v| {
             ac_runtime::character::option(ac_runtime::character::option_id::SPELL_DURATION)
                 .is_some_and(|e| {
                     let word = if e.in_options1 {
@@ -328,7 +326,14 @@ impl WindowUi {
                     };
                     word & e.mask != 0
                 })
-        });
+        })
+    }
+
+    /// One frame of the indicator bar and its panels.
+    pub(super) fn update_indicator_panels(&mut self, link: LinkStatus) {
+        let now = self.status.clock.elapsed().as_secs_f64();
+        let session_now = self.facts.session_now().unwrap_or(0.0);
+        let show_duration = self.show_spell_durations();
         let Self {
             host,
             facts,

@@ -6,6 +6,7 @@
 //! moment after the pointer has left both.
 
 use crate::draw::RenderContext;
+use crate::geometry::AnchorEdges;
 use crate::root::UiRoot;
 use crate::shapes::CornerRadii;
 use crate::tree::{Element, ElementId, Widget};
@@ -66,7 +67,11 @@ impl HoverPane {
     /// A pane `width` by `height`, hidden, made a child of the root. Put
     /// its content in [`HoverPane::element`].
     pub fn mount(ui: &mut UiRoot, theme: Horizon, width: f32, height: f32) -> Self {
-        let mut element = Element::at(0.0, 0.0, width, height).with_visible(false);
+        // Not held to the root's edges: the pane is placed (and sized) by
+        // hand each time it opens, and a layout pass must not undo that.
+        let mut element = Element::at(0.0, 0.0, width, height)
+            .with_visible(false)
+            .with_anchors(AnchorEdges::NONE);
         element.name = Some("hover-pane".to_owned());
         let root = ui.root();
         let pane = ui.add(root, element, HoverFrame { theme });

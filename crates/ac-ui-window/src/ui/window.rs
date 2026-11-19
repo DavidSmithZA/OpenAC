@@ -1214,6 +1214,7 @@ impl WindowUi {
         let radar = radar_scene(scene, self.player_view.as_ref(), fellowship);
         self.host
             .with_controller::<RadarController, _>(RADAR_WINDOW, |c, _| c.set_scene(&radar));
+        self.feed_modern_radar(&radar);
         self.feed_plugin_ui();
         let mut dirty = self.facts.take_dirty();
         if dirty.chat_entry
@@ -1250,6 +1251,7 @@ impl WindowUi {
         });
         self.update_indicator_panels(link);
         self.update_mini_game();
+        self.feed_modern_effects();
     }
 
     /// The panels' views from the window's copy of the facts, and each
@@ -1503,6 +1505,8 @@ impl WindowUi {
         self.tick_examination(dt);
         self.tick_keyboard_dialogs();
         self.tick_tooltips(dt, now_ms);
+        self.tick_modern_effects(dt);
+        self.tick_modern_connection();
         if let Some(modern) = &self.modern {
             modern.hide_replaced(&mut self.host);
         }

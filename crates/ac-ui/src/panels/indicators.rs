@@ -171,6 +171,19 @@ pub fn burden_state(load: f32) -> u32 {
     }
 }
 
+/// The player's load: what they carry over what they can carry (1 is a
+/// full load). Strength is taken as 10 when it is not known yet.
+#[must_use]
+pub fn burden_load(objects: &ClientObjectTable, player: u32, strength: Option<i32>) -> f32 {
+    let me = objects.get(player);
+    let augmentation = me.map_or(0, |p| p.properties.get_int(ENCUMBRANCE_AUG_PROPERTY, 0));
+    let capacity = encumbrance_capacity(strength.unwrap_or(10), augmentation);
+    let burden = me
+        .and_then(|p| p.properties.ints.get(&ENCUMBRANCE_VAL_PROPERTY).copied())
+        .unwrap_or_else(|| objects.sum_carried_burden(player));
+    load_ratio(capacity, burden)
+}
+
 /// What the indicators read, borrowed for one update.
 #[derive(Debug, Clone, Copy)]
 pub struct IndicatorsView<'a> {
@@ -335,14 +348,7 @@ impl IndicatorBarController {
     }
 
     fn update_burden(&mut self, ui: &mut UiRoot, view: &IndicatorsView<'_>) {
-        let player = view.objects.get(view.player);
-        let strength = view.strength.unwrap_or(10);
-        let augmentation = player.map_or(0, |p| p.properties.get_int(ENCUMBRANCE_AUG_PROPERTY, 0));
-        let capacity = encumbrance_capacity(strength, augmentation);
-        let burden = player
-            .and_then(|p| p.properties.ints.get(&ENCUMBRANCE_VAL_PROPERTY).copied())
-            .unwrap_or_else(|| view.objects.sum_carried_burden(view.player));
-        let state = burden_state(load_ratio(capacity, burden));
+        let state = burden_state(burden_load(view.objects, view.player, view.strength));
         ensure_state(ui, &mut self.applied, self.burden, state);
     }
 
@@ -460,7 +466,14 @@ pub fn format_remaining(enchantment: &ActiveEnchantmentRecord, now: f64) -> Stri
     if enchantment.duration < 0.0 {
         return String::new();
     }
-    let remaining = (enchantment.start_time + enchantment.duration - now).max(0.0);
+    format_seconds_left(enchantment.start_time + enchantment.duration - now)
+}
+
+/// `seconds` left as the effects rows show a time: "h:mm:ss" from an hour
+/// up, else "m:ss"; "--:--" when it is not a number.
+#[must_use]
+pub fn format_seconds_left(seconds: f64) -> String {
+    let remaining = seconds.max(0.0);
     if !remaining.is_finite() {
         return "--:--".to_owned();
     }

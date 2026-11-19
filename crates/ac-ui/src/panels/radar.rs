@@ -117,6 +117,18 @@ pub struct RadarScene {
 /// Project a scene into a radar frame.
 #[must_use]
 pub fn build_snapshot(scene: &RadarScene) -> RadarSnapshot {
+    build_snapshot_at(scene, PRODUCTION_CENTER, RADAR_PIXEL_RADIUS, None)
+}
+
+/// Project a scene into a radar frame of `radius` around `center`, out to
+/// `range` meters (none: the game's range, outdoors or in).
+#[must_use]
+pub fn build_snapshot_at(
+    scene: &RadarScene,
+    center: Vec2,
+    radius: i32,
+    range: Option<f32>,
+) -> RadarSnapshot {
     let Some(player) = scene.player else {
         return RadarSnapshot {
             ui_locked: scene.ui_locked,
@@ -131,7 +143,7 @@ pub fn build_snapshot(scene: &RadarScene) -> RadarSnapshot {
         .map(|c| c.combined_text());
     let player_traits =
         ObjectTraits::from_public_weenie_description(player.item_type, player.pwd_bitfield, 0);
-    let range = radar::range_meters(is_outside);
+    let range = range.unwrap_or_else(|| radar::range_meters(is_outside));
     let mut blips = Vec::new();
     for o in &scene.objects {
         if o.guid == player.guid {
@@ -159,7 +171,7 @@ pub fn build_snapshot(scene: &RadarScene) -> RadarSnapshot {
             continue;
         }
         let local = radar::global_to_local(player.rotation, o.position - player.position);
-        let Some(p) = radar::project(local, PRODUCTION_CENTER, RADAR_PIXEL_RADIUS, range) else {
+        let Some(p) = radar::project(local, center, radius, range) else {
             continue;
         };
         let color = radar::dim_rgb(radar::blip_color(&traits, &relationship), p.rgb_multiplier);
