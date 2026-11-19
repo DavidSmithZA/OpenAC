@@ -1254,6 +1254,7 @@ impl WindowUi {
         self.feed_modern_effects();
         self.follow_modern_vitals_settings();
         self.tick_modern_panels();
+        self.tick_modern_bars();
     }
 
     /// The panels' views from the window's copy of the facts, and each
@@ -1584,6 +1585,13 @@ impl WindowUi {
         modifiers: Modifiers,
         text: Option<&str>,
     ) -> Routed<K> {
+        // The bars' key pop-up takes a key while it listens.
+        if !self.pregame_active() && self.modern_bars_key_first(key, modifiers, pressed) {
+            return Routed {
+                world: None,
+                outputs: self.host.take_outputs(),
+            };
+        }
         let mut routed = ui_input::key(
             &mut self.host,
             physical,
@@ -1593,6 +1601,16 @@ impl WindowUi {
             modifiers,
             text,
         );
+        // A key of the player's own bars comes before everything else.
+        if matches!(routed.world, Some(WorldInput::KeyDown { .. }))
+            && !repeat
+            && !self.pregame_active()
+            && self.modern_bars_key(key, modifiers)
+        {
+            routed.world = None;
+            routed.outputs.extend(self.host.take_outputs());
+            return routed;
+        }
         if matches!(routed.world, Some(WorldInput::KeyDown { .. }))
             && !repeat
             && !self.pregame_active()
@@ -1608,6 +1626,9 @@ impl WindowUi {
     /// Carry out a hotkey; false when it did nothing (the world gets the
     /// key).
     pub fn run_hotkey(&mut self, hotkey: Hotkey) -> bool {
+        if let Some(done) = self.modern_bars_hotkey(hotkey) {
+            return done;
+        }
         match hotkey {
             Hotkey::Spellbook(page) => self.open_spellbook(page),
             Hotkey::Character(tab) => self.open_character(tab),
@@ -1739,6 +1760,9 @@ impl WindowUi {
                 UiOutput::WorldDragStart { x, y } => {
                     self.status.world_drag_starts.push((x, y));
                 }
+                UiOutput::QuickMoveMenu { piece, x, y } => {
+                    self.modern_quick_move_menu(piece, x, y);
+                }
                 UiOutput::DragReleasedOutsideUi { payload, x, y } => {
                     if let Some(item) = payload.get::<ac_ui::event::ItemDragPayload>() {
                         self.status.world_drops.push((item.clone(), x, y));
@@ -1775,6 +1799,7 @@ impl WindowUi {
             PanelOutput::CloseExamination => {
                 self.host.root.hide_window(EXAMINATION_WINDOW);
             }
+            PanelOutput::FavoriteSpell(spell) if self.modern_bars_favorite(spell) => {}
             PanelOutput::FavoriteSpell(spell) => {
                 self.host
                     .with_controller::<SpellcastingController, _>(COMBAT_WINDOW, |c, ui| {

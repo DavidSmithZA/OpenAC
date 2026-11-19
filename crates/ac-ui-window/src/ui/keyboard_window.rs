@@ -116,6 +116,7 @@ impl WindowUi {
     /// ([`WindowUi::build_with`]); a window without one saves nothing.
     pub fn attach_key_bindings(&mut self, bindings: &KeyBindings) {
         self.feed_modern_panel_keys(bindings);
+        self.feed_modern_bar_bindings(bindings);
         let unmapped = self
             .storage
             .as_deref()

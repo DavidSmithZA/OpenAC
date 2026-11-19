@@ -325,10 +325,11 @@ fn bag(rc: &mut RenderContext<'_>, x: f32, y: f32, color: Color) {
 }
 
 impl Widget for TargetLine {
-    fn hit_test(&self, _element: &Element, x: f32, y: f32) -> bool {
+    fn hit_test(&self, element: &Element, x: f32, y: f32) -> bool {
         // Only the buttons take the pointer; the rest of the line lets
         // clicks through to the world (all of it while quick move is held).
-        self.quick_move || self.button_at(x, y).is_some()
+        // It does not clip, so the toolkit leaves its bounds to it.
+        (self.quick_move && element.contains_local(x, y)) || self.button_at(x, y).is_some()
     }
 
     fn handles_click(&self, _element: &Element) -> bool {

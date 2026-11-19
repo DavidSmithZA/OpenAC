@@ -591,8 +591,9 @@ impl RadarRing {
 }
 
 impl Widget for RadarRing {
-    fn hit_test(&self, _element: &Element, x: f32, y: f32) -> bool {
-        self.quick_move
+    fn hit_test(&self, element: &Element, x: f32, y: f32) -> bool {
+        // It does not clip, so the toolkit leaves its bounds to it.
+        (self.quick_move && element.contains_local(x, y))
             || Self::on_disc(x, y)
             || self.on_chip_at(x, y)
             || self.status.on_button(x, y)

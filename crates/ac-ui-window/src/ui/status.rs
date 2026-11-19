@@ -86,6 +86,8 @@ pub struct StatusUi {
     pub lock: ac_ui::window_chrome::LockPresentation,
     /// The character whose layout was restored.
     restored_for: Option<String>,
+    /// The character in the world with no pre-game screen over it.
+    pub(super) playing: Option<String>,
     /// The screen the layouts were last placed on.
     screen: Option<(i32, i32)>,
     /// The UI's own clock (the link indicator's timers).
@@ -307,6 +309,7 @@ impl WindowUi {
         let character = (in_world && !covered)
             .then(|| scene.player().and_then(|p| p.name.clone()))
             .flatten();
+        self.status.playing.clone_from(&character);
         if let Some(layouts) = self.status.layouts.as_mut() {
             match character {
                 Some(name) if self.status.restored_for.as_deref() != Some(name.as_str()) => {
