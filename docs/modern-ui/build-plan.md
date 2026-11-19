@@ -71,6 +71,60 @@ Still open after M0: the quick-move Mac key; Erik and one PR per
 milestone; a live look at both interfaces (the first live run's window
 was covered, so nothing was drawn).
 
+**M1 built 2026-11-19** on `feat/modern-ui-m1` (off `feat/modern-ui-m0`):
+vitals, target line and status messages, effects counts and chips,
+frame rate, radar B with the connection line and card, Recall list and
+own recalls, combat strip and jump meter, panel strip, Options rows.
+The retail indicator bar stays (its end-session button) until M6.
+
+**M2 built 2026-11-20** on `feat/modern-ui-m2` (off `feat/modern-ui-m1`):
+
+1. Settings section `modernBars` (`ac_host::settings::SavedBars`): a
+   `shared` layout and per character (`world/name`) `useShared` and
+   `own`. Each bar: name, anchor + offset, upright, locked, hidden,
+   slots (`item`/`spell` + id + name, `key` and `magicKey` as
+   `Shift+Number1`).
+2. `ui/modern/bars/model.rs`: the layout. Keys per slot for
+   Peace/Melee/Missile and for Magic; a taken key swaps; slots swap
+   content and keep keys; a place is held to the screen third the bar
+   sits in. First layout from the retail lists: Main (1 to =, Shift+1 to
+   Shift+= in Magic) with the toolbar's numbered row, Spells (1 to = in
+   Magic) with favourite bar 1, and the toolbar's second row and other
+   favourite bars that held anything as upright bars down the right
+   edge.
+3. `bars/widgets.rs`, `bars/edit.rs`: slot (icon, key with drawn
+   modifier marks since Inter's bake has no Shift or Ctrl symbols,
+   count, spell dot, cooldown sweep, greyed spells outside Magic, drops
+   of items, spells and other slots), band, Edit layout tab, toolbar,
+   key pop-up, menu, rename box, spell-drag hint.
+4. `bars/run.rs`: load / seed (waits up to 4 s for the retail lists) /
+   save 0.5 s after a change; build, place (a moved bar takes a new
+   place), feed; keys before the key map (a slot's key in the mode in
+   use); click uses an item (or offers it as a target) and casts a
+   spell only in Magic; right-click inspects (an empty slot opens its
+   bar's menu); a slot dragged off the bars comes off; New shortcut and
+   the spellbook's double-click put things on the first free slot; the
+   retail toolbar and combat window are replaced.
+5. Edit layout opens from quick move's menu (Ctrl + right-click a piece)
+   or an empty slot's right-click. Quick move's menu for other pieces:
+   back to the default place, Edit layout.
+6. A spell dragged out of the spellbook fades it to 12% and lifts the
+   bars over it.
+7. Fixed on the way (M1 bug): pieces that do not clip answered every hit
+   test, so the panel strip took the pointer anywhere on the screen and
+   the combat strip, radar, target and effects did so while quick move
+   was held.
+8. `crates/ac-render/tests/modern_snapshot.rs` (ignored): pictures of the
+   modern UI with no window (real dats, made-up player, real input, the
+   web tests' CPU rasteriser). Used to check M2 while the Mac was
+   locked.
+
+Not done in M2: the retail toolbar's split-stack slider is gone with the
+toolbar (the split amount stays the default until the inventory's split
+in M4); Lock and Hide in quick move's menu are for bars only; recall
+rows and own recalls cannot go on a bar yet; the Options › Controls row
+for the quick-move key is M6.
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
