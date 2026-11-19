@@ -32,6 +32,7 @@ pub mod input;
 pub mod layout_persistence;
 pub mod layout_policy;
 pub mod media;
+pub mod modern;
 pub mod overlay;
 pub mod panels;
 pub mod plugin;
