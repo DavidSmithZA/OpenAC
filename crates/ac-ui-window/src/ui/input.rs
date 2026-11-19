@@ -133,10 +133,12 @@ pub fn key<K>(
 /// The characters a key typed, as [`key`] types the text that comes with
 /// it.
 fn type_text(ui: &mut UiHost, text: &str, modifiers: Modifiers) {
-    // A Ctrl chord (Ctrl+V, Ctrl+C) is a command, though the window still
-    // reports its letter as text. AltGr comes as Ctrl and Alt together and
-    // does type (AltGr+2 is "@" on some keyboards).
-    let chord = modifiers.contains(Modifiers::CTRL) && !modifiers.contains(Modifiers::ALT);
+    // A Ctrl chord (Ctrl+V, Ctrl+C) or a Command one (Cmd+V on a Mac) is a
+    // command, though the window may still report its letter as text.
+    // AltGr comes as Ctrl and Alt together and does type (AltGr+2 is "@"
+    // on some keyboards).
+    let chord = (modifiers.contains(Modifiers::CTRL) && !modifiers.contains(Modifiers::ALT))
+        || modifiers.contains(Modifiers::WIN);
     for c in text.chars().filter(|_| !chord) {
         // Control characters (Enter, Backspace, Tab, Escape) acted as keys.
         if !c.is_control() {
@@ -373,6 +375,18 @@ mod tests {
         let altgr = Modifiers::CTRL | Modifiers::ALT;
         super::key(&mut ui, 3, Key::Number2, true, false, altgr, Some("@"));
         assert_eq!(ui.root.widget::<Entry>(entry).unwrap().text, "@");
+    }
+
+    #[test]
+    fn a_command_chord_types_nothing_but_option_still_types() {
+        let (mut ui, entry) = host();
+        ui.root.set_keyboard_focus(Some(entry));
+        // Cmd+V on a Mac may come with its letter as text; it is a command.
+        super::key(&mut ui, 47, Key::V, true, false, Modifiers::WIN, Some("v"));
+        assert_eq!(ui.root.widget::<Entry>(entry).unwrap().text, "");
+        // Option+E types an accent on a Mac.
+        super::key(&mut ui, 18, Key::E, true, false, Modifiers::ALT, Some("´"));
+        assert_eq!(ui.root.widget::<Entry>(entry).unwrap().text, "´");
     }
 
     #[test]
