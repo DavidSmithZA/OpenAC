@@ -572,7 +572,10 @@ impl BarLayout {
                                 id,
                                 name,
                                 key: s.key(KeyMode::Normal).map(keys::save).unwrap_or_default(),
-                                magic_key: s.key(KeyMode::Magic).map(keys::save).unwrap_or_default(),
+                                magic_key: s
+                                    .key(KeyMode::Magic)
+                                    .map(keys::save)
+                                    .unwrap_or_default(),
                             }
                         })
                         .collect(),
@@ -693,11 +696,9 @@ mod tests {
     }
 
     fn seeded() -> BarLayout {
-        BarLayout::seeded(
-            &retail(),
-            &|id| format!("Item {id:x}"),
-            &|id| format!("Spell {id}"),
-        )
+        BarLayout::seeded(&retail(), &|id| format!("Item {id:x}"), &|id| {
+            format!("Spell {id}")
+        })
     }
 
     #[test]
@@ -720,7 +721,12 @@ mod tests {
         let spells = &layout.bars[0];
         assert_eq!(spells.slots[0].key(KeyMode::Normal), None);
         assert_eq!(spells.slots[0].key(KeyMode::Magic), Some(key(Key::Number1)));
-        assert!(spells.slots[1].content.as_ref().is_some_and(SlotContent::is_spell));
+        assert!(
+            spells.slots[1]
+                .content
+                .as_ref()
+                .is_some_and(SlotContent::is_spell)
+        );
         assert!(layout.bars[2].vertical);
         assert_eq!(layout.bars[2].slots.len(), 3);
     }
@@ -742,7 +748,10 @@ mod tests {
         );
         let mut hidden = layout.clone();
         hidden.bars[1].hidden = true;
-        assert_eq!(hidden.slot_for_key(key(Key::Number1), KeyMode::Normal), None);
+        assert_eq!(
+            hidden.slot_for_key(key(Key::Number1), KeyMode::Normal),
+            None
+        );
     }
 
     #[test]
@@ -751,11 +760,17 @@ mod tests {
         // Main slot 1 takes 2; slot 2 gets 1 back.
         layout.set_key(SlotRef::new(1, 0), KeyMode::Normal, Some(key(Key::Number2)));
         assert_eq!(
-            layout.slot(SlotRef::new(1, 0)).unwrap().key(KeyMode::Normal),
+            layout
+                .slot(SlotRef::new(1, 0))
+                .unwrap()
+                .key(KeyMode::Normal),
             Some(key(Key::Number2))
         );
         assert_eq!(
-            layout.slot(SlotRef::new(1, 1)).unwrap().key(KeyMode::Normal),
+            layout
+                .slot(SlotRef::new(1, 1))
+                .unwrap()
+                .key(KeyMode::Normal),
             Some(key(Key::Number1))
         );
         // The other mode is untouched.
@@ -765,7 +780,10 @@ mod tests {
         );
         layout.set_key(SlotRef::new(1, 0), KeyMode::Normal, None);
         assert_eq!(
-            layout.slot(SlotRef::new(1, 0)).unwrap().key(KeyMode::Normal),
+            layout
+                .slot(SlotRef::new(1, 0))
+                .unwrap()
+                .key(KeyMode::Normal),
             None
         );
     }
@@ -777,7 +795,10 @@ mod tests {
         assert!(layout.slot(SlotRef::new(1, 0)).unwrap().content.is_none());
         assert!(matches!(
             layout.slot(SlotRef::new(0, 5)).unwrap().content,
-            Some(SlotContent::Item { id: 0x8000_0001, .. })
+            Some(SlotContent::Item {
+                id: 0x8000_0001,
+                ..
+            })
         ));
         assert_eq!(
             layout.slot(SlotRef::new(0, 5)).unwrap().key(KeyMode::Magic),

@@ -6,8 +6,8 @@
 //! the first time a character plays with them they are made from its
 //! retail toolbar and favourite spells (the server's lists stay retail's).
 
+pub mod edit;
 pub mod keys;
 pub mod model;
 pub mod run;
 pub mod widgets;
-pub mod edit;

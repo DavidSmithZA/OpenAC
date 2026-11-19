@@ -239,7 +239,15 @@ fn mark(rc: &mut RenderContext<'_>, modifier: Modifiers, x: f32, y: f32, size: f
     } else {
         // Win or Cmd: a small square.
         let (a, b) = (p(0.1, 0.15), p(0.9, 0.95));
-        rc.stroke_rounded_rect(a.0, a.1, b.0 - a.0, b.1 - a.1, ac_ui::shapes::CornerRadii::all(1.5), color, w);
+        rc.stroke_rounded_rect(
+            a.0,
+            a.1,
+            b.0 - a.0,
+            b.1 - a.1,
+            ac_ui::shapes::CornerRadii::all(1.5),
+            color,
+            w,
+        );
     }
 }
 

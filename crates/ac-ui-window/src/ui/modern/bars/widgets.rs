@@ -336,7 +336,19 @@ impl Widget for SlotCell {
                 10.0,
                 10.0,
                 20.0,
-                &[&[(8.0, 9.0), (9.5, 6.5), (12.0, 5.5), (14.5, 6.5), (16.0, 9.0), (15.0, 11.5), (12.0, 13.5), (12.0, 15.5)], &[(12.0, 18.5), (12.0, 19.0)]],
+                &[
+                    &[
+                        (8.0, 9.0),
+                        (9.5, 6.5),
+                        (12.0, 5.5),
+                        (14.5, 6.5),
+                        (16.0, 9.0),
+                        (15.0, 11.5),
+                        (12.0, 13.5),
+                        (12.0, 15.5),
+                    ],
+                    &[(12.0, 18.5), (12.0, 19.0)],
+                ],
                 c,
                 1.6,
             );
@@ -410,7 +422,9 @@ fn sweep(rc: &mut RenderContext<'_>, side: f32, left: f32) {
     let start = -std::f32::consts::FRAC_PI_2 + (1.0 - left) * std::f32::consts::TAU;
     let end = -std::f32::consts::FRAC_PI_2 + std::f32::consts::TAU;
     // Convex pieces of at most a quarter turn each.
-    let steps = ((end - start) / std::f32::consts::FRAC_PI_2).ceil().max(1.0) as usize;
+    let steps = ((end - start) / std::f32::consts::FRAC_PI_2)
+        .ceil()
+        .max(1.0) as usize;
     let step = (end - start) / steps as f32;
     rc.push_clip(0.0, 0.0, side, side);
     for i in 0..steps {
@@ -515,7 +529,12 @@ impl Widget for BarFrame {
         rc.stroke_rounded_rect(0.0, 0.0, w, h, round, edge, 1.0);
     }
 
-    fn draw_after_children(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
+    fn draw_after_children(
+        &mut self,
+        _ui: &mut UiRoot,
+        _me: ElementId,
+        rc: &mut RenderContext<'_>,
+    ) {
         if self.hidden {
             rc.pop_alpha();
         }
@@ -714,7 +733,14 @@ impl Widget for BarTab {
         rc.stroke_rounded_rect(0.0, 0.0, w, h, round, p.accent, 1.0);
         // The grip's six dots.
         let dots = p.text_soft;
-        for (dx, dy) in [(0.0, 0.0), (5.0, 0.0), (0.0, 5.0), (5.0, 5.0), (0.0, 10.0), (5.0, 10.0)] {
+        for (dx, dy) in [
+            (0.0, 0.0),
+            (5.0, 0.0),
+            (0.0, 5.0),
+            (5.0, 5.0),
+            (0.0, 10.0),
+            (5.0, 10.0),
+        ] {
             rc.fill_ellipse(9.0 + dx, 7.0 + dy, 2.2, 2.2, dots);
         }
         if self.locked {
@@ -739,7 +765,14 @@ impl Widget for BarTab {
             }
             let top = (h - TAB_BUTTON) * 0.5;
             if self.hovered == Some(part) {
-                rc.fill_rounded_rect(left, top, bw, TAB_BUTTON, CornerRadii::all(3.0), hex(0x2A_2116, 0.9));
+                rc.fill_rounded_rect(
+                    left,
+                    top,
+                    bw,
+                    TAB_BUTTON,
+                    CornerRadii::all(3.0),
+                    hex(0x2A_2116, 0.9),
+                );
             }
             let c = p.icon;
             let (cx, cy) = (left + bw * 0.5, top + TAB_BUTTON * 0.5);
@@ -812,7 +845,10 @@ mod tests {
         let w = tab.width();
         assert_eq!(tab.part_at(w, 2.0), Some(TabPart::Grip));
         assert_eq!(tab.part_at(w, w - 5.0), Some(TabPart::Menu));
-        assert_eq!(tab.part_at(w, w - 4.0 - TAB_BUTTON * 4.0 + 1.0), Some(TabPart::Turn));
+        assert_eq!(
+            tab.part_at(w, w - 4.0 - TAB_BUTTON * 4.0 + 1.0),
+            Some(TabPart::Turn)
+        );
         assert_eq!(tab.part_at(w, w + 10.0), None);
     }
 }

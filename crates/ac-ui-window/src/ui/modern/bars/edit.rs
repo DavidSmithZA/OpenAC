@@ -47,7 +47,11 @@ fn button(
     let round = CornerRadii::all(4.0);
     let ink = match look {
         Look::Plain => {
-            let fill = if hovered { hex(0x2A_2116, 0.9) } else { hex(0, 0.35) };
+            let fill = if hovered {
+                hex(0x2A_2116, 0.9)
+            } else {
+                hex(0, 0.35)
+            };
             rc.fill_rounded_rect(x, y, w, h, round, fill);
             rc.stroke_rounded_rect(x, y, w, h, round, hex(0xC9_A062, 0.6), 1.0);
             p.text
@@ -347,11 +351,25 @@ impl Widget for EditToolbar {
         rc.stroke_rounded_rect(0.0, 0.0, w, h, round, hex(0xC9_A062, 0.8), 1.0);
         let mut x = 16.0;
         if let Some(f) = &self.fonts.title {
-            text::draw(rc, f, TITLE, x, ((h - f.line_height) * 0.5).round(), TextStyle::plain(p.text));
+            text::draw(
+                rc,
+                f,
+                TITLE,
+                x,
+                ((h - f.line_height) * 0.5).round(),
+                TextStyle::plain(p.text),
+            );
             x += text::measure(f, TITLE, 0.0) + 10.0;
         }
         if let Some(f) = &self.fonts.small {
-            text::draw(rc, f, HINT, x, ((h - f.line_height) * 0.5).round(), TextStyle::plain(p.text_soft));
+            text::draw(
+                rc,
+                f,
+                HINT,
+                x,
+                ((h - f.line_height) * 0.5).round(),
+                TextStyle::plain(p.text_soft),
+            );
         }
         let (parts, _) = self.parts();
         let body = self.fonts.body.as_deref();
@@ -360,17 +378,40 @@ impl Widget for EditToolbar {
             let top = (h - 30.0) * 0.5;
             match part {
                 ToolbarPart::Layout => {
-                    button(rc, &self.theme, None, (left, top, bw, 30.0), "", Look::Plain, hovered);
+                    button(
+                        rc,
+                        &self.theme,
+                        None,
+                        (left, top, bw, 30.0),
+                        "",
+                        Look::Plain,
+                        hovered,
+                    );
                     if let Some(f) = body {
                         let ty = top + ((30.0 - f.line_height) * 0.5).round();
-                        text::draw(rc, f, "Layout", left + 10.0, ty, TextStyle::plain(p.text_soft));
+                        text::draw(
+                            rc,
+                            f,
+                            "Layout",
+                            left + 10.0,
+                            ty,
+                            TextStyle::plain(p.text_soft),
+                        );
                         let lx = left + 10.0 + text::measure(f, "Layout", 0.0) + 6.0;
                         text::draw(rc, f, &self.layout_words, lx, ty, TextStyle::plain(p.text));
                     }
                     caret(rc, left + bw - 13.0, top + 15.0, p.text_soft);
                 }
                 ToolbarPart::NewBar => {
-                    button(rc, &self.theme, body, (left, top, bw, 30.0), "+ New bar", Look::Plain, hovered);
+                    button(
+                        rc,
+                        &self.theme,
+                        body,
+                        (left, top, bw, 30.0),
+                        "+ New bar",
+                        Look::Plain,
+                        hovered,
+                    );
                 }
                 ToolbarPart::Reset => button(
                     rc,
@@ -378,11 +419,23 @@ impl Widget for EditToolbar {
                     body,
                     (left, top, bw, 30.0),
                     self.reset_words(),
-                    if self.reset_armed { Look::Plain } else { Look::Quiet },
+                    if self.reset_armed {
+                        Look::Plain
+                    } else {
+                        Look::Quiet
+                    },
                     hovered,
                 ),
                 ToolbarPart::Done => {
-                    button(rc, &self.theme, body, (left, top, bw, 30.0), "Done", Look::Main, hovered);
+                    button(
+                        rc,
+                        &self.theme,
+                        body,
+                        (left, top, bw, 30.0),
+                        "Done",
+                        Look::Main,
+                        hovered,
+                    );
                 }
             }
         }
@@ -564,9 +617,21 @@ impl Widget for KeyPopover {
         let (ax, on_top) = self.arrow;
         let ax = ax.clamp(16.0, w - 16.0);
         let v = |x: f32, y: f32, color: Color| ColorVertex { x, y, color };
-        let (base, tip) = if on_top { (0.5, -7.0) } else { (h - 0.5, h + 7.0) };
-        let _ = rc.fill_convex_polygon(&[v(ax - 8.0, base, edge), v(ax + 8.0, base, edge), v(ax, tip, edge)]);
-        let inner = if on_top { (1.5, -5.0) } else { (h - 1.5, h + 5.0) };
+        let (base, tip) = if on_top {
+            (0.5, -7.0)
+        } else {
+            (h - 0.5, h + 7.0)
+        };
+        let _ = rc.fill_convex_polygon(&[
+            v(ax - 8.0, base, edge),
+            v(ax + 8.0, base, edge),
+            v(ax, tip, edge),
+        ]);
+        let inner = if on_top {
+            (1.5, -5.0)
+        } else {
+            (h - 1.5, h + 5.0)
+        };
         let _ = rc.fill_convex_polygon(&[
             v(ax - 6.5, inner.0, fill),
             v(ax + 6.5, inner.0, fill),
@@ -576,13 +641,26 @@ impl Widget for KeyPopover {
         rc.fill_rounded_rect(0.0, 0.0, w, h, round, fill);
         rc.stroke_rounded_rect(0.0, 0.0, w, h, round, edge, 1.0);
         // Cover the edge where the pointer joins.
-        rc.fill(ax - 6.5, if on_top { 0.0 } else { h - 1.0 }, 13.0, 1.0, fill);
+        rc.fill(
+            ax - 6.5,
+            if on_top { 0.0 } else { h - 1.0 },
+            13.0,
+            1.0,
+            fill,
+        );
         if let Some(f) = &self.fonts.title {
             let title = crate::ui::modern::hud::target::fit(f, &self.title, w - 2.0 * POP_PAD);
             text::draw(rc, f, &title, POP_PAD, POP_PAD, TextStyle::plain(p.text));
         }
         if let Some(f) = &self.fonts.small {
-            text::draw(rc, f, &self.where_words, POP_PAD, POP_PAD + 19.0, TextStyle::plain(p.text_soft));
+            text::draw(
+                rc,
+                f,
+                &self.where_words,
+                POP_PAD,
+                POP_PAD + 19.0,
+                TextStyle::plain(p.text_soft),
+            );
         }
         let box_left = w - POP_PAD - KEY_BOX;
         for (i, mode) in KeyMode::ALL.into_iter().enumerate() {
@@ -598,9 +676,21 @@ impl Widget for KeyPopover {
                 rc.fill_rounded_rect(box_left, top, KEY_BOX, ROW, round, hex(0xE0_B068, 0.12));
                 rc.stroke_rounded_rect(box_left, top, KEY_BOX, ROW, round, p.accent, 2.0);
             } else {
-                let fill = if hovered { hex(0x2A_2116, 0.9) } else { hex(0, 0.4) };
+                let fill = if hovered {
+                    hex(0x2A_2116, 0.9)
+                } else {
+                    hex(0, 0.4)
+                };
                 rc.fill_rounded_rect(box_left, top, KEY_BOX, ROW, round, fill);
-                rc.stroke_rounded_rect(box_left, top, KEY_BOX, ROW, round, hex(0xC9_A062, 0.5), 1.0);
+                rc.stroke_rounded_rect(
+                    box_left,
+                    top,
+                    KEY_BOX,
+                    ROW,
+                    round,
+                    hex(0xC9_A062, 0.5),
+                    1.0,
+                );
             }
             let Some(f) = &self.fonts.body else {
                 continue;
@@ -610,7 +700,14 @@ impl Widget for KeyPopover {
             if listening {
                 let small = self.fonts.small.as_deref().unwrap_or(f);
                 let ty = top + ((ROW - small.line_height) * 0.5).round();
-                text::draw_centred(rc, small, "Press a key\u{2026}", cx, ty, TextStyle::plain(p.accent));
+                text::draw_centred(
+                    rc,
+                    small,
+                    "Press a key\u{2026}",
+                    cx,
+                    ty,
+                    TextStyle::plain(p.accent),
+                );
             } else if let Some(chord) = self.keys[i] {
                 let kw = keys::drawn_width(f, chord);
                 keys::draw(rc, f, chord, (cx - kw * 0.5).round(), ty, p.text, None);
@@ -619,7 +716,11 @@ impl Widget for KeyPopover {
             }
         }
         if let Some(f) = &self.fonts.small {
-            for (i, line) in wrap(f, &self.note, w - 2.0 * POP_PAD).iter().take(3).enumerate() {
+            for (i, line) in wrap(f, &self.note, w - 2.0 * POP_PAD)
+                .iter()
+                .take(3)
+                .enumerate()
+            {
                 text::draw(
                     rc,
                     f,
@@ -633,7 +734,15 @@ impl Widget for KeyPopover {
         let top = h - POP_PAD - 28.0;
         let body = self.fonts.body.as_deref();
         for (part, left, bw, words, look) in self.buttons() {
-            button(rc, &self.theme, body, (left, top, bw, 28.0), words, look, self.hovered == Some(part));
+            button(
+                rc,
+                &self.theme,
+                body,
+                (left, top, bw, 28.0),
+                words,
+                look,
+                self.hovered == Some(part),
+            );
         }
     }
 }
@@ -799,7 +908,13 @@ impl Menu {
 
     /// Opens it about `about` with `rows`, at (`x`, `y`) kept on a screen
     /// of `screen` (a press outside closes it).
-    pub fn open(ui: &mut UiRoot, me: ElementId, about: MenuFor, rows: Vec<MenuRow>, (x, y): (f32, f32)) {
+    pub fn open(
+        ui: &mut UiRoot,
+        me: ElementId,
+        about: MenuFor,
+        rows: Vec<MenuRow>,
+        (x, y): (f32, f32),
+    ) {
         let screen = ui.size();
         let Some(height) = ui.widget_mut::<Menu>(me).map(|m| {
             m.rows = rows;
@@ -899,7 +1014,13 @@ impl Widget for Menu {
                         );
                     }
                 }
-                MenuRow::Line => rc.fill(MENU_PAD + 4.0, top + 4.0, w - 2.0 * MENU_PAD - 8.0, 1.0, p.trim_faint),
+                MenuRow::Line => rc.fill(
+                    MENU_PAD + 4.0,
+                    top + 4.0,
+                    w - 2.0 * MENU_PAD - 8.0,
+                    1.0,
+                    p.trim_faint,
+                ),
                 MenuRow::Entry {
                     words,
                     hint,
@@ -985,7 +1106,8 @@ impl RenameBox {
                 hovered: None,
             },
         );
-        let mut e = Element::at(13.0, 35.0, RENAME_WIDTH - 26.0, 26.0).with_anchors(AnchorEdges::NONE);
+        let mut e =
+            Element::at(13.0, 35.0, RENAME_WIDTH - 26.0, 26.0).with_anchors(AnchorEdges::NONE);
         Field::configure(&mut e);
         e.tab_stop = true;
         let mut f = Field::default();
@@ -1039,7 +1161,10 @@ impl RenameBox {
         let done = button_width(body, "Done");
         let cancel = button_width(body, "Cancel");
         let right = RENAME_WIDTH - 13.0;
-        [(true, right - done, done), (false, right - done - 6.0 - cancel, cancel)]
+        [
+            (true, right - done, done),
+            (false, right - done - 6.0 - cancel, cancel),
+        ]
     }
 
     fn button_at(&self, x: f32, y: f32) -> Option<bool> {
@@ -1119,8 +1244,23 @@ impl Widget for RenameBox {
         if let Some(f) = &self.fonts.body {
             text::draw(rc, f, "Rename bar", 13.0, 11.0, TextStyle::plain(p.text));
         }
-        rc.fill_rounded_rect(12.0, 34.0, w - 24.0, 28.0, CornerRadii::all(4.0), hex(0, 0.4));
-        rc.stroke_rounded_rect(12.0, 34.0, w - 24.0, 28.0, CornerRadii::all(4.0), hex(0xC9_A062, 0.5), 1.0);
+        rc.fill_rounded_rect(
+            12.0,
+            34.0,
+            w - 24.0,
+            28.0,
+            CornerRadii::all(4.0),
+            hex(0, 0.4),
+        );
+        rc.stroke_rounded_rect(
+            12.0,
+            34.0,
+            w - 24.0,
+            28.0,
+            CornerRadii::all(4.0),
+            hex(0xC9_A062, 0.5),
+            1.0,
+        );
         let body = self.fonts.body.as_deref();
         for (done, left, bw) in self.buttons() {
             let words = if done { "Done" } else { "Cancel" };
@@ -1149,7 +1289,11 @@ mod tests {
             MenuRow::Header("Main bar".to_owned()),
             MenuRow::entry(MenuAction::Turn, "Turn upright", None),
             MenuRow::Line,
-            MenuRow::entry(MenuAction::OpenEdit, "Open Edit layout", Some("keys, new bars")),
+            MenuRow::entry(
+                MenuAction::OpenEdit,
+                "Open Edit layout",
+                Some("keys, new bars"),
+            ),
         ];
         assert_eq!(menu.height(), MENU_PAD * 2.0 + 24.0 + 30.0 + 9.0 + 40.0);
         assert_eq!(menu.row_at(MENU_PAD + 1.0), Some(0));

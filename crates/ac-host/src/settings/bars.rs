@@ -278,10 +278,8 @@ mod tests {
             let nanos = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_or(0, |d| d.as_nanos());
-            let dir = std::env::temp_dir().join(format!(
-                "openac-modern-bars-{}-{nanos}",
-                std::process::id()
-            ));
+            let dir = std::env::temp_dir()
+                .join(format!("openac-modern-bars-{}-{nanos}", std::process::id()));
             std::fs::create_dir_all(&dir).unwrap();
             Self(dir)
         }

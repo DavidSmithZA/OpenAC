@@ -20,13 +20,11 @@ use ac_ui::tree::{Element, ElementId};
 use ac_ui::{Key, Modifiers, MouseButton};
 
 use super::edit::{
-    Dim, DragHint, EditToolbar, HINT_HEIGHT, KeyPopover, Menu, MenuAction, MenuFor, MenuRow, POPOVER_HEIGHT,
-    POPOVER_WIDTH, PopoverRequest, RenameBox, TOOLBAR_HEIGHT, ToolbarPart,
+    Dim, DragHint, EditToolbar, HINT_HEIGHT, KeyPopover, Menu, MenuAction, MenuFor, MenuRow,
+    POPOVER_HEIGHT, POPOVER_WIDTH, PopoverRequest, RenameBox, TOOLBAR_HEIGHT, ToolbarPart,
 };
 use super::keys;
-use super::model::{
-    Bar, BarLayout, BarPlace, KeyMode, RetailBars, SLOT, SlotContent, SlotRef,
-};
+use super::model::{Bar, BarLayout, BarPlace, KeyMode, RetailBars, SLOT, SlotContent, SlotRef};
 use super::widgets::{
     BarFonts, BarFrame, BarTab, Dropped, SlotCell, SlotRequest, SlotView, TAB_GAP, TAB_HEIGHT,
     TabPart, TabRequest,
@@ -152,19 +150,17 @@ impl BarsUi {
 
 /// The place a bar of the first layout named `name` has, if any.
 fn default_place_of(name: &str) -> BarPlace {
-    let seeded = BarLayout::seeded(&RetailBars::default(), &|_| String::new(), &|_| String::new());
-    seeded
-        .bars
-        .iter()
-        .find(|b| b.name == name)
-        .map_or(
-            BarPlace {
-                anchor: Anchor::Center,
-                dx: 0.0,
-                dy: 0.0,
-            },
-            |b| b.place,
-        )
+    let seeded = BarLayout::seeded(&RetailBars::default(), &|_| String::new(), &|_| {
+        String::new()
+    });
+    seeded.bars.iter().find(|b| b.name == name).map_or(
+        BarPlace {
+            anchor: Anchor::Center,
+            dx: 0.0,
+            dy: 0.0,
+        },
+        |b| b.place,
+    )
 }
 
 /// The keys of `bar` in `mode` in a few words ("1 to =").
@@ -382,9 +378,7 @@ impl WindowUi {
         self.feed_bar_slots(b);
         self.place_edit_layer(b, now);
         b.shown = true;
-        if b
-            .dirty_since
-            .is_some_and(|t| now - t >= SAVE_AFTER)
+        if b.dirty_since.is_some_and(|t| now - t >= SAVE_AFTER)
             && !self.host.root.button_down(MouseButton::Left)
         {
             self.save_bars(b, false);
@@ -446,7 +440,10 @@ impl WindowUi {
         let retail = RetailBars {
             shortcuts: self.facts.state.shortcuts.snapshot().to_vec(),
             favorites: (0..8)
-                .map(|t| book.map(|b| b.get_favorites(t).to_vec()).unwrap_or_default())
+                .map(|t| {
+                    book.map(|b| b.get_favorites(t).to_vec())
+                        .unwrap_or_default()
+                })
                 .collect(),
         };
         let objects = &self.facts.objects;
@@ -500,8 +497,7 @@ impl WindowUi {
         for (i, bar) in layout.bars.iter().enumerate() {
             let size = bar.size();
             let (x, y) = bar.place.top_left(size, screen);
-            let mut element =
-                Element::at(x, y, size.0, size.1).with_anchors(AnchorEdges::NONE);
+            let mut element = Element::at(x, y, size.0, size.1).with_anchors(AnchorEdges::NONE);
             element.name = Some(format!("{} bar", bar.name));
             element.quick_move = !bar.locked;
             let frame = ui.add(root, element, BarFrame::new(theme, bar.name.clone()));
@@ -598,14 +594,21 @@ impl WindowUi {
             return;
         };
         let magic = self.facts.state.combat_mode == CombatMode::MAGIC;
-        let mode = if magic { KeyMode::Magic } else { KeyMode::Normal };
+        let mode = if magic {
+            KeyMode::Magic
+        } else {
+            KeyMode::Normal
+        };
         let player = self.facts.state.player;
         let now = self.facts.session_now();
         let Self {
             host, facts, icons, ..
         } = self;
         let objects = &facts.objects;
-        let mut book = facts.player.as_mut().and_then(|p| p.numbers.spellbook_mut());
+        let mut book = facts
+            .player
+            .as_mut()
+            .and_then(|p| p.numbers.spellbook_mut());
         for (i, (bar, built)) in layout.bars.iter().zip(&b.built).enumerate() {
             for (j, (slot, &cell)) in bar.slots.iter().zip(&built.slots).enumerate() {
                 let at = SlotRef::new(i, j);
@@ -833,9 +836,7 @@ impl WindowUi {
             .widget_mut::<KeyPopover>(b.popover)
             .map(|p| std::mem::take(&mut p.requests))
             .unwrap_or_default();
-        let chosen = ui
-            .widget_mut::<Menu>(b.menu)
-            .and_then(|m| m.chosen.take());
+        let chosen = ui.widget_mut::<Menu>(b.menu).and_then(|m| m.chosen.take());
         let renamed = ui
             .widget_mut::<RenameBox>(b.rename)
             .and_then(|r| r.done.take());
@@ -1134,7 +1135,11 @@ impl WindowUi {
             b,
             "Click a key box, then press the key. Esc stops; Backspace clears it.".to_owned(),
         );
-        let Some(cell) = b.built.get(at.bar).and_then(|built| built.slots.get(at.slot)) else {
+        let Some(cell) = b
+            .built
+            .get(at.bar)
+            .and_then(|built| built.slots.get(at.slot))
+        else {
             return;
         };
         let ui = &mut self.host.root;
@@ -1207,10 +1212,7 @@ impl WindowUi {
             Some(KeyMode::Magic) => "Press the key for Magic.",
             None => "Click a key box, then press the key.",
         };
-        self.refresh_key_popover(
-            b,
-            format!("{note} Esc stops; Backspace clears it."),
-        );
+        self.refresh_key_popover(b, format!("{note} Esc stops; Backspace clears it."));
     }
 
     /// The key pop-up is waiting for a key.
@@ -1292,7 +1294,13 @@ impl WindowUi {
     }
 
     /// Gives slot `at` the key `chord` in `mode`; what that did, in words.
-    fn assign_bar_key(&mut self, b: &mut BarsUi, at: SlotRef, mode: KeyMode, chord: KeyChord) -> String {
+    fn assign_bar_key(
+        &mut self,
+        b: &mut BarsUi,
+        at: SlotRef,
+        mode: KeyMode,
+        chord: KeyChord,
+    ) -> String {
         let Some(l) = b.layout.as_mut() else {
             return String::new();
         };
@@ -1329,7 +1337,11 @@ impl WindowUi {
     /// mode in use is used. True when one was.
     pub(in crate::ui) fn modern_bars_key(&mut self, key: Key, modifiers: Modifiers) -> bool {
         let magic = self.facts.state.combat_mode == CombatMode::MAGIC;
-        let mode = if magic { KeyMode::Magic } else { KeyMode::Normal };
+        let mode = if magic {
+            KeyMode::Magic
+        } else {
+            KeyMode::Normal
+        };
         let Some(chord) = keys::slot_chord(key, modifiers) else {
             return false;
         };
@@ -1583,18 +1595,14 @@ impl WindowUi {
                 false
             }
             (MenuFor::Bar(bar), MenuAction::Turn) => self.turn_bar(b, bar),
-            (MenuFor::Bar(bar), MenuAction::AddSlot) => {
-                b.layout.as_mut().is_some_and(|l| {
-                    l.add_slot(bar);
-                    true
-                })
-            }
-            (MenuFor::Bar(bar), MenuAction::RemoveSlot) => {
-                b.layout.as_mut().is_some_and(|l| {
-                    l.remove_last_slot(bar);
-                    true
-                })
-            }
+            (MenuFor::Bar(bar), MenuAction::AddSlot) => b.layout.as_mut().is_some_and(|l| {
+                l.add_slot(bar);
+                true
+            }),
+            (MenuFor::Bar(bar), MenuAction::RemoveSlot) => b.layout.as_mut().is_some_and(|l| {
+                l.remove_last_slot(bar);
+                true
+            }),
             (MenuFor::Bar(bar), MenuAction::Lock(on)) => b
                 .layout
                 .as_mut()
@@ -1604,9 +1612,7 @@ impl WindowUi {
                     true
                 }),
             (MenuFor::Bar(bar), MenuAction::Hide(on)) => {
-                if on
-                    && b.popover_for.is_some_and(|at| at.bar == bar)
-                {
+                if on && b.popover_for.is_some_and(|at| at.bar == bar) {
                     self.close_key_popover(b);
                 }
                 b.layout
@@ -1817,7 +1823,10 @@ mod tests {
 
     #[test]
     fn key_map_actions_are_put_in_words() {
-        assert_eq!(action_words(InputAction::MovementForward), "Movement Forward");
+        assert_eq!(
+            action_words(InputAction::MovementForward),
+            "Movement Forward"
+        );
         assert!(is_slot_action(InputAction::UseQuickSlot_1));
         assert!(!is_slot_action(InputAction::MovementForward));
     }

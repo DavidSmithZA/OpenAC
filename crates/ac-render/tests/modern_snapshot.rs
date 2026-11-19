@@ -23,7 +23,9 @@ use ac_render::ui::input::{self as ui_input, Routed};
 use ac_render::ui::{UiBatch, UiTextureSource, WindowUi};
 use ac_runtime::session::PresentationEvent;
 use ac_runtime::session::interface::{InterfaceEvent, InterfaceState, ItemsUpdate, PlayerFacts};
-use ac_runtime::world::{ObjectKey, ObjectView, PlayerView, RadarFacts, VitalReading, WorldSnapshot};
+use ac_runtime::world::{
+    ObjectKey, ObjectView, PlayerView, RadarFacts, VitalReading, WorldSnapshot,
+};
 use ac_ui::draw::TextureRef;
 use ac_ui::event::{Key, Modifiers};
 
@@ -52,8 +54,10 @@ fn dats() -> Arc<DatCollection> {
 }
 
 fn out_dir() -> PathBuf {
-    std::env::var_os("OPENAC_SNAPSHOT_DIR")
-        .map_or_else(|| std::env::temp_dir().join("openac-snapshots"), PathBuf::from)
+    std::env::var_os("OPENAC_SNAPSHOT_DIR").map_or_else(
+        || std::env::temp_dir().join("openac-snapshots"),
+        PathBuf::from,
+    )
 }
 
 fn player_object() -> ObjectView {
@@ -99,9 +103,21 @@ fn player_object() -> ObjectView {
 
 /// The player's things: (guid, name, item type, icon, stack).
 const ITEMS: &[(u32, &str, ItemType, u32, i32)] = &[
-    (0x8000_0101, "Health Potion", ItemType::FOOD, 0x0600_1A8B, 12),
+    (
+        0x8000_0101,
+        "Health Potion",
+        ItemType::FOOD,
+        0x0600_1A8B,
+        12,
+    ),
     (0x8000_0102, "Mana Potion", ItemType::FOOD, 0x0600_1A8D, 7),
-    (0x8000_0103, "Stamina Elixir", ItemType::FOOD, 0x0600_1A8C, 1),
+    (
+        0x8000_0103,
+        "Stamina Elixir",
+        ItemType::FOOD,
+        0x0600_1A8C,
+        1,
+    ),
     (0x8000_0104, "Healing Kit", ItemType::MISC, 0x0600_1E3B, 1),
     (0x8000_0105, "Sword", ItemType::MELEE_WEAPON, 0x0600_11CB, 1),
 ];
@@ -146,12 +162,14 @@ fn scene(dats: &DatCollection, mode: ac_core::combat::CombatMode) -> Scene {
         });
     }
     let guids: Vec<u32> = ITEMS.iter().map(|i| i.0).collect();
-    scene.apply(PresentationEvent::Interface(InterfaceEvent::Items(ItemsUpdate {
-        reset: true,
-        objects,
-        removed: Vec::new(),
-        contents: vec![(PLAYER, Some(guids))],
-    })));
+    scene.apply(PresentationEvent::Interface(InterfaceEvent::Items(
+        ItemsUpdate {
+            reset: true,
+            objects,
+            removed: Vec::new(),
+            contents: vec![(PLAYER, Some(guids))],
+        },
+    )));
     let tables = ac_runtime::gameplay::GameTables::load(dats).expect("the game tables");
     let mut book = Spellbook::new(Some(Arc::clone(tables.spells())));
     let ids: Vec<u32> = tables.spells().spell_ids().take(40).collect();
@@ -163,22 +181,22 @@ fn scene(dats: &DatCollection, mode: ac_core::combat::CombatMode) -> Scene {
             book.set_favorite(2, i - 8, id);
         }
     }
-    scene.apply(PresentationEvent::Interface(InterfaceEvent::Player(Box::new(
-        PlayerFacts {
+    scene.apply(PresentationEvent::Interface(InterfaceEvent::Player(
+        Box::new(PlayerFacts {
             revision: 2,
             numbers: ac_core::player::LocalPlayerState::new(Some(book)),
             session_seconds: 0.0,
-        },
-    ))));
-    scene.apply(PresentationEvent::Interface(InterfaceEvent::State(Box::new(
-        InterfaceState {
+        }),
+    )));
+    scene.apply(PresentationEvent::Interface(InterfaceEvent::State(
+        Box::new(InterfaceState {
             player: PLAYER,
             can_make_request: true,
             combat_mode: mode,
             shortcuts,
             ..InterfaceState::default()
-        },
-    ))));
+        }),
+    )));
     scene
 }
 
@@ -235,15 +253,15 @@ impl Shot {
             s
         };
         self.scene
-            .apply(PresentationEvent::Interface(InterfaceEvent::State(Box::new(
-                InterfaceState {
+            .apply(PresentationEvent::Interface(InterfaceEvent::State(
+                Box::new(InterfaceState {
                     player: PLAYER,
                     can_make_request: true,
                     combat_mode: mode,
                     shortcuts,
                     ..InterfaceState::default()
-                },
-            ))));
+                }),
+            )));
         self.step();
         self.step();
     }
@@ -319,9 +337,11 @@ impl Shot {
                 ac_render::ui::gpu::UiPixels::Coverage { alpha, .. } => {
                     alpha.iter().flat_map(|&a| [255, 255, 255, a]).collect()
                 }
-                ac_render::ui::gpu::UiPixels::Plugin(levels) => {
-                    levels.into_iter().next().map(|t| t.rgba).unwrap_or_default()
-                }
+                ac_render::ui::gpu::UiPixels::Plugin(levels) => levels
+                    .into_iter()
+                    .next()
+                    .map(|t| t.rgba)
+                    .unwrap_or_default(),
             };
             self.textures.insert(
                 key,
@@ -423,11 +443,10 @@ fn the_modern_bars() {
     assert!(s.ui.run_hotkey(Hotkey::Spellbook(SpellbookPage::Spells)));
     s.step();
     s.step();
-    let list = s
-        .ui
-        .host_mut()
-        .with_controller::<SpellbookWindowController, _>(SPELLBOOK_WINDOW, |c, _| c.list())
-        .expect("the spellbook");
+    let list =
+        s.ui.host_mut()
+            .with_controller::<SpellbookWindowController, _>(SPELLBOOK_WINDOW, |c, _| c.list())
+            .expect("the spellbook");
     let row = {
         let root = &s.ui.host().root;
         let cell = root
@@ -447,7 +466,10 @@ fn the_modern_bars() {
     let _ = s.ui.handle(r.outputs);
     s.step();
     for i in 1..=8 {
-        s.moved(row.0 + (to.0 - row.0) * i / 8, row.1 + (to.1 - row.1) * i / 8);
+        s.moved(
+            row.0 + (to.0 - row.0) * i / 8,
+            row.1 + (to.1 - row.1) * i / 8,
+        );
     }
     s.save("spell-dragging");
     let none = ui_input::mouse_flags(&[], Modifiers::NONE);
