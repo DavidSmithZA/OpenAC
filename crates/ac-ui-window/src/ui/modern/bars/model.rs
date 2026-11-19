@@ -529,10 +529,10 @@ impl BarLayout {
         }
     }
 
-    /// A new empty bar at `place`, named after how many there are; its
+    /// A new empty bar at `place`, named "Bar N" with the first N not taken; its
     /// index.
     pub fn new_bar(&mut self, place: BarPlace) -> usize {
-        let mut n = self.bars.len() + 1;
+        let mut n = 1;
         while self.bars.iter().any(|b| b.name == format!("Bar {n}")) {
             n += 1;
         }
@@ -814,6 +814,9 @@ mod tests {
         assert_eq!(layout.bars[i].slots.len(), 1);
         assert_eq!(layout.new_bar(MAIN_PLACE), 1);
         assert_eq!(layout.bars[1].name, "Bar 2");
+        let mut seeded = seeded();
+        let i = seeded.new_bar(MAIN_PLACE);
+        assert_eq!(seeded.bars[i].name, "Bar 1");
     }
 
     #[test]

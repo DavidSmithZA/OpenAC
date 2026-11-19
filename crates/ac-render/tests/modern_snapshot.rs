@@ -191,8 +191,15 @@ struct Shot {
 
 impl Shot {
     fn new(mode: ac_core::combat::CombatMode) -> Self {
+        Self::with_settings(mode, None)
+    }
+
+    /// The same, saving to the settings file at `settings`.
+    fn with_settings(mode: ac_core::combat::CombatMode, settings: Option<PathBuf>) -> Self {
+        use ac_render::ui::SettingsStores;
         let dats = dats();
         let mut ui = WindowUi::build(Arc::clone(&dats), (W, H)).expect("the UI builds");
+        ui.set_layout_store(settings.map(ac_host::settings::SettingsStore::new));
         ui.set_interface(ac_host::Interface::Modern);
         let scene = scene(&dats, mode);
         let mut shot = Self {
@@ -455,7 +462,9 @@ fn the_modern_bars() {
 #[ignore = "needs the retail dat files; writes pictures"]
 fn the_modern_bars_move_and_turn() {
     use ac_core::combat::CombatMode;
-    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let settings = out_dir().join("settings.json");
+    let _ = std::fs::remove_file(&settings);
+    let mut s = Shot::with_settings(CombatMode::NON_COMBAT, Some(settings.clone()));
     // Edit layout from the empty slot's menu (right-click on slot 12).
     let last = (MAIN_SLOT.0 + 43 * 11, MAIN_SLOT.1);
     s.click(1, last.0, last.1, Modifiers::NONE);
@@ -467,4 +476,38 @@ fn the_modern_bars_move_and_turn() {
     // Turn it with the tab's turn button (the tab is now above the bar,
     // its buttons at its right end).
     s.save("move-before-turn");
+    // Its tab sits over it now (286, 405), 347 wide: the turn button is
+    // the fourth from its right end.
+    s.click(0, 286 + 347 - 4 - 22 * 4 + 11, 418, Modifiers::NONE);
+    s.save("move-turned");
+    s.click(0, 286 + 347 - 4 - 22 * 4 + 11, 418, Modifiers::NONE);
+    // A new bar; the layout menu.
+    s.click(0, 913, 115, Modifiers::NONE);
+    s.save("move-new-bar");
+    s.click(0, 778, 115, Modifiers::NONE);
+    s.save("move-layout-menu");
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    // Saved (Edit layout was left with Escape). A new window for the
+    // same character finds the bar where it was left.
+    for _ in 0..12 {
+        s.step();
+    }
+    let saved = std::fs::read_to_string(&settings).expect("the settings file");
+    assert!(saved.contains("modernBars"), "{saved}");
+    assert!(saved.contains("/Aerin Vale"), "{saved}");
+    let main = |ui: &WindowUi| {
+        let root = &ui.host().root;
+        root.children(root.root())
+            .into_iter()
+            .filter_map(|c| root.element(c))
+            .find(|e| e.name.as_deref() == Some("Main bar"))
+            .map(|e| (e.left, e.top))
+    };
+    let before = main(&s.ui);
+    assert_ne!(before, Some((460.0, 796.0)));
+    drop(s);
+    let mut again = Shot::with_settings(CombatMode::NON_COMBAT, Some(settings));
+    assert_eq!(main(&again.ui), before);
+    again.save("move-reloaded");
 }

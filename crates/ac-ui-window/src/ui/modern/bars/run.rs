@@ -529,8 +529,15 @@ impl WindowUi {
                 placed: (x, y),
             });
         }
-        // The edit layer stays over the bars.
-        for id in [b.toolbar, b.popover, b.menu, b.rename] {
+        // While editing (or carrying a spell) the bars stay over the dim and
+        // the windows; the edit layer stays over the bars.
+        if b.edit || b.spell_drag.is_some() {
+            for built in &b.built {
+                ui.bring_to_front(built.frame);
+                ui.bring_to_front(built.tab);
+            }
+        }
+        for id in [b.toolbar, b.popover, b.menu, b.rename, b.hint] {
             ui.bring_to_front(id);
         }
         b.built_shape = shape;
