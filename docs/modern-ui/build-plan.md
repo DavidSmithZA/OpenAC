@@ -135,6 +135,20 @@ Gaps closed after M2 (2026-11-20, same branch):
 Still not done: the Options › Controls row for the quick-move key (M6);
 moving the quests panel and fellows in Edit layout (they come in M8).
 
+**M3 started 2026-11-20** on `feat/modern-ui-m3` (off `feat/modern-ui-m2`).
+Steps, one or more commits each:
+
+1. Model: line kind (tag, colour), speaker and words, mentions; tabs as
+   text-class filters with a talk channel; unread counts. Done.
+2. The panel bottom left: tabs with unread badges, wrapped lines, idle
+   fade with "Enter to chat", read-back hold with "N new messages".
+3. The entry: channel button and menu (12 channels, recent tells, greyed
+   with reasons), typed lines through the retail chat submission; then
+   the modern chat replaces the retail chat window.
+4. @ suggestions, the name menu, search.
+5. New tab, pop-out windows (own filter, opacity, channel), saved; they
+   replace the four floating chat windows.
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
