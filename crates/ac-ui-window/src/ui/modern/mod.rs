@@ -13,6 +13,7 @@
 //! [`places`].
 
 pub mod bars;
+pub mod character;
 pub mod chat;
 pub mod fonts;
 pub mod hud;
@@ -86,6 +87,8 @@ pub struct ModernLayer {
     pub effects_window: Option<magic::effects_run::EffectsUi>,
     /// The Spellbook.
     pub spellbook: Option<magic::spellbook_run::BookUi>,
+    /// The Character window.
+    pub character: Option<character::run::CharacterUi>,
     /// Packs used anywhere since the inventory last looked.
     pub opened_packs: Vec<u32>,
 }
@@ -329,6 +332,7 @@ impl WindowUi {
         self.mount_modern_loot();
         self.mount_modern_effects_window();
         self.mount_modern_spellbook();
+        self.mount_modern_character();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };

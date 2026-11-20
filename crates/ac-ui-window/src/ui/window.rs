@@ -1519,6 +1519,7 @@ impl WindowUi {
         self.tick_modern_inspect(dt);
         self.tick_modern_effects_window();
         self.tick_modern_spellbook(dt);
+        self.tick_modern_character(dt);
         self.tick_keyboard_dialogs();
         self.tick_tooltips(dt, now_ms);
         self.tick_modern_effects(dt);
@@ -1722,6 +1723,9 @@ impl WindowUi {
 
     /// OpenAC `RetailUiRuntime.OpenCharacterPanel`.
     pub(super) fn open_character(&mut self, tab: CharacterTab) -> bool {
+        if let Some(done) = self.modern_open_character(tab) {
+            return done;
+        }
         let visible = self.host.root.is_window_visible(CHARACTER_WINDOW);
         let Some(on_tab) = self
             .host
@@ -1808,10 +1812,12 @@ impl WindowUi {
         }
         match output {
             PanelOutput::TogglePanel(panel) if self.modern_effects_toggle(panel, false) => {}
+            PanelOutput::TogglePanel(panel) if self.modern_character_toggle(panel, false) => {}
             PanelOutput::TogglePanel(panel) => {
                 self.panels.toggle(&mut self.host.root, panel);
             }
             PanelOutput::ClosePanel(panel) if self.modern_effects_toggle(panel, true) => {}
+            PanelOutput::ClosePanel(panel) if self.modern_character_toggle(panel, true) => {}
             PanelOutput::ClosePanel(panel) => {
                 self.panels
                     .set_visibility(&mut self.host.root, panel, false);

@@ -1947,3 +1947,204 @@ fn the_modern_spellbook() {
         s.sent
     );
 }
+
+/// The player's numbers for the character window: level 126, every
+/// attribute raised a way, the vitals, a dozen skills in every group,
+/// experience to spend and a Focus buff.
+fn character_numbers(s: &mut Shot) {
+    use ac_core::spells::{ActiveEnchantmentRecord, EnchantmentTypeFlags};
+    let dats = dats();
+    let curves: ac_dat::objects::ExperienceTable = dats
+        .get(ac_dat::objects::EXPERIENCE_TABLE_ID)
+        .expect("read")
+        .expect("the experience table");
+    let tables = ac_runtime::gameplay::GameTables::load(&dats).expect("the game tables");
+    let mut book = Spellbook::new(Some(Arc::clone(tables.spells())));
+    if let Some(id) = spell_named(&tables, "Focus Self VI") {
+        book.on_spell_learned(id, 1.0);
+        book.on_enchantment_added(ActiveEnchantmentRecord {
+            stat_mod_type: Some(
+                EnchantmentTypeFlags::ATTRIBUTE.bits() | EnchantmentTypeFlags::ADDITIVE.bits(),
+            ),
+            stat_mod_key: Some(5),
+            stat_mod_value: Some(35.0),
+            bucket: 2,
+            start_time: -100.0,
+            spell_category: 900,
+            power_level: 300,
+            ..ActiveEnchantmentRecord::new(id, 1, 2700.0, PLAYER)
+        });
+    }
+    let mut n = ac_core::player::LocalPlayerState::new(Some(book));
+    let a = |r: u32| curves.attributes.get(r as usize).copied().unwrap_or(0);
+    for (id, start, ranks) in [
+        (1, 60, 40),
+        (2, 60, 40),
+        (3, 60, 40),
+        (4, 60, 40),
+        (5, 100, 190),
+        (6, 100, 190),
+    ] {
+        n.on_attribute_update(id, ranks, start, a(ranks));
+    }
+    let v = |r: u32| curves.vitals.get(r as usize).copied().unwrap_or(0);
+    for (id, ranks, current) in [(2, 80, 310), (4, 60, 380), (6, 120, 290)] {
+        n.on_vital_update(id, ranks, 0, v(ranks), current);
+    }
+    let t = |r: u32| curves.trained_skills.get(r as usize).copied().unwrap_or(0);
+    let sp = |r: u32| {
+        curves
+            .specialized_skills
+            .get(r as usize)
+            .copied()
+            .unwrap_or(0)
+    };
+    // id, status (1 untrained, 2 trained, 3 specialized), ranks
+    for (id, status, ranks) in [
+        (34, 3, 180),
+        (33, 3, 160),
+        (16, 2, 150),
+        (15, 3, 170),
+        (31, 2, 150),
+        (32, 2, 140),
+        (14, 2, 120),
+        (6, 2, 130),
+        (24, 2, 100),
+        (22, 2, 90),
+        (21, 2, 60),
+        (23, 1, 0),
+        (20, 1, 0),
+        (38, 1, 0),
+        (37, 1, 0),
+    ] {
+        let xp = match status {
+            3 => sp(ranks),
+            2 => t(ranks),
+            _ => 0,
+        };
+        n.on_skill_update(id, ranks, status, xp, 0, 0, 0.0, 0);
+    }
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Player(
+            Box::new(PlayerFacts {
+                revision: 4,
+                numbers: n,
+                session_seconds: 0.0,
+            }),
+        )));
+    let mut player = ClientObject::new(PLAYER);
+    player.name = "Aerin Vale".to_owned();
+    player.item_type = ItemType::CREATURE;
+    player.properties.ints.insert(0x19, 126);
+    player.properties.ints.insert(0x18, 7);
+    player.properties.ints.insert(0x71, 2);
+    player.properties.ints.insert(0xBC, 1);
+    player.properties.ints.insert(0x2B, 38);
+    player.properties.ints.insert(0x7D, 5_270_400);
+    let at = |l: usize| i64::try_from(curves.levels.get(l).copied().unwrap_or(0)).unwrap_or(0);
+    player
+        .properties
+        .int64s
+        .insert(1, at(126) + (at(127) - at(126)) * 64 / 100);
+    player.properties.int64s.insert(2, 4_210_880_000);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: false,
+                objects: vec![player],
+                removed: Vec::new(),
+                contents: Vec::new(),
+            },
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_character() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_runtime::session::SessionCommand;
+    use ac_ui::panels::character::CharacterTab;
+    use ac_ui_window::ui::modern::character::window::{CharacterFrame, SkillList};
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    character_numbers(&mut s);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Titles(
+            Box::new(ac_runtime::session::interface::TitleFacts {
+                display_title_id: 2,
+                title_ids: (1..=20).collect(),
+                revision: 1,
+                table_generation: 1,
+            }),
+        )));
+    s.step();
+    assert!(s.ui.run_hotkey(Hotkey::Character(CharacterTab::Attributes)));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-character"),
+        "the window opens from its key"
+    );
+    s.save("character");
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-character")
+            .expect("it")
+            .frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    {
+        let f =
+            s.ui.host()
+                .root
+                .widget::<CharacterFrame>(frame)
+                .expect("it");
+        assert_eq!(f.sheet.level, Some(126), "the sheet is read");
+    }
+    // Focus chosen: how it adds up, with its spell.
+    let focus_y = fy + 172 + 26 + 4 * 44 + 21;
+    s.click(0, fx + 80, focus_y, Modifiers::NONE);
+    s.step();
+    s.save("character-focus");
+    // Strength's "+" raises it by one.
+    s.sent.clear();
+    s.click(
+        0,
+        fx + 24 + 300 - 6 - 13,
+        fy + 172 + 26 + 21,
+        Modifiers::NONE,
+    );
+    assert!(
+        s.sent
+            .iter()
+            .any(|c| matches!(c, SessionCommand::Character(_))),
+        "{:?}",
+        s.sent
+    );
+    // A skill chosen in the list.
+    let list = shown_in::<SkillList>(&s, frame).expect("the skills");
+    let (lx, ly, _, _) = rect_of(&s, list);
+    s.click(0, lx + 100, ly + 30 + 17, Modifiers::NONE);
+    s.step();
+    s.save("character-skill");
+    // The titles and information pages.
+    s.click(0, fx + 300, fy + 26, Modifiers::NONE);
+    s.click(0, fx + 24 + 120, fy + 210 + 20, Modifiers::NONE);
+    s.save("character-titles");
+    assert!(
+        shown_in::<ac_ui_window::ui::modern::character::window::TitleGrid>(&s, frame).is_some(),
+        "the titles page shows its grid"
+    );
+    s.click(0, fx + 380, fy + 26, Modifiers::NONE);
+    s.save("character-info");
+    {
+        let f =
+            s.ui.host()
+                .root
+                .widget::<CharacterFrame>(frame)
+                .expect("it");
+        assert!(!f.extras.info.is_empty(), "the information cards");
+    }
+}
