@@ -2240,6 +2240,12 @@ impl WindowUi {
         self.plugins.outbox.borrow_mut().extend(fired);
     }
 
+    /// Something the player did with what a plugin put on a screen (an
+    /// item menu entry chosen, a foot button pressed) goes to the session.
+    pub(in crate::ui) fn send_plugin_input(&mut self, input: UiInput) {
+        self.plugins.outbox.borrow_mut().push(input);
+    }
+
     /// Input actions the key map fired go to the session for the plugins
     /// that listen for them (it drops them when none does).
     pub fn plugin_input_actions(

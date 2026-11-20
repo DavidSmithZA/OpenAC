@@ -49,6 +49,11 @@ pub struct InspectUi {
     followed: Option<u32>,
     /// The field writing an inscription on the sheet.
     scribe: super::scribe::Scribe,
+    /// An item's sheet as its answer made it, before the plugins' cards;
+    /// and the notes those cards were made from.
+    base: Option<super::sheet::Sheet>,
+    notes_seen:
+        Option<std::sync::Arc<std::collections::BTreeMap<u32, Vec<ac_plugin_ui::ItemNoteEntry>>>>,
     /// Time since the last combat refresh.
     since: f64,
 }
@@ -89,6 +94,8 @@ impl WindowUi {
             subject: None,
             followed: None,
             scribe,
+            base: None,
+            notes_seen: None,
             since: 0.0,
         });
         modern.replace(crate::ui::window::EXAMINATION_WINDOW);
@@ -186,14 +193,18 @@ impl WindowUi {
         let Some(made) = made else {
             return;
         };
+        let item = matches!(page, AppraisalPage::Item | AppraisalPage::Spell);
+        if let Some(i) = self.modern.as_mut().and_then(|m| m.inspect.as_mut()) {
+            i.subject = Some(Subject::Object(guid, page));
+            i.followed = Some(guid);
+            i.base = item.then(|| made.clone());
+            i.notes_seen = None;
+        }
         let ui = &mut self.host.root;
         if let Some(v) = ui.widget_mut::<SheetView>(sheet) {
             v.set(made);
         }
-        if let Some(i) = self.modern.as_mut().and_then(|m| m.inspect.as_mut()) {
-            i.subject = Some(Subject::Object(guid, page));
-            i.followed = Some(guid);
-        }
+        self.add_inspect_cards();
         if opens {
             self.show_modern_inspect();
         }
@@ -237,9 +248,35 @@ impl WindowUi {
         }
         if let Some(i) = self.modern.as_mut().and_then(|m| m.inspect.as_mut()) {
             i.subject = Some(Subject::Spell(spell.spell_id));
+            i.base = None;
         }
         self.show_modern_inspect();
         true
+    }
+
+    /// An item's sheet takes the plugins' cards, again whenever their
+    /// notes change.
+    fn add_inspect_cards(&mut self) {
+        let notes = std::sync::Arc::clone(&self.facts.plugin_ui.item_notes);
+        let Some(i) = self.modern.as_mut().and_then(|m| m.inspect.as_mut()) else {
+            return;
+        };
+        if i.notes_seen
+            .as_ref()
+            .is_some_and(|seen| std::sync::Arc::ptr_eq(seen, &notes))
+        {
+            return;
+        }
+        i.notes_seen = Some(notes);
+        let (Some(base), Some(Subject::Object(id, _))) = (i.base.clone(), i.subject) else {
+            return;
+        };
+        let sheet = i.sheet;
+        let cards = super::plugin_notes::cards(&self.facts.plugin_ui, &Horizon::BRONZE, id);
+        let made = super::plugin_notes::with_cards(base, cards);
+        if let Some(v) = self.host.root.widget_mut::<SheetView>(sheet) {
+            v.set(made);
+        }
     }
 
     /// The examine key closes the sheet while it shows. False when it is
@@ -279,6 +316,7 @@ impl WindowUi {
             self.host.root.hide_window(INSPECT);
         }
         let open = self.host.root.is_window_visible(INSPECT);
+        self.add_inspect_cards();
         // The inscription field: what was written goes out.
         if let Some(i) = self.modern.as_mut().and_then(|m| m.inspect.as_mut()) {
             let ui = &mut self.host.root;

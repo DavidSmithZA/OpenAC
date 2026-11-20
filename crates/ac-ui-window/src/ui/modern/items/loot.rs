@@ -99,6 +99,8 @@ pub struct LootView {
     pub with_all: Burden,
     /// Something is being dragged over the window from elsewhere.
     pub drop_lit: bool,
+    /// The height the plugins' band takes over the foot (0: none).
+    pub band: f32,
 }
 
 /// What the frame asks of the window.
@@ -189,11 +191,17 @@ impl LootFrame {
         out
     }
 
+    /// Where the plugins' band starts, over the drop zone and the foot.
+    #[must_use]
+    pub fn band_top(&self) -> f32 {
+        self.height() - FOOT - if self.view.takes { DROP } else { 0.0 } - self.view.band
+    }
+
     /// The list's place in the window.
     #[must_use]
     pub fn list_rect(&self) -> Rect {
         let top = HEADER + if self.view.tabs.is_empty() { 0.0 } else { TABS } + 8.0;
-        let bottom = self.height() - FOOT - if self.view.takes { DROP } else { 0.0 } - 4.0;
+        let bottom = self.band_top() - 4.0;
         (8.0, top, WIDTH - 16.0, (bottom - top).max(40.0))
     }
 }
@@ -523,6 +531,10 @@ pub struct LootUi {
     pub grid: ElementId,
     /// The right-click menu.
     pub menu: ElementId,
+    /// The plugins' band over the foot.
+    pub band: ElementId,
+    /// What the plugins' entries in the menu last opened stand for.
+    plugin_menu: Vec<(String, String)>,
     /// The container shown (0: none).
     pub root: u32,
     /// The tab shown.
@@ -583,6 +595,20 @@ impl WindowUi {
         ItemGrid::set_look(ui, grid, CellLook::List);
         ItemGrid::set_source(ui, grid, ItemDragSource::Ground, true);
         let menu = PopMenu::mount(ui, theme, menu_fonts);
+        let band_widget = super::plugin_notes::FootBand::new(
+            theme,
+            self.modern_font(Weight::SemiBold, 9.5),
+            self.modern_font(Weight::Regular, 10.5),
+            self.modern_font(Weight::SemiBold, 12.0),
+        );
+        let ui = &mut self.host.root;
+        let band = ui.add(
+            frame,
+            Element::at(0.0, HEIGHT - FOOT, WIDTH, 1.0)
+                .with_anchors(AnchorEdges::NONE)
+                .with_visible(false),
+            band_widget,
+        );
         ui.hide_window(LOOT);
         let Some(modern) = self.modern.as_mut() else {
             return;
@@ -591,6 +617,8 @@ impl WindowUi {
             frame,
             grid,
             menu,
+            band,
+            plugin_menu: Vec::new(),
             root: 0,
             open: 0,
             closing: false,
@@ -652,7 +680,7 @@ impl WindowUi {
         let Some(l) = self.modern.as_ref().and_then(|m| m.loot.as_ref()) else {
             return;
         };
-        let (frame, grid, menu) = (l.frame, l.grid, l.menu);
+        let (frame, grid, menu, band) = (l.frame, l.grid, l.menu, l.band);
         let root = self.facts.state.external_container;
         let in_range = self.facts.state.external_container_in_range;
         // A container opened or closed.
@@ -683,6 +711,13 @@ impl WindowUi {
             .unwrap_or_default();
         let cell_asks = ItemGrid::take_requests(ui, grid);
         let chosen = PopMenu::take(ui, menu);
+        for (owner, id) in super::plugin_notes::FootBand::take(ui, band) {
+            self.send_plugin_input(ac_plugin_ui::UiInput::FootButton {
+                owner,
+                window: ac_plugin_ui::ItemWindow::Loot,
+                id,
+            });
+        }
         let mut close = false;
         for ask in frame_asks {
             match ask {
@@ -746,8 +781,11 @@ impl WindowUi {
                                 .on(free > 0),
                         );
                     }
+                    let (extra, tags) = super::plugin_notes::menu_rows(&self.facts.plugin_ui, id);
+                    rows.extend(extra);
                     if let Some(l) = self.loot_mut() {
                         l.into = packs.iter().map(|p| p.id).collect();
+                        l.plugin_menu = tags;
                     }
                     emit(&mut self.host.root, PanelOutput::SelectObject(id));
                     PopMenu::open(&mut self.host.root, menu, MENU_LOOT, id, rows, 230.0, at);
@@ -769,6 +807,21 @@ impl WindowUi {
         }
         if let Some((MENU_LOOT, id, tag)) = chosen {
             match tag {
+                t if t >= super::plugin_notes::MENU_TAG_BASE => {
+                    // A plugin's entry: it goes back to the plugin.
+                    let entry = self.loot_mut().and_then(|l| {
+                        l.plugin_menu
+                            .get((t - super::plugin_notes::MENU_TAG_BASE) as usize)
+                            .cloned()
+                    });
+                    if let Some((owner, entry)) = entry {
+                        self.send_plugin_input(ac_plugin_ui::UiInput::ItemMenu {
+                            owner,
+                            id: entry,
+                            object: id,
+                        });
+                    }
+                }
                 DO_INSPECT => self.send_loot(ItemCommand::Appraise(ObjectRef::Guid(id))),
                 DO_LOOT => self.loot_into(id, player),
                 t if t >= DO_INTO => {
@@ -918,6 +971,7 @@ impl WindowUi {
                     lit: false,
                     actions: true,
                     note: moving.then(|| "Looting\u{2026}".to_owned()),
+                    mark: super::plugin_notes::mark_on(&facts.plugin_ui, &Horizon::BRONZE, id),
                 }
             })
             .collect();
@@ -941,6 +995,7 @@ impl WindowUi {
             container.icon_overlay_id,
             container.effects,
         );
+        let feet = super::plugin_notes::feet_of(&facts.plugin_ui, ac_plugin_ui::ItemWindow::Loot);
         let view = LootView {
             icon,
             name: names(container),
@@ -951,6 +1006,7 @@ impl WindowUi {
             burden,
             with_all: burden.with(total_burden),
             drop_lit: false,
+            band: super::plugin_notes::band_height(feet.len()),
         };
         let changed = ui
             .widget::<LootFrame>(frame)
@@ -962,6 +1018,18 @@ impl WindowUi {
             f.view = view;
             f.list_rect()
         };
+        let band_top = ui
+            .widget::<LootFrame>(frame)
+            .map_or(HEIGHT - FOOT, LootFrame::band_top);
+        if let Some(band) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.loot.as_ref())
+            .map(|l| l.band)
+        {
+            super::plugin_notes::FootBand::show(&mut self.host.root, band, feet, band_top, WIDTH);
+        }
+        let ui = &mut self.host.root;
         if changed
             || ui
                 .element(grid)

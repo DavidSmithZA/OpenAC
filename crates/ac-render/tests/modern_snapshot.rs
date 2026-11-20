@@ -1406,3 +1406,156 @@ fn the_modern_loot() {
         SessionCommand::Item(ItemCommand::CloseContainer(ObjectRef::Guid(0x8000_0A01)))
     )));
 }
+
+/// A plugin's notes on the potions (kept, with a card and a menu entry),
+/// the sword and a corpse's sword (to salvage), and its part of the
+/// inventory's and loot window's feet, as the session hands them over.
+fn plugin_notes(s: &mut Shot) {
+    use ac_plugin_ui::{
+        FootButton, ItemMenuEntry, ItemNote, ItemWindow, NoteTone, PluginUi, UiOwner, WindowFoot,
+    };
+    let owner = UiOwner::new("example.looter", "Looter");
+    let mut state = PluginUi::new();
+    let note = |object_id, mark: &str, tone| ItemNote {
+        object_id,
+        mark: mark.to_owned(),
+        tone,
+        lines: Vec::new(),
+        menu: Vec::new(),
+    };
+    let mut potions = note(0x8000_0101, "Keep", NoteTone::Good);
+    potions.lines = vec![
+        "Rule: Healing kept up to 20".to_owned(),
+        "Carrying 12 of 20.".to_owned(),
+    ];
+    potions.menu = vec![ItemMenuEntry {
+        id: "never".to_owned(),
+        label: "Never loot this".to_owned(),
+    }];
+    assert!(state.set_item_notes(
+        &owner,
+        vec![
+            potions,
+            note(0x8000_0105, "Salvage", NoteTone::Warning),
+            note(0x8000_0A13, "Salvage", NoteTone::Warning),
+            note(0x8000_0A12, "Sell", NoteTone::Bad),
+        ]
+    ));
+    let foot = |summary: &str, label: &str| WindowFoot {
+        summary: summary.to_owned(),
+        buttons: vec![FootButton {
+            id: "go".to_owned(),
+            label: label.to_owned(),
+            enabled: true,
+        }],
+    };
+    assert!(state.set_window_foot(
+        &owner,
+        ItemWindow::Inventory,
+        foot("1 to salvage", "Salvage 1")
+    ));
+    assert!(state.set_window_foot(
+        &owner,
+        ItemWindow::Loot,
+        foot("1 to salvage, 1 to sell", "Loot 2")
+    ));
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::PluginUi(
+            state.snapshot(),
+        )));
+    s.step();
+    s.step();
+}
+
+/// The first visible element under `root`'s children holding a `T`.
+fn shown_in<T: ac_ui::tree::Widget>(
+    s: &Shot,
+    parent: ac_ui::tree::ElementId,
+) -> Option<ac_ui::tree::ElementId> {
+    let root = &s.ui.host().root;
+    root.children(parent)
+        .into_iter()
+        .find(|&c| root.widget::<T>(c).is_some() && root.element(c).is_some_and(|e| e.visible))
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_plugin_notes() {
+    use ac_core::combat::CombatMode;
+    use ac_plugin_ui::{ItemWindow, UiInput};
+    use ac_render::ui::window::Hotkey;
+    use ac_runtime::session::SessionCommand;
+    use ac_ui_window::ui::modern::items::menu::PopMenu;
+    use ac_ui_window::ui::modern::items::plugin_notes::FootBand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    plugin_notes(&mut s);
+    assert!(s.ui.run_hotkey(Hotkey::Inventory));
+    s.step();
+    s.step();
+    s.save("plugin-notes-inventory");
+    // The potions selected: the details carry the plugin's card.
+    let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
+    s.click(0, first.0, first.1, Modifiers::NONE);
+    s.scene.apply(PresentationEvent::Player(PlayerView {
+        selected: Some(0x8000_0101),
+        ..PlayerView::default()
+    }));
+    let a = ac_proto::appraise::IdentifyObjectResponse {
+        guid: 0x8000_0101,
+        success: true,
+        ..Default::default()
+    };
+    answer(&mut s, a, false);
+    s.save("plugin-notes-details");
+    // Its menu carries the plugin's entry; choosing it goes to the plugin.
+    s.sent.clear();
+    s.click(1, first.0, first.1, Modifiers::NONE);
+    s.save("plugin-notes-menu");
+    let menu = shown::<PopMenu>(&s).expect("the menu");
+    let (mx, my, mw, _) = rect_of(&s, menu);
+    let (top, h) =
+        s.ui.host()
+            .root
+            .widget::<PopMenu>(menu)
+            .and_then(|m| m.entry_rows("Never loot this"))
+            .expect("the plugin's entry");
+    s.click(0, mx + mw / 2, my + (top + h / 2.0) as i32, Modifiers::NONE);
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::PluginUi(UiInput::ItemMenu { owner, id, object })
+                if owner == "example.looter" && id == "never" && *object == 0x8000_0101
+        )),
+        "{:?}",
+        s.sent
+    );
+    // The band's button, at the right of its row.
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-inventory")
+            .expect("inventory")
+            .frame;
+    let band = shown_in::<FootBand>(&s, frame).expect("the inventory's band");
+    let (bx, by, bw, _) = rect_of(&s, band);
+    s.sent.clear();
+    s.click(0, bx + bw - 12 - 20, by + 2 + 4 + 12, Modifiers::NONE);
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::PluginUi(UiInput::FootButton { owner, window: ItemWindow::Inventory, id })
+                if owner == "example.looter" && id == "go"
+        )),
+        "{:?}",
+        s.sent
+    );
+    // The loot window: marks on its rows, its band over the foot.
+    open_corpse(&mut s, true);
+    s.save("plugin-notes-loot");
+    let frame = s.ui.host().root.window("modern-loot").expect("loot").frame;
+    assert!(
+        shown_in::<FootBand>(&s, frame).is_some(),
+        "the loot window's band"
+    );
+}

@@ -66,6 +66,13 @@ pub enum Entry {
         /// A cantrip or enchantment (gold).
         gold: bool,
     },
+    /// A plugin's mark on the item, as a chip in its colour.
+    Verdict {
+        /// Its words.
+        words: String,
+        /// Its colour.
+        color: Color,
+    },
     /// An inscription.
     Inscription {
         /// Its words.

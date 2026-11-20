@@ -9,6 +9,7 @@ pub mod inventory;
 pub mod loot;
 pub mod menu;
 pub mod model;
+pub mod plugin_notes;
 pub mod run;
 pub mod scribe;
 pub mod sheet;
