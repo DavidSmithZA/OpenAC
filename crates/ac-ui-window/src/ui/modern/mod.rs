@@ -106,6 +106,8 @@ pub struct ModernLayer {
     pub social: Option<social::run::SocialUi>,
     /// The Journal and the quests on screen.
     pub journal: Option<journal::run::JournalUi>,
+    /// The book reader.
+    pub book: Option<journal::book::BookUi>,
     /// The question card and the invitations under the target.
     pub questions: Option<dialogs::run::QuestionsUi>,
     /// Packs used anywhere since the inventory last looked.
@@ -359,6 +361,7 @@ impl WindowUi {
         self.mount_modern_questions();
         self.mount_modern_social();
         self.mount_modern_journal();
+        self.mount_modern_book();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };

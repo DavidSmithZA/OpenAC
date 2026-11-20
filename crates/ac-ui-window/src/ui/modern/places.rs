@@ -80,6 +80,16 @@ impl Place {
 /// windows are built).
 const PLACES: &[(&str, Place)] = &[
     (
+        super::journal::book::BOOK,
+        Place {
+            anchor: Anchor::Center,
+            dx: 0.0,
+            dy: 0.0,
+            width: super::journal::book::WIDTH,
+            height: super::journal::book::HEIGHT,
+        },
+    ),
+    (
         super::journal::run::JOURNAL,
         Place {
             anchor: Anchor::Center,

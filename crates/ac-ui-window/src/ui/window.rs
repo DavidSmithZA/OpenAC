@@ -1249,6 +1249,7 @@ impl WindowUi {
         self.tick_modern_social();
         self.update_salvage();
         self.update_book(dirty);
+        self.tick_modern_book();
         self.update_map_house(scene);
         self.update_barber(dirty, scene);
         self.update_journal_pages(dirty, scene);

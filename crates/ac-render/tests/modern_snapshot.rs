@@ -3089,3 +3089,73 @@ fn the_modern_journal() {
     s.step();
     s.save("journal-notes");
 }
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_book() {
+    use ac_core::combat::CombatMode;
+    use ac_proto::book::BookPage;
+    use ac_runtime::gameplay::{BookCommand, BookView, GameplayCommand};
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let page = |author: u32, name: &str, words: &str| BookPage {
+        author_id: author,
+        author_name: name.to_owned(),
+        author_account: String::new(),
+        text_included: 1,
+        ignore_author: 0,
+        page_text: words.to_owned(),
+    };
+    let view = |current: i32, revision: u64| BookView {
+        revision,
+        book_guid: 0x8000_0901,
+        max_num_pages: 10,
+        max_num_chars_per_page: 1000,
+        pages: vec![
+            page(
+                0x5000_0099,
+                "Mira",
+                "Drudges keep to the hills by day and come down at dusk. They favour the old farms north-west of Holtburg, where the fences are down.",
+            ),
+            page(PLAYER, "Aerin Vale", "My own notes on the raids."),
+        ],
+        current_page: current,
+        inscription: "On the Habits of Drudges".to_owned(),
+        scribe_id: 0x5000_0099,
+        scribe_name: "Mira".to_owned(),
+        request_pending: false,
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Book(
+            Box::new(view(0, 1)),
+        )));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-book"),
+        "a book opens it"
+    );
+    assert!(!s.ui.host().root.is_window_visible("book"));
+    s.save("book-read");
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Book(
+            Box::new(view(1, 2)),
+        )));
+    s.step();
+    s.step();
+    s.save("book-own-page");
+    // The close saves the page.
+    let frame = s.ui.host().root.window("modern-book").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    s.sent.clear();
+    s.click(0, fx + 560 - 12 - 15, fy + 26, Modifiers::NONE);
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Book(BookCommand::CloseWriting(Some(_))))
+        )),
+        "{:?}",
+        s.sent
+    );
+}
