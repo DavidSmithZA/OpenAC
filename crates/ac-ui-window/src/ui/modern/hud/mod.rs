@@ -6,6 +6,7 @@ pub mod combat;
 pub mod connection;
 pub mod edge_glow;
 pub mod effects;
+pub mod fellows;
 pub mod lines;
 pub mod panels;
 pub mod radar;
@@ -38,9 +39,12 @@ pub const PANELS: &str = "modern-panels";
 /// The combat strip's (and the jump meter's) window name.
 pub const COMBAT: &str = "modern-combat";
 
+/// The fellows on screen's window name.
+pub const FELLOWS: &str = "modern-fellows";
+
 /// Every HUD piece's window name (not the bars: they keep their own lock
 /// and hiding).
-pub const PIECES: [&str; 6] = [VITALS, TARGET, EFFECTS, RADAR, COMBAT, PANELS];
+pub const PIECES: [&str; 7] = [VITALS, TARGET, EFFECTS, RADAR, COMBAT, PANELS, FELLOWS];
 
 /// What the player calls piece `name` (its window name).
 #[must_use]
@@ -52,6 +56,7 @@ pub fn piece_words(name: &str) -> &str {
         RADAR => "Radar",
         COMBAT => "Combat strip",
         PANELS => "Panel strip",
+        FELLOWS => "Fellows",
         other => other.strip_prefix("modern-").unwrap_or(other),
     }
 }

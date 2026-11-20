@@ -80,6 +80,26 @@ impl Place {
 /// windows are built).
 const PLACES: &[(&str, Place)] = &[
     (
+        super::social::run::SOCIAL,
+        Place {
+            anchor: Anchor::Center,
+            dx: 0.0,
+            dy: 0.0,
+            width: super::social::window::WIDTH,
+            height: super::social::window::HEIGHT,
+        },
+    ),
+    (
+        super::hud::FELLOWS,
+        Place {
+            anchor: Anchor::TopLeft,
+            dx: 16.0,
+            dy: 56.0,
+            width: super::hud::fellows::WIDTH,
+            height: 60.0,
+        },
+    ),
+    (
         super::character::run::CHARACTER,
         Place {
             anchor: Anchor::Center,

@@ -24,6 +24,7 @@ pub mod kit;
 pub mod magic;
 pub mod options;
 pub mod places;
+pub mod social;
 
 use std::sync::Arc;
 
@@ -100,6 +101,8 @@ pub struct ModernLayer {
     pub trade: Option<dealing::trade_run::TradeUi>,
     /// The Salvage window.
     pub salvage: Option<dealing::salvage_run::SalvageUi>,
+    /// The Social window and the fellows on screen.
+    pub social: Option<social::run::SocialUi>,
     /// The question card and the invitations under the target.
     pub questions: Option<dialogs::run::QuestionsUi>,
     /// Packs used anywhere since the inventory last looked.
@@ -351,6 +354,7 @@ impl WindowUi {
         self.mount_modern_trade();
         self.mount_modern_salvage();
         self.mount_modern_questions();
+        self.mount_modern_social();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -525,6 +529,8 @@ impl WindowUi {
         let inventory = shows(ac_ui::panels::panel_id::INVENTORY);
         let spellbook = shows(ac_ui::panels::panel_id::MAGIC);
         let options = shows(ac_ui::panels::panel_id::OPTIONS);
+        let social = shows(ac_ui::panels::panel_id::SOCIAL);
+        let journal = shows(ac_ui::panels::panel_id::JOURNAL);
         let ui = &mut self.host.root;
         for id in buttons {
             let Some(panel) = ui.widget::<PanelButton>(id).map(|b| b.panel) else {
@@ -534,10 +540,10 @@ impl WindowUi {
                 Panel::Character => character,
                 Panel::Inventory => inventory,
                 Panel::Spellbook => spellbook,
-                Panel::Journal => ui.is_window_visible(super::social_panels::JOURNAL_WINDOW),
+                Panel::Journal => journal,
                 Panel::Map => world_open && !on_house,
                 Panel::House => on_house,
-                Panel::Social => ui.is_window_visible(super::social_panels::SOCIAL_WINDOW),
+                Panel::Social => social,
                 Panel::Options => options,
             };
             if let Some(b) = ui.widget_mut::<PanelButton>(id) {

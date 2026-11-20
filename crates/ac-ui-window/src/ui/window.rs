@@ -1246,6 +1246,7 @@ impl WindowUi {
         self.update_components_page(dirty, &stale);
         self.update_external_container();
         self.tick_modern_salvage();
+        self.tick_modern_social();
         self.update_salvage();
         self.update_book(dirty);
         self.update_map_house(scene);

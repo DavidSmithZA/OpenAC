@@ -241,6 +241,20 @@ impl WindowUi {
         );
     }
 
+    /// A window's question in a look of its own (a title, button words),
+    /// on the card.
+    pub(in crate::ui) fn modern_ask_as(&mut self, look: Look, text: String, action: DialogAction) {
+        self.modern_question(
+            look,
+            text,
+            Form::YesNo,
+            0,
+            Vec::new(),
+            Then::Window(action),
+            false,
+        );
+    }
+
     /// A key-profile question (`data` says its kind and words), on the
     /// card; answers its number.
     pub(in crate::ui) fn modern_keyboard_question(

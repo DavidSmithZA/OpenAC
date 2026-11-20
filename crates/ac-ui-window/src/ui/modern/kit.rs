@@ -374,6 +374,138 @@ pub fn field_text(ui: &UiRoot, field: ElementId) -> String {
         .unwrap_or_default()
 }
 
+/// An input box in `r` (a field goes over it, [`mount_field`]); `empty`
+/// shows `hint` in it.
+#[allow(clippy::too_many_arguments)]
+pub fn field_box(
+    rc: &mut RenderContext<'_>,
+    theme: &Horizon,
+    r: Rect,
+    hint: &str,
+    empty: bool,
+    focused: bool,
+    font: Option<&Arc<UiFont>>,
+) {
+    let radius = CornerRadii::all(4.0);
+    rc.fill_rounded_rect(r.0, r.1, r.2, r.3, radius, hex(0, 0.35));
+    let edge = if focused { gold(0.8) } else { bronze(0.45) };
+    rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, radius, edge, 1.0);
+    if empty && let Some(f) = font {
+        let y = if r.3 > 40.0 {
+            r.1 + 8.0
+        } else {
+            r.1 + ((r.3 - f.line_height) * 0.5).round()
+        };
+        text::draw(
+            rc,
+            f,
+            hint,
+            r.0 + 10.0,
+            y,
+            TextStyle::plain(theme.palette.muted),
+        );
+    }
+}
+
+/// A field over the input box at `r` in `parent` (one line unless
+/// `lines`), at most `most` characters (0: no limit).
+pub fn mount_field(
+    ui: &mut UiRoot,
+    parent: ElementId,
+    r: Rect,
+    font: Option<Arc<UiFont>>,
+    theme: &Horizon,
+    lines: bool,
+) -> ElementId {
+    let (y, h) = if lines {
+        (r.1 + 4.0, r.3 - 8.0)
+    } else {
+        (r.1 + (r.3 - 24.0) * 0.5, 24.0)
+    };
+    let mut e = Element::at(r.0 + 6.0, y, r.2 - 12.0, h).with_anchors(AnchorEdges::NONE);
+    Field::configure(&mut e);
+    let mut f = Field::default();
+    f.font = font;
+    f.one_line = !lines;
+    f.selectable = true;
+    f.padding = 3.0;
+    f.record_history = false;
+    f.clear_on_submit = false;
+    f.stay_focused_after_submit = true;
+    f.text_color = theme.palette.text;
+    f.background_color = Color::TRANSPARENT;
+    f.selection_color = gold(0.35);
+    f.set_editable_detached(&mut e, true);
+    ui.add(parent, e, f)
+}
+
+/// Puts `words` in field `field` (when it holds something else).
+pub fn set_field_text(ui: &mut UiRoot, field: ElementId, words: &str) {
+    if let Some(f) = ui.widget_mut::<Field>(field)
+        && f.text() != words
+    {
+        f.set_text(words);
+    }
+}
+
+/// A switch in `r` (38 by 20 suits): gold with its knob right when `on`.
+pub fn switch(rc: &mut RenderContext<'_>, r: Rect, on: bool, lit: bool) {
+    let track = if on {
+        gold(0.9)
+    } else {
+        hex(0xFF_FFFF, if lit { 0.2 } else { 0.14 })
+    };
+    rc.fill_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(r.3 * 0.5), track);
+    let knob = if on { hex(0x1A_140D, 1.0) } else { SOFT };
+    let kx = if on { r.0 + r.2 - 17.0 } else { r.0 + 3.0 };
+    rc.fill_rounded_rect(kx, r.1 + 3.0, 14.0, 14.0, CornerRadii::all(7.0), knob);
+}
+
+/// The OPENAC tag (what the original client does not have) at `x`,
+/// centred on `cy`; returns its width.
+pub fn openac_tag(rc: &mut RenderContext<'_>, font: Option<&Arc<UiFont>>, x: f32, cy: f32) -> f32 {
+    let Some(f) = font else {
+        return 0.0;
+    };
+    let w = text::measure(f, "OPENAC", 0.6) + 12.0;
+    let r = (x, cy - 8.0, w, 16.0);
+    rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(8.0), bronze(0.5), 1.0);
+    text::draw(
+        rc,
+        f,
+        "OPENAC",
+        x + 6.0,
+        r.1 + ((16.0 - f.line_height) * 0.5).round(),
+        TextStyle::plain(gold(1.0)).tracked(0.6),
+    );
+    w
+}
+
+/// Someone's online dot at (`x`, `y`), `size` across: filled green when
+/// online, an empty grey ring when not.
+pub fn online_dot(rc: &mut RenderContext<'_>, x: f32, y: f32, size: f32, online: bool) {
+    if online {
+        rc.fill_ellipse(x, y, size, size, GOOD);
+    } else {
+        rc.stroke_ellipse(x, y, size, size, hex(0x8C_8070, 1.0), 1.5);
+    }
+}
+
+/// A row picked (gold edge and wash) or not (a quiet one), lit when
+/// hovered.
+pub fn pick_row(rc: &mut RenderContext<'_>, r: Rect, on: bool, lit: bool) {
+    let radius = CornerRadii::all(4.0);
+    let (fill, edge) = if on {
+        (gold(0.12), gold(1.0))
+    } else if lit {
+        (hex(0xFF_FFFF, 0.05), bronze(0.3))
+    } else {
+        (hex(0, 0.22), bronze(0.18))
+    };
+    rc.fill_rounded_rect(r.0, r.1, r.2, r.3, radius, fill);
+    rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, radius, edge, 1.0);
+}
+
 /// A spaced-capitals heading with a count and a rule running on to
 /// `right`.
 #[allow(clippy::too_many_arguments)]

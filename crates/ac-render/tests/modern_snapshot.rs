@@ -2708,3 +2708,228 @@ fn the_modern_salvage() {
     s.step();
     s.save("salvage-done");
 }
+
+/// The player in an allegiance (Mira's vassal, with vassals of their own;
+/// the monarch when `monarch`), in a locked fellowship Mira leads, with
+/// friends and people ignored.
+fn social_facts(monarch: bool) -> ac_runtime::session::interface::SocialFacts {
+    use ac_core::social::{
+        FriendEntry, FriendsStateParts, SquelchDatabase, SquelchInfo, SquelchStateParts,
+    };
+    use ac_proto::allegiance::{AllegianceMember, AllegianceProfile};
+    use ac_runtime::gameplay::{DepartedFellowView, FellowView, FellowshipView};
+    use std::collections::{HashMap, HashSet};
+    const MIRA: u32 = 0x5000_0002;
+    const ROOK: u32 = 0x5000_0003;
+    let member = |id, parent, name: &str, rank, level, online, tithed| AllegianceMember {
+        character_id: id,
+        parent_guid: parent,
+        is_logged_in: online,
+        name: name.to_owned(),
+        rank,
+        level,
+        loyalty: 140,
+        leadership: 95,
+        cp_cached: 0,
+        cp_tithed: tithed,
+        gender: 1,
+        heritage_group: 1,
+        may_passup_experience: true,
+    };
+    let (monarch_member, records) = if monarch {
+        (
+            member(PLAYER, 0, "Aerin Vale", 6, 126, true, 0),
+            vec![
+                member(0x5000_0010, PLAYER, "Hask", 3, 98, true, 812_400),
+                member(0x5000_0011, PLAYER, "Tarn", 2, 64, false, 140_210),
+            ],
+        )
+    } else {
+        (
+            member(ROOK, 0, "Rook of Arwic", 9, 275, true, 0),
+            vec![
+                member(MIRA, ROOK, "Mira", 7, 201, true, 1_241_880),
+                member(PLAYER, MIRA, "Aerin Vale", 6, 126, true, 964_910),
+                member(0x5000_0010, PLAYER, "Hask", 3, 98, true, 812_400),
+                member(0x5000_0011, PLAYER, "Tarn", 2, 64, false, 140_210),
+                member(0x5000_0012, PLAYER, "Wren", 1, 31, true, 9_880),
+                member(0x5000_0013, PLAYER, "Pell", 1, 12, false, 2_420),
+            ],
+        )
+    };
+    let fellow = |guid, name: &str, level, health: (u32, u32), loot| FellowView {
+        guid,
+        name: name.to_owned(),
+        level,
+        health,
+        stamina: (298, 410),
+        mana: (361, 620),
+        share_loot: loot,
+        vitals_age_seconds: Some(1.0),
+    };
+    let now = i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs()),
+    )
+    .unwrap_or(0);
+    let friend = |id, name: &str, online| FriendEntry {
+        id,
+        name: name.to_owned(),
+        online,
+        appear_offline: false,
+        friends: Vec::new(),
+        friend_of: Vec::new(),
+    };
+    ac_runtime::session::interface::SocialFacts {
+        in_world: true,
+        options: ac_runtime::character::CharacterOptions::default(),
+        friends: FriendsStateParts {
+            entries: vec![
+                friend(MIRA, "Mira", true),
+                friend(0x5000_0020, "Osk", true),
+                friend(0x5000_0011, "Tarn", false),
+                friend(0x5000_0021, "Corvan", false),
+            ],
+            revision: 1,
+        }
+        .into(),
+        squelch: SquelchStateParts {
+            database: SquelchDatabase {
+                accounts: HashMap::from([("Pyreal Dealer".to_owned(), 1)]),
+                characters: HashMap::from([
+                    (
+                        0x5000_0030,
+                        SquelchInfo {
+                            name: "Loudmouth".to_owned(),
+                            account_wide: false,
+                            message_types: HashSet::from([3, 12]),
+                        },
+                    ),
+                    (
+                        0x5000_0031,
+                        SquelchInfo {
+                            name: "Spamtastic".to_owned(),
+                            account_wide: false,
+                            message_types: HashSet::from([1]),
+                        },
+                    ),
+                ]),
+                global: SquelchInfo {
+                    name: String::new(),
+                    account_wide: false,
+                    message_types: HashSet::from([17]),
+                },
+            },
+            revision: 1,
+        }
+        .into(),
+        fellowship: FellowshipView {
+            revision: 1,
+            in_fellowship: true,
+            name: "Ramp Runners".to_owned(),
+            leader_guid: MIRA,
+            share_xp: true,
+            even_xp_split: false,
+            open: true,
+            locked: true,
+            members: vec![
+                fellow(MIRA, "Mira", 201, (1020, 1020), true),
+                fellow(PLAYER, "Aerin Vale", 126, (412, 450), true),
+                fellow(0x5000_0020, "Osk", 126, (305, 305), false),
+                fellow(0x5000_0010, "Hask", 98, (140, 388), true),
+            ],
+            departed: vec![DepartedFellowView {
+                guid: 0x5000_0013,
+                name: "Pell".to_owned(),
+                left_unix_s: now - 12 * 60,
+            }],
+        },
+        allegiance: Some(AllegianceProfile {
+            total_members: 1284,
+            total_vassals: 19,
+            motd: "Mana forge run on Friday. Meet at the Arwic lifestone an hour before."
+                .to_owned(),
+            motd_set_by: "Rook of Arwic".to_owned(),
+            allegiance_name: "House of Arwic".to_owned(),
+            monarch: Some(monarch_member),
+            records,
+            ..AllegianceProfile::default()
+        }),
+        allegiance_rank: 6,
+        allegiance_revision: 1,
+    }
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_social() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_render::ui::window::SocialPage;
+    use ac_runtime::gameplay::{FellowshipCommand, GameplayCommand};
+    use ac_runtime::session::SessionCommand;
+    use ac_ui_window::ui::modern::social::model::Tab;
+    use ac_ui_window::ui::modern::social::window::SocialFrame;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Social(
+            Box::new(social_facts(false)),
+        )));
+    s.step();
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Fellowship(
+                FellowshipCommand::SetPanelOpen(true)
+            ))
+        )),
+        "the fellows on screen keep their vitals coming: {:?}",
+        s.sent
+    );
+    assert!(
+        s.ui.host().root.is_window_visible("modern-fellows"),
+        "the fellows show on screen"
+    );
+    assert!(s.ui.run_hotkey(Hotkey::Social(SocialPage::Allegiance)));
+    s.step();
+    s.step();
+    assert!(s.ui.host().root.is_window_visible("modern-social"));
+    assert!(!s.ui.host().root.is_window_visible("social-panel"));
+    s.save("social-allegiance");
+    let frame = s.ui.host().root.window("modern-social").expect("it").frame;
+    let page = |s: &mut Shot, tab: Tab, name: &str| {
+        if let Some(f) = s.ui.host_mut().root.widget_mut::<SocialFrame>(frame) {
+            f.show(tab);
+        }
+        s.step();
+        s.step();
+        s.save(name);
+    };
+    page(&mut s, Tab::Fellowship, "social-fellowship");
+    page(&mut s, Tab::Friends, "social-friends");
+    page(&mut s, Tab::Ignored, "social-ignored");
+    if let Some(f) = s.ui.host_mut().root.widget_mut::<SocialFrame>(frame) {
+        f.menu = Some(Some(0));
+    }
+    s.step();
+    s.save("social-ignored-menu");
+    // The monarch manages the allegiance.
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Social(
+            Box::new(social_facts(true)),
+        )));
+    page(&mut s, Tab::Allegiance, "social-monarch");
+    if let Some(f) = s.ui.host_mut().root.widget_mut::<SocialFrame>(frame) {
+        f.managing = true;
+    }
+    s.step();
+    s.step();
+    s.save("social-manage");
+    // The fellowship key closes it when on its page.
+    page(&mut s, Tab::Fellowship, "social-fellowship-2");
+    assert!(s.ui.run_hotkey(Hotkey::Social(SocialPage::Fellowship)));
+    s.step();
+    assert!(!s.ui.host().root.is_window_visible("modern-social"));
+}
