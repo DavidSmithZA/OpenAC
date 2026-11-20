@@ -81,7 +81,7 @@ pub enum KeyboardRequest {
 }
 
 #[derive(Debug, Clone)]
-enum KeyboardDialog {
+pub(in crate::ui) enum KeyboardDialog {
     Instructions,
     Message,
     Overwrite,
@@ -288,7 +288,7 @@ impl WindowUi {
 
     fn close_instructions(&mut self) {
         let context = std::mem::take(&mut self.keyboard.instructions);
-        if context == 0 {
+        if context == 0 || self.withdraw_modern_question(context) {
             return;
         }
         let layout_id = self.dialog_layout;
@@ -365,6 +365,9 @@ impl WindowUi {
     }
 
     fn keyboard_dialog(&mut self, data: DialogData, tag: KeyboardDialog) -> u32 {
+        if self.modern_questions_on() {
+            return self.modern_keyboard_question(&data.priority(), tag);
+        }
         let layout_id = self.dialog_layout;
         let Self {
             host,
@@ -410,7 +413,12 @@ impl WindowUi {
         true
     }
 
-    fn keyboard_dialog_closed(&mut self, context: u32, data: &DialogData, tag: KeyboardDialog) {
+    pub(in crate::ui) fn keyboard_dialog_closed(
+        &mut self,
+        context: u32,
+        data: &DialogData,
+        tag: KeyboardDialog,
+    ) {
         match tag {
             KeyboardDialog::Instructions => {
                 if self.keyboard.instructions == context {
@@ -481,6 +489,10 @@ impl WindowUi {
             .position(|n| n.eq_ignore_ascii_case(&current))
             .unwrap_or(0);
         let data = DialogData::confirmation_menu(&names, i32::try_from(selected).unwrap_or(0));
+        if self.modern_questions_on() {
+            self.modern_keyboard_question(&data, KeyboardDialog::Load(names));
+            return;
+        }
         // The menu goes on the queue without priority (OpenAC).
         let layout_id = self.dialog_layout;
         let Self {

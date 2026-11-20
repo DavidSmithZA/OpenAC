@@ -2255,3 +2255,108 @@ fn the_modern_options() {
     assert_eq!(back, vec![!set[0]], "{:?}", s.sent);
     assert_eq!(changed(&s), Some((0, false)), "the keys are put back too");
 }
+
+/// Sets the session's open questions to `questions`.
+fn ask(s: &mut Shot, questions: Vec<ac_runtime::communication::ClientConfirmation>) {
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::State(
+            Box::new(InterfaceState {
+                player: PLAYER,
+                can_make_request: true,
+                confirmations: questions,
+                ..InterfaceState::default()
+            }),
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_questions() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::communication::ClientConfirmation;
+    use ac_runtime::session::SessionCommand;
+    use ac_ui_window::ui::modern::dialogs::card::QuestionCard;
+    use ac_ui_window::ui::modern::dialogs::invites::InviteCards;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let craft = ClientConfirmation::Server {
+        confirmation_type: 5,
+        context_id: 11,
+        message: "You have a 33% chance of successfully applying Granite to the Mithril Tachi. If you fail, the Mithril Tachi will be destroyed.".to_owned(),
+    };
+    let arena = ClientConfirmation::Server {
+        confirmation_type: 7,
+        context_id: 12,
+        message: "Do you wish to enter the arena? You cannot leave until the fight is over."
+            .to_owned(),
+    };
+    let fellow = ClientConfirmation::Server {
+        confirmation_type: 4,
+        context_id: 13,
+        message: "Mira".to_owned(),
+    };
+    ask(&mut s, vec![craft.clone(), arena.clone(), fellow.clone()]);
+    let card = shown::<QuestionCard>(&s).expect("the card shows");
+    let of =
+        s.ui.host()
+            .root
+            .widget::<QuestionCard>(card)
+            .and_then(|c| c.shown.as_ref().map(|v| (v.of, v.look.yes.clone())));
+    assert_eq!(
+        of,
+        Some((2, "Apply".to_owned())),
+        "the invitation waits apart"
+    );
+    assert_eq!(s.ui.host().root.modal, Some(card));
+    let invites = shown::<InviteCards>(&s).expect("the invitation shows");
+    s.save("questions-craft");
+    // Enter applies; the next question shows.
+    s.sent.clear();
+    s.key(Key::Enter, Modifiers::NONE, true);
+    s.key(Key::Enter, Modifiers::NONE, false);
+    let answered: Vec<(ClientConfirmation, bool)> = s
+        .sent
+        .iter()
+        .filter_map(|c| match c {
+            SessionCommand::AnswerConfirmation {
+                confirmation,
+                accepted,
+            } => Some((confirmation.clone(), *accepted)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(answered, vec![(craft.clone(), true)], "{:?}", s.sent);
+    ask(&mut s, vec![arena.clone(), fellow.clone()]);
+    s.save("questions-yes-no");
+    // Escape says no.
+    s.sent.clear();
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    assert!(
+        s.sent.iter().any(|c| matches!(c,
+            SessionCommand::AnswerConfirmation { accepted: false, confirmation } if *confirmation == arena)),
+        "{:?}",
+        s.sent
+    );
+    ask(&mut s, vec![fellow.clone()]);
+    assert!(
+        shown::<QuestionCard>(&s).is_none(),
+        "nothing left in the middle"
+    );
+    assert_eq!(s.ui.host().root.modal, None);
+    s.save("questions-invite");
+    // Join on the invitation.
+    let (ix, iy, iw, ih) = rect_of(&s, invites);
+    s.sent.clear();
+    s.click(0, ix + iw - 14 - 20, iy + (ih - 28) / 2, Modifiers::NONE);
+    assert!(
+        s.sent.iter().any(|c| matches!(c,
+            SessionCommand::AnswerConfirmation { accepted: true, confirmation } if *confirmation == fellow)),
+        "{:?}",
+        s.sent
+    );
+    // A training question from a window: its own words on the buttons.
+    ask(&mut s, vec![ClientConfirmation::Suicide]);
+    s.save("questions-danger");
+}

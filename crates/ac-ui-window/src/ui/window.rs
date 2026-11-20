@@ -1454,6 +1454,10 @@ impl WindowUi {
     /// The session's open questions (the server's and the client's own)
     /// show as the dialog until answered or withdrawn.
     fn follow_confirmation(&mut self) {
+        if self.modern_questions_on() {
+            self.follow_modern_confirmations();
+            return;
+        }
         let open = self.facts.state.confirmations.clone();
         let layout_id = self.dialog_layout;
         let Self {
@@ -1474,25 +1478,7 @@ impl WindowUi {
             if asked {
                 continue;
             }
-            let text = match &question {
-                ClientConfirmation::Server {
-                    confirmation_type,
-                    message,
-                    ..
-                } => {
-                    let strings = content.strings();
-                    confirmation_text(*confirmation_type, message, |kind, name| {
-                        let key = match kind {
-                            1 => "ID_Allegiance_AcceptSwearConfirmation",
-                            4 => "ID_Fellowship_FellowshipRequest",
-                            _ => return None,
-                        };
-                        let variables = [(PLAYER_VARIABLE, name.to_owned())].into_iter().collect();
-                        strings.resolve_template(UI_STRING_TABLE, key, &variables)
-                    })
-                }
-                client => client.text().to_owned(),
-            };
+            let text = confirmation_words(content, &question);
             dialogs.ask(
                 &mut host.root,
                 text,
@@ -1505,6 +1491,11 @@ impl WindowUi {
         // failure is reported once.
         let failures = dialogs.take_failures();
         self.notices.extend(failures);
+    }
+
+    /// The words the session's `question` is asked in.
+    pub(super) fn confirmation_words(&self, question: &ClientConfirmation) -> String {
+        confirmation_words(&self.content, question)
     }
 
     /// One UI frame at `now` for a screen of `size` pixels: tick, then
@@ -1526,6 +1517,7 @@ impl WindowUi {
         self.tick_modern_character(dt);
         self.tick_modern_options();
         self.tick_keyboard_dialogs();
+        self.tick_modern_questions();
         self.tick_tooltips(dt, now_ms);
         self.tick_modern_effects(dt);
         self.tick_modern_connection();
@@ -1766,6 +1758,7 @@ impl WindowUi {
                 UiOutput::Window { name, event } => self.window_event(&name, &event),
                 UiOutput::Element { element, message }
                     if !self.pregame_message(element, &message, &mut commands)
+                        && !self.modern_question_message(element, &message)
                         && !self.keyboard_dialog_message(element, &message) =>
                 {
                     self.dialog_message(element, &message, &mut commands);
@@ -1808,6 +1801,9 @@ impl WindowUi {
     }
 
     fn panel_output(&mut self, output: PanelOutput, commands: &mut Vec<SessionCommand>) {
+        if let PanelOutput::SelectObject(target) = &output {
+            self.note_modern_craft_target(*target);
+        }
         if let Some(command) = session_command(&output) {
             commands.push(command);
             return;
@@ -1876,6 +1872,10 @@ impl WindowUi {
     }
 
     pub(super) fn ask(&mut self, text: String, action: DialogAction) {
+        if self.modern_questions_on() {
+            self.modern_ask(text, action);
+            return;
+        }
         let layout_id = self.dialog_layout;
         let Self {
             host,
@@ -2310,6 +2310,31 @@ pub(in crate::ui) fn magic_skill(numbers: &ac_core::player::LocalPlayerState, sc
             .map(level)
             .max()
             .unwrap_or(0),
+    }
+}
+
+/// The words the session's `question` is asked in: the server's text, the
+/// allegiance and fellowship invitations worded from the string table
+/// with the asker's name.
+fn confirmation_words(content: &DatContent, question: &ClientConfirmation) -> String {
+    match question {
+        ClientConfirmation::Server {
+            confirmation_type,
+            message,
+            ..
+        } => {
+            let strings = content.strings();
+            confirmation_text(*confirmation_type, message, |kind, name| {
+                let key = match kind {
+                    1 => "ID_Allegiance_AcceptSwearConfirmation",
+                    4 => "ID_Fellowship_FellowshipRequest",
+                    _ => return None,
+                };
+                let variables = [(PLAYER_VARIABLE, name.to_owned())].into_iter().collect();
+                strings.resolve_template(UI_STRING_TABLE, key, &variables)
+            })
+        }
+        client => client.text().to_owned(),
     }
 }
 

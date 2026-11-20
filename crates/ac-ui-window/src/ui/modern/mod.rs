@@ -15,6 +15,7 @@
 pub mod bars;
 pub mod character;
 pub mod chat;
+pub mod dialogs;
 pub mod fonts;
 pub mod hud;
 pub mod items;
@@ -92,6 +93,8 @@ pub struct ModernLayer {
     pub character: Option<character::run::CharacterUi>,
     /// The Options window.
     pub options: Option<options::run::OptionsUi>,
+    /// The question card and the invitations under the target.
+    pub questions: Option<dialogs::run::QuestionsUi>,
     /// Packs used anywhere since the inventory last looked.
     pub opened_packs: Vec<u32>,
 }
@@ -337,6 +340,7 @@ impl WindowUi {
         self.mount_modern_spellbook();
         self.mount_modern_character();
         self.mount_modern_options();
+        self.mount_modern_questions();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
