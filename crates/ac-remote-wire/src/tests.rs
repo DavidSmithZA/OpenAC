@@ -60,8 +60,8 @@ use ac_runtime::communication::{
 };
 use ac_runtime::gameplay::selection_cycle::{SelectionCycleDirection, SelectionCycleKind};
 use ac_runtime::gameplay::{
-    AllegianceCommand, BarberCommand, BarberView, BookCommand, BookView, ChessCommand, ChessStage,
-    ChessView, CombatAttackCommand, DepartedFellowView, FellowView, FellowshipCommand,
+    AllegianceCommand, BarberCommand, BarberView, BookCommand, BookView, ChessCommand, ChessPlayed,
+    ChessStage, ChessView, CombatAttackCommand, DepartedFellowView, FellowView, FellowshipCommand,
     FellowshipView, GameplayCommand, HouseAccessView, HouseDetails, HouseLineColor, HouseView,
     InputActivation, SelectionSource,
 };
@@ -708,6 +708,12 @@ fn chess_view() -> ChessView {
             turn: ChessTeam::Black,
         }
         .into(),
+        moves: vec![ChessPlayed {
+            white: true,
+            from: ChessSquare { x: 6, y: 0 },
+            to: ChessSquare { x: 5, y: 2 },
+            written: "Nf3".to_owned(),
+        }],
     }
 }
 
@@ -2921,7 +2927,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "467f1139877c9ed0", "{:#x}", shape());
+    assert_eq!(shape_hex(), "60bacf5e217f5cb1", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full

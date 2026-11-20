@@ -55,7 +55,7 @@ pub use ac_core::combat::{AttackHeight, CombatMode};
 pub use allegiance::{AllegianceMemberView, AllegianceState, AllegianceView};
 pub use barber::{BarberCommand, BarberState, BarberView};
 pub use book::{BookFlushAction, BookPageAction, BookPageTurn, BookState, BookView};
-pub use chess::{ChessCommand, ChessStage, ChessState, ChessView};
+pub use chess::{ChessCommand, ChessPlayed, ChessStage, ChessState, ChessView};
 pub use combat::{
     CombatAttackCommand, CombatAttackState, CombatModeHistory, CombatModeHistoryEntry,
     CombatModeHistoryEvent, CombatModeRequestResult, CombatModeRequestStatus, CombatModeState,

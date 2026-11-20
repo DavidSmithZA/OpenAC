@@ -42,8 +42,8 @@ use ac_runtime::communication::{
     ChatChannelKind, ClientConfirmation, ItemUseConfirmation, JournalView, TrackedContract,
 };
 use ac_runtime::gameplay::{
-    BarberView, BookView, ChessStage, ChessView, DepartedFellowView, FellowView, FellowshipView,
-    HouseAccessView, HouseDetails, HouseLineColor, HouseView,
+    BarberView, BookView, ChessPlayed, ChessStage, ChessView, DepartedFellowView, FellowView,
+    FellowshipView, HouseAccessView, HouseDetails, HouseLineColor, HouseView,
 };
 use ac_runtime::inventory::{
     AppraisalView, HousePurchaseView, InteractionMode, PendingPlacement, StagedRow, TradeView,
@@ -669,7 +669,9 @@ record! {
         offering_stalemate: bool,
         games_ended: u64,
         board: ChessBoard,
+        moves: Vec<ChessPlayed>,
     }
+    ChessPlayed { white: bool, from: ChessSquare, to: ChessSquare, written: String }
     CreationAppearance {
         eyes_strip: u32,
         nose_strip: u32,

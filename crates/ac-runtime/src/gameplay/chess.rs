@@ -62,6 +62,19 @@ pub enum ChessCommand {
     Resign,
 }
 
+/// A move made in the game, as a window lists it.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ChessPlayed {
+    /// The side that moved.
+    pub white: bool,
+    /// From square.
+    pub from: ChessSquare,
+    /// To square.
+    pub to: ChessSquare,
+    /// The move in its usual written form ("Nf3", "O-O", "exd5+").
+    pub written: String,
+}
+
 /// The game as a window shows it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChessView {
@@ -79,6 +92,9 @@ pub struct ChessView {
     pub games_ended: u64,
     /// The position the board shows.
     pub board: ChessBoard,
+    /// The moves made in this game (the last game's, once it ended),
+    /// oldest first.
+    pub moves: Vec<ChessPlayed>,
 }
 
 impl Default for ChessView {
@@ -99,6 +115,7 @@ pub struct ChessState {
     games_ended: u64,
     revision: u64,
     lines: Vec<(String, LogTextType)>,
+    moves: Vec<ChessPlayed>,
 }
 
 impl ChessState {
@@ -113,6 +130,7 @@ impl ChessState {
             offering_stalemate: self.offering_stalemate,
             games_ended: self.games_ended,
             board: self.board.clone(),
+            moves: self.moves.clone(),
         }
     }
 
@@ -143,6 +161,22 @@ impl ChessState {
     /// Take the lines said, oldest first, with their text class.
     pub fn drain_lines(&mut self) -> std::vec::Drain<'_, (String, LogTextType)> {
         self.lines.drain(..)
+    }
+
+    /// Note the move from `from` to `to` that `before` made with `result`.
+    fn note_move(
+        &mut self,
+        before: &ChessBoard,
+        from: ChessSquare,
+        to: ChessSquare,
+        result: ChessMoveResult,
+    ) {
+        self.moves.push(ChessPlayed {
+            white: before.turn() == ChessTeam::White,
+            from,
+            to,
+            written: before.notation(from, to, result),
+        });
     }
 
     fn say(&mut self, text: impl Into<String>, class: LogTextType) {
@@ -185,6 +219,7 @@ impl ChessState {
         let before = self.board.clone();
         let result = self.board.make_move(from, to);
         if result.is_accepted() {
+            self.note_move(&before, from, to, result);
             self.before_move = Some(before);
             self.stage = ChessStage::MoveSent;
             self.revision += 1;
@@ -236,6 +271,7 @@ impl ChessState {
             self.board = ChessBoard::standard();
             self.before_move = None;
             self.offering_stalemate = false;
+            self.moves.clear();
             "You have joined the game, waiting for all players to be ready."
         } else {
             self.board_guid = 0;
@@ -279,6 +315,7 @@ impl ChessState {
             // refused as not their piece until the game ends.
             if let Some(before) = self.before_move.take() {
                 self.board.restore_squares(&before);
+                self.moves.pop();
             }
             self.stage = ChessStage::MyTurn;
             own_move_text(result)
@@ -296,11 +333,14 @@ impl ChessState {
         let mut text = None;
         let m = &turn.chess_move;
         if m.move_type == ChessMoveType::FROM_TO {
-            let result = self.board.make_move(
+            let (from, to) = (
                 ChessSquare::new(m.from_x, m.from_y),
                 ChessSquare::new(m.to_x, m.to_y),
             );
+            let before = self.board.clone();
+            let result = self.board.make_move(from, to);
             if result.is_accepted() {
+                self.note_move(&before, from, to, result);
                 text = Some(opponent_move_text(result));
             }
         }
@@ -354,6 +394,7 @@ impl ChessState {
     pub fn reset_session(&mut self) {
         self.end_game();
         self.board = ChessBoard::standard();
+        self.moves.clear();
     }
 
     fn end_game(&mut self) {
