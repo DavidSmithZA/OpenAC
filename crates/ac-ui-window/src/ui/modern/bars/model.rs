@@ -76,6 +76,13 @@ pub enum SlotContent {
     Item { id: u32, name: String },
     /// A spell.
     Spell { id: u32, name: String },
+    /// A recall: a command sent as if typed in chat (`@ls`, or one of the
+    /// player's own), with its name and icon from the Recall list.
+    Recall {
+        name: String,
+        command: String,
+        icon: String,
+    },
 }
 
 impl SlotContent {
@@ -83,7 +90,7 @@ impl SlotContent {
     #[must_use]
     pub fn name(&self) -> &str {
         match self {
-            Self::Item { name, .. } | Self::Spell { name, .. } => name,
+            Self::Item { name, .. } | Self::Spell { name, .. } | Self::Recall { name, .. } => name,
         }
     }
 
@@ -565,12 +572,23 @@ impl BarLayout {
                                 Some(SlotContent::Spell { id, name }) => {
                                     ("spell", *id, name.clone())
                                 }
+                                Some(SlotContent::Recall { name, .. }) => {
+                                    ("recall", 0, name.clone())
+                                }
                                 None => ("", 0, String::new()),
+                            };
+                            let (command, icon) = match &s.content {
+                                Some(SlotContent::Recall { command, icon, .. }) => {
+                                    (command.clone(), icon.clone())
+                                }
+                                _ => (String::new(), String::new()),
                             };
                             SlotData {
                                 kind: kind.to_owned(),
                                 id,
                                 name,
+                                command,
+                                icon,
                                 key: s.key(KeyMode::Normal).map(keys::save).unwrap_or_default(),
                                 magic_key: s
                                     .key(KeyMode::Magic)
@@ -618,6 +636,13 @@ impl BarLayout {
                                         id: s.id,
                                         name: s.name.clone(),
                                     }),
+                                    "recall" if !s.command.trim().is_empty() => {
+                                        Some(SlotContent::Recall {
+                                            name: s.name.clone(),
+                                            command: s.command.clone(),
+                                            icon: s.icon.clone(),
+                                        })
+                                    }
                                     _ => None,
                                 },
                                 keys: [keys::load(&s.key), keys::load(&s.magic_key)],
@@ -635,6 +660,7 @@ fn same(a: &SlotContent, b: &SlotContent) -> bool {
     match (a, b) {
         (SlotContent::Item { id: x, .. }, SlotContent::Item { id: y, .. })
         | (SlotContent::Spell { id: x, .. }, SlotContent::Spell { id: y, .. }) => x == y,
+        (SlotContent::Recall { command: x, .. }, SlotContent::Recall { command: y, .. }) => x == y,
         _ => false,
     }
 }
@@ -845,9 +871,18 @@ mod tests {
         let mut layout = seeded();
         layout.bars[1].locked = true;
         layout.bars[2].hidden = true;
+        let recall = SlotContent::Recall {
+            name: "Lifestone".to_owned(),
+            command: "@ls".to_owned(),
+            icon: "lifestone".to_owned(),
+        };
+        layout.put(SlotRef::new(1, 11), Some(recall.clone()));
         let data = layout.to_data();
         assert_eq!(BarLayout::from_data(&data), layout);
         assert_eq!(data.bars[1].slots[0].magic_key, "Shift+Number1");
+        assert_eq!(data.bars[1].slots[11].kind, "recall");
+        assert_eq!(data.bars[1].slots[11].command, "@ls");
+        assert!(layout.holds(&recall));
     }
 
     #[test]

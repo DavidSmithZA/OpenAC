@@ -21,6 +21,7 @@ use ac_ui::{UiFont, UiRoot};
 use super::keys;
 use super::model::{SLOT, SlotContent, SlotRef};
 use crate::ui::modern::hud::lines::stroke;
+use crate::ui::modern::hud::recall::{RecallPayload, own_icon_sized};
 
 /// The tab's height and the gap between it and its bar.
 pub const TAB_HEIGHT: f32 = 26.0;
@@ -47,6 +48,9 @@ pub struct BarFonts {
     pub small: Option<Arc<UiFont>>,
 }
 
+/// A recall's drawn icon's size in a slot.
+const RECALL_ICON: f32 = 22.0;
+
 /// A slot dragged off a bar.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BarSlotPayload {
@@ -65,6 +69,8 @@ pub enum Dropped {
     Spell(u32),
     /// Another slot's content.
     Slot(SlotRef),
+    /// A recall from the Recall list (a place or one of the player's own).
+    Recall(SlotContent),
 }
 
 /// What a slot asks of the window.
@@ -89,6 +95,8 @@ pub enum SlotRequest {
 pub struct SlotView {
     /// Its icon.
     pub icon: Option<TextureRef>,
+    /// A recall's drawn icon, by name.
+    pub recall_icon: Option<String>,
     /// Its key in the mode in use.
     pub key: Option<KeyChord>,
     /// It holds a spell.
@@ -115,6 +123,13 @@ fn dropped(payload: &DragPayload) -> Option<Dropped> {
     }
     if let Some(p) = payload.get::<SpellbookShortcutPayload>() {
         return Some(Dropped::Spell(p.spell_id));
+    }
+    if let Some(p) = payload.get::<RecallPayload>() {
+        return Some(Dropped::Recall(SlotContent::Recall {
+            name: p.name.clone(),
+            command: p.command.clone(),
+            icon: p.icon.clone(),
+        }));
     }
     if let Some(p) = payload.get::<SpellFavoritePayload>() {
         return Some(Dropped::Spell(p.spell_id));
@@ -328,6 +343,9 @@ impl Widget for SlotCell {
             };
             let at = (s - 32.0) * 0.5;
             rc.sprite(icon, at, at, 32.0, 32.0, (0.0, 0.0, 1.0, 1.0), tint);
+        } else if let (Some(name), true) = (&v.recall_icon, v.filled) {
+            let at = (s - RECALL_ICON) * 0.5;
+            own_icon_sized(rc, name, at, at, RECALL_ICON, p.accent);
         } else if v.filled {
             // Nothing to show for it: a faint mark.
             let c = hex(0xC9_A062, 0.45);
@@ -833,6 +851,19 @@ mod tests {
         );
         let vendor = DragPayload::new(ItemDragPayload::new(7, ItemDragSource::Vendor, 0));
         assert_eq!(cell.takes(Some(&vendor)), None);
+        let recall = DragPayload::new(RecallPayload {
+            name: "Driftnet".to_owned(),
+            command: "/dn".to_owned(),
+            icon: "flag".to_owned(),
+        });
+        assert_eq!(
+            cell.takes(Some(&recall)),
+            Some(Dropped::Recall(SlotContent::Recall {
+                name: "Driftnet".to_owned(),
+                command: "/dn".to_owned(),
+                icon: "flag".to_owned(),
+            }))
+        );
         let mut locked = SlotCell::new(Horizon::BRONZE, None, at);
         locked.locked = true;
         assert_eq!(locked.takes(Some(&item)), None);

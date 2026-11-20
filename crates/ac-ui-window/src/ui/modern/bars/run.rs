@@ -685,6 +685,19 @@ impl WindowUi {
                         }
                         view.tip = Some(tip);
                     }
+                    Some(SlotContent::Recall {
+                        name,
+                        command,
+                        icon,
+                    }) => {
+                        view.filled = true;
+                        view.recall_icon = Some(icon.clone());
+                        let mut tip = format!("{name} \u{b7} {command}");
+                        if let Some(k) = key {
+                            tip.push_str(&format!(" \u{b7} {}", keys::words(k)));
+                        }
+                        view.tip = Some(tip);
+                    }
                     None => {
                         view.tip = key.map(|k| format!("Empty \u{b7} {}", keys::words(k)));
                     }
@@ -1043,6 +1056,11 @@ impl WindowUi {
                     );
                 }
             }
+            SlotContent::Recall { command, .. } => {
+                if !target_mode {
+                    emit(ui, PanelOutput::Session(SessionCommand::Chat(command)));
+                }
+            }
             SlotContent::Spell { id, .. } => {
                 if self.facts.state.combat_mode == CombatMode::MAGIC && !target_mode {
                     emit(
@@ -1074,6 +1092,7 @@ impl WindowUi {
                 ))),
             ),
             Some(SlotContent::Spell { id, .. }) => emit(ui, PanelOutput::ExamineSpell(id)),
+            Some(SlotContent::Recall { .. }) => {}
             None => {
                 let (x, y) = ui.mouse();
                 self.open_bar_menu(b, at.bar, (x as f32, y as f32), true);
@@ -1111,6 +1130,7 @@ impl WindowUi {
                     name: o.name.clone(),
                 }
             }
+            Dropped::Recall(content) => content,
             Dropped::Spell(id) => SlotContent::Spell {
                 id,
                 name: self

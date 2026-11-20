@@ -87,7 +87,7 @@ pub struct BarData {
 /// One slot.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SlotData {
-    /// What it holds: `item`, `spell`, or empty.
+    /// What it holds: `item`, `spell`, `recall`, or empty.
     pub kind: String,
     /// The item's object id or the spell's id.
     pub id: u32,
@@ -97,6 +97,10 @@ pub struct SlotData {
     pub key: String,
     /// Its key in Magic.
     pub magic_key: String,
+    /// A recall's command, sent as if typed in chat.
+    pub command: String,
+    /// A recall's icon, by name.
+    pub icon: String,
 }
 
 impl SettingsStore {
@@ -188,6 +192,10 @@ fn write_layout(layout: &BarLayoutData) -> Vec<Member> {
                     set_member(&mut s, "name", Value::String(slot.name.clone()));
                     set_member(&mut s, "key", Value::String(slot.key.clone()));
                     set_member(&mut s, "magicKey", Value::String(slot.magic_key.clone()));
+                    if !slot.command.is_empty() {
+                        set_member(&mut s, "command", Value::String(slot.command.clone()));
+                        set_member(&mut s, "icon", Value::String(slot.icon.clone()));
+                    }
                     Node::made(Value::Object(s))
                 })
                 .collect();
@@ -248,6 +256,8 @@ fn read_slot(fields: &[Member]) -> SlotData {
         name: read_string(fields, "name", ""),
         key: read_string(fields, "key", ""),
         magic_key: read_string(fields, "magicKey", ""),
+        command: read_string(fields, "command", ""),
+        icon: read_string(fields, "icon", ""),
     }
 }
 
@@ -278,8 +288,14 @@ mod tests {
             let nanos = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_or(0, |d| d.as_nanos());
-            let dir = std::env::temp_dir()
-                .join(format!("openac-modern-bars-{}-{nanos}", std::process::id()));
+            // Tests run side by side: a count keeps two in the same tick
+            // apart.
+            static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+            let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let dir = std::env::temp_dir().join(format!(
+                "openac-modern-bars-{}-{nanos}-{n}",
+                std::process::id()
+            ));
             std::fs::create_dir_all(&dir).unwrap();
             Self(dir)
         }
@@ -312,6 +328,14 @@ mod tests {
                         name: "Health Potion".to_owned(),
                         key: "Number1".to_owned(),
                         magic_key: "Shift+Number1".to_owned(),
+                        ..SlotData::default()
+                    },
+                    SlotData {
+                        kind: "recall".to_owned(),
+                        name: "Driftnet".to_owned(),
+                        command: "/dn".to_owned(),
+                        icon: "flag".to_owned(),
+                        ..SlotData::default()
                     },
                     SlotData::default(),
                 ],
