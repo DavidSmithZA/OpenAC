@@ -2504,3 +2504,85 @@ fn the_modern_vendor() {
     s.click(0, fx + 1040 - 16 - 15, fy + 28, Modifiers::NONE);
     s.save("vendor-leave");
 }
+
+/// A trade with Osk: the player offers two things, Osk one (and a second
+/// when `more`), with the acceptances given.
+fn trade_with_osk(s: &mut Shot, more: bool, mine: bool, theirs: bool) {
+    use ac_runtime::inventory::TradeView;
+    let mut partner = vec![0x8000_0301];
+    if more {
+        partner.push(0x8000_0302);
+    }
+    let view = TradeView {
+        open: true,
+        partner_guid: 0x5000_0099,
+        partner_name: Some("Osk".to_owned()),
+        self_accepted: mine,
+        partner_accepted: theirs,
+        self_items: vec![0x8000_0101, 0x8000_0104],
+        partner_items: partner,
+        revision: 1,
+        ..TradeView::default()
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Trade(
+            Box::new(view),
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_trade() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::inventory::ItemCommand;
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    trade_with_osk(&mut s, false, false, true);
+    assert!(
+        s.ui.host().root.is_window_visible("modern-trade"),
+        "it opens with the trade"
+    );
+    assert!(
+        !s.ui.host().root.is_window_visible("secure-trade"),
+        "retail's stays hidden"
+    );
+    s.save("trade-they-accepted");
+    let frame = s.ui.host().root.window("modern-trade").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    // Accept.
+    s.sent.clear();
+    s.click(0, fx + 900 - 20 - 60, fy + 560 - 36, Modifiers::NONE);
+    assert!(
+        s.sent
+            .iter()
+            .any(|c| matches!(c, SessionCommand::Item(ItemCommand::AcceptTrade))),
+        "{:?}",
+        s.sent
+    );
+    trade_with_osk(&mut s, false, true, false);
+    s.save("trade-you-accepted");
+    // Osk adds something: the acceptance is taken back and it is new.
+    trade_with_osk(&mut s, true, false, false);
+    s.save("trade-changed");
+    let banner =
+        s.ui.host()
+            .root
+            .widget::<ac_ui_window::ui::modern::dealing::trade_window::TradeFrame>(frame)
+            .and_then(|f| f.screen.banner.clone());
+    assert!(banner.is_some_and(|b| !b.bad), "the change is told");
+    // Add from packs.
+    s.click(
+        0,
+        fx + 20 + 209,
+        fy + 120 + 48 + 8 + 2 * 48 + 4 + 64 - 8 - 14,
+        Modifiers::NONE,
+    );
+    s.save("trade-pick");
+    // A click on the other side's item shows its card.
+    s.click(0, fx + 500, fy + 300, Modifiers::NONE);
+    s.click(0, fx + 462 + 200, fy + 120 + 48 + 8 + 20, Modifiers::NONE);
+    s.save("trade-card");
+}

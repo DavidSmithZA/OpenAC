@@ -110,6 +110,16 @@ const PLACES: &[(&str, Place)] = &[
         },
     ),
     (
+        super::dealing::trade_run::TRADE,
+        Place {
+            anchor: Anchor::Center,
+            dx: 0.0,
+            dy: 0.0,
+            width: super::dealing::trade_window::WIDTH,
+            height: super::dealing::trade_window::HEIGHT,
+        },
+    ),
+    (
         super::dealing::vendor_run::VENDOR,
         Place {
             anchor: Anchor::Center,
