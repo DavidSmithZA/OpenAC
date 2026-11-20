@@ -80,6 +80,16 @@ impl Place {
 /// windows are built).
 const PLACES: &[(&str, Place)] = &[
     (
+        super::items::loot::LOOT,
+        Place {
+            anchor: Anchor::TopRight,
+            dx: -60.0,
+            dy: 250.0,
+            width: super::items::loot::WIDTH,
+            height: super::items::loot::HEIGHT,
+        },
+    ),
+    (
         super::items::run::INVENTORY,
         Place {
             anchor: Anchor::Center,

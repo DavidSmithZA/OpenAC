@@ -34,7 +34,7 @@ impl CellLook {
         match self {
             Self::Grid => 40.0,
             Self::Compact => 32.0,
-            Self::List => 36.0,
+            Self::List => 40.0,
         }
     }
 
@@ -76,6 +76,10 @@ pub struct CellView {
     pub faint: bool,
     /// Lit: what is being dragged may go here.
     pub lit: bool,
+    /// In the list, a selected row shows Inspect and Loot buttons.
+    pub actions: bool,
+    /// In the list, a note on the right ("Looting\u{2026}").
+    pub note: Option<String>,
 }
 
 /// What a cell asks of the window.
@@ -104,6 +108,23 @@ pub enum CellRequest {
     Lifted(u32),
     /// A drag from it ended (wherever it landed).
     DragEnded(u32),
+    /// A row's Inspect button.
+    Inspect(u32),
+    /// A row's Loot button.
+    Loot(u32),
+}
+
+/// A list row's Inspect and Loot buttons in a row `w` by `h`.
+fn action_rects(w: f32, h: f32) -> [(f32, f32, f32, f32); 2] {
+    let y = ((h - 28.0) * 0.5).round();
+    [
+        (w - 6.0 - 58.0 - 6.0 - 28.0, y, 28.0, 28.0),
+        (w - 6.0 - 58.0, y, 58.0, 28.0),
+    ]
+}
+
+fn within((x, y, w, h): (f32, f32, f32, f32), px: f32, py: f32) -> bool {
+    px >= x && px < x + w && py >= y && py < y + h
 }
 
 /// One cell.
@@ -235,9 +256,26 @@ impl Widget for ItemCell {
                 true
             }
             kind::CLICK => {
-                if self.view.id != 0 {
-                    self.requests.push(CellRequest::Select(self.view.id));
+                if self.view.id == 0 {
+                    return true;
                 }
+                if self.look == CellLook::List
+                    && self.view.actions
+                    && self.view.selected
+                    && let Some((w, h)) = ui.element(me).map(|el| (el.width, el.height))
+                {
+                    let [inspect, loot] = action_rects(w, h);
+                    let (px, py) = (e.data1 as f32, e.data2 as f32);
+                    if within(inspect, px, py) {
+                        self.requests.push(CellRequest::Inspect(self.view.id));
+                        return true;
+                    }
+                    if within(loot, px, py) {
+                        self.requests.push(CellRequest::Loot(self.view.id));
+                        return true;
+                    }
+                }
+                self.requests.push(CellRequest::Select(self.view.id));
                 true
             }
             kind::DOUBLE_CLICK => {
@@ -393,7 +431,8 @@ impl Widget for ItemCell {
         }
         if list {
             let x = bx + bw + 10.0;
-            let room = (w - x - 8.0).max(0.0);
+            let reserved = if v.actions && v.selected { 110.0 } else { 0.0 };
+            let room = (w - x - 8.0 - reserved).max(0.0);
             if let Some(f) = &self.name {
                 let name = match v.count {
                     Some(c) => format!("{} \u{d7}{c}", v.name),
@@ -425,6 +464,63 @@ impl Widget for ItemCell {
             }
             if v.selected {
                 rc.stroke_rounded_rect(0.0, 0.0, w, h, round, p.accent, 1.0);
+            }
+            if v.actions && v.selected {
+                let [inspect, loot] = action_rects(w, h);
+                let r = CornerRadii::all(4.0);
+                rc.fill_rounded_rect(inspect.0, inspect.1, inspect.2, inspect.3, r, hex(0, 0.35));
+                rc.stroke_rounded_rect(
+                    inspect.0,
+                    inspect.1,
+                    inspect.2,
+                    inspect.3,
+                    r,
+                    hex(0xC9_A062, 0.6),
+                    1.0,
+                );
+                crate::ui::modern::hud::lines::stroke(
+                    rc,
+                    inspect.0 + 7.5,
+                    inspect.1 + 7.5,
+                    13.0,
+                    &[
+                        &[
+                            (11.0, 4.0),
+                            (15.9, 6.1),
+                            (18.0, 11.0),
+                            (15.9, 15.9),
+                            (11.0, 18.0),
+                            (6.1, 15.9),
+                            (4.0, 11.0),
+                            (6.1, 6.1),
+                            (11.0, 4.0),
+                        ],
+                        &[(16.0, 16.0), (21.0, 21.0)],
+                    ],
+                    p.icon,
+                    1.6,
+                );
+                rc.fill_rounded_rect(loot.0, loot.1, loot.2, loot.3, r, hex(0xE0_B068, 0.9));
+                if let Some(f) = &self.name {
+                    text::draw_centred(
+                        rc,
+                        f,
+                        "Loot",
+                        loot.0 + loot.2 * 0.5,
+                        loot.1 + (loot.3 - f.line_height) * 0.5,
+                        TextStyle::plain(p.accent_ink),
+                    );
+                }
+            } else if let (Some(note), Some(f)) = (&v.note, &self.small) {
+                let nw = text::measure(f, note, 0.0);
+                text::draw(
+                    rc,
+                    f,
+                    note,
+                    w - 10.0 - nw,
+                    (h - f.line_height) * 0.5,
+                    TextStyle::plain(p.accent),
+                );
             }
         }
     }

@@ -5,6 +5,7 @@ pub mod cell;
 pub mod grid;
 pub mod inspect;
 pub mod inventory;
+pub mod loot;
 pub mod menu;
 pub mod model;
 pub mod run;

@@ -423,6 +423,8 @@ impl WindowUi {
                 CellRequest::Select(id) => self.select_item(id),
                 CellRequest::Use(id) => self.send_item(ItemCommand::Use(ObjectRef::Guid(id))),
                 CellRequest::Menu(id, at) => self.open_item_menu(id, at),
+                CellRequest::Inspect(id) => self.item_do(id, DO_INSPECT),
+                CellRequest::Loot(_) => {}
                 CellRequest::Lifted(id) => {
                     if let Some(inv) = self.inventory_mut() {
                         inv.lifted = Some(id);
@@ -914,6 +916,8 @@ impl WindowUi {
             cooldown: 0.0,
             faint: false,
             lit: false,
+            actions: false,
+            note: None,
         };
         let groups: Vec<GridGroup> = grid_view
             .groups

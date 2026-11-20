@@ -1116,3 +1116,127 @@ fn the_modern_inspect() {
     s.step();
     s.save("inspect-spell");
 }
+
+/// A corpse beside the player with a few things in it, open (or out of
+/// reach when `in_range` is false).
+fn open_corpse(s: &mut Shot, in_range: bool) {
+    let corpse = 0x8000_0A01;
+    let mut objects = Vec::new();
+    let mut c = ClientObject::new(corpse);
+    c.name = "Corpse of Drudge Ravener".to_owned();
+    c.item_type = ItemType::CONTAINER;
+    c.items_capacity = 120;
+    c.icon_id = 0x0600_127E;
+    objects.push(c);
+    let things: &[(u32, &str, ItemType, u32, i32, i32)] = &[
+        (0x8000_0A11, "Pyreal", ItemType::MONEY, 0x0600_1A8B, 212, 0),
+        (
+            0x8000_0A12,
+            "Drudge Raider Totem",
+            ItemType::MISC,
+            0x0600_1E3B,
+            1,
+            50,
+        ),
+        (
+            0x8000_0A13,
+            "Short Sword",
+            ItemType::MELEE_WEAPON,
+            0x0600_11CB,
+            1,
+            180,
+        ),
+        (
+            0x8000_0A14,
+            "Healing Kit",
+            ItemType::MISC,
+            0x0600_1E3B,
+            1,
+            40,
+        ),
+    ];
+    let mut inside = Vec::new();
+    for &(guid, name, t, icon, stack, burden) in things {
+        let mut o = ClientObject::new(guid);
+        o.name = name.to_owned();
+        o.plural_name = format!("{name}s");
+        o.item_type = t;
+        o.icon_id = icon;
+        o.stack_size = stack;
+        o.container_id = corpse;
+        o.burden = burden;
+        o.value = if t == ItemType::MONEY { stack } else { 860 };
+        o.attuned = name.contains("Totem");
+        objects.push(o);
+        inside.push(guid);
+    }
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: false,
+                objects,
+                removed: Vec::new(),
+                contents: vec![(corpse, Some(inside))],
+            },
+        )));
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::State(
+            Box::new(InterfaceState {
+                player: PLAYER,
+                can_make_request: true,
+                external_container: corpse,
+                external_container_in_range: in_range,
+                ..InterfaceState::default()
+            }),
+        )));
+    s.step();
+    s.step();
+}
+
+/// The Loot window's top left on a 1440 x 900 screen.
+const LOOT: (i32, i32) = (1440 - 60 - 400, 250);
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_loot() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::inventory::{ItemCommand, ObjectRef};
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    open_corpse(&mut s, true);
+    s.save("loot-corpse");
+    // The sword selected: its row's buttons.
+    s.scene.apply(PresentationEvent::Player(PlayerView {
+        selected: Some(0x8000_0A13),
+        ..PlayerView::default()
+    }));
+    s.step();
+    s.step();
+    s.save("loot-selected");
+    // Its Loot button (the third row, 42 a row, the list 64 down).
+    s.sent.clear();
+    let row = (LOOT.0 + 8, LOOT.1 + 64 + 2 * 44);
+    s.click(0, row.0 + 384 - 12 - 6 - 29, row.1 + 20, Modifiers::NONE);
+    println!("loot: {:?}", s.sent);
+    assert!(s.sent.iter().any(|c| matches!(
+        c,
+        SessionCommand::Item(ItemCommand::DropInto {
+            item: ObjectRef::Guid(0x8000_0A13),
+            pickup: true,
+            ..
+        })
+    )));
+    // The right-click menu on the totem.
+    s.click(1, row.0 + 100, LOOT.1 + 64 + 44 + 20, Modifiers::NONE);
+    s.save("loot-menu");
+    s.click(0, 300, 300, Modifiers::NONE);
+    // Walking away closes it.
+    s.sent.clear();
+    open_corpse(&mut s, false);
+    s.save("loot-gone");
+    assert!(s.sent.iter().any(|c| matches!(
+        c,
+        SessionCommand::Item(ItemCommand::CloseContainer(ObjectRef::Guid(0x8000_0A01)))
+    )));
+}

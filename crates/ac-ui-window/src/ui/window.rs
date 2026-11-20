@@ -1260,6 +1260,7 @@ impl WindowUi {
         self.tick_modern_panels();
         self.tick_modern_bars();
         self.tick_modern_inventory();
+        self.tick_modern_loot();
     }
 
     /// The panels' views from the window's copy of the facts, and each

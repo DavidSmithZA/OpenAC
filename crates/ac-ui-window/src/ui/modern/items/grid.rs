@@ -566,7 +566,7 @@ mod tests {
         let cells = shown(&ui, g);
         assert_eq!(
             cells.iter().map(|c| c.2).collect::<Vec<_>>(),
-            [0.0, 40.0, 80.0]
+            [0.0, 44.0, 88.0]
         );
     }
 }
