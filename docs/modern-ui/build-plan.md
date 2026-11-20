@@ -284,6 +284,69 @@ Not done yet in M4: the details as a pop-up card on small screens
 (Docked / Pop-up / Auto belongs with Options, M6); Close gaps (packs in
 this game hold no gaps).
 
+**M5 built 2026-11-20** on `feat/modern-ui-m5` (off `feat/modern-ui-m4`;
+plugin checks for API 1.15 left for later). Retail windows it replaces:
+`effects-positive`, `effects-negative`, `vitae`, `spellbook` (with its
+components page), `character` (with its titles page) and
+`character-information`. Neutral moves first, one commit each:
+
+- Enchantment stat families gain the whole-number, float and natural
+  armor bits; vitae's experience-to-recover in its own helper
+  (af910199).
+- The bars' cast logic (Magic at once, Peace with a caster through
+  `CastInMagic`) and bar-spot lookups as helpers other windows use
+  (e78f1dd1, a9eea573).
+- The character sheet carries the most each row's unassigned experience
+  buys (`max_raise`, for Max); attribute and vital descriptions public;
+  the information report in six named parts, retail's text unchanged
+  (a875cf6e, 4801f12e).
+- `ui/modern/kit.rs`: what the windows draw alike (back, title, close,
+  underlined tabs with counts, buttons, chips, search box and field,
+  scroll, scrollbar, meter, wrap).
+
+Screens, each checked offscreen (`the_modern_effects`,
+`the_modern_spellbook`, `the_modern_character`):
+
+1. Effects window (`magic/effects*.rs`, 184ae0ba): Helpful and Harmful
+   tabs, search, sort (time left, name, what it changes), chips
+   (Attributes, Skills, Vitals, Protections), groups Ending soon / Timed /
+   From your gear, vitae card with the experience to the next 1%; details
+   with what it changes (from and to when the value is known), who cast it
+   or which item, time left of the whole, the description, a weaker copy
+   underneath, Cast again with its bar slot (own spells) or Show item
+   (gear). The HUD counts and the effects and vitae keys open it on their
+   tab. Glyphs: the bake has no U+2212 or arrows, so minus is an en dash
+   and "210 to 255".
+2. Spellbook (`magic/spellbook*.rs`, 8db5e7b5): school and level filters
+   are the server's bits (shared with retail), highest level only (on by
+   default), search past the filters, sort; rows show the first bar a
+   spell is on; details with mana, difficulty against your skill,
+   components with uses and how many carried, the bar slots and keys;
+   Cast (greyed outside Magic or Peace with a caster), Add to bar, Forget
+   with its in-window question; drag a row to the bars (the book fades as
+   before); double click puts it on a bar, right click examines it in
+   Inspect. Components page: type filter, table with carried, restock to
+   (click the box, type, Enter) and a stock bar.
+3. Character (`character/*.rs`, 7acca51a): level plate that grows with
+   the number, name, title, heritage and PK status, experience line and
+   bar, chips for unassigned XP, credits, luminance and vitae; attributes
+   and vitals with "+" and their cost; skills in four groups with search,
+   "+" or Train; details with how the value adds up (starting value,
+   raises, each spell on it when they add up, vitae), the game's
+   description, +1 / +10 / Max or Train (retail's training question).
+   One raise at a time until the sheet changes (released after 3 s).
+   Titles page: grid with search, "Others see you as" and Display this
+   title. Information page: the report's parts as cards (life,
+   resistances, starting attributes, chess and fishing, masteries and
+   augmentations, burden) plus allegiance and fellowship.
+4. Panel strip: Character, Inventory and Spellbook light for the modern
+   windows (49e330b3; the inventory never lit in M4).
+
+Not done in M5: the Settings button in the Effects window opens retail's
+options (M6 brings the modern ones); "Specialize" from the window (retail
+has none either); Housing and Society cards on Information (the client
+has no house facts outside the house panel yet). Not live-tested yet.
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
