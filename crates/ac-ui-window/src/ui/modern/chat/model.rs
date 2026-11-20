@@ -210,13 +210,15 @@ impl ShownLine {
         };
         // The server's own sentence for a tell sent ("You tell Bob,
         // \"hi\"") under the YOU TELL tag: the addressee and the words.
-        let (who, words) = match (named, kind) {
-            (true, _) => (Some(line.sender.clone()), words),
+        // Its id is not the addressee's: the name is looked up when
+        // clicked.
+        let (who, who_guid, words) = match (named, kind) {
+            (true, _) => (Some(line.sender.clone()), line.sender_guid, words),
             (false, LineKind::TellOut) => match split_tell_out(&words) {
-                Some((to, said)) => (Some(to.to_owned()), said.to_owned()),
-                None => (None, words),
+                Some((to, said)) => (Some(to.to_owned()), 0, said.to_owned()),
+                None => (None, line.sender_guid, words),
             },
-            (false, _) => (None, words),
+            (false, _) => (None, line.sender_guid, words),
         };
         let mention =
             !me.is_empty() && line.sender != me && line.sender != "You" && mentions(&words, me);
@@ -226,7 +228,7 @@ impl ShownLine {
             kind,
             time,
             who,
-            who_guid: line.sender_guid,
+            who_guid,
             words,
             mention,
         }
@@ -524,6 +526,7 @@ mod tests {
         let shown = ShownLine::of(&l, "Kestrel");
         assert_eq!(shown.kind.tag(), Some("YOU TELL"));
         assert_eq!(shown.who.as_deref(), Some("Royal Guard Adrana"));
+        assert_eq!(shown.who_guid, 0, "the name is looked up when clicked");
         assert_eq!(shown.words, "hey, there");
     }
 
