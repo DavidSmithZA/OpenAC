@@ -118,6 +118,10 @@ pub const MAX_DESIRED_COMPONENT_AMOUNT: u32 = 5000;
 /// The player's int property holding the combat mode the server set.
 pub const COMBAT_MODE_PROPERTY: u32 = 40;
 
+/// How long a [`GameplayCommand::CastInMagic`] waits for Magic and the
+/// stance, seconds.
+pub const CAST_IN_MAGIC_WAIT_SECONDS: f64 = 5.0;
+
 /// A fellowship request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FellowshipCommand {
@@ -258,6 +262,15 @@ pub enum GameplayCommand {
         spell: u32,
         /// The target object.
         target: u32,
+    },
+    /// Cast a spell at the selection in Magic: from Peace, Magic is asked
+    /// for first (a caster in hand) and the spell goes once the server has
+    /// the player in Magic and the body has taken up the stance (a cast
+    /// sent while the stance is still being taken up is refused as too
+    /// busy). Given up after [`CAST_IN_MAGIC_WAIT_SECONDS`].
+    CastInMagic {
+        /// The spell id.
+        spell: u32,
     },
     /// Reply with [`GameplayEvent::Spellbook`]; the text filters names.
     ListSpells(Option<String>),
@@ -498,6 +511,9 @@ pub struct Gameplay {
     mode_mismatch_watch: ModeMismatchWatch,
     combat_mode_history: CombatModeHistory,
     last_body_style: Option<u32>,
+    /// A [`GameplayCommand::CastInMagic`] waiting for Magic and the body:
+    /// the spell and when it is given up (the session clock).
+    cast_in_magic: Option<(u32, f64)>,
     attack: CombatAttackState,
     target: CombatTargetState,
     deaths: CreatureDeathState,
@@ -543,6 +559,7 @@ impl Gameplay {
             mode_mismatch_watch: ModeMismatchWatch::default(),
             combat_mode_history: CombatModeHistory::default(),
             last_body_style: None,
+            cast_in_magic: None,
             attack: CombatAttackState::default(),
             target: CombatTargetState::default(),
             deaths: CreatureDeathState::default(),
@@ -1290,6 +1307,7 @@ impl Gameplay {
                 .then(|| self.combat_mode_history.lines());
             write_combat_mode_log(now, &combat::mode_mismatch_line(report), history.as_deref());
         }
+        self.follow_cast_in_magic(ctx);
         let mut ops = ops!(self, ctx);
         self.attack.tick(&mut ops, now);
         self.finish(ctx);
@@ -1470,6 +1488,7 @@ impl Gameplay {
             GameplayCommand::CastWithoutSelecting { spell, target } => {
                 self.cast_without_selecting(spell, target, ctx);
             }
+            GameplayCommand::CastInMagic { spell } => self.cast_in_magic(spell, ctx),
             GameplayCommand::ListSpells(filter) => {
                 let view = magic::spellbook_view(
                     ctx.world,
@@ -1726,6 +1745,72 @@ impl Gameplay {
         match world.spellbook() {
             Some(book) => {
                 self.cast.cast(book, spell, target, &mut ops);
+            }
+            None => ops.display_message_now("You do not know that spell."),
+        }
+        self.finish(ctx);
+    }
+
+    /// [`GameplayCommand::CastInMagic`]: cast now when ready in Magic;
+    /// from Peace ask for Magic and wait; refused in Melee and Missile.
+    fn cast_in_magic(&mut self, spell: u32, ctx: &mut GameplayContext<'_>) {
+        match self.combat.current_mode() {
+            CombatMode::MAGIC | CombatMode::NON_COMBAT => {}
+            _ => {
+                self.refuse("Enter magic combat first.");
+                return;
+            }
+        }
+        self.cast_in_magic = Some((spell, ctx.now() + CAST_IN_MAGIC_WAIT_SECONDS));
+        if self.combat.current_mode() == CombatMode::NON_COMBAT {
+            let current = self.combat.current_mode();
+            let mut readiness = mode_readiness(ctx.body.as_deref(), ctx.world, ctx.teleporting);
+            let mut ops = ops!(self, ctx);
+            let result =
+                self.mode
+                    .request(CombatMode::MAGIC, current, &mut ops, readiness.as_dyn());
+            self.finish(ctx);
+            let refused = result.status == combat::CombatModeRequestStatus::Rejected;
+            self.mode_result(result, ctx);
+            if refused {
+                self.cast_in_magic = None;
+                return;
+            }
+        }
+        self.follow_cast_in_magic(ctx);
+    }
+
+    /// A waiting [`GameplayCommand::CastInMagic`] goes once the player is
+    /// ready in Magic, and is given up when its time runs out or the
+    /// player goes to another combat mode.
+    fn follow_cast_in_magic(&mut self, ctx: &mut GameplayContext<'_>) {
+        let Some((spell, until)) = self.cast_in_magic else {
+            return;
+        };
+        let mode = self.combat.current_mode();
+        if ctx.now() >= until || !matches!(mode, CombatMode::MAGIC | CombatMode::NON_COMBAT) {
+            self.cast_in_magic = None;
+            return;
+        }
+        let body_ready = ctx.body.as_deref().is_none_or(|body| {
+            body.body_motion().is_some_and(|m| {
+                m.current_style == ac_core::combat::motion_command::MAGIC && !m.motions_pending
+            })
+        });
+        let ready = mode == CombatMode::MAGIC
+            && self.combat.server_mode() == Some(CombatMode::MAGIC)
+            && self.mode.pending_mode().is_none()
+            && body_ready;
+        if !ready {
+            return;
+        }
+        self.cast_in_magic = None;
+        let selected = self.selection.selected();
+        let mut ops = ops!(self, ctx);
+        let world: &World = ops.world;
+        match world.spellbook() {
+            Some(book) => {
+                self.cast.cast(book, spell, selected, &mut ops);
             }
             None => ops.display_message_now("You do not know that spell."),
         }

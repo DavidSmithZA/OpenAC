@@ -277,6 +277,64 @@ fn an_unknown_spell_name_is_refused_as_host_feedback() {
     );
 }
 
+#[test]
+fn a_cast_in_magic_from_peace_waits_for_the_server_s_magic() {
+    // A spell clicked in Peace: Magic is asked for, and the cast goes only
+    // once the server has the player in Magic (sent at once, the server
+    // refuses it as too busy while the stance is taken up).
+    let mut f = Fixture::new();
+    let spell = SpellMetadata {
+        flags: ac_core::spells::SpellFlags::SELF_TARGETED,
+        ..SpellMetadata::new(2, "Strength Self I", 1)
+    };
+    f.world
+        .install_player_rules(Arc::new(SpellTable::create([spell]).unwrap()), None);
+    f.apply(&object(PLAYER, "+Horan", 0x10, 0, 0.0));
+    let mut description = crate::world::tests::empty_description();
+    description.spells.insert(2, 0.0);
+    f.describe(&description);
+    f.apply(&Inbound::PrivateUpdatePropertyBool(
+        PrivateUpdatePropertyBool {
+            sequence: 1,
+            property: ac_core::properties::PropertyBool::SPELL_COMPONENTS_REQUIRED.0,
+            value: false,
+        },
+    ));
+    f.sent();
+    f.run(GameplayCommand::CastInMagic { spell: 2 });
+    let asked = f.sent();
+    assert_eq!(asked.len(), 1);
+    assert_eq!(
+        asked[0],
+        wire_combat::build_change_combat_mode(2, CombatMode::MAGIC.bits())
+    );
+    f.tick();
+    assert!(f.sent().is_empty(), "the server has not said Magic yet");
+    f.apply(&Inbound::PrivateUpdatePropertyInt(
+        PrivateUpdatePropertyInt {
+            sequence: 2,
+            property: COMBAT_MODE_PROPERTY,
+            value: CombatMode::MAGIC.bits().cast_signed(),
+        },
+    ));
+    f.tick();
+    assert_eq!(
+        f.sent(),
+        [wire_magic::build_cast_targeted_spell(3, PLAYER, 2)]
+    );
+    f.tick();
+    assert!(f.sent().is_empty(), "cast once");
+}
+
+#[test]
+fn a_cast_in_magic_is_refused_in_melee() {
+    let mut f = Fixture::in_the_field();
+    f.run(GameplayCommand::SetCombatMode(CombatMode::MELEE));
+    f.sent();
+    f.run(GameplayCommand::CastInMagic { spell: 2 });
+    assert!(f.sent().is_empty());
+}
+
 // -- Combat through the owner -----------------------------------------------------
 
 #[test]
