@@ -392,6 +392,66 @@ Pop-up / Auto choice (the pop-up card is not built: it has to float
 outside the inventory frame); Trim (Bronze / Neutral: every modern
 window draws Bronze). Not live-tested yet.
 
+**M7 built 2026-11-20** on `feat/modern-ui-m7` (off `feat/modern-ui-m6`).
+Retail windows it replaces: `vendor`, `secure-trade` and `salvage`, and the
+dialogs (the window's questions and the key-profile questions no longer
+go through the dialog factory on Modern). Neutral moves first, one commit
+each:
+
+- Vendor rules: whether the vendor takes an item, what a cleared row
+  gives up, selling part of a stack (split, then stage the new stack)
+  (fa39a297).
+- Salvage staging: the tool, the staged items, the one-material rule,
+  pack contents, the send and the session's marks (b36db135).
+- A salvage's bags reach the interface as `InterfaceEvent::Salvaged`
+  beside the chat line (d3b7038c; stream shape re-pinned, format stays 3).
+
+Screens, each checked offscreen (`the_modern_questions`,
+`the_modern_vendor`, `the_modern_trade`, `the_modern_salvage`):
+
+1. Questions (`dialogs/*`, 2892ebd3): one card for every kind (yes or
+   no, OK, please wait, a typed answer, a choice), centred over a slight
+   dimming, modal, one at a time with "1 of 3" and "2 more waiting";
+   icon, colour, title and button words by kind (Apply, Untrain, Augment,
+   Abandon...), red yes for what cannot be undone, Enter and Esc shown.
+   Crafting shows the tool and target (the window notes the target picked
+   while a tool waits; icons f03a267a). Allegiance and fellowship
+   invitations are cards under the target (Decline / Accept or Join), noted
+   in chat; play goes on. Key profiles (Load, Save as, overwrite) use the
+   card too.
+2. Vendor (`dealing/vendor_*`, f4909b07): Buy and Sell tabs with how many
+   rows wait on each list, the purse (another currency with pyreals
+   beside), search; Buy: the shop's categories, goods with price, stock
+   and "On list"; Sell: the player's packs, every carried item with what
+   the vendor pays or greyed with retail's reason, "Only what they buy",
+   what the vendor buys in words; the chosen thing with a quantity (typed,
+   -, +, Max / All / To restock), Buy now / Sell now and Add to list; the
+   To buy / To sell list with total, now and after, Buy all / Sell all,
+   Clear and a cross per row. Restock banner from the Spellbook's amounts
+   (the `/fillcomps` planner, all categories, no ceiling). A refused drop
+   shows the reason and the vendor's limit; leaving with lists asks in the
+   window. Plugin marks and foot band (API 1.15).
+3. Trade (`dealing/trade_*`, 3d9a010f): both sides with acceptance,
+   items, count and total (money exact, items at vendor value, OPENAC tag);
+   status pill; banner when the other player changed the trade after the
+   player accepted (new items marked NEW) or the game refused an item
+   (its words from the error table); Accept trade / Withdraw acceptance
+   with the hint; Clear both sides; drop zone and Add from packs (stacks
+   ask how many through the split pop-up, attuned greyed); a card for any
+   item with Full details. Plugin marks and foot band.
+4. Salvage (`dealing/salvage_*`, 42467ccf): the tool and the player's
+   Salvaging skill; items with material chip and workmanship, out with the
+   cross or a double click; drop zone that shows why a drop was refused;
+   one bag per material with count and average workmanship; Clear, the
+   options' material rule, Salvage N items; Add from packs with material
+   chips; after the answer, each bag with units and workmanship, Salvage
+   more.
+
+Not done in M7: the vendor and trade windows' narrow layouts for small
+screens (792 px); dragging a staged salvage item out (the cross and a
+double click do it); a tool's target picked in the 3D world is not noted
+for the crafting card (inventory targets are). Not live-tested yet.
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
@@ -531,7 +591,7 @@ key bindings with clash checks, OPENAC tags, Character select and Exit.
 
 Replaces: options, keyboard config.
 
-### M7 Dealing ("Vendor", "Trade", "Salvage", "Dialogs")
+### M7 Dealing ("Vendor", "Trade", "Salvage", "Dialogs") (built 2026-11-20)
 
 Vendor, Trade, Salvage; the one dialog card with its queue; invitation
 cards under the target.
