@@ -533,3 +533,78 @@ fn the_modern_bars_move_and_turn() {
     assert_eq!(main(&again.ui), before);
     again.save("move-reloaded");
 }
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_m2_gaps() {
+    use ac_core::combat::CombatMode;
+    let settings = out_dir().join("gaps-settings.json");
+    let _ = std::fs::remove_file(&settings);
+    let mut s = Shot::with_settings(CombatMode::NON_COMBAT, Some(settings.clone()));
+    // The potion stack selected: the target line shows its split.
+    let potion = ITEMS[0].0;
+    s.scene.apply(PresentationEvent::Player(PlayerView {
+        selected: Some(potion),
+        ..PlayerView::default()
+    }));
+    s.step();
+    s.step();
+    s.save("gaps-split");
+    assert_eq!(s.ui.drag_amount(potion), 12);
+    // Drag the knob back along the track (the line is 420 wide, top
+    // centre at 46; its track runs from 40 to 256 at 84).
+    let left = (1440 - 420) / 2;
+    s.drag((left + 256, 84), (left + 120, 84));
+    s.save("gaps-split-dragged");
+    let amount = s.ui.drag_amount(potion);
+    assert!((4..=6).contains(&amount), "{amount}");
+    // Quick move's menu on the radar.
+    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
+    s.click(1, 1440 - 80, 80, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(Modifiers::NONE);
+    s.save("gaps-radar-menu");
+    // Hide it (the menu's second entry).
+    s.click(0, 1210, 163, Modifiers::NONE);
+    s.save("gaps-radar-hidden");
+    // Lock the vitals: their menu's first entry.
+    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
+    s.click(1, 720, 22, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(Modifiers::NONE);
+    s.save("gaps-vitals-menu");
+    s.click(0, 760, 72, Modifiers::NONE);
+    // Locked: Ctrl + right-click on it opens nothing now.
+    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
+    s.click(1, 720, 22, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(Modifiers::NONE);
+    s.save("gaps-vitals-locked");
+    // Edit layout from the Main bar's menu; its toolbar.
+    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
+    s.click(1, MAIN_SLOT.0, MAIN_SLOT.1, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(Modifiers::NONE);
+    s.click(0, MAIN_SLOT.0 + 40, 900 - 6 - 20, Modifiers::NONE);
+    s.save("gaps-edit");
+    s.click(0, 960, 115, Modifiers::NONE);
+    s.save("gaps-pieces-menu");
+    // Show Radar; out of Edit layout.
+    s.click(0, 770, 188, Modifiers::NONE);
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    s.save("gaps-radar-back");
+    // The Recall list from the button on the radar's rim.
+    s.click(0, 1239, 227, Modifiers::NONE);
+    s.save("gaps-recall-list");
+    // Lifestone carried to the Main bar's seventh slot (empty).
+    s.drag((1030, 140), (MAIN_SLOT.0 + 43 * 6, MAIN_SLOT.1));
+    s.moved(MAIN_SLOT.0 + 43 * 6, MAIN_SLOT.1);
+    for _ in 0..14 {
+        s.step();
+    }
+    s.save("gaps-recall-on-bar");
+    // The bars are saved half a second (of the window's own clock) after
+    // a change.
+    std::thread::sleep(Duration::from_millis(600));
+    s.step();
+    let saved = std::fs::read_to_string(&settings).expect("the settings file");
+    assert!(saved.contains("modernPieces"), "{saved}");
+    assert!(saved.contains("\"@ls\""), "{saved}");
+}
