@@ -506,38 +506,19 @@ impl WindowUi {
         }
     }
 
-    /// The combat strip and the menu its mode button opens.
+    /// The combat strip.
     fn mount_modern_combat(&mut self) -> Result<ElementId, String> {
         let fonts = hud::combat::StripFonts {
             mode: self.modern_font(Weight::SemiBold, COMBAT_MODE_SIZE),
             small: self.modern_font(Weight::SemiBold, COMBAT_SMALL_SIZE),
             word: self.modern_font(Weight::SemiBold, COMBAT_WORD_SIZE),
         };
-        let menu_font = fonts.mode.clone();
-        let ui = &mut self.host.root;
-        let strip = hud::mount_piece(
-            ui,
+        hud::mount_piece(
+            &mut self.host.root,
             hud::COMBAT,
             (hud::combat::WIDTH, hud::combat::HEIGHT),
             hud::combat::CombatStrip::new(Horizon::BRONZE, fonts),
-        )?;
-        let element = Element::at(
-            0.0,
-            0.0,
-            hud::combat::MENU_WIDTH,
-            hud::combat::ModeMenu::height(),
         )
-        .with_visible(false)
-        .with_anchors(AnchorEdges::NONE);
-        let menu = ui.add(
-            strip,
-            element,
-            hud::combat::ModeMenu::new(Horizon::BRONZE, menu_font),
-        );
-        if let Some(s) = ui.widget_mut::<hud::combat::CombatStrip>(strip) {
-            s.menu = Some(menu);
-        }
-        Ok(strip)
     }
 
     /// The combat strip follows the mode, the attack, a jump being charged

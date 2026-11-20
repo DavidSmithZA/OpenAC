@@ -7,8 +7,10 @@
 //! Missile a quiet ammunition count. Charging a jump shows the same meter
 //! alone, in any mode, while the jump key is held.
 //!
-//! Clicking the mode opens a small menu of the four modes. Repeat attacks,
-//! Auto target and Keep in view are not here: they are options.
+//! Clicking the mode is the combat toggle (as `): Peace to combat and back,
+//! the combat mode following what is wielded (a caster Magic, a bow or
+//! crossbow Missile, anything else or nothing Melee). Repeat attacks, Auto
+//! target and Keep in view are not here: they are options.
 
 use std::f32::consts::TAU;
 use std::sync::Arc;
@@ -69,11 +71,6 @@ const FLASH: Color = hex(0xFF_F4DC, 0.9);
 /// The ammunition count when low and when out.
 const AMMO_LOW: Color = hex(0xFF_C870, 1.0);
 const AMMO_OUT: Color = hex(0xFF_8A8E, 1.0);
-/// The menu's width, its rows' height and its inside margin.
-pub const MENU_WIDTH: f32 = 150.0;
-const MENU_ROW: f32 = 28.0;
-const MENU_PAD: f32 = 4.0;
-
 /// What is in the ammunition slot, in Missile.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ammo {
@@ -101,7 +98,7 @@ pub struct CombatView {
     pub ammo: Option<Ammo>,
 }
 
-/// The four modes the menu offers, in its order, with their words.
+/// The four modes with their words.
 pub const MODES: [(CombatMode, &str); 4] = [
     (CombatMode::NON_COMBAT, "Peace"),
     (CombatMode::MELEE, "Melee"),
@@ -194,8 +191,6 @@ pub struct CombatStrip {
     fonts: StripFonts,
     /// What it shows.
     pub view: CombatView,
-    /// The menu the mode opens (a child of the piece).
-    pub menu: Option<ElementId>,
     /// The pointer is on this part.
     hovered: Option<Part>,
     /// This height button is held down (its release lets the attack go).
@@ -222,7 +217,6 @@ impl CombatStrip {
             theme,
             fonts,
             view: CombatView::default(),
-            menu: None,
             hovered: None,
             held: None,
             dragging: None,
@@ -406,30 +400,6 @@ impl CombatStrip {
             );
         }
         self.dragging = None;
-    }
-
-    /// Opens the mode menu over the mode button (under it when the piece
-    /// is too near the top of the screen).
-    fn open_menu(&self, ui: &mut UiRoot, me: ElementId) {
-        let Some(menu) = self.menu else {
-            return;
-        };
-        let current = self.view.mode.unwrap_or(CombatMode::NON_COMBAT);
-        let height = ModeMenu::height();
-        let (_, y) = ui.screen_position(me);
-        let left = self.parts().mode.0;
-        let top = if y >= height + 6.0 {
-            -height - 6.0
-        } else {
-            HEIGHT + 6.0
-        };
-        if let Some(e) = ui.element_mut(menu) {
-            e.left = left;
-            e.top = top;
-            e.height = height;
-        }
-        ui.with::<ModeMenu, _>(menu, |m, ui| m.open(ui, menu, current));
-        ui.bring_to_front(me);
     }
 
     fn draw_pill(&self, rc: &mut RenderContext<'_>, parts: &Parts) {
@@ -707,7 +677,7 @@ impl Widget for CombatStrip {
             }
             kind::CLICK => {
                 if self.part_at(x, y) == Some(Part::Mode) {
-                    self.open_menu(ui, me);
+                    send(ui, GameplayCommand::ToggleCombat);
                 }
                 true
             }
@@ -738,7 +708,8 @@ impl Widget for CombatStrip {
     fn tooltip_text(&self, _element: &Element) -> Option<String> {
         match self.hovered? {
             Part::Mode => Some(
-                "Combat mode (` switches): click for Peace, Melee, Missile or Magic".to_owned(),
+                "Click (or `) to go between Peace and combat; what you wield picks Melee, Missile or Magic"
+                    .to_owned(),
             ),
             Part::Height(i) => Some(format!(
                 "{} \u{b7} hold to charge, let go to attack",
@@ -766,160 +737,6 @@ impl Widget for CombatStrip {
             Form::Hidden => {}
             Form::Pill => self.draw_pill(rc, &parts),
             Form::Strip | Form::Jump => self.draw_strip(rc, &parts, form),
-        }
-    }
-}
-
-/// The small menu of the four modes the mode button opens.
-#[derive(Debug)]
-pub struct ModeMenu {
-    theme: Horizon,
-    font: Option<Arc<UiFont>>,
-    /// The mode in use, marked.
-    current: CombatMode,
-    hovered: Option<usize>,
-}
-
-impl ModeMenu {
-    /// The menu in `theme`, its words in `font`.
-    #[must_use]
-    pub fn new(theme: Horizon, font: Option<Arc<UiFont>>) -> Self {
-        Self {
-            theme,
-            font,
-            current: CombatMode::NON_COMBAT,
-            hovered: None,
-        }
-    }
-
-    /// Its height.
-    #[must_use]
-    pub fn height() -> f32 {
-        MENU_PAD * 2.0 + MENU_ROW * MODES.len() as f32
-    }
-
-    fn row_at(y: f32) -> Option<usize> {
-        let i = ((y - MENU_PAD) / MENU_ROW).floor();
-        (y >= MENU_PAD && (i as usize) < MODES.len()).then_some(i as usize)
-    }
-
-    /// Opens it (the live pop-up: a press outside closes it), `current`
-    /// marked.
-    pub fn open(&mut self, ui: &mut UiRoot, me: ElementId, current: CombatMode) {
-        self.current = current;
-        self.hovered = None;
-        ui.set_visible(me, true);
-        ui.set_active_popup(me, me);
-    }
-
-    fn close(ui: &mut UiRoot, me: ElementId) {
-        ui.clear_active_popup(me);
-        ui.set_visible(me, false);
-    }
-}
-
-impl Widget for ModeMenu {
-    fn hit_test(&self, _element: &Element, _x: f32, _y: f32) -> bool {
-        true
-    }
-
-    fn handles_click(&self, _element: &Element) -> bool {
-        true
-    }
-
-    fn on_popup_dismissed(&mut self, ui: &mut UiRoot, me: ElementId, _popup: ElementId) {
-        ui.set_visible(me, false);
-    }
-
-    fn receives_hover_mouse_move(&self) -> bool {
-        true
-    }
-
-    fn on_event(&mut self, ui: &mut UiRoot, me: ElementId, e: &UiEvent) -> bool {
-        if e.target != Some(me) {
-            return false;
-        }
-        let y = e.data2 as f32;
-        match e.kind {
-            kind::MOUSE_MOVE | kind::HOVER_ENTER => {
-                self.hovered = Self::row_at(y);
-                true
-            }
-            kind::HOVER_LEAVE => {
-                self.hovered = None;
-                true
-            }
-            kind::CLICK => {
-                if let Some(i) = Self::row_at(y) {
-                    let mode = MODES[i].0;
-                    if mode != self.current {
-                        send(ui, GameplayCommand::SetCombatMode(mode));
-                    }
-                    Self::close(ui, me);
-                }
-                true
-            }
-            _ => true,
-        }
-    }
-
-    fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
-        let (w, h) = (MENU_WIDTH, Self::height());
-        let radius = CornerRadii::all(self.theme.metrics.window_radius);
-        rc.soft_shadow(0.0, 0.0, w, h, 6.0, 12.0, 30.0, p.shadow);
-        rc.fill_rounded_rect(0.0, 0.0, w, h, radius, p.popup);
-        rc.stroke_rounded_rect(0.0, 0.0, w, h, radius, p.trim, 1.0);
-        for (i, (mode, word)) in MODES.iter().enumerate() {
-            let top = MENU_PAD + MENU_ROW * i as f32;
-            let current = *mode == self.current;
-            let row = CornerRadii::all(self.theme.metrics.radius);
-            if current {
-                rc.fill_rounded_rect(
-                    MENU_PAD,
-                    top,
-                    w - MENU_PAD * 2.0,
-                    MENU_ROW,
-                    row,
-                    p.accent_tint,
-                );
-            } else if self.hovered == Some(i) {
-                rc.fill_rounded_rect(
-                    MENU_PAD,
-                    top,
-                    w - MENU_PAD * 2.0,
-                    MENU_ROW,
-                    row,
-                    hex(0x2A_2116, 0.9),
-                );
-            }
-            let color = if current { p.accent } else { p.icon };
-            mode_icon(
-                rc,
-                *mode,
-                14.0,
-                top + (MENU_ROW - MODE_ICON) * 0.5,
-                MODE_ICON,
-                color,
-            );
-            if let Some(f) = &self.font {
-                let ty = (top + (MENU_ROW - f.line_height) * 0.5).round();
-                let ink = if current { p.accent } else { p.text };
-                text::draw(
-                    rc,
-                    f,
-                    word,
-                    14.0 + MODE_ICON + 8.0,
-                    ty,
-                    TextStyle::plain(ink),
-                );
-            }
-            if current {
-                // A tick at the right.
-                let (cx, cy) = (w - 22.0, top + MENU_ROW * 0.5);
-                rc.smooth_line(cx, cy, cx + 3.5, cy + 3.5, p.accent, 1.6);
-                rc.smooth_line(cx + 3.5, cy + 3.5, cx + 10.0, cy - 3.5, p.accent, 1.6);
-            }
         }
     }
 }
@@ -1170,11 +987,7 @@ mod tests {
     }
 
     #[test]
-    fn the_menu_rows_are_the_four_modes() {
-        assert_eq!(ModeMenu::row_at(MENU_PAD + 1.0), Some(0));
-        assert_eq!(ModeMenu::row_at(MENU_PAD + MENU_ROW * 3.5), Some(3));
-        assert_eq!(ModeMenu::row_at(ModeMenu::height() + 4.0), None);
-        assert_eq!(ModeMenu::row_at(1.0), None);
+    fn the_modes_have_their_words() {
         assert_eq!(mode_word(CombatMode::MISSILE), "Missile");
     }
 }

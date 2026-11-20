@@ -825,4 +825,13 @@ fn the_modern_chat() {
         s.step();
     }
     s.save("chat-window");
+    // Its close button (440 wide at (500, 300); the X is the last of the
+    // two 24 px buttons on its title row): the tab goes back into the
+    // panel.
+    s.click(0, 500 + 440 - 4 - 12, 300 + 2 + 12, Modifiers::NONE);
+    s.ui.chat_entry_key(ac_ui::input::InputAction::EnterChatMode, None);
+    for _ in 0..4 {
+        s.step();
+    }
+    s.save("chat-window-closed");
 }

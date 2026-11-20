@@ -103,6 +103,10 @@ pub struct BarsUi {
     /// A spell is being carried out of the spellbook: the book's opacity
     /// before it faded.
     spell_drag: Option<f32>,
+    /// A spell clicked in Peace with a caster held: it is cast once the
+    /// switch to Magic has taken, unless this time (the clock) passes
+    /// first.
+    pending_cast: Option<(u32, f64)>,
 }
 
 impl BarsUi {
@@ -296,6 +300,7 @@ impl WindowUi {
             shown: false,
             hint,
             spell_drag: None,
+            pending_cast: None,
         });
         modern.replace(crate::ui::window::TOOLBAR_WINDOW);
         modern.replace(crate::ui::window::COMBAT_WINDOW);
@@ -374,6 +379,7 @@ impl WindowUi {
         }
         self.follow_spell_drag(b);
         self.bar_requests(b, now);
+        self.follow_pending_cast(b, now);
         // A slot taken off (fewer slots, a bar deleted) takes its key
         // pop-up with it.
         if let Some(at) = b.popover_for
@@ -607,6 +613,9 @@ impl WindowUi {
         } else {
             KeyMode::Normal
         };
+        // In Peace with a caster held, a click goes to Magic and casts.
+        let castable = magic || self.peace_with_caster();
+        let selected = self.player_view.and_then(|v| v.selected);
         let player = self.facts.state.player;
         let now = self.facts.session_now();
         let Self {
@@ -666,22 +675,23 @@ impl WindowUi {
                     Some(SlotContent::Spell { id, name }) => {
                         view.filled = true;
                         view.spell = true;
-                        view.off = !magic;
                         view.icon = ac_ui::icons::IconSource::spell_icon(icons, *id);
                         let known = book.as_deref().is_none_or(|bk| bk.knows(*id));
                         view.missing = !known;
-                        let shown = book
-                            .as_deref()
-                            .and_then(|bk| bk.try_get_metadata(*id))
-                            .map_or(name.clone(), |m| m.name.clone());
+                        let meta = book.as_deref().and_then(|bk| bk.try_get_metadata(*id));
+                        let no_target = meta.is_some_and(needs_target) && selected.is_none();
+                        view.off = !castable || no_target;
+                        let shown = meta.map_or(name.clone(), |m| m.name.clone());
                         let mut tip = shown;
                         if let Some(k) = key {
                             tip.push_str(&format!(" \u{b7} {}", keys::words(k)));
                         }
                         if !known {
                             tip.push_str(" \u{b7} not in your spellbook");
-                        } else if !magic {
-                            tip.push_str(" \u{b7} Magic mode only");
+                        } else if !castable {
+                            tip.push_str(" \u{b7} Magic mode, or a caster in hand");
+                        } else if no_target {
+                            tip.push_str(" \u{b7} select a target first");
                         }
                         view.tip = Some(tip);
                     }
@@ -1025,8 +1035,10 @@ impl WindowUi {
 
     /// A slot clicked (or its key pressed): an item is used (or, while a
     /// use or examine waits for a target, offered as it); a spell is cast
-    /// in Magic, and does nothing otherwise.
-    fn use_bar_slot(&mut self, b: &BarsUi, at: SlotRef) {
+    /// in Magic; in Peace with a caster held, the player goes to Magic and
+    /// the spell is cast once there (not a spell that needs a target with
+    /// nothing selected: it would find none); otherwise nothing.
+    fn use_bar_slot(&mut self, b: &mut BarsUi, at: SlotRef) {
         let Some(content) = b
             .layout
             .as_ref()
@@ -1062,16 +1074,68 @@ impl WindowUi {
                 }
             }
             SlotContent::Spell { id, .. } => {
-                if self.facts.state.combat_mode == CombatMode::MAGIC && !target_mode {
+                if target_mode {
+                    return;
+                }
+                if self.facts.state.combat_mode == CombatMode::MAGIC {
+                    cast(&mut self.host.root, id);
+                } else if self.peace_with_caster() {
+                    let selected = self.player_view.and_then(|v| v.selected);
+                    let no_target = self
+                        .facts
+                        .numbers()
+                        .and_then(|n| n.spellbook())
+                        .and_then(|bk| bk.try_get_metadata(id))
+                        .is_some_and(needs_target)
+                        && selected.is_none();
+                    if no_target {
+                        return;
+                    }
+                    let now = self.status.clock.elapsed().as_secs_f64();
+                    b.pending_cast = Some((id, now + CAST_AFTER_SWITCH));
                     emit(
-                        ui,
-                        PanelOutput::Session(SessionCommand::Gameplay(GameplayCommand::Cast {
-                            spell: id.to_string(),
-                            target: None,
-                        })),
+                        &mut self.host.root,
+                        PanelOutput::Session(SessionCommand::Gameplay(
+                            GameplayCommand::SetCombatMode(CombatMode::MAGIC),
+                        )),
                     );
                 }
             }
+        }
+    }
+
+    /// In Peace, holding a caster: the combat toggle would go to Magic.
+    fn peace_with_caster(&self) -> bool {
+        if self.facts.state.combat_mode != CombatMode::NON_COMBAT {
+            return false;
+        }
+        let player = self.facts.state.player;
+        if player == 0 {
+            return false;
+        }
+        let carried: Vec<_> = self
+            .facts
+            .objects
+            .get_equipped_by(player)
+            .into_iter()
+            .map(ac_runtime::gameplay::combat::carried_item)
+            .collect();
+        ac_core::combat::default_combat_mode(&carried) == CombatMode::MAGIC
+    }
+
+    /// A spell waiting on the switch to Magic is cast once the player is
+    /// there, or forgotten when the switch does not come in time (or the
+    /// player went somewhere else).
+    fn follow_pending_cast(&mut self, b: &mut BarsUi, now: f64) {
+        let Some((spell, until)) = b.pending_cast else {
+            return;
+        };
+        let mode = self.facts.state.combat_mode;
+        if mode == CombatMode::MAGIC {
+            b.pending_cast = None;
+            cast(&mut self.host.root, spell);
+        } else if now >= until || mode != CombatMode::NON_COMBAT {
+            b.pending_cast = None;
         }
     }
 
@@ -1907,6 +1971,28 @@ impl WindowUi {
 }
 
 /// The HUD piece window name of `piece`, if it is one.
+/// How long a spell clicked in Peace waits for the switch to Magic,
+/// seconds.
+const CAST_AFTER_SWITCH: f64 = 4.0;
+
+/// Casts `spell` at the selection (the runtime picks the caster for a
+/// spell on the caster, and refuses one that needs a target it lacks).
+fn cast(ui: &mut ac_ui::UiRoot, spell: u32) {
+    emit(
+        ui,
+        PanelOutput::Session(SessionCommand::Gameplay(GameplayCommand::Cast {
+            spell: spell.to_string(),
+            target: None,
+        })),
+    );
+}
+
+/// The spell is cast at something other than its caster: it needs a
+/// target selected.
+fn needs_target(spell: &ac_core::spells::SpellMetadata) -> bool {
+    !spell.is_self_targeted() && !spell.is_untargeted && spell.target_mask != 0
+}
+
 fn piece_name(ui: &ac_ui::UiRoot, piece: ElementId) -> Option<&'static str> {
     let name = ui.element(piece)?.name.as_deref()?;
     hud::PIECES.into_iter().find(|n| *n == name)
