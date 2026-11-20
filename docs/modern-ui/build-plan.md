@@ -229,6 +229,42 @@ more commits each:
    on small screens.
 9. Plugin item hooks (a new API version), once the screens stand.
 
+Built 2026-11-20 on `feat/modern-ui-m4` (steps 1 to 8 in part), each
+checked offscreen (`the_modern_inventory`, `the_modern_inspect`,
+`the_modern_loot` in `modern_snapshot.rs`; drags and loots assert the
+commands sent):
+
+- Neutral moves first: `item_report_in_parts` (b51dfc80), the pack drop
+  rules out of the retail inventory into `ac_ui::panels::pack_drops`
+  (ef565a89, retail's 96 item panel tests unchanged), `MainPanels::stand_in`
+  so the inventory key, panel strip, burden chip and a pack used anywhere
+  open the modern window (e67c73e3).
+- `items/model.rs`, `cell.rs`, `grid.rs` (recycled cells), `sheet.rs` and
+  `sheet_view.rs` (retail's report lines sorted into the four tabs),
+  `menu.rs`, `inventory.rs` + `run.rs` (the window), `sheets.rs`,
+  `inspect.rs`, `loot.rs`.
+- Inventory: equipment slots (an item covering several shows in each;
+  Aetheria by its quest), the figure (the paperdoll render takes a turn;
+  drag turns it, gear dropped on it is worn), pack rail with fill and
+  drops, Group/Sort/compact/list/chips, search over every pack, details
+  asked about quietly (the answer kept; Inspect does not open),
+  Equip/Take off/Use, Give (to the previous selection), Drop, Salvage,
+  More (inscribe tab, add to a bar, link in chat), right-click menu,
+  Tidy merges partial stacks one request at a time, burden and pyreals.
+- Inspect: items (portals, chests, doors in one column), creatures,
+  characters (Stats, Allegiance, Armor, About), spells from bars or the
+  book; follows the selection; 0.75 s combat refresh; examine key closes.
+- Loot: rows with Inspect and Loot, double-click, Loot into a pack,
+  chest tabs and drop zone, burden now and with all, Loot all (OPENAC),
+  closes the container itself out of reach.
+
+Not done yet in M4: the split popover (the target line's split amount
+already applies to every drag); writing an inscription (shown read-only
+with who signed it); the details as a pop-up card on small screens
+(Docked / Pop-up / Auto belongs with Options, M6); drawn glyphs in empty
+equipment slots; Close gaps (packs in this game hold no gaps); step 9
+(plugin item hooks).
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
