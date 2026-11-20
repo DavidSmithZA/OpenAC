@@ -1511,6 +1511,7 @@ impl WindowUi {
         self.tick_modern_effects(dt);
         self.tick_modern_connection();
         self.tick_modern_recalls();
+        self.follow_modern_pieces();
         if let Some(modern) = &self.modern {
             modern.hide_replaced(&mut self.host);
         }

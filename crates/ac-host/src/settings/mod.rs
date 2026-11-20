@@ -11,6 +11,7 @@ use crate::json::{self, Member, Node, Value};
 mod bars;
 mod layout;
 mod markup_controls;
+mod pieces;
 mod recalls;
 pub mod render_pack;
 mod sections;
@@ -18,6 +19,7 @@ mod sections;
 pub use bars::{BarData, BarLayoutData, CharacterBars, SavedBars, SlotData};
 pub use layout::{UiWindowLayout, UiWindowPlacement, UiWindowPosition};
 pub use markup_controls::MarkupControlKey;
+pub use pieces::HudPieces;
 pub use recalls::CustomRecall;
 pub use render_pack::RenderPackSelection;
 pub use sections::{

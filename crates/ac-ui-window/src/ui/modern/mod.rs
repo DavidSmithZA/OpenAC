@@ -68,6 +68,8 @@ pub struct ModernLayer {
     pub panels: Option<(ElementId, [ElementId; 8])>,
     /// The player's own shortcut bars.
     pub bars: Option<bars::run::BarsUi>,
+    /// The HUD pieces the player hid or locked (read once).
+    pub pieces: Option<ac_host::settings::HudPieces>,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -1232,6 +1234,81 @@ impl WindowUi {
             && let Some(edge) = self.host.root.widget_mut::<hud::edge_glow::EdgeGlow>(glow)
         {
             edge.on = low && s.low_health_edge_glow;
+        }
+    }
+
+    /// The HUD pieces follow what the player hid or locked: a hidden one
+    /// stays hidden whoever shows it, a locked one is left out of quick
+    /// move. Read from the settings the first time.
+    pub(super) fn follow_modern_pieces(&mut self) {
+        let Some(modern) = self.modern.as_mut() else {
+            return;
+        };
+        let pieces = modern.pieces.get_or_insert_with(|| {
+            self.status
+                .settings_store
+                .as_ref()
+                .map(ac_host::settings::SettingsStore::load_hud_pieces)
+                .unwrap_or_default()
+        });
+        let ui = &mut self.host.root;
+        for name in hud::PIECES {
+            let Some(frame) = ui.window(name).map(|w| w.frame) else {
+                continue;
+            };
+            let movable = !pieces.is_locked(name);
+            if let Some(e) = ui.element_mut(frame)
+                && e.quick_move != movable
+            {
+                e.quick_move = movable;
+            }
+            if pieces.is_hidden(name) && ui.is_window_visible(name) {
+                ui.hide_window(name);
+            }
+        }
+    }
+
+    /// Hides HUD piece `name` (or shows it again) and saves that.
+    pub(super) fn set_modern_piece_hidden(&mut self, name: &'static str, on: bool) {
+        let changed = self
+            .modern
+            .as_mut()
+            .and_then(|m| m.pieces.as_mut())
+            .is_some_and(|p| p.set_hidden(name, on));
+        if !on {
+            self.host.root.show_window(name);
+        }
+        if changed {
+            self.save_modern_pieces();
+        }
+    }
+
+    /// Locks HUD piece `name` in place (or unlocks it) and saves that.
+    pub(super) fn set_modern_piece_locked(&mut self, name: &'static str, on: bool) {
+        let changed = self
+            .modern
+            .as_mut()
+            .and_then(|m| m.pieces.as_mut())
+            .is_some_and(|p| p.set_locked(name, on));
+        if changed {
+            self.follow_modern_pieces();
+            self.save_modern_pieces();
+        }
+    }
+
+    /// The HUD pieces hidden and locked, by name.
+    pub(super) fn modern_pieces(&self) -> Option<&ac_host::settings::HudPieces> {
+        self.modern.as_ref()?.pieces.as_ref()
+    }
+
+    fn save_modern_pieces(&mut self) {
+        let Some(pieces) = self.modern.as_ref().and_then(|m| m.pieces.clone()) else {
+            return;
+        };
+        if let Some(store) = &self.status.settings_store
+            && let Err(e) = store.save_hud_pieces(&pieces)
+        {
+            self.notices.push(format!("ui: saving the HUD pieces: {e}"));
         }
     }
 

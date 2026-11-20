@@ -38,6 +38,24 @@ pub const PANELS: &str = "modern-panels";
 /// The combat strip's (and the jump meter's) window name.
 pub const COMBAT: &str = "modern-combat";
 
+/// Every HUD piece's window name (not the bars: they keep their own lock
+/// and hiding).
+pub const PIECES: [&str; 6] = [VITALS, TARGET, EFFECTS, RADAR, COMBAT, PANELS];
+
+/// What the player calls piece `name` (its window name).
+#[must_use]
+pub fn piece_words(name: &str) -> &str {
+    match name {
+        VITALS => "Vitals",
+        TARGET => "Target",
+        EFFECTS => "Effects",
+        RADAR => "Radar",
+        COMBAT => "Combat strip",
+        PANELS => "Panel strip",
+        other => other.strip_prefix("modern-").unwrap_or(other),
+    }
+}
+
 /// Mounts `widget` as the HUD piece `name`, at its first place on a screen
 /// of the root's size (or the top left when the table has none); a piece
 /// quick move can carry.
