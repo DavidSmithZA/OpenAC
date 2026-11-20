@@ -205,6 +205,8 @@ struct Shot {
     scene: Scene,
     now: Instant,
     textures: HashMap<(u32, u32), Held>,
+    /// What the window sent the session.
+    sent: Vec<ac_runtime::session::SessionCommand>,
 }
 
 impl Shot {
@@ -225,6 +227,7 @@ impl Shot {
             scene,
             now: Instant::now(),
             textures: HashMap::new(),
+            sent: Vec::new(),
         };
         // Long enough for the fonts, the layout and the first bars.
         for _ in 0..10 {
@@ -237,7 +240,8 @@ impl Shot {
         self.ui.feed(&mut self.scene);
         self.now += Duration::from_millis(50);
         let _ = self.ui.frame(self.now, (W, H));
-        let _ = self.ui.drain();
+        let sent = self.ui.drain();
+        self.sent.extend(sent);
     }
 
     fn set_mode(&mut self, mode: ac_core::combat::CombatMode) {
