@@ -98,6 +98,8 @@ pub struct ModernLayer {
     pub vendor: Option<dealing::vendor_run::VendorUi>,
     /// The Trade window.
     pub trade: Option<dealing::trade_run::TradeUi>,
+    /// The Salvage window.
+    pub salvage: Option<dealing::salvage_run::SalvageUi>,
     /// The question card and the invitations under the target.
     pub questions: Option<dialogs::run::QuestionsUi>,
     /// Packs used anywhere since the inventory last looked.
@@ -347,6 +349,7 @@ impl WindowUi {
         self.mount_modern_options();
         self.mount_modern_vendor();
         self.mount_modern_trade();
+        self.mount_modern_salvage();
         self.mount_modern_questions();
         let Some(modern) = self.modern.as_mut() else {
             return;

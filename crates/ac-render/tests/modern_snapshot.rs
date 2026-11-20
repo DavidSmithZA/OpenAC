@@ -2586,3 +2586,125 @@ fn the_modern_trade() {
     s.click(0, fx + 462 + 200, fy + 120 + 48 + 8 + 20, Modifiers::NONE);
     s.save("trade-card");
 }
+
+/// An Ust and four things to salvage in the main pack.
+fn salvage_things(s: &mut Shot) -> u32 {
+    const UST: u32 = 0x8000_0501;
+    let mut objects = Vec::new();
+    let mut p = ClientObject::new(PLAYER);
+    p.name = "Aerin Vale".to_owned();
+    p.item_type = ItemType::CREATURE;
+    p.items_capacity = 102;
+    p.containers_capacity = 7;
+    objects.push(p);
+    let mut ust = ClientObject::new(UST);
+    ust.name = "Ust".to_owned();
+    ust.item_type = ItemType::TINKERING_TOOL;
+    ust.icon_id = 0x0600_1E3B;
+    ust.container_id = PLAYER;
+    objects.push(ust);
+    let mut main = vec![UST];
+    for (i, (name, material, ws, icon)) in [
+        ("Steel Longsword", 64, 6.0, 0x0600_11CB),
+        ("Steel Kite Shield", 64, 5.0, 0x0600_11CB),
+        ("Granite Mace", 67, 4.0, 0x0600_11CB),
+        ("Silk Robe", 6, 5.0, 0x0600_1E3B),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let guid = 0x8000_0510 + i as u32;
+        let mut o = ClientObject::new(guid);
+        o.name = name.to_owned();
+        o.item_type = ItemType::MELEE_WEAPON;
+        o.icon_id = icon;
+        o.material_type = Some(material);
+        o.workmanship = ws;
+        o.value = 1_240 - 100 * i as i32;
+        o.container_id = PLAYER;
+        objects.push(o);
+        main.push(guid);
+    }
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: true,
+                objects,
+                removed: Vec::new(),
+                contents: vec![(PLAYER, Some(main))],
+            },
+        )));
+    s.step();
+    s.step();
+    UST
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_salvage() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::inventory::ItemCommand;
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let ust = salvage_things(&mut s);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::OpenSalvage(
+            ust,
+        )));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-salvage"),
+        "it opens on the tool"
+    );
+    assert!(
+        !s.ui.host().root.is_window_visible("salvage"),
+        "retail's stays hidden"
+    );
+    s.save("salvage-empty");
+    let frame = s.ui.host().root.window("modern-salvage").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    // Add from packs, then the first three.
+    s.click(0, fx + 20 + 470 - 70, fy + 68 + 14, Modifiers::NONE);
+    s.save("salvage-pick");
+    for _ in 0..3 {
+        // The first row not yet added sits lower each time.
+        let pick =
+            s.ui.host()
+                .root
+                .widget::<ac_ui_window::ui::modern::dealing::salvage_window::SalvageFrame>(frame)
+                .map(|f| f.pick.iter().position(|p| !p.off).unwrap_or(0))
+                .unwrap_or(0) as i32;
+        s.click(
+            0,
+            fx + 110 + 400 - 12 - 6 - 32,
+            fy + 100 + 44 + 24 + 10 + pick * 42 + 20,
+            Modifiers::NONE,
+        );
+    }
+    s.click(0, fx + 110 + 400 - 24, fy + 100 + 22, Modifiers::NONE);
+    s.save("salvage-staged");
+    // Salvage.
+    s.sent.clear();
+    s.click(0, fx + 820 - 20 - 95, fy + 540 - 36, Modifiers::NONE);
+    let salvaged = s.sent.iter().find_map(|c| match c {
+        SessionCommand::Item(ItemCommand::Salvage { items, .. }) => Some(items.len()),
+        _ => None,
+    });
+    // One material at a time (the options' default): the mace was refused.
+    assert_eq!(salvaged, Some(2), "{:?}", s.sent);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Salvaged(
+            Box::new(ac_core::items::SalvageOutcome {
+                bags: vec![ac_core::items::SalvageBag {
+                    material_type: 64,
+                    workmanship: 5.5,
+                    units: 64,
+                }],
+                unsuitable: Vec::new(),
+            }),
+        )));
+    s.step();
+    s.step();
+    s.save("salvage-done");
+}
