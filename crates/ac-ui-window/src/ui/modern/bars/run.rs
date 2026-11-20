@@ -1075,36 +1075,75 @@ impl WindowUi {
                 }
             }
             SlotContent::Spell { id, .. } => {
-                if target_mode {
-                    return;
-                }
-                if self.facts.state.combat_mode == CombatMode::MAGIC {
-                    cast(&mut self.host.root, id);
-                } else if self.peace_with_caster() {
-                    let selected = self.player_view.and_then(|v| v.selected);
-                    let player = self.facts.state.player;
-                    let gate = self
-                        .facts
-                        .numbers()
-                        .and_then(|n| n.spellbook())
-                        .map(|bk| cast_gate(&self.facts.objects, player, bk, id, selected));
-                    if matches!(
-                        gate,
-                        Some(SpellCastGate::NoTargetSelected | SpellCastGate::TargetIncompatible)
-                    ) {
-                        return;
-                    }
-                    // The runtime goes to Magic and casts once the stance
-                    // is taken up.
-                    emit(
-                        &mut self.host.root,
-                        PanelOutput::Session(SessionCommand::Gameplay(
-                            GameplayCommand::CastInMagic { spell: id },
-                        )),
-                    );
+                if !target_mode {
+                    self.modern_cast(id);
                 }
             }
         }
+    }
+
+    /// Casts `spell` as a bar slot does: in Magic at once; in Peace with a
+    /// caster held, the player goes to Magic and it is cast once there
+    /// (not a spell that needs a target with no fit target selected);
+    /// otherwise nothing. False when nothing was sent.
+    pub(in crate::ui) fn modern_cast(&mut self, id: u32) -> bool {
+        if self.facts.state.combat_mode == CombatMode::MAGIC {
+            cast(&mut self.host.root, id);
+            return true;
+        }
+        if !self.peace_with_caster() {
+            return false;
+        }
+        let selected = self.player_view.and_then(|v| v.selected);
+        let player = self.facts.state.player;
+        let gate = self
+            .facts
+            .numbers()
+            .and_then(|n| n.spellbook())
+            .map(|bk| cast_gate(&self.facts.objects, player, bk, id, selected));
+        if matches!(
+            gate,
+            Some(SpellCastGate::NoTargetSelected | SpellCastGate::TargetIncompatible)
+        ) {
+            return false;
+        }
+        // The runtime goes to Magic and casts once the stance is taken up.
+        emit(
+            &mut self.host.root,
+            PanelOutput::Session(SessionCommand::Gameplay(GameplayCommand::CastInMagic {
+                spell: id,
+            })),
+        );
+        true
+    }
+
+    /// Where `spell` sits on the player's bars, in a few words ("On Buffs
+    /// bar, Shift+4"; "Not on a bar").
+    pub(in crate::ui) fn modern_bar_spot(&self, spell: u32) -> String {
+        let Some(layout) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.bars.as_ref())
+            .and_then(|b| b.layout.as_ref())
+        else {
+            return "Not on a bar".to_owned();
+        };
+        for bar in &layout.bars {
+            for slot in &bar.slots {
+                if let Some(SlotContent::Spell { id, .. }) = &slot.content
+                    && *id == spell
+                {
+                    let key = slot
+                        .key(KeyMode::Magic)
+                        .or_else(|| slot.key(KeyMode::Normal));
+                    return match key {
+                        Some(k) => format!("On {} bar, {}", bar.name, keys::words(k)),
+                        None => format!("On {} bar", bar.name),
+                    };
+                }
+            }
+        }
+        "Not on a bar".to_owned()
     }
 
     /// In Peace, holding a caster: the combat toggle would go to Magic.
