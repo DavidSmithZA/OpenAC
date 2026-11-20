@@ -13,6 +13,7 @@
 //! [`places`].
 
 pub mod bars;
+pub mod chat;
 pub mod fonts;
 pub mod hud;
 pub mod places;
@@ -68,6 +69,10 @@ pub struct ModernLayer {
     pub panels: Option<(ElementId, [ElementId; 8])>,
     /// The player's own shortcut bars.
     pub bars: Option<bars::run::BarsUi>,
+    /// The HUD pieces the player hid or locked (read once).
+    pub pieces: Option<ac_host::settings::HudPieces>,
+    /// The chat.
+    pub chat: Option<chat::run::ChatUi>,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -230,8 +235,11 @@ impl WindowUi {
             &mut self.host.root,
             hud::TARGET,
             (hud::target::WIDTH, hud::target::HEIGHT),
-            hud::target::TargetLine::new(Horizon::BRONZE, fonts.0, fonts.1, fonts.2),
+            hud::target::TargetLine::new(Horizon::BRONZE, fonts.0, fonts.1, fonts.2.clone()),
         );
+        if let Ok(id) = &target {
+            hud::target::TargetLine::mount_split_field(&mut self.host.root, *id, fonts.2.clone());
+        }
         let effects = self.mount_modern_effects();
         let card_fonts = hud::connection::CardFonts {
             title: self.modern_font(Weight::SemiBold, CARD_TITLE_SIZE),
@@ -300,6 +308,7 @@ impl WindowUi {
         let combat = self.mount_modern_combat();
         let panels = self.mount_modern_panels();
         self.mount_modern_bars();
+        self.mount_modern_chat();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -1144,6 +1153,52 @@ impl WindowUi {
         {
             line.target = target;
         }
+        self.feed_modern_split();
+    }
+
+    /// The target line's split amount and the one drags use (the retail
+    /// toolbar's, kept while it is hidden) follow each other.
+    fn feed_modern_split(&mut self) {
+        use ac_ui::panels::toolbar::ToolbarWindowController;
+        let Some(id) = self.modern.as_ref().and_then(|m| m.target) else {
+            return;
+        };
+        let chosen = self
+            .host
+            .root
+            .widget_mut::<hud::target::TargetLine>(id)
+            .and_then(|line| line.split_chosen.take());
+        let selected = self.player_view.and_then(|v| v.selected);
+        let quantity = self.host.with_controller::<ToolbarWindowController, _>(
+            super::window::TOOLBAR_WINDOW,
+            |c, ui| {
+                if let Some(value) = chosen {
+                    c.split.set_value(ui, value);
+                }
+                c.split.quantity().clone()
+            },
+        );
+        let split = quantity
+            .filter(|q| selected.is_some() && q.maximum() > 1)
+            .map(|q| hud::target::SplitView {
+                value: q.value(),
+                stack: q.maximum(),
+            });
+        self.host
+            .root
+            .with::<hud::target::TargetLine, _>(id, |line, ui| line.show_split(ui, split));
+    }
+
+    /// The split key: the target line's amount takes the keyboard. False
+    /// without the modern target line.
+    pub(super) fn modern_split_key(&mut self) -> bool {
+        let Some(id) = self.modern.as_ref().and_then(|m| m.target) else {
+            return false;
+        };
+        self.host
+            .root
+            .with::<hud::target::TargetLine, _>(id, |line, ui| line.type_split(ui))
+            .is_some()
     }
 
     /// The vitals' new values, for the modern vitals.
@@ -1183,6 +1238,81 @@ impl WindowUi {
             && let Some(edge) = self.host.root.widget_mut::<hud::edge_glow::EdgeGlow>(glow)
         {
             edge.on = low && s.low_health_edge_glow;
+        }
+    }
+
+    /// The HUD pieces follow what the player hid or locked: a hidden one
+    /// stays hidden whoever shows it, a locked one is left out of quick
+    /// move. Read from the settings the first time.
+    pub(super) fn follow_modern_pieces(&mut self) {
+        let Some(modern) = self.modern.as_mut() else {
+            return;
+        };
+        let pieces = modern.pieces.get_or_insert_with(|| {
+            self.status
+                .settings_store
+                .as_ref()
+                .map(ac_host::settings::SettingsStore::load_hud_pieces)
+                .unwrap_or_default()
+        });
+        let ui = &mut self.host.root;
+        for name in hud::PIECES {
+            let Some(frame) = ui.window(name).map(|w| w.frame) else {
+                continue;
+            };
+            let movable = !pieces.is_locked(name);
+            if let Some(e) = ui.element_mut(frame)
+                && e.quick_move != movable
+            {
+                e.quick_move = movable;
+            }
+            if pieces.is_hidden(name) && ui.is_window_visible(name) {
+                ui.hide_window(name);
+            }
+        }
+    }
+
+    /// Hides HUD piece `name` (or shows it again) and saves that.
+    pub(super) fn set_modern_piece_hidden(&mut self, name: &'static str, on: bool) {
+        let changed = self
+            .modern
+            .as_mut()
+            .and_then(|m| m.pieces.as_mut())
+            .is_some_and(|p| p.set_hidden(name, on));
+        if !on {
+            self.host.root.show_window(name);
+        }
+        if changed {
+            self.save_modern_pieces();
+        }
+    }
+
+    /// Locks HUD piece `name` in place (or unlocks it) and saves that.
+    pub(super) fn set_modern_piece_locked(&mut self, name: &'static str, on: bool) {
+        let changed = self
+            .modern
+            .as_mut()
+            .and_then(|m| m.pieces.as_mut())
+            .is_some_and(|p| p.set_locked(name, on));
+        if changed {
+            self.follow_modern_pieces();
+            self.save_modern_pieces();
+        }
+    }
+
+    /// The HUD pieces hidden and locked, by name.
+    pub(super) fn modern_pieces(&self) -> Option<&ac_host::settings::HudPieces> {
+        self.modern.as_ref()?.pieces.as_ref()
+    }
+
+    fn save_modern_pieces(&mut self) {
+        let Some(pieces) = self.modern.as_ref().and_then(|m| m.pieces.clone()) else {
+            return;
+        };
+        if let Some(store) = &self.status.settings_store
+            && let Err(e) = store.save_hud_pieces(&pieces)
+        {
+            self.notices.push(format!("ui: saving the HUD pieces: {e}"));
         }
     }
 

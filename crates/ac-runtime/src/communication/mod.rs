@@ -62,7 +62,9 @@ pub use dispatcher::{
     NEEDS_A_WINDOW, WindowRequest,
 };
 pub use feed::{CLIENT_LOCAL_TAG, ChatLine, format, format_tagged, tag_for};
-pub use input::{ChatChannelKind, ParsedInput, expand_reply_abbreviation};
+pub use input::{
+    ChatChannelKind, ParsedInput, expand_reply_abbreviation, parse as parse_chat_input,
+};
 pub use journal::{JournalFile, JournalState, JournalView};
 pub use log_file::{ChatLogResult, ChatSessionLog};
 pub use login_commands::{LoginCommandFailure, LoginCommandSequence};

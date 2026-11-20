@@ -903,6 +903,14 @@ impl StackSplitController {
         self.reflect(ui, true);
     }
 
+    /// The quantity set to `value` (kept within the stack) from elsewhere,
+    /// such as another interface's split control.
+    pub fn set_value(&mut self, ui: &mut UiRoot, value: u32) {
+        if self.quantity.set_value(value) {
+            self.reflect(ui, true);
+        }
+    }
+
     /// The quantity back to the whole stack of `stack` units (a panel
     /// refused part of a stack).
     pub fn reset_to_whole(&mut self, ui: &mut UiRoot, stack: u32) {

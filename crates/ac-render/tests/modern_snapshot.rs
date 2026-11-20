@@ -533,3 +533,296 @@ fn the_modern_bars_move_and_turn() {
     assert_eq!(main(&again.ui), before);
     again.save("move-reloaded");
 }
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_m2_gaps() {
+    use ac_core::combat::CombatMode;
+    let settings = out_dir().join("gaps-settings.json");
+    let _ = std::fs::remove_file(&settings);
+    let mut s = Shot::with_settings(CombatMode::NON_COMBAT, Some(settings.clone()));
+    // The potion stack selected: the target line shows its split.
+    let potion = ITEMS[0].0;
+    s.scene.apply(PresentationEvent::Player(PlayerView {
+        selected: Some(potion),
+        ..PlayerView::default()
+    }));
+    s.step();
+    s.step();
+    s.save("gaps-split");
+    assert_eq!(s.ui.drag_amount(potion), 12);
+    // Drag the knob back along the track (the line is 420 wide, top
+    // centre at 46; its track runs from 40 to 256 at 84).
+    let left = (1440 - 420) / 2;
+    s.drag((left + 256, 84), (left + 120, 84));
+    s.save("gaps-split-dragged");
+    let amount = s.ui.drag_amount(potion);
+    assert!((4..=6).contains(&amount), "{amount}");
+    // Quick move's menu on the radar.
+    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
+    s.click(1, 1440 - 80, 80, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(Modifiers::NONE);
+    s.save("gaps-radar-menu");
+    // Hide it (the menu's second entry).
+    s.click(0, 1210, 163, Modifiers::NONE);
+    s.save("gaps-radar-hidden");
+    // Lock the vitals: their menu's first entry.
+    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
+    s.click(1, 720, 22, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(Modifiers::NONE);
+    s.save("gaps-vitals-menu");
+    s.click(0, 760, 72, Modifiers::NONE);
+    // Locked: Ctrl + right-click on it opens nothing now.
+    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
+    s.click(1, 720, 22, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(Modifiers::NONE);
+    s.save("gaps-vitals-locked");
+    // Edit layout from the Main bar's menu; its toolbar.
+    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
+    s.click(1, MAIN_SLOT.0, MAIN_SLOT.1, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(Modifiers::NONE);
+    s.click(0, MAIN_SLOT.0 + 40, 900 - 6 - 20, Modifiers::NONE);
+    s.save("gaps-edit");
+    s.click(0, 960, 115, Modifiers::NONE);
+    s.save("gaps-pieces-menu");
+    // Show Radar; out of Edit layout.
+    s.click(0, 770, 188, Modifiers::NONE);
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    s.save("gaps-radar-back");
+    // The Recall list from the button on the radar's rim.
+    s.click(0, 1239, 227, Modifiers::NONE);
+    s.save("gaps-recall-list");
+    // Lifestone carried to the Main bar's seventh slot (empty).
+    s.drag((1030, 140), (MAIN_SLOT.0 + 43 * 6, MAIN_SLOT.1));
+    s.moved(MAIN_SLOT.0 + 43 * 6, MAIN_SLOT.1);
+    for _ in 0..14 {
+        s.step();
+    }
+    s.save("gaps-recall-on-bar");
+    // The bars are saved half a second (of the window's own clock) after
+    // a change.
+    std::thread::sleep(Duration::from_millis(600));
+    s.step();
+    let saved = std::fs::read_to_string(&settings).expect("the settings file");
+    assert!(saved.contains("modernPieces"), "{saved}");
+    assert!(saved.contains("\"@ls\""), "{saved}");
+}
+
+/// A chat line of `class` from `sender` saying `words` (`text` as the game
+/// words the whole line).
+fn chat_line(
+    n: u64,
+    kind: ac_core::chat::ChatKind,
+    class: ac_core::chat::LogTextType,
+    sender: &str,
+    words: &str,
+    text: &str,
+) -> ac_runtime::communication::ChatLine {
+    ac_runtime::communication::ChatLine {
+        sequence: n,
+        kind,
+        log_text_type: class as u32,
+        combat_kind: None,
+        received_unix_ms: 0,
+        text: text.to_owned(),
+        channel_name: String::new(),
+        sender: sender.to_owned(),
+        sender_guid: 0x5000_0100 + n as u32,
+        words: words.to_owned(),
+        display_text: text.to_owned(),
+        channel_id: 0,
+        spans: None,
+    }
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_chat() {
+    use ac_core::chat::{ChatKind as K, LogTextType as T};
+    use ac_core::combat::CombatMode;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let lines = vec![
+        chat_line(1, K::System, T::System, "", "", "Rook is now online."),
+        chat_line(
+            2,
+            K::Tell,
+            T::Tell,
+            "Rook",
+            "portal gem ready when you are",
+            "Rook tells you, \"portal gem ready when you are\"",
+        ),
+        chat_line(
+            3,
+            K::Channel,
+            T::Fellowship,
+            "Mira",
+            "pulling the next room, stay on the ramp",
+            "",
+        ),
+        chat_line(
+            4,
+            K::Channel,
+            T::TurbineGeneral,
+            "Osk",
+            "anyone selling Major Coordination?",
+            "",
+        ),
+        chat_line(
+            5,
+            K::System,
+            T::Magic,
+            "",
+            "",
+            "You cast Incantation of Flame Bolt on Drudge Ravener.",
+        ),
+        chat_line(
+            6,
+            K::Channel,
+            T::Allegiance,
+            "Thessaly",
+            "Aerin, grats on 87! That was a long night of drudges and we all saw it.",
+            "",
+        ),
+        chat_line(
+            7,
+            K::LocalSpeech,
+            T::Speech,
+            "Bram",
+            "anyone heading to the Marketplace?",
+            "",
+        ),
+    ];
+    s.scene.apply(PresentationEvent::Chat(lines));
+    s.step();
+    s.step();
+    s.save("chat-idle");
+    // Enter: the panel comes up with the entry focused.
+    s.ui.chat_entry_key(ac_ui::input::InputAction::EnterChatMode, None);
+    s.step();
+    for c in "hello there".chars() {
+        let r: Routed<u32> = s.ui.key(
+            0,
+            Key::A,
+            true,
+            false,
+            Modifiers::NONE,
+            Some(c.to_string().as_str()),
+        );
+        let _ = s.ui.handle(r.outputs);
+    }
+    s.step();
+    s.save("chat-active");
+    // The channel button (bottom left: the panel's entry at 900 - 14 - 32).
+    s.click(0, 16 + 30, 900 - 14 - 16, Modifiers::NONE);
+    s.save("chat-channels");
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    // The Fellowship tab: its unread count clears.
+    s.save("chat-before-tab");
+    // Enter sends the typed line through the session's chat entry.
+    s.ui.chat_entry_key(ac_ui::input::InputAction::EnterChatMode, None);
+    s.step();
+    let r: Routed<u32> =
+        s.ui.key(0, Key::Enter, true, false, Modifiers::NONE, Some("\r"));
+    let mut sent = format!("{:?}", r.outputs);
+    let _ = s.ui.handle(r.outputs);
+    s.now += Duration::from_millis(50);
+    let _ = s.ui.frame(s.now, (W, H));
+    sent.push_str(&format!("{:?}", s.ui.drain()));
+    assert!(sent.contains("Submit(Some(\"hello there\"))"), "{sent}");
+    // Typing @r suggests @reply first.
+    s.ui.chat_entry_key(ac_ui::input::InputAction::EnterChatMode, None);
+    s.step();
+    for c in ["@", "r"] {
+        let r: Routed<u32> = s.ui.key(0, Key::A, true, false, Modifiers::NONE, Some(c));
+        let _ = s.ui.handle(r.outputs);
+    }
+    s.step();
+    s.save("chat-commands");
+    for _ in 0..2 {
+        let r: Routed<u32> =
+            s.ui.key(0, Key::Backspace, true, false, Modifiers::NONE, None);
+        let _ = s.ui.handle(r.outputs);
+    }
+    s.step();
+    // Osk's name: the menu.
+    s.click(0, 98, 758, Modifiers::NONE);
+    s.save("chat-name");
+    s.click(0, 700, 300, Modifiers::NONE);
+    // Search, for "drudge".
+    s.ui.chat_entry_key(ac_ui::input::InputAction::EnterChatMode, None);
+    s.step();
+    s.click(0, 16 + 440 - 12, 900 - 14 - 300 + 12, Modifiers::NONE);
+    for c in "drudge".chars() {
+        let r: Routed<u32> = s.ui.key(
+            0,
+            Key::A,
+            true,
+            false,
+            Modifiers::NONE,
+            Some(c.to_string().as_str()),
+        );
+        let _ = s.ui.handle(r.outputs);
+    }
+    s.step();
+    s.save("chat-search");
+    // Close search; a new tab from the + after the tabs.
+    s.click(0, 16 + 440 - 4 - 22 + 11 - 22, 598, Modifiers::NONE);
+    s.click(0, 16 + 440 - 4 - 11, 598, Modifiers::NONE);
+    s.ui.chat_entry_key(ac_ui::input::InputAction::EnterChatMode, None);
+    s.step();
+    s.click(0, 386, 598, Modifiers::NONE);
+    for c in "Trade watch".chars() {
+        let r: Routed<u32> = s.ui.key(
+            0,
+            Key::A,
+            true,
+            false,
+            Modifiers::NONE,
+            Some(c.to_string().as_str()),
+        );
+        let _ = s.ui.handle(r.outputs);
+    }
+    // The dialog sits in the middle: 380 x 400 at (530, 250).
+    let (dx, dy) = (530, 250);
+    s.click(0, dx + 16 + 116 + 20, dy + 130 + 22 + 11, Modifiers::NONE); // Trade
+    s.click(0, dx + 16 + 116 + 20, dy + 130 + 44 + 11, Modifiers::NONE); // LFG
+    s.click(0, dx + 16 + 20, dy + 130 + 22 + 11, Modifiers::NONE); // Tells
+    for _ in 0..8 {
+        s.click(0, dx + 16 + 90 + 20, dy + 252 + 13, Modifiers::NONE); // Talks on
+    }
+    s.click(0, dx + 16 + 15, dy + 286 + 11, Modifiers::NONE); // Own window
+    s.save("chat-new-tab");
+    s.click(0, dx + 380 - 16 - 30, dy + 356 + 14, Modifiers::NONE); // Make tab
+    s.scene.apply(PresentationEvent::Chat(vec![
+        chat_line(
+            20,
+            K::Channel,
+            T::TurbineTrade,
+            "Osk",
+            "WTS Major Coordination, 40k",
+            "",
+        ),
+        chat_line(
+            21,
+            K::Channel,
+            T::TurbineLfg,
+            "Varn",
+            "LF2M Lugian quest, meet at the Holtburg lifestone",
+            "",
+        ),
+        chat_line(
+            22,
+            K::Channel,
+            T::TurbineTrade,
+            "Corvan",
+            "WTB Mana Scarabs, paying well",
+            "",
+        ),
+    ]));
+    for _ in 0..12 {
+        s.step();
+    }
+    s.save("chat-window");
+}

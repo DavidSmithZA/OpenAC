@@ -29,6 +29,7 @@ use super::widgets::{
     BarFonts, BarFrame, BarTab, Dropped, SlotCell, SlotRequest, SlotView, TAB_GAP, TAB_HEIGHT,
     TabPart, TabRequest,
 };
+use crate::ui::modern::hud;
 use crate::ui::modern::places::{self, Anchor};
 use crate::ui::window::WindowUi;
 
@@ -684,6 +685,19 @@ impl WindowUi {
                         }
                         view.tip = Some(tip);
                     }
+                    Some(SlotContent::Recall {
+                        name,
+                        command,
+                        icon,
+                    }) => {
+                        view.filled = true;
+                        view.recall_icon = Some(icon.clone());
+                        let mut tip = format!("{name} \u{b7} {command}");
+                        if let Some(k) = key {
+                            tip.push_str(&format!(" \u{b7} {}", keys::words(k)));
+                        }
+                        view.tip = Some(tip);
+                    }
                     None => {
                         view.tip = key.map(|k| format!("Empty \u{b7} {}", keys::words(k)));
                     }
@@ -941,6 +955,15 @@ impl WindowUi {
                         .unwrap_or_default();
                     self.open_layout_menu(b, at);
                 }
+                ToolbarPart::Pieces => {
+                    let at = self
+                        .host
+                        .root
+                        .element(b.toolbar)
+                        .map(|e| (e.left + e.width * 0.5, e.top + e.height + 4.0))
+                        .unwrap_or_default();
+                    self.open_pieces_menu(b, at);
+                }
                 ToolbarPart::NewBar => {
                     if let Some(l) = b.layout.as_mut() {
                         l.new_bar(BarPlace {
@@ -1033,6 +1056,11 @@ impl WindowUi {
                     );
                 }
             }
+            SlotContent::Recall { command, .. } => {
+                if !target_mode {
+                    emit(ui, PanelOutput::Session(SessionCommand::Chat(command)));
+                }
+            }
             SlotContent::Spell { id, .. } => {
                 if self.facts.state.combat_mode == CombatMode::MAGIC && !target_mode {
                     emit(
@@ -1064,6 +1092,7 @@ impl WindowUi {
                 ))),
             ),
             Some(SlotContent::Spell { id, .. }) => emit(ui, PanelOutput::ExamineSpell(id)),
+            Some(SlotContent::Recall { .. }) => {}
             None => {
                 let (x, y) = ui.mouse();
                 self.open_bar_menu(b, at.bar, (x as f32, y as f32), true);
@@ -1101,6 +1130,7 @@ impl WindowUi {
                     name: o.name.clone(),
                 }
             }
+            Dropped::Recall(content) => content,
             Dropped::Spell(id) => SlotContent::Spell {
                 id,
                 name: self
@@ -1462,7 +1492,19 @@ impl WindowUi {
                 .element(piece)
                 .and_then(|e| e.name.clone())
                 .unwrap_or_default();
-            let mut rows = vec![MenuRow::Header(piece_words(&name))];
+            let mut rows = vec![MenuRow::Header(hud::piece_words(&name).to_owned())];
+            if hud::PIECES.contains(&name.as_str()) {
+                rows.push(MenuRow::entry(
+                    MenuAction::Lock(true),
+                    "Lock in place",
+                    Some("Ctrl will not move it; Edit layout unlocks it"),
+                ));
+                rows.push(MenuRow::entry(
+                    MenuAction::Hide(true),
+                    "Hide",
+                    Some("Edit layout brings it back"),
+                ));
+            }
             if places::default_place(&name).is_some() {
                 rows.push(MenuRow::entry(
                     MenuAction::DefaultPlace,
@@ -1546,6 +1588,55 @@ impl WindowUi {
             ));
         }
         Menu::open(&mut self.host.root, b.menu, MenuFor::Bar(bar), rows, at);
+    }
+
+    /// The hidden and locked HUD pieces, each to show or unlock.
+    fn open_pieces_menu(&mut self, b: &mut BarsUi, at: (f32, f32)) {
+        let pieces = self.modern_pieces().cloned().unwrap_or_default();
+        let mut rows = Vec::new();
+        let hidden: Vec<&'static str> = hud::PIECES
+            .into_iter()
+            .filter(|n| pieces.is_hidden(n))
+            .collect();
+        let locked: Vec<&'static str> = hud::PIECES
+            .into_iter()
+            .filter(|n| pieces.is_locked(n))
+            .collect();
+        if !hidden.is_empty() {
+            rows.push(MenuRow::Header("Hidden".to_owned()));
+            for name in hidden {
+                rows.push(MenuRow::entry(
+                    MenuAction::ShowPiece(name),
+                    &format!("Show {}", hud::piece_words(name)),
+                    None,
+                ));
+            }
+        }
+        if !locked.is_empty() {
+            if !rows.is_empty() {
+                rows.push(MenuRow::Line);
+            }
+            rows.push(MenuRow::Header("Locked in place".to_owned()));
+            for name in locked {
+                rows.push(MenuRow::entry(
+                    MenuAction::UnlockPiece(name),
+                    &format!("Unlock {}", hud::piece_words(name)),
+                    None,
+                ));
+            }
+        }
+        if rows.is_empty() {
+            rows.push(MenuRow::Header("Hidden and locked".to_owned()));
+            rows.push(
+                MenuRow::entry(
+                    MenuAction::OpenEdit,
+                    "Nothing is hidden or locked",
+                    Some("Ctrl + right-click a piece to hide or lock it"),
+                )
+                .disabled(),
+            );
+        }
+        Menu::open(&mut self.host.root, b.menu, MenuFor::Pieces, rows, at);
     }
 
     /// The layout menu: this character's own or the shared one; copy
@@ -1690,6 +1781,26 @@ impl WindowUi {
                     }
                 })
             }
+            (MenuFor::Piece(piece), MenuAction::Lock(on)) => {
+                if let Some(name) = piece_name(&self.host.root, piece) {
+                    self.set_modern_piece_locked(name, on);
+                }
+                false
+            }
+            (MenuFor::Piece(piece), MenuAction::Hide(on)) => {
+                if let Some(name) = piece_name(&self.host.root, piece) {
+                    self.set_modern_piece_hidden(name, on);
+                }
+                false
+            }
+            (_, MenuAction::ShowPiece(name)) => {
+                self.set_modern_piece_hidden(name, false);
+                false
+            }
+            (_, MenuAction::UnlockPiece(name)) => {
+                self.set_modern_piece_locked(name, false);
+                false
+            }
             (MenuFor::Piece(piece), MenuAction::DefaultPlace) => {
                 let ui = &mut self.host.root;
                 let name = ui.element(piece).and_then(|e| e.name.clone());
@@ -1795,18 +1906,10 @@ impl WindowUi {
     }
 }
 
-/// What quick move's menu calls a piece by its window name.
-fn piece_words(name: &str) -> String {
-    let words = name.strip_prefix("modern-").unwrap_or(name);
-    match words {
-        "vitals" => "Vitals".to_owned(),
-        "target" => "Target".to_owned(),
-        "effects" => "Effects".to_owned(),
-        "radar" => "Radar".to_owned(),
-        "combat" => "Combat strip".to_owned(),
-        "panels" => "Panel strip".to_owned(),
-        other => other.to_owned(),
-    }
+/// The HUD piece window name of `piece`, if it is one.
+fn piece_name(ui: &ac_ui::UiRoot, piece: ElementId) -> Option<&'static str> {
+    let name = ui.element(piece)?.name.as_deref()?;
+    hud::PIECES.into_iter().find(|n| *n == name)
 }
 
 #[cfg(test)]

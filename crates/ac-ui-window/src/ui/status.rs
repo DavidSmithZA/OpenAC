@@ -791,6 +791,9 @@ impl WindowUi {
         // .FocusSplitStackEntry`: the selected stack's typed quantity takes
         // the keyboard, its text selected (nothing for no stack).
         if action == InputAction::SelectionSplitStack {
+            if self.modern_split_key() {
+                return true;
+            }
             if let Some(selected) = self.player_view.and_then(|v| v.selected) {
                 self.host
                     .with_controller::<ac_ui::panels::toolbar::ToolbarWindowController, _>(
@@ -809,6 +812,9 @@ impl WindowUi {
     /// it has it. `key` (the keyboard key that pressed it) types nothing
     /// into the entry until it is let go.
     pub fn chat_entry_key(&mut self, action: InputAction, key: Option<ac_ui::Key>) -> bool {
+        if self.modern_chat_entry_key(action == InputAction::EnterChatMode, key) {
+            return true;
+        }
         self.host
             .with_controller::<ac_ui::panels::chat::ChatWindowController, _>(
                 super::window::CHAT_WINDOW,
@@ -855,6 +861,27 @@ impl WindowUi {
         } else {
             None
         };
+        if self.modern.as_ref().is_some_and(|m| m.chat.is_some()) {
+            let entry = self
+                .host
+                .with_controller::<ac_ui::panels::chat::ChatWindowController, _>(
+                    super::window::CHAT_WINDOW,
+                    |c, _| c.entry().clone(),
+                )
+                .unwrap_or_default();
+            let reply_to = match action {
+                InputAction::ChatReply => entry.last_incoming_tell_sender,
+                InputAction::ChatMonarchReply => entry.last_monarch_sender,
+                InputAction::ChatPatronReply => entry.last_patron_sender,
+                _ => tell_to,
+            };
+            if action == InputAction::ChatStartCommand {
+                self.start_modern_chat_line("/");
+            } else if let Some(name) = reply_to.filter(|n| !n.is_empty()) {
+                self.start_modern_chat_line(&format!("@tell {name}, "));
+            }
+            return;
+        }
         self.host
             .with_controller::<ac_ui::panels::chat::ChatWindowController, _>(
                 super::window::CHAT_WINDOW,

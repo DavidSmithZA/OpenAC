@@ -507,7 +507,7 @@ pub struct WindowUi {
     pub(super) content: DatContent,
     started: Instant,
     last_tick: Option<Instant>,
-    context: ChatContext,
+    pub(super) context: ChatContext,
     pub(super) player_view: Option<PlayerView>,
     /// The clipboard behind the text fields (none until the host hands
     /// one in).
@@ -1146,6 +1146,7 @@ impl WindowUi {
                     }
                 });
             self.feed_floating_chat(&lines);
+            self.feed_modern_chat(&lines);
         }
         let view = scene.player_view().copied();
         if view != self.player_view {
@@ -1224,6 +1225,7 @@ impl WindowUi {
                 .with_controller::<ChatWindowController, _>(CHAT_WINDOW, |c, ui| {
                     c.set_entry(ui, &entry);
                 });
+            self.feed_modern_chat_entry(&entry);
         }
         let selection = self.player_view.and_then(|v| v.selected);
         if self.fed_selection != Some(selection) {
@@ -1511,6 +1513,8 @@ impl WindowUi {
         self.tick_modern_effects(dt);
         self.tick_modern_connection();
         self.tick_modern_recalls();
+        self.tick_modern_chat();
+        self.follow_modern_pieces();
         if let Some(modern) = &self.modern {
             modern.hide_replaced(&mut self.host);
         }

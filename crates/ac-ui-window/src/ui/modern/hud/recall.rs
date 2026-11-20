@@ -11,14 +11,15 @@ use ac_host::settings::CustomRecall;
 use ac_runtime::gameplay::GameplayCommand;
 use ac_runtime::session::SessionCommand;
 use ac_ui::draw::{Color, RenderContext, TextureRef};
-use ac_ui::event::{UiEvent, kind};
+use ac_ui::event::{DragPayload, UiEvent, kind};
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
 use ac_ui::modern::theme::hex;
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::items::emit;
+use ac_ui::panels::magic::SpellbookShortcutPayload;
 use ac_ui::shapes::CornerRadii;
-use ac_ui::tree::{Element, ElementId, Widget};
+use ac_ui::tree::{DragGhost, Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
 
 use super::target::fit;
@@ -91,6 +92,20 @@ impl Place {
             Self::Marketplace => "The Marketplace",
             Self::PkArena => "For player killers",
             Self::PkLiteArena => "For PK lite players",
+        }
+    }
+
+    /// The name of the icon it shows (as a recall of the player's own
+    /// names its icon), so it can go on a bar.
+    #[must_use]
+    pub fn icon_name(self) -> &'static str {
+        match self {
+            Self::Lifestone => "lifestone",
+            Self::House => "house",
+            Self::Mansion => "mansion",
+            Self::Hometown => "flag",
+            Self::Marketplace => "coin",
+            Self::PkArena | Self::PkLiteArena => "swords",
         }
     }
 
@@ -192,6 +207,7 @@ enum Row {
     Section(String),
     Place(Place),
     Spell {
+        id: u32,
         name: String,
         icon: Option<TextureRef>,
     },
@@ -229,6 +245,19 @@ pub const OWN_ICONS: [&str; 7] = [
 /// Draws own-recall icon `name` (the recall mark for an unknown one) in a
 /// 14-unit box.
 pub fn own_icon(rc: &mut RenderContext<'_>, name: &str, x: f32, y: f32, color: Color) {
+    own_icon_sized(rc, name, x, y, 14.0, color);
+}
+
+/// The same in a `size`-unit box.
+pub fn own_icon_sized(
+    rc: &mut RenderContext<'_>,
+    name: &str,
+    x: f32,
+    y: f32,
+    size: f32,
+    color: Color,
+) {
+    let k = size / 14.0;
     let place = match name {
         "lifestone" => Place::Lifestone,
         "house" => Place::House,
@@ -236,9 +265,21 @@ pub fn own_icon(rc: &mut RenderContext<'_>, name: &str, x: f32, y: f32, color: C
         "flag" => Place::Hometown,
         "coin" => Place::Marketplace,
         "swords" => Place::PkArena,
-        _ => return recall_mark(rc, x, y, color),
+        _ => return recall_mark_sized(rc, x, y, k, color),
     };
-    place_icon(rc, place, x, y, color);
+    place_icon(rc, place, x, y, k, color);
+}
+
+/// A recall on the move: what a row dragged out of the list carries (a
+/// place or one of the player's own; a recall spell travels as a spell).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecallPayload {
+    /// Its name.
+    pub name: String,
+    /// What it sends, as if typed in chat.
+    pub command: String,
+    /// Its icon's name.
+    pub icon: String,
 }
 
 /// The action buttons a right-clicked own recall shows: what each does
@@ -267,6 +308,8 @@ pub struct RecallList {
     scroll: f32,
     /// The own recall showing its action buttons (a row index).
     armed: Option<usize>,
+    /// The row the left button went down on (what a drag carries).
+    held: Option<usize>,
     /// What the player asked of their own recalls, for the window to do.
     pub requests: Vec<OwnRequest>,
 }
@@ -283,6 +326,7 @@ impl RecallList {
             hovered: None,
             scroll: 0.0,
             armed: None,
+            held: None,
             requests: Vec::new(),
         };
         list.build(&mut |_| None);
@@ -308,6 +352,7 @@ impl RecallList {
             rows.push(Row::Section("YOUR RECALL SPELLS".to_owned()));
             for (id, name) in &self.facts.spells {
                 rows.push(Row::Spell {
+                    id: *id,
                     name: name.clone(),
                     icon: icon(*id),
                 });
@@ -436,9 +481,53 @@ impl RecallList {
     }
 }
 
+impl RecallList {
+    /// What the row under the pointer carries when dragged onto a bar.
+    fn carried(&self) -> Option<DragPayload> {
+        match self.rows.get(self.held.or(self.hovered)?)? {
+            Row::Place(place) => Some(DragPayload::new(RecallPayload {
+                name: place.name().to_owned(),
+                command: place.command().to_owned(),
+                icon: place.icon_name().to_owned(),
+            })),
+            Row::Own { recall, .. } => Some(DragPayload::new(RecallPayload {
+                name: recall.name.clone(),
+                command: recall.command.clone(),
+                icon: recall.icon.clone(),
+            })),
+            Row::Spell { id, .. } => {
+                Some(DragPayload::new(SpellbookShortcutPayload { spell_id: *id }))
+            }
+            Row::Section(_) | Row::AddOwn => None,
+        }
+    }
+}
+
 impl Widget for RecallList {
     fn hit_test(&self, _element: &Element, _x: f32, _y: f32) -> bool {
         true
+    }
+
+    fn is_drag_source(&self, _element: &Element) -> bool {
+        self.armed.is_none() && self.carried().is_some()
+    }
+
+    fn drag_payload(&mut self, _ui: &mut UiRoot, _me: ElementId) -> Option<DragPayload> {
+        self.carried()
+    }
+
+    fn drag_ghost(&mut self, _ui: &mut UiRoot, _me: ElementId) -> Option<DragGhost> {
+        match self.rows.get(self.held.or(self.hovered)?)? {
+            Row::Spell {
+                icon: Some(texture),
+                ..
+            } => Some(DragGhost {
+                texture: *texture,
+                width: 32,
+                height: 32,
+            }),
+            _ => None,
+        }
     }
 
     fn handles_click(&self, _element: &Element) -> bool {
@@ -467,6 +556,14 @@ impl Widget for RecallList {
                 let step = -(e.data0.signum() as f32) * WHEEL_STEP;
                 self.scroll = (self.scroll + step).clamp(0.0, self.scroll_max());
                 self.hovered = self.row_at(y);
+                true
+            }
+            kind::MOUSE_DOWN => {
+                self.held = self.row_at(y);
+                true
+            }
+            kind::MOUSE_UP | kind::CAPTURE_CHANGED => {
+                self.held = None;
                 true
             }
             kind::RIGHT_CLICK => {
@@ -631,6 +728,7 @@ impl RecallList {
                             *place,
                             12.0 + 6.0,
                             tile_y + 6.0,
+                            1.0,
                             Color {
                                 a: fade,
                                 ..p.accent
@@ -642,7 +740,7 @@ impl RecallList {
                             place.command().to_owned(),
                         )
                     }
-                    Row::Spell { name, icon } => {
+                    Row::Spell { name, icon, .. } => {
                         if let Some(t) = icon {
                             rc.sprite(
                                 *t,
@@ -759,21 +857,33 @@ impl RecallList {
 
 /// The recall mark: rings closing on a point, in a 14-unit box.
 pub fn recall_mark(rc: &mut RenderContext<'_>, x: f32, y: f32, color: Color) {
-    let (cx, cy) = (x + 7.0, y + 7.0);
-    let half = std::f32::consts::FRAC_PI_2;
-    rc.stroke_arc(cx, cy, 6.0, 0.0, 3.0 * half, color, 1.6);
-    rc.stroke_arc(cx, cy, 3.3, 0.0, 3.0 * half, color, 1.6);
-    rc.fill_ellipse(cx - 1.0, cy - 1.0, 2.0, 2.0, color);
+    recall_mark_sized(rc, x, y, 1.0, color);
 }
 
-/// A small mark for each place, in a 14-unit box.
-fn place_icon(rc: &mut RenderContext<'_>, place: Place, x: f32, y: f32, c: Color) {
+/// The recall mark `k` times its size.
+fn recall_mark_sized(rc: &mut RenderContext<'_>, x: f32, y: f32, k: f32, color: Color) {
+    let (cx, cy) = (x + 7.0 * k, y + 7.0 * k);
+    let half = std::f32::consts::FRAC_PI_2;
+    let width = stroke_width(k, 1.6);
+    rc.stroke_arc(cx, cy, 6.0 * k, 0.0, 3.0 * half, color, width);
+    rc.stroke_arc(cx, cy, 3.3 * k, 0.0, 3.0 * half, color, width);
+    rc.fill_ellipse(cx - k, cy - k, 2.0 * k, 2.0 * k, color);
+}
+
+/// A line `width` wide at the 14-unit size, for an icon `k` times that.
+fn stroke_width(k: f32, width: f32) -> f32 {
+    (width * k.sqrt()).min(width * 1.6)
+}
+
+/// A small mark for each place, in a box 14 units times `k`.
+fn place_icon(rc: &mut RenderContext<'_>, place: Place, x: f32, y: f32, k: f32, c: Color) {
+    let width = stroke_width(k, 1.5);
     let line = |rc: &mut RenderContext<'_>, a: (f32, f32), b: (f32, f32)| {
-        rc.smooth_line(x + a.0, y + a.1, x + b.0, y + b.1, c, 1.5);
+        rc.smooth_line(x + a.0 * k, y + a.1 * k, x + b.0 * k, y + b.1 * k, c, width);
     };
     match place {
         Place::Lifestone => {
-            rc.stroke_ellipse(x + 3.0, y + 1.0, 8.0, 8.0, c, 1.5);
+            rc.stroke_ellipse(x + 3.0 * k, y + k, 8.0 * k, 8.0 * k, c, width);
             line(rc, (7.0, 9.0), (7.0, 13.0));
             line(rc, (4.0, 13.0), (10.0, 13.0));
         }
@@ -793,7 +903,7 @@ fn place_icon(rc: &mut RenderContext<'_>, place: Place, x: f32, y: f32, c: Color
             line(rc, (12.0, 4.5), (3.0, 7.0));
         }
         Place::Marketplace => {
-            rc.stroke_ellipse(x + 1.5, y + 1.5, 11.0, 11.0, c, 1.5);
+            rc.stroke_ellipse(x + 1.5 * k, y + 1.5 * k, 11.0 * k, 11.0 * k, c, width);
             line(rc, (7.0, 4.0), (7.0, 10.0));
         }
         Place::PkArena | Place::PkLiteArena => {
@@ -878,6 +988,7 @@ mod tests {
     fn spells_need_magic_mode() {
         let mut list = RecallList::new(Horizon::BRONZE, RecallFonts::default());
         let spell = Row::Spell {
+            id: 2645,
             name: "Portal Recall".to_owned(),
             icon: None,
         };

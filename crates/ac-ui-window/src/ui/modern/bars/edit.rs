@@ -200,6 +200,8 @@ pub enum ToolbarPart {
     Layout,
     /// A new bar.
     NewBar,
+    /// The HUD pieces hidden or locked: show or unlock them.
+    Pieces,
     /// The layout made again from the retail bars.
     Reset,
     /// Edit layout ends.
@@ -225,6 +227,7 @@ pub struct EditToolbar {
 pub const TOOLBAR_HEIGHT: f32 = 46.0;
 const TITLE: &str = "Editing your HUD";
 const HINT: &str = "Drag a bar by its tab \u{b7} click a slot to set its keys";
+const PIECES_WORDS: &str = "Hidden and locked";
 
 impl EditToolbar {
     /// The toolbar in `theme`.
@@ -264,6 +267,7 @@ impl EditToolbar {
         x += layout.ceil() + 10.0;
         for (part, words) in [
             (ToolbarPart::NewBar, "+ New bar"),
+            (ToolbarPart::Pieces, PIECES_WORDS),
             (ToolbarPart::Reset, self.reset_words()),
             (ToolbarPart::Done, "Done"),
         ] {
@@ -333,6 +337,7 @@ impl Widget for EditToolbar {
                     "This character only, a layout your characters share, or copy one from another character"
                 }
                 ToolbarPart::NewBar => "A new empty bar in the middle of the screen",
+                ToolbarPart::Pieces => "Show the HUD pieces you hid, unlock the ones you locked",
                 ToolbarPart::Reset => "Make the bars again from your retail toolbar and spell bars",
                 ToolbarPart::Done => "Leave Edit layout",
             }
@@ -410,6 +415,17 @@ impl Widget for EditToolbar {
                         (left, top, bw, 30.0),
                         "+ New bar",
                         Look::Plain,
+                        hovered,
+                    );
+                }
+                ToolbarPart::Pieces => {
+                    button(
+                        rc,
+                        &self.theme,
+                        body,
+                        (left, top, bw, 30.0),
+                        PIECES_WORDS,
+                        Look::Quiet,
                         hovered,
                     );
                 }
@@ -776,6 +792,10 @@ pub enum MenuAction {
     UseShared,
     /// Copy this character's layout (by its saved name).
     CopyFrom(String),
+    /// Show the HUD piece of this window name again.
+    ShowPiece(&'static str),
+    /// Unlock the HUD piece of this window name.
+    UnlockPiece(&'static str),
 }
 
 /// A menu row.
@@ -835,6 +855,27 @@ impl MenuRow {
         }
     }
 
+    /// The same, greyed: it cannot be chosen.
+    #[must_use]
+    pub fn disabled(self) -> Self {
+        match self {
+            Self::Entry {
+                action,
+                words,
+                hint,
+                ticked,
+                ..
+            } => Self::Entry {
+                action,
+                words,
+                hint,
+                enabled: false,
+                ticked,
+            },
+            other => other,
+        }
+    }
+
     fn height(&self) -> f32 {
         match self {
             Self::Header(_) => 24.0,
@@ -858,6 +899,8 @@ pub enum MenuFor {
     Piece(ElementId),
     /// The layout (the toolbar's Layout button).
     Layout,
+    /// The hidden and locked HUD pieces (the toolbar's button).
+    Pieces,
 }
 
 /// A small menu.
