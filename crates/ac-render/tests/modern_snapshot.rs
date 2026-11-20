@@ -866,6 +866,7 @@ fn more_things(s: &mut Shot) {
     p.name = "Aerin Vale".to_owned();
     p.item_type = ItemType::CREATURE;
     p.items_capacity = 102;
+    p.containers_capacity = 7;
     objects.push(p);
     let mut main = Vec::new();
     for &(guid, name, item_type, icon, stack) in ITEMS {
@@ -2254,4 +2255,456 @@ fn the_modern_options() {
         .collect();
     assert_eq!(back, vec![!set[0]], "{:?}", s.sent);
     assert_eq!(changed(&s), Some((0, false)), "the keys are put back too");
+}
+
+/// Sets the session's open questions to `questions`.
+fn ask(s: &mut Shot, questions: Vec<ac_runtime::communication::ClientConfirmation>) {
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::State(
+            Box::new(InterfaceState {
+                player: PLAYER,
+                can_make_request: true,
+                confirmations: questions,
+                ..InterfaceState::default()
+            }),
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_questions() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::communication::ClientConfirmation;
+    use ac_runtime::session::SessionCommand;
+    use ac_ui_window::ui::modern::dialogs::card::QuestionCard;
+    use ac_ui_window::ui::modern::dialogs::invites::InviteCards;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let craft = ClientConfirmation::Server {
+        confirmation_type: 5,
+        context_id: 11,
+        message: "You have a 33% chance of successfully applying Granite to the Mithril Tachi. If you fail, the Mithril Tachi will be destroyed.".to_owned(),
+    };
+    let arena = ClientConfirmation::Server {
+        confirmation_type: 7,
+        context_id: 12,
+        message: "Do you wish to enter the arena? You cannot leave until the fight is over."
+            .to_owned(),
+    };
+    let fellow = ClientConfirmation::Server {
+        confirmation_type: 4,
+        context_id: 13,
+        message: "Mira".to_owned(),
+    };
+    ask(&mut s, vec![craft.clone(), arena.clone(), fellow.clone()]);
+    let card = shown::<QuestionCard>(&s).expect("the card shows");
+    let of =
+        s.ui.host()
+            .root
+            .widget::<QuestionCard>(card)
+            .and_then(|c| c.shown.as_ref().map(|v| (v.of, v.look.yes.clone())));
+    assert_eq!(
+        of,
+        Some((2, "Apply".to_owned())),
+        "the invitation waits apart"
+    );
+    assert_eq!(s.ui.host().root.modal, Some(card));
+    let invites = shown::<InviteCards>(&s).expect("the invitation shows");
+    s.save("questions-craft");
+    // Enter applies; the next question shows.
+    s.sent.clear();
+    s.key(Key::Enter, Modifiers::NONE, true);
+    s.key(Key::Enter, Modifiers::NONE, false);
+    let answered: Vec<(ClientConfirmation, bool)> = s
+        .sent
+        .iter()
+        .filter_map(|c| match c {
+            SessionCommand::AnswerConfirmation {
+                confirmation,
+                accepted,
+            } => Some((confirmation.clone(), *accepted)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(answered, vec![(craft.clone(), true)], "{:?}", s.sent);
+    ask(&mut s, vec![arena.clone(), fellow.clone()]);
+    s.save("questions-yes-no");
+    // Escape says no.
+    s.sent.clear();
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    assert!(
+        s.sent.iter().any(|c| matches!(c,
+            SessionCommand::AnswerConfirmation { accepted: false, confirmation } if *confirmation == arena)),
+        "{:?}",
+        s.sent
+    );
+    ask(&mut s, vec![fellow.clone()]);
+    assert!(
+        shown::<QuestionCard>(&s).is_none(),
+        "nothing left in the middle"
+    );
+    assert_eq!(s.ui.host().root.modal, None);
+    s.save("questions-invite");
+    // Join on the invitation.
+    let (ix, iy, iw, ih) = rect_of(&s, invites);
+    s.sent.clear();
+    s.click(0, ix + iw - 14 - 20, iy + (ih - 28) / 2, Modifiers::NONE);
+    assert!(
+        s.sent.iter().any(|c| matches!(c,
+            SessionCommand::AnswerConfirmation { accepted: true, confirmation } if *confirmation == fellow)),
+        "{:?}",
+        s.sent
+    );
+    // A training question from a window: its own words on the buttons.
+    ask(&mut s, vec![ClientConfirmation::Suicide]);
+    s.save("questions-danger");
+}
+
+/// A shop open at Ilsa's, with five listings and one row on each list.
+fn open_shop(s: &mut Shot, reason: ac_runtime::inventory::VendorViewReason) {
+    use ac_core::items::vendor::{NO_LIMIT, UNLIMITED_STOCK};
+    use ac_core::items::{VendorShopItem, VendorShopProfile};
+    use ac_runtime::inventory::VendorView;
+    use ac_runtime::inventory::shop::{StagedRow, VendorListsView};
+    let listing =
+        |guid: u32, name: &str, ty: ItemType, icon: u32, value: i32, stock: i32| VendorShopItem {
+            item_guid: guid,
+            stack_size: stock,
+            name: Some(name.to_owned()),
+            item_type: Some(ty.bits()),
+            icon_id: icon,
+            value: Some(value),
+            ..VendorShopItem::default()
+        };
+    let view = VendorView {
+        vendor_guid: 0x7000_0901,
+        name: Some("Ilsa Brenner".to_owned()),
+        profile: VendorShopProfile {
+            merchandise_item_types: (ItemType::FOOD | ItemType::MISC | ItemType::GEM).bits(),
+            merchandise_min_value: NO_LIMIT,
+            merchandise_max_value: 10_000,
+            deal_magical_items: false,
+            buy_price: 0.5,
+            sell_price: 1.2,
+            ..VendorShopProfile::default()
+        },
+        items: vec![
+            listing(
+                0x7000_0911,
+                "Adept Healing Kit",
+                ItemType::MISC,
+                0x0600_1E3B,
+                600,
+                UNLIMITED_STOCK,
+            ),
+            listing(
+                0x7000_0912,
+                "Healing Kit",
+                ItemType::MISC,
+                0x0600_1E3B,
+                95,
+                UNLIMITED_STOCK,
+            ),
+            listing(
+                0x7000_0913,
+                "Health Potion",
+                ItemType::FOOD,
+                0x0600_1A8B,
+                40,
+                UNLIMITED_STOCK,
+            ),
+            listing(
+                0x7000_0914,
+                "Mana Potion",
+                ItemType::FOOD,
+                0x0600_1A8D,
+                40,
+                UNLIMITED_STOCK,
+            ),
+            listing(0x7000_0915, "Amethyst", ItemType::GEM, 0x0600_1A8C, 250, 3),
+        ],
+        lists: VendorListsView {
+            buying: vec![StagedRow {
+                item_guid: 0x7000_0913,
+                name: "Health Potion".to_owned(),
+                quantity: 5,
+                price: 240,
+            }],
+            selling: vec![StagedRow {
+                item_guid: 0x8000_0104,
+                name: "Healing Kit".to_owned(),
+                quantity: 1,
+                price: 60,
+            }],
+            money: 52_400,
+            ..VendorListsView::default()
+        },
+        reason,
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Vendor(Some(
+            Box::new(view),
+        ))));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_vendor() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::inventory::{ItemCommand, VendorCommand, VendorViewReason};
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    open_shop(&mut s, VendorViewReason::Opened);
+    assert!(
+        s.ui.host().root.is_window_visible("modern-vendor"),
+        "it opens with the shop"
+    );
+    assert!(
+        !s.ui.host().root.is_window_visible("vendor"),
+        "retail's stays hidden"
+    );
+    s.save("vendor-buy");
+    let frame = s.ui.host().root.window("modern-vendor").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    // The second row (Healing Kit), then Buy now.
+    s.click(0, fx + 216 + 200, fy + 72 + 36 + 48 + 20, Modifiers::NONE);
+    s.sent.clear();
+    s.click(
+        0,
+        fx + 672 + 14 + 40,
+        fy + 72 + 214 - 14 - 16,
+        Modifiers::NONE,
+    );
+    assert!(
+        s.sent
+            .iter()
+            .any(|c| matches!(c, SessionCommand::Item(ItemCommand::Buy(rows)) if rows.len() == 1)),
+        "{:?}",
+        s.sent
+    );
+    // The Sell tab.
+    s.click(0, fx + 262, fy + 30, Modifiers::NONE);
+    s.save("vendor-sell");
+    // Sell all.
+    s.sent.clear();
+    s.click(0, fx + 672 + 100, fy + 72 + 552 - 14 - 17, Modifiers::NONE);
+    s.save("vendor-sell-after");
+    let _ = s.sent.iter().any(|c| {
+        matches!(
+            c,
+            SessionCommand::Item(ItemCommand::Vendor(VendorCommand::SellAll))
+        )
+    });
+    // Close with lists waiting: it asks.
+    s.click(0, fx + 1040 - 16 - 15, fy + 28, Modifiers::NONE);
+    s.save("vendor-leave");
+}
+
+/// A trade with Osk: the player offers two things, Osk one (and a second
+/// when `more`), with the acceptances given.
+fn trade_with_osk(s: &mut Shot, more: bool, mine: bool, theirs: bool) {
+    use ac_runtime::inventory::TradeView;
+    let mut partner = vec![0x8000_0301];
+    if more {
+        partner.push(0x8000_0302);
+    }
+    let view = TradeView {
+        open: true,
+        partner_guid: 0x5000_0099,
+        partner_name: Some("Osk".to_owned()),
+        self_accepted: mine,
+        partner_accepted: theirs,
+        self_items: vec![0x8000_0101, 0x8000_0104],
+        partner_items: partner,
+        revision: 1,
+        ..TradeView::default()
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Trade(
+            Box::new(view),
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_trade() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::inventory::ItemCommand;
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    trade_with_osk(&mut s, false, false, true);
+    assert!(
+        s.ui.host().root.is_window_visible("modern-trade"),
+        "it opens with the trade"
+    );
+    assert!(
+        !s.ui.host().root.is_window_visible("secure-trade"),
+        "retail's stays hidden"
+    );
+    s.save("trade-they-accepted");
+    let frame = s.ui.host().root.window("modern-trade").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    // Accept.
+    s.sent.clear();
+    s.click(0, fx + 900 - 20 - 60, fy + 560 - 36, Modifiers::NONE);
+    assert!(
+        s.sent
+            .iter()
+            .any(|c| matches!(c, SessionCommand::Item(ItemCommand::AcceptTrade))),
+        "{:?}",
+        s.sent
+    );
+    trade_with_osk(&mut s, false, true, false);
+    s.save("trade-you-accepted");
+    // Osk adds something: the acceptance is taken back and it is new.
+    trade_with_osk(&mut s, true, false, false);
+    s.save("trade-changed");
+    let banner =
+        s.ui.host()
+            .root
+            .widget::<ac_ui_window::ui::modern::dealing::trade_window::TradeFrame>(frame)
+            .and_then(|f| f.screen.banner.clone());
+    assert!(banner.is_some_and(|b| !b.bad), "the change is told");
+    // Add from packs.
+    s.click(
+        0,
+        fx + 20 + 209,
+        fy + 120 + 48 + 8 + 2 * 48 + 4 + 64 - 8 - 14,
+        Modifiers::NONE,
+    );
+    s.save("trade-pick");
+    // A click on the other side's item shows its card.
+    s.click(0, fx + 500, fy + 300, Modifiers::NONE);
+    s.click(0, fx + 462 + 200, fy + 120 + 48 + 8 + 20, Modifiers::NONE);
+    s.save("trade-card");
+}
+
+/// An Ust and four things to salvage in the main pack.
+fn salvage_things(s: &mut Shot) -> u32 {
+    const UST: u32 = 0x8000_0501;
+    let mut objects = Vec::new();
+    let mut p = ClientObject::new(PLAYER);
+    p.name = "Aerin Vale".to_owned();
+    p.item_type = ItemType::CREATURE;
+    p.items_capacity = 102;
+    p.containers_capacity = 7;
+    objects.push(p);
+    let mut ust = ClientObject::new(UST);
+    ust.name = "Ust".to_owned();
+    ust.item_type = ItemType::TINKERING_TOOL;
+    ust.icon_id = 0x0600_1E3B;
+    ust.container_id = PLAYER;
+    objects.push(ust);
+    let mut main = vec![UST];
+    for (i, (name, material, ws, icon)) in [
+        ("Steel Longsword", 64, 6.0, 0x0600_11CB),
+        ("Steel Kite Shield", 64, 5.0, 0x0600_11CB),
+        ("Granite Mace", 67, 4.0, 0x0600_11CB),
+        ("Silk Robe", 6, 5.0, 0x0600_1E3B),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let guid = 0x8000_0510 + i as u32;
+        let mut o = ClientObject::new(guid);
+        o.name = name.to_owned();
+        o.item_type = ItemType::MELEE_WEAPON;
+        o.icon_id = icon;
+        o.material_type = Some(material);
+        o.workmanship = ws;
+        o.value = 1_240 - 100 * i as i32;
+        o.container_id = PLAYER;
+        objects.push(o);
+        main.push(guid);
+    }
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: true,
+                objects,
+                removed: Vec::new(),
+                contents: vec![(PLAYER, Some(main))],
+            },
+        )));
+    s.step();
+    s.step();
+    UST
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_salvage() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::inventory::ItemCommand;
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let ust = salvage_things(&mut s);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::OpenSalvage(
+            ust,
+        )));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-salvage"),
+        "it opens on the tool"
+    );
+    assert!(
+        !s.ui.host().root.is_window_visible("salvage"),
+        "retail's stays hidden"
+    );
+    s.save("salvage-empty");
+    let frame = s.ui.host().root.window("modern-salvage").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    // Add from packs, then the first three.
+    s.click(0, fx + 20 + 470 - 70, fy + 68 + 14, Modifiers::NONE);
+    s.save("salvage-pick");
+    for _ in 0..3 {
+        // The first row not yet added sits lower each time.
+        let pick =
+            s.ui.host()
+                .root
+                .widget::<ac_ui_window::ui::modern::dealing::salvage_window::SalvageFrame>(frame)
+                .map(|f| f.pick.iter().position(|p| !p.off).unwrap_or(0))
+                .unwrap_or(0) as i32;
+        s.click(
+            0,
+            fx + 110 + 400 - 12 - 6 - 32,
+            fy + 100 + 44 + 24 + 10 + pick * 42 + 20,
+            Modifiers::NONE,
+        );
+    }
+    s.click(0, fx + 110 + 400 - 24, fy + 100 + 22, Modifiers::NONE);
+    s.save("salvage-staged");
+    // Salvage.
+    s.sent.clear();
+    s.click(0, fx + 820 - 20 - 95, fy + 540 - 36, Modifiers::NONE);
+    let salvaged = s.sent.iter().find_map(|c| match c {
+        SessionCommand::Item(ItemCommand::Salvage { items, .. }) => Some(items.len()),
+        _ => None,
+    });
+    // One material at a time (the options' default): the mace was refused.
+    assert_eq!(salvaged, Some(2), "{:?}", s.sent);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Salvaged(
+            Box::new(ac_core::items::SalvageOutcome {
+                bags: vec![ac_core::items::SalvageBag {
+                    material_type: 64,
+                    workmanship: 5.5,
+                    units: 64,
+                }],
+                unsuitable: Vec::new(),
+            }),
+        )));
+    s.step();
+    s.step();
+    s.save("salvage-done");
 }

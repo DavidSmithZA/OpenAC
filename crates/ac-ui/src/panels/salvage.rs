@@ -12,7 +12,6 @@
 //! suitable leaves the row. Drags, drops and the button act at the
 //! next update.
 
-use ac_core::items::{ClientObject, ItemType, is_salvage_suitable};
 use ac_runtime::inventory::{ItemCommand, ObjectRef};
 use ac_runtime::session::SessionCommand;
 
@@ -23,6 +22,7 @@ use crate::import::ImportedLayout;
 use crate::panels::PanelOutput;
 use crate::panels::external_container::apply_horizontal_bar_art;
 use crate::panels::items::{ItemsView, bind_click, emit, fill_slot};
+use crate::panels::salvage_list::SalvageList;
 use crate::root::{ElementMessage, UiRoot};
 use crate::tree::ElementId;
 use crate::widgets::item_slot::{
@@ -46,10 +46,7 @@ pub const CLOSE_BUTTON_ID: u32 = 0x1000_0078;
 /// The content's smallest width, pixels.
 pub const MINIMUM_CONTENT_WIDTH: f32 = 240.0;
 
-/// What a refused list says.
-pub const INVALID_LIST: &str = "The list of items you are attempting to salvage is invalid.";
-/// What a send that cannot be made says.
-pub const CANNOT_SALVAGE_NOW: &str = "You cannot salvage those items right now.";
+pub use super::salvage_list::{CANNOT_SALVAGE_NOW, INVALID_LIST};
 
 /// The salvage window's controller.
 #[derive(Debug)]
@@ -58,13 +55,9 @@ pub struct SalvageController {
     list: ElementId,
     button: ElementId,
     close: Option<ElementId>,
-    tool: u32,
-    material: u32,
-    items: Vec<u32>,
+    staging: SalvageList,
     queue: Vec<(ElementId, ElementMessage)>,
     salvage_requested: bool,
-    /// The staged items the session was last told to mark.
-    marked: Vec<u32>,
 }
 
 fn slot_object(ui: &UiRoot, cell: ElementId) -> u32 {
@@ -85,10 +78,6 @@ fn shows(ui: &UiRoot, list: ElementId, items: &[u32]) -> bool {
             .iter()
             .enumerate()
             .all(|(i, c)| slot_object(ui, *c) == items.get(i).copied().unwrap_or(0))
-}
-
-fn is_owned(view: &ItemsView<'_>, id: u32) -> bool {
-    view.objects.is_owned_by_object(id, view.player)
 }
 
 impl SalvageController {
@@ -148,12 +137,9 @@ impl SalvageController {
             list,
             button,
             close,
-            tool: 0,
-            material: 0,
-            items: Vec::new(),
+            staging: SalvageList::default(),
             queue: Vec::new(),
             salvage_requested: false,
-            marked: Vec::new(),
         })
     }
 
@@ -161,14 +147,8 @@ impl SalvageController {
     /// are marked as in a trade while staged (moves, uses and merges refuse
     /// them; the inventory draws the trade overlay on them).
     fn sync_marks(&mut self, ui: &mut UiRoot) {
-        if self.marked != self.items {
-            self.marked.clone_from(&self.items);
-            emit(
-                ui,
-                PanelOutput::Session(SessionCommand::Item(ItemCommand::MarkSalvage(
-                    self.marked.clone(),
-                ))),
-            );
+        if let Some(marks) = self.staging.marks() {
+            emit(ui, PanelOutput::Session(marks));
         }
     }
 
@@ -187,37 +167,26 @@ impl SalvageController {
     /// The tool the window is open on (0: none).
     #[must_use]
     pub fn tool(&self) -> u32 {
-        self.tool
+        self.staging.tool()
     }
 
     /// The staged items, in staging order.
     pub fn staged(&self) -> impl Iterator<Item = u32> + '_ {
-        self.items.iter().copied()
+        self.staging.items().iter().copied()
     }
 
     /// How many items are staged.
     #[must_use]
     pub fn item_count(&self) -> usize {
-        self.items.len()
-    }
-
-    fn is_tool_available(&self, tool: u32, view: &ItemsView<'_>) -> bool {
-        tool != 0
-            && is_owned(view, tool)
-            && view
-                .get(tool)
-                .is_some_and(|t| t.item_type.intersects(ItemType::TINKERING_TOOL))
+        self.staging.items().len()
     }
 
     /// Open the window on `tool` (a salvaging tool the player carries):
     /// the staging starts empty.
     pub fn open(&mut self, ui: &mut UiRoot, tool: u32, view: &ItemsView<'_>) {
-        if !self.is_tool_available(tool, view) {
-            return;
+        if self.staging.open(tool, view) {
+            ui.show_window(&self.window);
         }
-        self.clear_items();
-        self.tool = tool;
-        ui.show_window(&self.window);
     }
 
     /// `item` may be staged: the window is open on a usable tool, and the
@@ -227,19 +196,7 @@ impl SalvageController {
     /// allowed).
     #[must_use]
     pub fn can_add(&self, item: u32, view: &ItemsView<'_>, allow_multiple: bool) -> bool {
-        if self.salvage_requested
-            || !self.is_tool_available(self.tool, view)
-            || item == self.tool
-            || !is_owned(view, item)
-            || self.items.contains(&item)
-        {
-            return false;
-        }
-        let Some(object) = view.get(item) else {
-            return false;
-        };
-        !view.objects.get_contained_items(item).is_empty()
-            || is_salvage_suitable(object, self.material, allow_multiple)
+        !self.salvage_requested && self.staging.can_add(item, view, allow_multiple)
     }
 
     /// Stage `item` (a pack stages its suitable contents, saying so).
@@ -251,103 +208,38 @@ impl SalvageController {
         view: &ItemsView<'_>,
         allow_multiple: bool,
     ) -> bool {
-        if !self.can_add(item, view, allow_multiple) {
+        if self.salvage_requested {
             return false;
         }
-        let mut visited = std::collections::HashSet::new();
-        self.add_recursive(ui, item, view, allow_multiple, &mut visited);
-        true
-    }
-
-    fn add_recursive(
-        &mut self,
-        ui: &mut UiRoot,
-        item: u32,
-        view: &ItemsView<'_>,
-        allow_multiple: bool,
-        visited: &mut std::collections::HashSet<u32>,
-    ) {
-        if !visited.insert(item) || !self.can_add(item, view, allow_multiple) {
-            return;
-        }
-        // A dropped container contributes its item list only. Its packs are
-        // a separate list and are not walked, so the main pack adds the
-        // character's own items and leaves every side pack alone.
-        let contents = view.objects.get_contained_items(item);
-        if !contents.is_empty() {
-            if let Some(pack) = view.get(item) {
-                emit(
-                    ui,
-                    PanelOutput::Notice(format!("Adding contents of {}", pack.appropriate_name())),
-                );
-            }
-            for child in contents {
-                self.add_recursive(ui, child, view, allow_multiple, visited);
-            }
-            return;
-        }
-        let Some(object) = view.get(item) else {
-            return;
+        let Some(notices) = self.staging.add(item, view, allow_multiple) else {
+            return false;
         };
-        self.items.push(item);
-        if self.items.len() == 1 {
-            self.material = object.material_type.unwrap_or(0);
+        for n in notices {
+            emit(ui, PanelOutput::Notice(n));
         }
+        true
     }
 
     /// Take `item` out of the row.
     pub fn remove_item(&mut self, item: u32) {
-        self.items.retain(|id| *id != item);
-        if self.items.is_empty() {
-            self.material = 0;
-        }
-    }
-
-    fn clear_items(&mut self) {
-        self.items.clear();
-        self.material = 0;
-    }
-
-    fn still_valid(view: &ItemsView<'_>, id: u32) -> bool {
-        is_owned(view, id) && view.get(id).is_some()
+        self.staging.remove(item);
     }
 
     /// Salvage the staged items: every one still there, the player's
     /// and suitable, else the list is refused; the items go last
     /// staged first and the row empties. False when nothing was sent.
     pub fn salvage(&mut self, ui: &mut UiRoot, view: &ItemsView<'_>) -> bool {
-        if self.items.is_empty() || !self.is_tool_available(self.tool, view) {
-            return false;
+        match self.staging.salvage(view) {
+            Ok(Some(command)) => {
+                emit(ui, PanelOutput::Session(command));
+                true
+            }
+            Ok(None) => false,
+            Err(words) => {
+                emit(ui, PanelOutput::Notice(words.to_owned()));
+                false
+            }
         }
-        let invalid = self.items.iter().any(|&id| {
-            !Self::still_valid(view, id)
-                || !view
-                    .get(id)
-                    .is_some_and(|o: &ClientObject| is_salvage_suitable(o, 0, true))
-        });
-        if invalid {
-            emit(ui, PanelOutput::Notice(INVALID_LIST.to_owned()));
-            return false;
-        }
-        if !view.can_make_request {
-            emit(ui, PanelOutput::Notice(CANNOT_SALVAGE_NOW.to_owned()));
-            return false;
-        }
-        let items: Vec<ObjectRef> = self
-            .items
-            .iter()
-            .rev()
-            .map(|id| ObjectRef::Guid(*id))
-            .collect();
-        emit(
-            ui,
-            PanelOutput::Session(SessionCommand::Item(ItemCommand::Salvage {
-                tool: ObjectRef::Guid(self.tool),
-                items,
-            })),
-        );
-        self.clear_items();
-        true
     }
 
     /// Close the window (its staging empties).
@@ -358,8 +250,7 @@ impl SalvageController {
     }
 
     fn forget(&mut self) {
-        self.tool = 0;
-        self.clear_items();
+        self.staging.forget();
         self.queue.clear();
         self.salvage_requested = false;
     }
@@ -377,24 +268,15 @@ impl SalvageController {
         for &tool in opened {
             self.open(ui, tool, view);
         }
-        if self.tool == 0 {
+        if self.staging.tool() == 0 {
             self.queue.clear();
             self.salvage_requested = false;
             self.sync_marks(ui);
             return;
         }
-        if !self.is_tool_available(self.tool, view) {
+        if !self.staging.follow(view) {
             self.close(ui);
             return;
-        }
-        self.items.retain(|&id| {
-            Self::still_valid(view, id)
-                && view
-                    .get(id)
-                    .is_some_and(|o| is_salvage_suitable(o, 0, true))
-        });
-        if self.items.is_empty() {
-            self.material = 0;
         }
         let queued = std::mem::take(&mut self.queue);
         for (element, message) in queued {
@@ -457,12 +339,13 @@ impl SalvageController {
     /// it out) although the window is fed every frame.
     pub fn populate(&mut self, ui: &mut UiRoot, view: &ItemsView<'_>, icons: &mut dyn IconSource) {
         let list = self.list;
-        if !shows(ui, list, &self.items) {
+        let items = self.staging.items().to_vec();
+        if !shows(ui, list, &items) {
             ui.with::<ItemList, _>(list, |l, ui| {
                 l.defer_layout();
                 l.flush(ui);
             });
-            for (i, id) in self.items.iter().enumerate() {
+            for (i, id) in items.iter().enumerate() {
                 let mut s = ItemSlot {
                     slot_index: i32::try_from(i).unwrap_or(i32::MAX),
                     drag_accept_sprite: DEFAULT_DRAG_ACCEPT_SPRITE,
@@ -479,13 +362,13 @@ impl SalvageController {
             }
             ui.with::<ItemList, _>(list, |l, ui| l.end_defer_layout(ui, list));
         }
-        for (cell, id) in cells(ui, list).into_iter().zip(&self.items) {
+        for (cell, id) in cells(ui, list).into_iter().zip(&items) {
             if let Some(s) = ui.widget_mut::<ItemSlot>(cell) {
                 fill_slot(s, view.get(*id), view, icons);
                 s.show_trade_overlay = true;
             }
         }
-        ui.set_enabled(self.button, !self.items.is_empty());
+        ui.set_enabled(self.button, !items.is_empty());
     }
 }
 

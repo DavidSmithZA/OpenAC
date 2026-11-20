@@ -1373,6 +1373,14 @@ fn interface_events() -> Vec<InterfaceEvent> {
             timer_seconds_at_start: 4.0,
         })),
         InterfaceEvent::OpenSalvage(0x8000_0005),
+        InterfaceEvent::Salvaged(Box::new(ac_core::items::SalvageOutcome {
+            bags: vec![ac_core::items::SalvageBag {
+                material_type: 37,
+                workmanship: 5.5,
+                units: 64,
+            }],
+            unsuitable: vec![0x8000_0006],
+        })),
         InterfaceEvent::Chess(Box::new(chess_view())),
         InterfaceEvent::Barber(Box::new(BarberView {
             revision: 1,
@@ -2889,7 +2897,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "eb0df3699bc1e88b", "{:#x}", shape());
+    assert_eq!(shape_hex(), "261019edc37123ef", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full
@@ -2991,7 +2999,7 @@ variants! {
     interface_variant, INTERFACE: InterfaceEvent {
         Items, Player, State, Appraisal, Trade, Vendor, Social, Contracts, Book, House,
         HousePurchase, Journal, OpenSalvage, Chess, Barber, BeginGame, OpenContainedContainer,
-        ItemMana, PluginUi, Titles, ChatEntry, Selection,
+        ItemMana, PluginUi, Titles, ChatEntry, Selection, Salvaged,
     }
     ui_change_variant, UI_CHANGE: UiChange {
         Clear, PanelAdded, PanelRemoved, PanelValues, PanelRequestedVisible, ControlLabel,

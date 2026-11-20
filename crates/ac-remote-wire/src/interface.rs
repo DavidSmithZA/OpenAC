@@ -15,7 +15,8 @@ use ac_core::items::{
     ClientArmorProfile, ClientCreatureAttributes, ClientCreatureProfile, ClientObject,
     ClientObjectHeader, ClientObjectParts, ClientWeaponProfile, EquipMask, HouseRestrictionRecord,
     ItemManaChange, ItemType, ItemUseable, ObjectIdentity, PropertyBundle, PublicWeenieFlags,
-    ShortcutEntry, ShortcutStore, ShortcutStoreParts, VendorShopItem, VendorShopProfile,
+    SalvageBag, SalvageOutcome, ShortcutEntry, ShortcutStore, ShortcutStoreParts, VendorShopItem,
+    VendorShopProfile,
 };
 use ac_core::journal::JournalPage;
 use ac_core::player::{
@@ -681,6 +682,8 @@ record! {
         preview_setup: u32,
     }
     ItemManaChange { item_id: u32, fraction: f32, valid: bool }
+    SalvageBag { material_type: u32, workmanship: f64, units: u32 }
+    SalvageOutcome { bags: Vec<SalvageBag>, unsuitable: Vec<u32> }
     TitleFacts {
         display_title_id: u32,
         title_ids: Vec<u32>,
@@ -798,6 +801,7 @@ union! {
         19 => Titles(facts: Box<TitleFacts>),
         20 => ChatEntry(view: Box<ChatEntryView>),
         21 => Selection(selected: Option<u32>),
+        22 => Salvaged(outcome: Box<SalvageOutcome>),
     }
 }
 

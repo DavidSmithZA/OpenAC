@@ -39,6 +39,7 @@ pub mod paperdoll;
 pub mod projectile_debug;
 pub mod radar;
 pub mod salvage;
+pub mod salvage_list;
 pub mod selected_object;
 pub mod social;
 pub mod spell_components;
@@ -47,6 +48,7 @@ pub mod toolbar;
 pub mod trade;
 pub mod transcript;
 pub mod vendor;
+pub mod vendor_rules;
 pub mod vitals;
 
 use std::collections::HashMap;

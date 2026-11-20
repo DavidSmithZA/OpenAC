@@ -176,6 +176,16 @@ pub struct SalvageBag {
     pub units: u32,
 }
 
+/// What one salvage produced: the bags, and the items the server would not
+/// take.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct SalvageOutcome {
+    /// The bags, one per material.
+    pub bags: Vec<SalvageBag>,
+    /// The items it would not salvage.
+    pub unsuitable: Vec<u32>,
+}
+
 /// The line a salvage that produced something prints: each bag as
 /// "units material (ws n.nn)", the skill from the client's built-in list
 /// (blank where it has no name), then the augmentation's bonus when there

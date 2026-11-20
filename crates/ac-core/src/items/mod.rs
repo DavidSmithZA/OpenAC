@@ -55,9 +55,10 @@ pub use shortcuts::{
     ShortcutDropSource, ShortcutEntry, ShortcutMutation, ShortcutStore, ShortcutStoreParts,
 };
 pub use small_rules::{
-    AETHERIA_UNLOCK_PROPERTY, AetheriaUnlockState, SALVAGE_FAILED_TEXT, SalvageBag, ToolbarAmmo,
-    aetheria_unlocks, cooldown_overlay_step, is_salvage_suitable, is_valid_salvage_material,
-    salvage_material_name, salvage_success_text, salvage_unsuitable_text,
+    AETHERIA_UNLOCK_PROPERTY, AetheriaUnlockState, SALVAGE_FAILED_TEXT, SalvageBag, SalvageOutcome,
+    ToolbarAmmo, aetheria_unlocks, cooldown_overlay_step, is_salvage_suitable,
+    is_valid_salvage_material, salvage_material_name, salvage_success_text,
+    salvage_unsuitable_text,
 };
 pub use stacks::{StackMergeItem, StackMergePlan, StackSplitQuantity};
 pub use table::{

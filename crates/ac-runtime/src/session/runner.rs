@@ -195,6 +195,8 @@ pub enum HostEvent {
     ItemMana(ac_core::items::ItemManaChange),
     /// A salvaging tool was used: the salvage panel opens on it.
     OpenSalvage(u32),
+    /// What a salvage produced.
+    Salvaged(ac_core::items::SalvageOutcome),
     /// Someone else's game board was used: its game began (the join went
     /// out unless the player already sits at a board) and the game window
     /// shows.

@@ -579,6 +579,8 @@ pub enum InventoryEvent {
     /// A salvaging tool the player carries was used: the salvage panel
     /// opens on it.
     OpenSalvage(u32),
+    /// What a salvage produced (the chat has it in words too).
+    Salvaged(ac_core::items::SalvageOutcome),
     /// A pack the player carries was used: the inventory window shows and
     /// opens on it (the main pack when it is the player).
     OpenContainedContainer(u32),
@@ -1368,6 +1370,19 @@ impl Inventory {
         if result.results.is_empty() && result.unsuitable_item_guids.is_empty() {
             text(SALVAGE_FAILED_TEXT.to_owned());
         }
+        self.events
+            .push(InventoryEvent::Salvaged(ac_core::items::SalvageOutcome {
+                bags: result
+                    .results
+                    .iter()
+                    .map(|r| SalvageBag {
+                        material_type: r.material_type,
+                        workmanship: r.workmanship,
+                        units: r.units,
+                    })
+                    .collect(),
+                unsuitable: result.unsuitable_item_guids.clone(),
+            }));
     }
 
     fn trade_changed(&mut self, world: &World) {

@@ -62,6 +62,8 @@ pub enum InterfaceEvent {
     Journal(Box<JournalView>),
     /// A salvaging tool was used: the salvage panel opens on it.
     OpenSalvage(u32),
+    /// What a salvage produced: the salvage panel shows the bags.
+    Salvaged(Box<ac_core::items::SalvageOutcome>),
     /// The chess game as it stands (after the snapshot and each change).
     Chess(Box<ChessView>),
     /// The barber as it stands (after the snapshot and each change).
