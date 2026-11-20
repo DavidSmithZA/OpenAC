@@ -359,7 +359,7 @@ impl WindowUi {
 
     /// What a crafting question combines, tool first, when the window saw
     /// the tool used.
-    fn craft_parts(&self, question: &ClientConfirmation) -> Vec<Part> {
+    fn craft_parts(&mut self, question: &ClientConfirmation) -> Vec<Part> {
         let ClientConfirmation::Server {
             confirmation_type: confirmation_type::CRAFT_INTERACTION,
             ..
@@ -376,6 +376,7 @@ impl WindowUi {
             return Vec::new();
         };
         let names = crate::ui::facts::composed_names(&self.status.names);
+        let icons = &mut self.icons;
         let mut parts = Vec::new();
         for id in [tool, target] {
             let Some(o) = self.facts.objects.get(id) else {
@@ -389,7 +390,14 @@ impl WindowUi {
                 String::new()
             };
             parts.push(Part {
-                icon: None,
+                icon: ac_ui::icons::IconSource::item_icon(
+                    icons,
+                    o.item_type,
+                    o.icon_id,
+                    o.icon_underlay_id,
+                    o.icon_overlay_id,
+                    o.effects,
+                ),
                 name: names(o),
                 sub,
             });

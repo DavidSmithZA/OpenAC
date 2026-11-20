@@ -571,6 +571,30 @@ impl TradeFrame {
                 ty,
                 TextStyle::plain(p.text),
             );
+            // Totals are OpenAC's own: retail shows none.
+            if let Some(t) = &f.tiny {
+                let tag = "OPENAC";
+                let tw = text::measure(t, tag, 0.0) + 10.0;
+                let tx = col.0 + col.2 - 12.0 - w - 8.0 - tw;
+                let tr = (tx, fy + (SIDE_FOOT - 16.0) * 0.5, tw, 16.0);
+                rc.stroke_rounded_rect(
+                    tr.0,
+                    tr.1,
+                    tr.2,
+                    tr.3,
+                    CornerRadii::all(3.0),
+                    bronze(0.5),
+                    1.0,
+                );
+                text::draw(
+                    rc,
+                    t,
+                    tag,
+                    tr.0 + 5.0,
+                    tr.1 + ((16.0 - t.line_height) * 0.5).round(),
+                    TextStyle::plain(bronze(0.9)),
+                );
+            }
         }
     }
 
