@@ -266,6 +266,8 @@ right-click and More menus (ee868c56; track, count box, Enter splits into
 a new stack just after it), drawn glyphs in empty equipment slots
 (fa583cfd). Offscreen tests `the_modern_inscription`, `the_modern_split`.
 
+**M4 accepted live 2026-11-20** (install 38de12d1: all of M4).
+
 Not done yet in M4: the details as a pop-up card on small screens
 (Docked / Pop-up / Auto belongs with Options, M6); Close gaps (packs in
 this game hold no gaps); step 9 (plugin item hooks, after the live
