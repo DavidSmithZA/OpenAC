@@ -3,3 +3,4 @@
 //! for retail's chat window and its four floating chat windows.
 
 pub mod model;
+pub mod panel;
