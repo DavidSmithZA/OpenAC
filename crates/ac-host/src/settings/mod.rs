@@ -13,6 +13,7 @@ mod chat;
 mod layout;
 mod markup_controls;
 mod pieces;
+mod quests;
 mod recalls;
 pub mod render_pack;
 mod sections;
@@ -22,6 +23,7 @@ pub use chat::ChatTabData;
 pub use layout::{UiWindowLayout, UiWindowPlacement, UiWindowPosition};
 pub use markup_controls::MarkupControlKey;
 pub use pieces::HudPieces;
+pub use quests::QuestsOnScreen;
 pub use recalls::CustomRecall;
 pub use render_pack::RenderPackSelection;
 pub use sections::{
