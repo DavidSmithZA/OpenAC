@@ -452,6 +452,71 @@ screens (792 px); dragging a staged salvage item out (the cross and a
 double click do it); a tool's target picked in the 3D world is not noted
 for the crafting card (inventory targets are). Not live-tested yet.
 
+**M8 built 2026-11-20/21** on `feat/modern-ui-m8` (off `feat/modern-ui-m7`).
+Retail windows it replaces: `social-panel`, `journal`, `book`,
+`house-purchase` and `map-house` (the house page became its own window).
+Neutral moves first, one commit each:
+
+- Fellowship: who left a locked fellowship, with the name they had, reaches
+  the interface (326007b4; stream shape re-pinned, format stays 3).
+- Fellowship: a member's experience share in its own function (d9774737).
+- Settings: the quests each character shows on screen, `modernQuests`
+  (39256a10); each character's map pins, `modernPins` (52304ee4).
+- House: the house itself (type, place, dates, each maintenance item paid
+  of needed), the guest list and the houses for sale reach the interface
+  (65991493; stream shape re-pinned).
+- Map: the map art (image, size, marker area) and the projection both
+  ways in their own functions (db25860a).
+- The kit gained a hit registry (what can be clicked is noted while
+  drawing), switches, the OPENAC tag, input boxes with their fields, pills.
+
+Screens, each checked offscreen (`the_modern_social`, `the_modern_journal`,
+`the_modern_book`, `the_modern_house`, `the_modern_map`):
+
+1. Social (`social/*`, f8d703c0): O, F3, F4 and the friends key open it on
+   their tab. Allegiance: the line of fealty, vassals by rank with what
+   they passed up, a card for anyone (Tell, Invite, Add friend; Release or
+   Break asked on the question card), ignore requests, swear to the
+   selected player. Manage allegiance (OPENAC, monarch only): rename, the
+   message of the day, appoint, remove or retitle an office, lock and
+   approve, ban, lift, gag, put out of chat, the lists in chat; all as
+   the chat box's `@allegiance` commands. Fellowship: shares, vitals, loot,
+   who may rejoin, the leader's actions, Disband asked first, the four
+   switches. Friends online first with what else they are (Patron,
+   Vassal, Fellowship). Ignored: each person with what is hidden from them
+   and a menu to change it (`@squelch -Kind`), everyone (`@filter`).
+   Fellows on screen (OPENAC): a HUD piece that keeps the vitals streaming
+   (the window asks for them itself; retail's page never shows).
+2. Journal (`journal/*`, 75edc2f4): Quests grouped (in progress, waiting
+   to repeat, can be started, done), search, the picked quest's words,
+   progress, time, who and where with Map; Abandon (or Remove for a done
+   one) asked first. Notes: pages with label and countdown, search, New;
+   the page's label, title and notes with counters (sent when a field is
+   left, a page turned or the window closed), Record and Map, one
+   countdown at a time, Delete asked first. Quests on screen (OPENAC) per
+   character, a HUD piece.
+3. Book reader (`journal/book.rs`, d81929f2): title (inscription), page
+   list with who wrote each, read only or typed on, saved on turn or close.
+4. House (`house/*`, 7637ab55): H and the panel strip. Type, place, Show on
+   map, dates, maintenance bars, the note, the buying rule; who may come in
+   (OPENAC, `@house` commands; the guest list is asked for when the window
+   first opens, so its chat lines show once); no house: free houses by
+   type. The house sale window in place of the slumlord window: rules
+   ticked against the player, a row per price line with Add, what is on
+   the rows, Buy or Pay maintenance asked first as the game asks.
+5. Map (`world/*`, 40c4eaae): full screen, M, F10, the panel strip, Esc.
+   The game's map art zooms and pans; towns, the player's arrow, house,
+   pins (right click, per character), houses for sale (`@hslist
+   cottage`); a card per town or pin (Copy, Link in chat, Remove pin); the
+   side column (where you are, nearest town and facing, Dereth date, Find
+   a place, the layers). Underground dims and keeps the last outside place.
+   The Journal's and House's Map buttons open it on their place.
+
+Not done in M8: the map's plugin markers (needs a plugin API, to decide
+with the user); the map's drawer and the windows' small-screen layouts
+(the side column only folds); officers cannot be told from members (the
+client is not told), so Manage stays monarch-only. Not live-tested yet.
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
@@ -598,7 +663,7 @@ cards under the target.
 
 Replaces: vendor, trade, salvage, dialog, dialog factory.
 
-### M8 Social and world ("Social", "Journal", "Map", "House", "Dialogs")
+### M8 Social and world ("Social", "Journal", "Map", "House", "Dialogs") (built 2026-11-21)
 
 Social window; Journal (quests, notes, quests on screen) and the book
 reader; full-screen Map with pins, markers and houses for sale; House
