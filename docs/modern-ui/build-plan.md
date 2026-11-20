@@ -119,11 +119,21 @@ The retail indicator bar stays (its end-session button) until M6.
    web tests' CPU rasteriser). Used to check M2 while the Mac was
    locked.
 
-Not done in M2: the retail toolbar's split-stack slider is gone with the
-toolbar (the split amount stays the default until the inventory's split
-in M4); Lock and Hide in quick move's menu are for bars only; recall
-rows and own recalls cannot go on a bar yet; the Options › Controls row
-for the quick-move key is M6.
+Gaps closed after M2 (2026-11-20, same branch):
+
+- The split amount moved to the target line: a selected stack of more
+  than one shows Split, a track, the typed amount and "of N"; the wheel
+  steps it (Shift: ten), the split key types into it. It sets the amount
+  the hidden retail split controller keeps, which drags already use.
+- Lock in place and Hide in quick move's menu for every HUD piece, saved
+  in settings section `modernPieces` (this computer). Edit layout's
+  toolbar has Hidden and locked to show or unlock them.
+- Recall rows drag onto bars: places and own recalls become `recall`
+  slots (name, command, icon; the command is sent as if typed); recall
+  spells go on as spells.
+
+Still not done: the Options › Controls row for the quick-move key (M6);
+moving the quests panel and fellows in Edit layout (they come in M8).
 
 ## Shape of the build
 
