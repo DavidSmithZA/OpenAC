@@ -9,7 +9,7 @@ use std::time::Instant;
 
 use ac_dat::objects::{Animation, EnumIdMap};
 use ac_ui::pregame::chargen::appearance::PreviewRequest;
-use glam::{Mat4, Vec3};
+use glam::{Mat4, Quat, Vec3};
 
 use super::WorldRenderer;
 use crate::animation::source::AnimationSource;
@@ -209,7 +209,9 @@ impl WorldRenderer {
         let mut out = Vec::with_capacity(requests.len());
         for request in requests {
             let built = match &request.subject {
-                ViewportSubject::Paperdoll { heritage } => self.paperdoll_scene(scene, *heritage),
+                ViewportSubject::Paperdoll { heritage, turn } => {
+                    self.paperdoll_scene(scene, *heritage, *turn)
+                }
                 ViewportSubject::Examine { guid } => {
                     self.examine_scene(scene, *guid, request.aspect)
                 }
@@ -323,12 +325,17 @@ impl WorldRenderer {
 
     /// The inventory figure: the player's parts with his look, holding his
     /// heritage's pose, turned toward the eye.
-    fn paperdoll_scene(&mut self, scene: Option<&Scene>, heritage: u32) -> Option<SceneDraw> {
+    fn paperdoll_scene(
+        &mut self,
+        scene: Option<&Scene>,
+        heritage: u32,
+        yaw: f32,
+    ) -> Option<SceneDraw> {
         let player = scene?.player()?;
         let setup_id = player.setup_id?;
         let scale = player.scale.filter(|s| *s > 0.0).unwrap_or(1.0);
         let parts = self.object_parts(setup_id, &player.model)?.0.to_vec();
-        let turn = Mat4::from_quat(figure_turn());
+        let turn = Mat4::from_quat(figure_turn() * Quat::from_axis_angle(Vec3::Z, yaw));
         let posed = self.pose_animation(pose_enum(heritage)).and_then(|pose| {
             let setup = self.animation_source()?.setup(setup_id)?;
             Some(hold(&setup, held_frame(&pose)?, &parts, scale))

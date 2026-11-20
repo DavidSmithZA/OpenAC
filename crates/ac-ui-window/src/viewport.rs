@@ -85,6 +85,9 @@ pub enum ViewportSubject {
     Paperdoll {
         /// The player's heritage.
         heritage: u32,
+        /// Turned about its up axis from where retail stands it, radians
+        /// (the modern inventory's figure is turned by a drag).
+        turn: f32,
     },
     /// The examined creature or character.
     Examine {

@@ -897,3 +897,93 @@ impl Widget for PackButton {
 
 /// Where a drag from the equipment says it came from.
 pub const EQUIPMENT: ItemDragSource = ItemDragSource::Equipment;
+
+/// Over the figure: a drag turns it, an item dropped on it is worn.
+#[derive(Debug, Default)]
+pub struct FigureTurn {
+    /// How far it is turned, radians.
+    pub turn: f32,
+    /// Items dropped on it since the window last looked.
+    pub dropped: Vec<u32>,
+    held: Option<i32>,
+    over: bool,
+}
+
+impl Widget for FigureTurn {
+    fn hit_test(&self, _element: &Element, _x: f32, _y: f32) -> bool {
+        true
+    }
+
+    fn handles_click(&self, _element: &Element) -> bool {
+        true
+    }
+
+    fn on_event(&mut self, ui: &mut UiRoot, me: ElementId, e: &UiEvent) -> bool {
+        if e.target != Some(me) {
+            return false;
+        }
+        match e.kind {
+            kind::MOUSE_DOWN => {
+                self.held = Some(e.data1);
+                ui.set_capture(me);
+                true
+            }
+            kind::MOUSE_MOVE => {
+                if let Some(x0) = self.held {
+                    self.turn += (e.data1 - x0) as f32 * 0.012;
+                    self.held = Some(e.data1);
+                }
+                true
+            }
+            kind::MOUSE_UP | kind::CAPTURE_CHANGED => {
+                self.held = None;
+                true
+            }
+            kind::DOUBLE_CLICK => {
+                self.turn = 0.0;
+                true
+            }
+            kind::DRAG_ENTER => {
+                self.over = item_payload(e.payload.as_ref()).is_some();
+                true
+            }
+            kind::DRAG_OVER => {
+                self.over = false;
+                true
+            }
+            kind::DROP_RELEASED => {
+                self.over = false;
+                if let Some(p) = item_payload(e.payload.as_ref()) {
+                    self.dropped.push(p.obj_id);
+                }
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn tick(&mut self, ui: &mut UiRoot, _me: ElementId, _dt: f64) {
+        if self.over && ui.drag_payload().is_none() {
+            self.over = false;
+        }
+    }
+
+    fn tooltip_text(&self, _element: &Element) -> Option<String> {
+        Some(
+            "Drag to turn \u{b7} double-click to face you \u{b7} drop gear here to wear it"
+                .to_owned(),
+        )
+    }
+
+    fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
+        if !self.over {
+            return;
+        }
+        let Some((w, h)) = ui.element(me).map(|e| (e.width, e.height)) else {
+            return;
+        };
+        let r = CornerRadii::all(4.0);
+        rc.fill_rounded_rect(0.0, 0.0, w, h, r, hex(0xE0_B068, 0.08));
+        rc.stroke_rounded_rect(0.0, 0.0, w, h, r, hex(0xE0_B068, 0.8), 1.5);
+    }
+}

@@ -76,6 +76,9 @@ pub struct InventoryUi {
     pub packs: Vec<ElementId>,
     /// The menus.
     pub menu: ElementId,
+    /// The figure's viewport and the overlay that turns it.
+    pub figure: ElementId,
+    pub turner: ElementId,
     /// The grid's options.
     pub options: ViewOptions,
     /// How cells are drawn.
@@ -206,6 +209,19 @@ impl WindowUi {
                 cell,
             ));
         }
+        let figure_at = || {
+            Element::at(
+                inv::FIGURE_X,
+                inv::FIGURE_Y,
+                inv::FIGURE_W,
+                inv::FIGURE_H - 20.0,
+            )
+            .with_anchors(AnchorEdges::NONE)
+        };
+        let figure = ui.add(frame, figure_at(), ac_ui::widgets::Viewport::default());
+        let mut turner_at = figure_at();
+        turner_at.captures_pointer_drag = true;
+        let turner = ui.add(frame, turner_at, inv::FigureTurn::default());
         let grid = ui.add(
             frame,
             Element::at(inv::GRID_X, inv::GRID_Y, inv::GRID_W, inv::GRID_H)
@@ -234,6 +250,8 @@ impl WindowUi {
             slots,
             packs: Vec::new(),
             menu,
+            figure,
+            turner,
             options: ViewOptions::default(),
             look: CellLook::Grid,
             arrivals: HashMap::new(),
@@ -384,6 +402,10 @@ impl WindowUi {
                 pack_asks.extend(button.requests.drain(..).map(|r| (face, id, r)));
             }
         }
+        let worn_drops = ui
+            .widget_mut::<inv::FigureTurn>(inv.turner)
+            .map(|t| std::mem::take(&mut t.dropped))
+            .unwrap_or_default();
         let sheet_asks = ui
             .widget_mut::<SheetView>(details)
             .map(|s| std::mem::take(&mut s.requests))
@@ -391,6 +413,19 @@ impl WindowUi {
         let chosen = PopMenu::take(ui, menu);
         for ask in frame_asks {
             self.run_frame_request(ask);
+        }
+        for id in worn_drops {
+            let wearable = self
+                .facts
+                .objects
+                .get(id)
+                .is_some_and(|o| o.valid_locations != EquipMask::NONE);
+            if wearable {
+                self.send_item(ItemCommand::Wield {
+                    item: ObjectRef::Guid(id),
+                    location: 0,
+                });
+            }
         }
         for (face, id, ask) in pack_asks {
             match ask {

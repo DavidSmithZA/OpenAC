@@ -946,6 +946,19 @@ fn the_modern_inventory() {
     s.step();
     s.step();
     s.save("inventory-open");
+    // The figure is asked for, turned by a drag across it.
+    let figure = |s: &mut Shot| {
+        let (requests, _) = s.ui.viewport_requests(&s.scene, 1.0);
+        requests.into_iter().find_map(|r| match r.subject {
+            ac_render::viewport::ViewportSubject::Paperdoll { turn, .. } => Some(turn),
+            _ => None,
+        })
+    };
+    assert_eq!(figure(&mut s), Some(0.0));
+    s.drag((INV.0 + 100, INV.1 + 200), (INV.0 + 180, INV.1 + 200));
+    let turned = figure(&mut s).expect("the figure");
+    println!("figure turned {turned}");
+    assert!(turned > 0.5);
     // The sword: the first cell of the grid.
     let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
     s.click(0, first.0, first.1, Modifiers::NONE);
