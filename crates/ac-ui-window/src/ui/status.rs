@@ -791,6 +791,9 @@ impl WindowUi {
         // .FocusSplitStackEntry`: the selected stack's typed quantity takes
         // the keyboard, its text selected (nothing for no stack).
         if action == InputAction::SelectionSplitStack {
+            if self.modern_split_key() {
+                return true;
+            }
             if let Some(selected) = self.player_view.and_then(|v| v.selected) {
                 self.host
                     .with_controller::<ac_ui::panels::toolbar::ToolbarWindowController, _>(

@@ -230,8 +230,11 @@ impl WindowUi {
             &mut self.host.root,
             hud::TARGET,
             (hud::target::WIDTH, hud::target::HEIGHT),
-            hud::target::TargetLine::new(Horizon::BRONZE, fonts.0, fonts.1, fonts.2),
+            hud::target::TargetLine::new(Horizon::BRONZE, fonts.0, fonts.1, fonts.2.clone()),
         );
+        if let Ok(id) = &target {
+            hud::target::TargetLine::mount_split_field(&mut self.host.root, *id, fonts.2.clone());
+        }
         let effects = self.mount_modern_effects();
         let card_fonts = hud::connection::CardFonts {
             title: self.modern_font(Weight::SemiBold, CARD_TITLE_SIZE),
@@ -1144,6 +1147,52 @@ impl WindowUi {
         {
             line.target = target;
         }
+        self.feed_modern_split();
+    }
+
+    /// The target line's split amount and the one drags use (the retail
+    /// toolbar's, kept while it is hidden) follow each other.
+    fn feed_modern_split(&mut self) {
+        use ac_ui::panels::toolbar::ToolbarWindowController;
+        let Some(id) = self.modern.as_ref().and_then(|m| m.target) else {
+            return;
+        };
+        let chosen = self
+            .host
+            .root
+            .widget_mut::<hud::target::TargetLine>(id)
+            .and_then(|line| line.split_chosen.take());
+        let selected = self.player_view.and_then(|v| v.selected);
+        let quantity = self.host.with_controller::<ToolbarWindowController, _>(
+            super::window::TOOLBAR_WINDOW,
+            |c, ui| {
+                if let Some(value) = chosen {
+                    c.split.set_value(ui, value);
+                }
+                c.split.quantity().clone()
+            },
+        );
+        let split = quantity
+            .filter(|q| selected.is_some() && q.maximum() > 1)
+            .map(|q| hud::target::SplitView {
+                value: q.value(),
+                stack: q.maximum(),
+            });
+        self.host
+            .root
+            .with::<hud::target::TargetLine, _>(id, |line, ui| line.show_split(ui, split));
+    }
+
+    /// The split key: the target line's amount takes the keyboard. False
+    /// without the modern target line.
+    pub(super) fn modern_split_key(&mut self) -> bool {
+        let Some(id) = self.modern.as_ref().and_then(|m| m.target) else {
+            return false;
+        };
+        self.host
+            .root
+            .with::<hud::target::TargetLine, _>(id, |line, ui| line.type_split(ui))
+            .is_some()
     }
 
     /// The vitals' new values, for the modern vitals.
