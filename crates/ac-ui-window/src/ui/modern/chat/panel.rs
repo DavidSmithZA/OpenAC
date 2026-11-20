@@ -1434,7 +1434,7 @@ fn label_cap(widths: &[f32], room: f32) -> f32 {
 }
 
 /// `name` cut on a whole character with an ellipsis to fit `width`.
-fn shorten(font: &UiFont, name: &str, width: f32) -> String {
+pub(super) fn shorten(font: &UiFont, name: &str, width: f32) -> String {
     let dots = if font.glyph('\u{2026}').is_some() {
         "\u{2026}"
     } else {
