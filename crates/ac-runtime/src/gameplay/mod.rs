@@ -67,7 +67,7 @@ pub use death::{
     last_outside_corpse_cell, vitae_view,
 };
 pub use fellowship::{DepartedFellowView, Departure, FellowView, FellowshipState, FellowshipView};
-pub use house::{HouseLineColor, HouseState, HouseView};
+pub use house::{HouseAccessView, HouseDetails, HouseLineColor, HouseState, HouseView};
 pub use magic::{
     CastRequestResult, CharacterSheet, EnchantmentView, SheetLine, SpellCast, SpellCastCompletion,
     SpellSummary, SpellbookView,
@@ -1207,6 +1207,12 @@ impl Gameplay {
             GameEventType::UPDATE_HAR => {
                 let access = wire_house::HouseAccess::parse(payload)?;
                 self.text(house::guest_list_text(&access));
+                self.house.apply_access(&access);
+            }
+            GameEventType::AVAILABLE_HOUSES => {
+                // The chat lines are the communication owner's.
+                let houses = wire_house::AvailableHouses::parse(payload)?;
+                self.house.apply_for_sale(&houses);
             }
             GameEventType::UPDATE_RENT_PAYMENT => {
                 let rent = wire_house::parse_rent_payment(payload)?;

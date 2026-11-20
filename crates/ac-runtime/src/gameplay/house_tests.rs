@@ -369,3 +369,75 @@ fn all_flags_print_permissions_before_open_house_and_no_roommates() {
         "Guests:\n  Alice\nAllegiance Permissions: guest accessstorage access\n[ open house ]\n"
     );
 }
+
+#[test]
+fn the_view_carries_the_house_itself_and_who_may_come_in() {
+    let mut house = HouseState::default();
+    let rent_time = 1_700_086_400u32;
+    let data = HouseData {
+        buy_time: 1_700_000_000,
+        rent_time,
+        house_type: 1,
+        rent: vec![
+            payment(10, 4, "Pyreal", "Pyreals"),
+            payment(2, 2, "Box", ""),
+        ],
+        position: at(cell(1200, 800)),
+        ..sample()
+    };
+    house.apply_house_data(&data, clock(NOW, 0));
+    let view = house.view();
+    let d = view.details.expect("an owned house");
+    assert_eq!(d.house_type, 1);
+    assert_eq!(d.cell, cell(1200, 800));
+    assert_eq!(d.period_ends_unix_s, i64::from(rent_time) + 2_592_000);
+    assert_eq!(
+        d.next_due_unix_s, d.period_ends_unix_s,
+        "unpaid: due at its end"
+    );
+    assert!(!d.paid);
+    assert_eq!(
+        d.rent,
+        [("Pyreals".to_owned(), 4, 10), ("Boxes".to_owned(), 2, 2)]
+    );
+    assert!(view.access.is_none());
+    let before = house.revision();
+    house.apply_access(&access(0x1 | 0x4, &[("Osk", true), ("Pell", false)], &[]));
+    assert!(house.revision() > before, "a window hears the guest list");
+    let a = house.view().access.expect("the guest list");
+    assert!(a.open && !a.allegiance_guests && a.allegiance_storage);
+    assert_eq!(
+        a.guests,
+        [("Osk".to_owned(), true), ("Pell".to_owned(), false)]
+    );
+}
+
+#[test]
+fn the_view_says_when_another_house_may_be_bought() {
+    let mut house = HouseState::default();
+    let bought = i32::try_from(NOW - 86_400).unwrap();
+    house.apply_house_status(clock(NOW, bought));
+    assert_eq!(
+        house.view().buy_another_unix_s,
+        i64::from(bought) + PURCHASE_WAIT_PERIOD_SECONDS
+    );
+    house.apply_house_status(clock(NOW, 0));
+    assert_eq!(house.view().buy_another_unix_s, 0);
+}
+
+#[test]
+fn the_houses_for_sale_are_kept_by_type() {
+    let mut house = HouseState::default();
+    let list = |house_type, locations: Vec<u32>, total| AvailableHouses {
+        house_type,
+        locations,
+        total_available: total,
+    };
+    house.apply_for_sale(&list(1, vec![0xA9B4_FFFF], 12));
+    house.apply_for_sale(&list(2, vec![], 0));
+    house.apply_for_sale(&list(1, vec![0x1234_FFFF, 0x2345_FFFF], 40));
+    assert_eq!(
+        house.view().for_sale,
+        [(1, 40, vec![0x1234_FFFF, 0x2345_FFFF]), (2, 0, vec![])]
+    );
+}
