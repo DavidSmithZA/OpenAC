@@ -61,6 +61,8 @@ mod raw {
         pub(super) fn ui_markers_set_shapes(ptr: *const u8, len: usize) -> i32;
         pub(super) fn ui_markers_set_drawings(ptr: *const u8, len: usize) -> i32;
         pub(super) fn ui_markers_remove(ptr: *const u8, len: usize) -> i32;
+        pub(super) fn ui_item_notes_set(ptr: *const u8, len: usize) -> i32;
+        pub(super) fn ui_window_foot_set(ptr: *const u8, len: usize) -> i32;
         pub(super) fn ui_projectile_debug(ptr: *const u8, len: usize) -> i32;
     }
 }
@@ -132,5 +134,7 @@ wrappers!(
     ui_markers_set_shapes,
     ui_markers_set_drawings,
     ui_markers_remove,
+    ui_item_notes_set,
+    ui_window_foot_set,
     ui_projectile_debug,
 );

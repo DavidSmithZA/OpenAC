@@ -2404,3 +2404,212 @@ fn a_resized_canvas_measures_a_held_drag_from_its_new_size() {
     };
     assert_eq!((event.x, event.y), (5.0, 5.0));
 }
+
+fn note(object: u32, mark: &str) -> ItemNote {
+    ItemNote {
+        object_id: object,
+        mark: mark.into(),
+        tone: crate::model::NoteTone::Good,
+        lines: Vec::new(),
+        menu: Vec::new(),
+    }
+}
+
+fn entry(id: &str, label: &str) -> crate::model::ItemMenuEntry {
+    crate::model::ItemMenuEntry {
+        id: id.into(),
+        label: label.into(),
+    }
+}
+
+#[test]
+fn item_notes_are_cut_to_their_limits_and_empty_ones_dropped() {
+    let mut ui = PluginUi::new();
+    let mut long = note(7, "A mark far longer than sixteen");
+    long.lines = (0..9).map(|i| format!("line {i}")).collect();
+    long.lines[0] = "x".repeat(400);
+    long.menu = vec![
+        entry("a", "First"),
+        entry("a", "Same id again"),
+        entry("", "No id"),
+        entry("b", " "),
+        entry("c", "Third"),
+    ];
+    assert!(ui.set_item_notes(&tank(), vec![long, note(8, ""), note(0, "Keep")]));
+    let notes = ui.item_notes("edwards.tank");
+    assert_eq!(
+        notes.len(),
+        1,
+        "a note saying nothing, and one about no item, go"
+    );
+    let n = &notes[0];
+    assert_eq!(n.mark, "A mark far longe");
+    assert_eq!(n.lines.len(), MAXIMUM_NOTE_LINES);
+    assert_eq!(n.lines[0].chars().count(), MAXIMUM_NOTE_LINE);
+    let ids: Vec<&str> = n.menu.iter().map(|e| e.id.as_str()).collect();
+    assert_eq!(ids, ["a", "c"]);
+}
+
+#[test]
+fn item_notes_are_refused_whole_when_two_name_one_item_or_there_are_too_many() {
+    let mut ui = PluginUi::new();
+    assert!(ui.set_item_notes(&tank(), vec![note(7, "Keep")]));
+    ui.take_changes();
+    assert!(!ui.set_item_notes(&tank(), vec![note(9, "Keep"), note(9, "Sell")]));
+    let many = (1..=MAXIMUM_ITEM_NOTES as u32 + 1)
+        .map(|i| note(i, "Keep"))
+        .collect();
+    assert!(!ui.set_item_notes(&tank(), many));
+    assert!(ui.take_changes().is_empty());
+    assert_eq!(ui.item_notes("edwards.tank")[0].object_id, 7);
+}
+
+#[test]
+fn a_menu_entry_or_foot_button_is_heard_only_by_the_plugin_that_has_it() {
+    let mut ui = PluginUi::new();
+    let mut n = note(7, "Keep");
+    n.menu = vec![entry("never", "Never loot this")];
+    assert!(ui.set_item_notes(&tank(), vec![n]));
+    let foot = WindowFoot {
+        summary: "4 kept".into(),
+        buttons: vec![
+            crate::model::FootButton {
+                id: "loot".into(),
+                label: "Loot 4 kept".into(),
+                enabled: true,
+            },
+            crate::model::FootButton {
+                id: "off".into(),
+                label: "Not now".into(),
+                enabled: false,
+            },
+        ],
+    };
+    assert!(ui.set_window_foot(&tank(), ItemWindow::Loot, foot));
+    for input in [
+        UiInput::ItemMenu {
+            owner: "edwards.tank".into(),
+            id: "never".into(),
+            object: 7,
+        },
+        // Not on that item, not its entry, not its plugin.
+        UiInput::ItemMenu {
+            owner: "edwards.tank".into(),
+            id: "never".into(),
+            object: 8,
+        },
+        UiInput::ItemMenu {
+            owner: "another.plugin".into(),
+            id: "never".into(),
+            object: 7,
+        },
+        UiInput::FootButton {
+            owner: "edwards.tank".into(),
+            window: ItemWindow::Loot,
+            id: "loot".into(),
+        },
+        // Not able to be pressed; not in that window.
+        UiInput::FootButton {
+            owner: "edwards.tank".into(),
+            window: ItemWindow::Loot,
+            id: "off".into(),
+        },
+        UiInput::FootButton {
+            owner: "edwards.tank".into(),
+            window: ItemWindow::Inventory,
+            id: "loot".into(),
+        },
+    ] {
+        ui.input(input);
+    }
+    assert_eq!(
+        ui.take_events(),
+        [
+            (
+                "edwards.tank".to_owned(),
+                UiEvent::ItemMenu {
+                    id: "never".into(),
+                    object: 7
+                }
+            ),
+            (
+                "edwards.tank".to_owned(),
+                UiEvent::FootButton {
+                    window: ItemWindow::Loot,
+                    id: "loot".into()
+                }
+            ),
+        ]
+    );
+}
+
+#[test]
+fn a_window_foot_is_refused_with_too_many_buttons_or_a_shared_id() {
+    let mut ui = PluginUi::new();
+    let button = |id: &str| crate::model::FootButton {
+        id: id.into(),
+        label: "Go".into(),
+        enabled: true,
+    };
+    let foot = |buttons| WindowFoot {
+        summary: String::new(),
+        buttons,
+    };
+    assert!(!ui.set_window_foot(
+        &tank(),
+        ItemWindow::Loot,
+        foot(vec![button("a"), button("b"), button("c"), button("d")])
+    ));
+    assert!(!ui.set_window_foot(
+        &tank(),
+        ItemWindow::Loot,
+        foot(vec![button("a"), button("a")])
+    ));
+    assert!(ui.take_changes().is_empty());
+    // Clearing what was never set says nothing.
+    assert!(ui.set_window_foot(&tank(), ItemWindow::Loot, WindowFoot::default()));
+    assert!(ui.take_changes().is_empty());
+}
+
+#[test]
+fn the_view_shows_every_plugins_notes_by_item_and_drops_them_on_unload_and_logoff() {
+    let mut ui = PluginUi::new();
+    let mut view = PluginUiView::new();
+    assert!(ui.set_item_notes(&tank(), vec![note(7, "Keep"), note(8, "Sell")]));
+    assert!(ui.set_item_notes(&other(), vec![note(7, "Salvage")]));
+    assert!(ui.set_window_foot(
+        &other(),
+        ItemWindow::Loot,
+        WindowFoot {
+            summary: "2 to salvage".into(),
+            buttons: Vec::new(),
+        }
+    ));
+    for c in ui.take_changes() {
+        view.apply(c);
+    }
+    let on_7: Vec<(&str, &str)> = view.item_notes[&7]
+        .iter()
+        .map(|e| (e.owner.display_name.as_str(), e.note.mark.as_str()))
+        .collect();
+    assert_eq!(on_7, [("Other", "Salvage"), ("Tank", "Keep")]);
+    assert_eq!(view.feet.len(), 1);
+    // A window that attaches later gets the same from a snapshot.
+    let mut fresh = PluginUiView::new();
+    for c in ui.snapshot() {
+        fresh.apply(c);
+    }
+    assert_eq!(fresh.item_notes, view.item_notes);
+    assert_eq!(fresh.feet, view.feet);
+    ui.release("another.plugin");
+    for c in ui.take_changes() {
+        view.apply(c);
+    }
+    assert_eq!(view.item_notes[&7].len(), 1);
+    assert!(view.feet.is_empty());
+    ui.clear_item_notes();
+    for c in ui.take_changes() {
+        view.apply(c);
+    }
+    assert!(view.item_notes.is_empty());
+}

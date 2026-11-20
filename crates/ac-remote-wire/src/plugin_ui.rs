@@ -18,12 +18,13 @@ use ac_plugin_ui::markup::{
 use ac_plugin_ui::number::{Dec, NumberSpec};
 use ac_plugin_ui::{
     ActionValue, CanvasAnchor, CanvasDescriptor, CanvasPlace, CanvasView, ClientWindow,
-    ClientWindowAction, Color8, DecodedImage, DialogView, DrawingScale, FileImage, GroundShape,
-    GroundShapeKind, ImageSource, ImageView, ItemRecord, MapPoint, MarkerAnchor, MarkupDocument,
-    PaintCmd, PaintRect, PanelDescriptor, PanelView, PluginIcon, PointerEvent, PointerKind,
-    ProjectileSample, Rgba, ThemeKind, UiChange, UiInput, UiOwner, UiValue, WindowIcon,
-    WindowLayout, WindowOwner, WindowParts, WindowReport, WorldDrawing, WorldIcon, WorldIconEntry,
-    WorldLabel, WorldLine, WorldTriangle,
+    ClientWindowAction, Color8, DecodedImage, DialogView, DrawingScale, FileImage, FootButton,
+    GroundShape, GroundShapeKind, ImageSource, ImageView, ItemMenuEntry, ItemNote, ItemRecord,
+    ItemWindow, MapPoint, MarkerAnchor, MarkupDocument, NoteTone, PaintCmd, PaintRect,
+    PanelDescriptor, PanelView, PluginIcon, PointerEvent, PointerKind, ProjectileSample, Rgba,
+    ThemeKind, UiChange, UiInput, UiOwner, UiValue, WindowFoot, WindowIcon, WindowLayout,
+    WindowOwner, WindowParts, WindowReport, WorldDrawing, WorldIcon, WorldIconEntry, WorldLabel,
+    WorldLine, WorldTriangle,
 };
 
 use crate::codec::{
@@ -237,6 +238,16 @@ record! {
         hidden_by_world: bool,
     }
     WorldIconEntry { owner: String, icon: WorldIcon }
+    ItemMenuEntry { id: String, label: String }
+    ItemNote {
+        object_id: u32,
+        mark: String,
+        tone: NoteTone,
+        lines: Vec<String>,
+        menu: Vec<ItemMenuEntry>,
+    }
+    FootButton { id: String, label: String, enabled: bool }
+    WindowFoot { summary: String, buttons: Vec<FootButton> }
     WorldDrawing {
         anchor: MarkerAnchor,
         height_offset: f32,
@@ -542,6 +553,19 @@ union! {
         1 => Object(object: u32),
         2 => Position { point: MapPoint, is_outdoor: bool },
     }
+    NoteTone: "note tone" {
+        0 => Plain,
+        1 => Good,
+        2 => Warning,
+        3 => Bad,
+        4 => Accent,
+    }
+    ItemWindow: "item window" {
+        0 => Inventory,
+        1 => Loot,
+        2 => Trade,
+        3 => Vendor,
+    }
     DrawingScale: "drawing scale" {
         0 => Fixed,
         1 => WithDistance { near: f32, far: f32, smallest: f32 },
@@ -606,6 +630,8 @@ union! {
         30 => WindowApply { name: String, layout: WindowLayout, parts: WindowParts },
         31 => WindowsHeld(names: Vec<String>),
         32 => Drawings { owner: String, drawings: Arc<Vec<WorldDrawing>> },
+        33 => ItemNotes { owner: UiOwner, notes: Arc<Vec<ItemNote>> },
+        34 => WindowFoot { owner: UiOwner, window: ItemWindow, foot: WindowFoot },
     }
     WindowOwner: "window owner" {
         0 => Client,
@@ -658,6 +684,8 @@ union! {
         11 => DialogAnswered { handle: u32, button: i32 },
         12 => Windows { screen: (i32, i32), ready: bool, windows: Vec<WindowReport> },
         13 => WindowsChanged(windows: Vec<WindowReport>),
+        14 => ItemMenu { owner: String, id: String, object: u32 },
+        15 => FootButton { owner: String, window: ItemWindow, id: String },
     }
 }
 

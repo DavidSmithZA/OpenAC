@@ -311,6 +311,13 @@ wire_union! {
         /// restored (after [`Self::ScreenSizeChanged`]): read them again
         /// with [`crate::Import::UiWindows`] (API 1.14).
         31 => UiWindowsChanged since (1, 14),
+        /// One of the plugin's item menu entries was chosen
+        /// ([`crate::Import::UiItemNotesSet`]): which, and on what item
+        /// (API 1.15).
+        32 => ItemMenuChosen(crate::ui::ItemMenuChoice) since (1, 15),
+        /// One of the plugin's item window foot buttons was pressed
+        /// ([`crate::Import::UiWindowFootSet`]) (API 1.15).
+        33 => FootButtonPressed(crate::ui::FootPress) since (1, 15),
         /// One of the plugin's panels or canvases was used ([`crate::ui`];
         /// the tag is `crate::ui::EVENT_TAG`).
         100 => Ui(crate::ui::UiEvent),

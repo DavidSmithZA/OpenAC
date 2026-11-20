@@ -611,6 +611,54 @@ and keep it. A texture that does not decode gives its type an `rgb` of 0.
 Neither call needs a permission; both are empty without the
 game files.
 
+## Notes on items
+
+A plugin can say what it thinks of items, and the client shows it wherever
+those items are on screen, in its own style (API 1.15). A loot plugin marks
+what its rules keep, a salvage helper what to break down. The client only
+shows the notes; anything that acts is the plugin's own menu entry or button.
+
+`Host::set_item_notes(&notes)` replaces every note the plugin set before (an
+empty slice clears them). Each `ItemNote` (`ui::item_note` starts one) is
+about one item, by its object id, and may carry:
+
+- a `mark`, a word or two beside the item ("Keep", "Salvage"), in a `tone`
+  the client colours (`Plain`, `Good`, `Warning`, `Bad`, `Accent`); cut to
+  16 characters;
+- `lines` for a card under the plugin's name on the item's details and its
+  Inspect sheet (the rule that matched, a reason): at most 6, each cut to
+  160 characters;
+- `menu` entries (`ui::menu_entry`) for the item's menus, under the
+  plugin's name: at most 6. Choosing one raises `Event::ItemMenuChosen`
+  with the entry's id and the item.
+
+A plugin holds at most 4,096 notes; a set over that, or with two notes about
+one item, is refused and the notes stay as they were. A note that says
+nothing is dropped. Notes go when the character leaves the world, since
+object ids mean nothing on the next stay, and when the plugin unloads.
+
+`Host::set_window_foot(window, summary, &buttons)` puts a line and up to 3
+buttons (`ui::foot_button`) in an item window's foot, under the plugin's
+name: `ItemWindow::Inventory`, `Loot`, `Trade` or `Vendor`. It replaces what
+the plugin put there before; an empty summary and no buttons clear it. A
+button pressed raises `Event::FootButtonPressed` with the window and the
+button's id; one with `enabled` false is drawn but cannot be pressed.
+
+```rust
+let mut keep = ui::item_note(item.object_id, "Keep", ui::NoteTone::Good);
+keep.lines = vec![format!("Rule: {}", rule.name)];
+keep.menu = vec![ui::menu_entry("never", "Never loot this")];
+host.set_item_notes(&[keep]);
+host.set_window_foot(ui::ItemWindow::Loot, "4 kept, 2 to salvage",
+    &[ui::foot_button("loot-kept", "Loot 4 kept")]);
+```
+
+Set notes when what the plugin thinks changes (a container opened, an item
+appraised or picked up), not every tick. The client draws them in its modern
+interface (the inventory, Inspect and the loot window; trade and the vendor
+when those screens come); the retail interface does not show them. Neither
+call needs a permission.
+
 ## Appraising a creature
 
 `host.identify(id)` asks the server to appraise an object without opening

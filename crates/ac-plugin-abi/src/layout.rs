@@ -214,8 +214,54 @@ mod tests {
     /// value as 1.12: it added WebP to the image formats the client
     /// decodes, not a shape, and API 1.14 (the screen and the registered
     /// windows: two events and five imports; world drawings: one import)
-    /// changed it again.
-    const PUBLISHED: u64 = 0x8acd_8072_4077_387e;
+    /// changed it again, and API 1.15 (notes on items and item window
+    /// feet: two events and two imports) again.
+    const PUBLISHED: u64 = 0x95ff_5ea9_a317_90dd;
+
+    /// The fingerprint API 1.14 was published with.
+    const PUBLISHED_1_14: u64 = 0x8acd_8072_4077_387e;
+
+    /// API 1.14 is published: it keeps the fingerprint it was published
+    /// with, whatever later versions add.
+    #[test]
+    fn api_1_14_keeps_its_published_fingerprint() {
+        let fingerprint = fingerprint_at(ApiVersion::new(1, 14));
+        assert_eq!(
+            fingerprint, PUBLISHED_1_14,
+            "API 1.14's layout changed (fingerprint {fingerprint:016x}, published {PUBLISHED_1_14:016x}): \
+             mark what was added `since` the version that adds it"
+        );
+    }
+
+    /// The core shape every plugin built for API 1.14 carries.
+    const API_1_14_CORE: u64 = 0x2d00_9e96_5997_304e;
+
+    /// The imports API 1.15 added: notes on items and an item window's
+    /// foot.
+    const API_1_15_IMPORTS: [Import; 2] = [Import::UiItemNotesSet, Import::UiWindowFootSet];
+
+    /// API 1.15 added two events (an item menu entry chosen, a foot button
+    /// pressed), which change the core shape, and two imports, each marked
+    /// `since`; no existing call changed. A plugin built for API 1.14 keeps
+    /// its core shape, lacks the imports, and has every other import as it
+    /// is now.
+    #[test]
+    fn api_1_14_plugins_keep_their_core_and_import_shapes() {
+        let v1_14 = ApiVersion::new(1, 14);
+        assert_eq!(core_shape(v1_14), API_1_14_CORE);
+        assert_ne!(CORE_SHAPE, API_1_14_CORE);
+        let section = PluginLayout::parse(&section_at(v1_14)).unwrap();
+        for import in Import::ALL {
+            let new = API_1_15_IMPORTS.contains(import);
+            assert_eq!(import.since() == ApiVersion::new(1, 15), new, "{import:?}");
+            assert_eq!(import.shape_at(v1_14), import.shape(), "{import:?}");
+            let expected = (!new).then(|| import.shape());
+            assert_eq!(section.import_shape(import.name()), expected, "{import:?}");
+        }
+        assert_ne!(section_at(v1_14), LAYOUT_SECTION_BYTES);
+        assert_eq!(core_shape(API_CURRENT), CORE_SHAPE);
+        assert_eq!(section_at(API_CURRENT), LAYOUT_SECTION_BYTES.to_vec());
+    }
 
     /// The fingerprint API 1.12 was published with.
     const PUBLISHED_1_12: u64 = 0x4ae5_d2f7_29f5_02b6;
@@ -264,9 +310,10 @@ mod tests {
         let section = PluginLayout::parse(&section_at(v1_13)).unwrap();
         for import in Import::ALL {
             let new = API_1_14_IMPORTS.contains(import);
+            let later = API_1_15_IMPORTS.contains(import);
             assert_eq!(import.since() == ApiVersion::new(1, 14), new, "{import:?}");
             assert_eq!(import.shape_at(v1_13), import.shape(), "{import:?}");
-            let expected = (!new).then(|| import.shape());
+            let expected = (!new && !later).then(|| import.shape());
             assert_eq!(section.import_shape(import.name()), expected, "{import:?}");
         }
         assert_ne!(section_at(v1_13), LAYOUT_SECTION_BYTES);

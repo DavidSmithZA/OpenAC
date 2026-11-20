@@ -748,6 +748,109 @@ pub struct WorldDrawingEntry {
     pub drawing: WorldDrawing,
 }
 
+/// How an item's mark reads: the window draws each in its own colour.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum NoteTone {
+    /// No judgement.
+    #[default]
+    Plain,
+    /// Good: keep it.
+    Good,
+    /// Worth a look: salvage it.
+    Warning,
+    /// Bad: sell or drop it.
+    Bad,
+    /// The plugin's own emphasis.
+    Accent,
+}
+
+/// An entry a plugin adds to an item's menus.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ItemMenuEntry {
+    /// The plugin's own name for it.
+    pub id: String,
+    /// Its words.
+    pub label: String,
+}
+
+/// What a plugin says about one item: a mark beside it, a card's lines,
+/// entries for its menus. The window shows it and does nothing else.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ItemNote {
+    /// The item.
+    pub object_id: u32,
+    /// A word or two beside the item; empty for none.
+    pub mark: String,
+    /// How the mark reads.
+    pub tone: NoteTone,
+    /// The card's lines.
+    pub lines: Vec<String>,
+    /// Entries for the item's menus.
+    pub menu: Vec<ItemMenuEntry>,
+}
+
+/// A note with the plugin that wrote it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ItemNoteEntry {
+    /// The plugin.
+    pub owner: UiOwner,
+    /// The note.
+    pub note: ItemNote,
+}
+
+/// The item windows a plugin may add a foot to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+pub enum ItemWindow {
+    /// The inventory.
+    #[default]
+    Inventory,
+    /// The loot window.
+    Loot,
+    /// The trade window.
+    Trade,
+    /// The vendor window.
+    Vendor,
+}
+
+/// A button a plugin adds to an item window's foot.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FootButton {
+    /// The plugin's own name for it.
+    pub id: String,
+    /// Its words.
+    pub label: String,
+    /// It can be pressed.
+    pub enabled: bool,
+}
+
+/// A plugin's part of an item window's foot: a summary line and buttons.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct WindowFoot {
+    /// One line; empty for none.
+    pub summary: String,
+    /// The buttons.
+    pub buttons: Vec<FootButton>,
+}
+
+impl WindowFoot {
+    /// It shows nothing.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.summary.is_empty() && self.buttons.is_empty()
+    }
+}
+
+/// A foot with the plugin and window it belongs to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WindowFootEntry {
+    /// The plugin.
+    pub owner: UiOwner,
+    /// The window.
+    pub window: ItemWindow,
+    /// What it shows there.
+    pub foot: WindowFoot,
+}
+
 /// What form a ground shape takes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GroundShapeKind {
@@ -1086,6 +1189,24 @@ pub enum UiChange {
     },
     /// Projectile markers to show for a moment.
     ProjectileDebug(Arc<Vec<ProjectileSample>>),
+    /// One plugin's notes on items from now on (none: it has none any
+    /// more); every other plugin's stay as they are.
+    ItemNotes {
+        /// The plugin.
+        owner: UiOwner,
+        /// Its notes, one per item.
+        notes: Arc<Vec<ItemNote>>,
+    },
+    /// One plugin's part of an item window's foot from now on (empty: it
+    /// has none there any more).
+    WindowFoot {
+        /// The plugin.
+        owner: UiOwner,
+        /// The window.
+        window: ItemWindow,
+        /// What it shows there.
+        foot: WindowFoot,
+    },
     /// A plugin asks the window to show, hide or toggle a client window.
     ClientWindow {
         /// Which.
@@ -1270,6 +1391,24 @@ pub enum UiInput {
     /// sent instead of a whole [`Self::Windows`] when the screen, the
     /// layout's readiness and which windows there are stayed the same.
     WindowsChanged(Vec<crate::windows::WindowReport>),
+    /// The player chose one of a plugin's item menu entries.
+    ItemMenu {
+        /// The plugin.
+        owner: String,
+        /// The entry's id.
+        id: String,
+        /// The item whose menu it was.
+        object: u32,
+    },
+    /// The player pressed one of a plugin's foot buttons.
+    FootButton {
+        /// The plugin.
+        owner: String,
+        /// The window.
+        window: ItemWindow,
+        /// The button's id.
+        id: String,
+    },
 }
 
 /// Something a plugin hears from its UI.
@@ -1317,5 +1456,19 @@ pub enum UiEvent {
         width: i32,
         /// Height, pixels.
         height: i32,
+    },
+    /// One of its item menu entries was chosen.
+    ItemMenu {
+        /// The entry's id.
+        id: String,
+        /// The item whose menu it was.
+        object: u32,
+    },
+    /// One of its foot buttons was pressed.
+    FootButton {
+        /// The window.
+        window: ItemWindow,
+        /// The button's id.
+        id: String,
     },
 }

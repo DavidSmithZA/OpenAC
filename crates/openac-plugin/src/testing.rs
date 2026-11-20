@@ -825,6 +825,8 @@ impl Transport for FakeHost {
             | Import::UiMarkersSetShapes
             | Import::UiMarkersSetDrawings
             | Import::UiMarkersRemove
+            | Import::UiItemNotesSet
+            | Import::UiWindowFootSet
             | Import::UiProjectileDebug
             | Import::UiInputActionsListen => self.ui_call(import, bytes),
             other => other.default_reply(),
@@ -932,7 +934,7 @@ mod tests {
         host.enable(&mut plugin).unwrap();
         assert_eq!(
             host.logs,
-            vec![(LogLevel::Info, "test.recorder on API 1.14".to_owned())]
+            vec![(LogLevel::Info, "test.recorder on API 1.15".to_owned())]
         );
         host.tick(&mut plugin);
         assert!(host.type_line(&mut plugin, " @R waves "));

@@ -358,6 +358,8 @@ pub(crate) fn handle_import(
         | Import::UiMarkersSetShapes
         | Import::UiMarkersSetDrawings
         | Import::UiMarkersRemove
+        | Import::UiItemNotesSet
+        | Import::UiWindowFootSet
         | Import::UiProjectileDebug
         | Import::UiHotkeyRegister
         | Import::UiHotkeyUnregister

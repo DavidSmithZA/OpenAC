@@ -242,6 +242,13 @@ macro_rules! import_table {
             /// Remove a marker layer and its markers.
             UiMarkersRemove = ui_markers_remove(u32) -> bool,
                 permission: None, window: false, since: (1, 3);
+            /// Replace the plugin's notes on items (marks, cards, menu
+            /// entries).
+            UiItemNotesSet = ui_item_notes_set($crate::ui::ItemNoteSet) -> bool,
+                permission: None, window: false, since: (1, 15);
+            /// Replace the plugin's part of an item window's foot.
+            UiWindowFootSet = ui_window_foot_set($crate::ui::WindowFoot) -> bool,
+                permission: None, window: false, since: (1, 15);
             /// Projectile markers to draw for a moment.
             UiProjectileDebug = ui_projectile_debug(Vec<$crate::ui::ProjectileSample>) -> (),
                 permission: None, window: false, since: (1, 0);
