@@ -13,6 +13,7 @@ pub mod scribe;
 pub mod sheet;
 pub mod sheet_view;
 pub mod sheets;
+pub mod split;
 
 use ac_ui::UiFont;
 use ac_ui::modern::text;

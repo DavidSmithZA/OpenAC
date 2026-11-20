@@ -23,7 +23,7 @@ use super::widgets::BarFonts;
 
 /// How a button looks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Look {
+pub(crate) enum Look {
     /// Outlined.
     Plain,
     /// Words only.
@@ -34,7 +34,7 @@ enum Look {
 
 /// Draws a button `w` wide at (`x`, `y`), 28 or 30 high, with `words`.
 #[allow(clippy::too_many_arguments)]
-fn button(
+pub(crate) fn button(
     rc: &mut RenderContext<'_>,
     theme: &Horizon,
     font: Option<&UiFont>,
@@ -80,7 +80,7 @@ fn button(
 }
 
 /// The width a button needs for `words`.
-fn button_width(font: Option<&UiFont>, words: &str) -> f32 {
+pub(crate) fn button_width(font: Option<&UiFont>, words: &str) -> f32 {
     font.map_or(60.0, |f| text::measure(f, words, 0.0)).ceil() + 24.0
 }
 

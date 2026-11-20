@@ -1024,6 +1024,65 @@ fn the_modern_inventory() {
     s.save("inventory-side-pack");
 }
 
+/// The visible root child holding a `T`.
+fn shown<T: ac_ui::tree::Widget>(s: &Shot) -> Option<ac_ui::tree::ElementId> {
+    let root = &s.ui.host().root;
+    root.children(root.root())
+        .into_iter()
+        .find(|&c| root.widget::<T>(c).is_some() && root.element(c).is_some_and(|e| e.visible))
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_split() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_ui_window::ui::modern::items::menu::PopMenu;
+    use ac_ui_window::ui::modern::items::split::SplitPopover;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    assert!(s.ui.run_hotkey(Hotkey::Inventory));
+    s.step();
+    s.step();
+    // The potions: the first cell of the grid, a stack of 12.
+    let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
+    s.click(1, first.0, first.1, Modifiers::NONE);
+    let menu = shown::<PopMenu>(&s).expect("the menu");
+    let (mx, my, mw, _) = rect_of(&s, menu);
+    let (top, h) =
+        s.ui.host()
+            .root
+            .widget::<PopMenu>(menu)
+            .and_then(|m| m.entry_rows("Split the stack\u{2026}"))
+            .expect("a split entry");
+    s.click(0, mx + mw / 2, my + (top + h / 2.0) as i32, Modifiers::NONE);
+    let pop = shown::<SplitPopover>(&s).expect("the split pop-up");
+    let (stack, amount) = {
+        let p = s.ui.host().root.widget::<SplitPopover>(pop).unwrap();
+        (p.stack, p.amount)
+    };
+    assert_eq!((stack, amount), (12, 6));
+    s.save("split-open");
+    // The count typed over the half chosen, then Enter.
+    let out = ui_input::typed(s.ui.host_mut(), "5", Modifiers::NONE);
+    let _ = s.ui.handle(out);
+    s.step();
+    s.save("split-typed");
+    s.key(Key::Enter, Modifiers::NONE, true);
+    s.key(Key::Enter, Modifiers::NONE, false);
+    assert!(shown::<SplitPopover>(&s).is_none(), "the pop-up closed");
+    let moves: Vec<String> = s
+        .sent
+        .iter()
+        .map(|c| format!("{c:?}"))
+        .filter(|c| c.contains("MoveToContainer"))
+        .collect();
+    println!("{moves:?}");
+    assert_eq!(moves.len(), 1);
+    assert!(moves[0].contains("amount: 5"));
+    assert!(moves[0].contains("item: Guid(2147483905)"));
+}
+
 /// An answer about `guid` the player asked for.
 fn answer(s: &mut Shot, a: ac_proto::appraise::IdentifyObjectResponse, opens: bool) {
     s.scene
