@@ -2933,3 +2933,159 @@ fn the_modern_social() {
     s.step();
     assert!(!s.ui.host().root.is_window_visible("modern-social"));
 }
+
+/// Five quests in every state, the two timed ones shown on screen, and a
+/// journal of three pages with a countdown running on the second.
+fn quests_and_notes(s: &mut Shot) {
+    use ac_core::journal::JournalPage;
+    use ac_core::quests::{ContractCatalog, ContractEntry};
+    use ac_proto::contract::ContractTracker;
+    use ac_runtime::communication::{JournalView, TrackedContract};
+    let now = i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis()),
+    )
+    .unwrap_or(0);
+    let entry = |id, name: &str, desc: &str, progress: &str, repeat: &str| {
+        (
+            id,
+            ContractEntry {
+                contract_id: id,
+                contract_name: name.to_owned(),
+                description: desc.to_owned(),
+                description_progress: progress.to_owned(),
+                questflag_repeat_time: repeat.to_owned(),
+                name_npc_start: "Captain Aldric".to_owned(),
+                name_npc_end: "Captain Aldric".to_owned(),
+                location_npc_start_cell: 0xA9B4_0031,
+                location_npc_end_cell: 0xA9B4_0031,
+                location_quest_area_cell: 0xA5B3_0021,
+                ..ContractEntry::default()
+            },
+        )
+    };
+    let catalog = ContractCatalog::new(HashMap::from([
+        entry(
+            1,
+            "Drudge Raiders of Holtburg",
+            "Drudges have been raiding the farms north-west of Holtburg. Captain Aldric wants their camp broken up: slay the raiders and bring back their totem.",
+            "You have slain %d Drudge Raiders.",
+            "",
+        ),
+        entry(
+            2,
+            "Hearts of the Golems",
+            "The mages of Rithwic pay for golem hearts.",
+            "",
+            "flag",
+        ),
+        entry(
+            3,
+            "The Ramp Watch",
+            "The watch on the old ramp needs another blade.",
+            "",
+            "",
+        ),
+        entry(
+            4,
+            "Tusker Tusks",
+            "Bring the tusks of Tusker Guards to the carver.",
+            "",
+            "",
+        ),
+        entry(
+            5,
+            "The Lost Shipment",
+            "A shipment of mana charges went missing.",
+            "",
+            "",
+        ),
+    ]));
+    let tracked = |id, stage, done, repeats| TrackedContract {
+        tracker: ContractTracker {
+            version: 1,
+            contract_id: id,
+            stage,
+            time_when_done: done,
+            time_when_repeats: repeats,
+        },
+        received_unix_ms: now,
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Contracts(
+            Box::new(ac_runtime::session::interface::ContractFacts {
+                contracts: vec![
+                    tracked(1, 12, 0.0, 0.0),
+                    tracked(2, 3, 0.0, 50_700.0),
+                    tracked(3, 1, 0.0, 0.0),
+                    tracked(4, 3, 0.0, 0.0),
+                    tracked(5, 2, 6_120.0, 0.0),
+                ],
+                display_contract_id: 0,
+                revision: 1,
+                catalog: Arc::new(catalog),
+            }),
+        )));
+    let page = |title: &str, label: &str, notes: &str, running: f64| JournalPage {
+        title: title.to_owned(),
+        label: label.to_owned(),
+        notes: notes.to_owned(),
+        timer_hours: 2,
+        has_location: running == 0.0,
+        location_x: 32.9,
+        location_y: 37.3,
+        running_timer_seconds: running,
+        ..JournalPage::default()
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Journal(
+            Box::new(JournalView {
+                pages: vec![
+                    page(
+                        "Golem hearts",
+                        "farm",
+                        "Rithwic mages buy them.\nTake the pass road.",
+                        0.0,
+                    ),
+                    page("Mana forge", "raid", "Friday, an hour before.", 7200.0),
+                    page("", "", "", 0.0),
+                ],
+                current_page: 1,
+                revision: 1,
+                timer_started_unix_ms: Some(now - 600_000),
+                timer_seconds_at_start: 7200.0,
+            }),
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_journal() {
+    use ac_core::combat::CombatMode;
+    use ac_ui_window::ui::modern::journal::model::JournalTab;
+    use ac_ui_window::ui::modern::journal::window::JournalFrame;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    quests_and_notes(&mut s);
+    assert!(s.ui.open_contracts(), "the quests key opens it");
+    s.step();
+    s.step();
+    assert!(s.ui.host().root.is_window_visible("modern-journal"));
+    assert!(!s.ui.host().root.is_window_visible("journal"));
+    s.save("journal-quests");
+    let frame = s.ui.host().root.window("modern-journal").expect("it").frame;
+    if let Some(f) = s.ui.host_mut().root.widget_mut::<JournalFrame>(frame) {
+        f.pick(5);
+    }
+    s.step();
+    s.step();
+    s.save("journal-timed");
+    if let Some(f) = s.ui.host_mut().root.widget_mut::<JournalFrame>(frame) {
+        f.show(JournalTab::Notes);
+    }
+    s.step();
+    s.step();
+    s.save("journal-notes");
+}

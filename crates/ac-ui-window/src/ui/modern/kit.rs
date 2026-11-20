@@ -374,6 +374,148 @@ pub fn field_text(ui: &UiRoot, field: ElementId) -> String {
         .unwrap_or_default()
 }
 
+/// What can be clicked, noted while a window draws, and where the pointer
+/// is: a click lands on what was drawn last under it.
+#[derive(Debug)]
+pub struct Hits<H> {
+    /// Each place and what it is, in drawing order.
+    pub list: Vec<(Rect, H)>,
+    /// The pointer, in the window's units.
+    pub hover: Option<(f32, f32)>,
+}
+
+impl<H> Default for Hits<H> {
+    fn default() -> Self {
+        Self {
+            list: Vec::new(),
+            hover: None,
+        }
+    }
+}
+
+impl<H: Clone> Hits<H> {
+    /// None noted yet, the pointer at `hover`.
+    #[must_use]
+    pub fn new(hover: Option<(f32, f32)>) -> Self {
+        Self {
+            list: Vec::new(),
+            hover,
+        }
+    }
+
+    /// Notes `hit` at `r`; whether the pointer is over it.
+    pub fn add(&mut self, r: Rect, hit: H) -> bool {
+        self.list.push((r, hit));
+        hot(self.hover, r)
+    }
+
+    /// What was drawn last under (`x`, `y`).
+    #[must_use]
+    pub fn at(&self, x: f32, y: f32) -> Option<H> {
+        self.list
+            .iter()
+            .rev()
+            .find(|(r, _)| inside(*r, x, y))
+            .map(|(_, h)| h.clone())
+    }
+}
+
+/// `words` in `font` at (`x`, `y`).
+pub fn put(
+    rc: &mut RenderContext<'_>,
+    font: Option<&Arc<UiFont>>,
+    words: &str,
+    x: f32,
+    y: f32,
+    c: Color,
+) {
+    if let Some(f) = font {
+        text::draw(rc, f, words, x, y, TextStyle::plain(c));
+    }
+}
+
+/// `words` in `font` centred down a band from `y`, `h` high.
+pub fn put_mid(
+    rc: &mut RenderContext<'_>,
+    font: Option<&Arc<UiFont>>,
+    words: &str,
+    x: f32,
+    y: f32,
+    h: f32,
+    c: Color,
+) {
+    if let Some(f) = font {
+        let ty = y + ((h - f.line_height) * 0.5).round();
+        text::draw(rc, f, words, x, ty, TextStyle::plain(c));
+    }
+}
+
+/// `words` ending at `right`, centred down a band from `y`, `h` high;
+/// returns where they start.
+pub fn put_right(
+    rc: &mut RenderContext<'_>,
+    font: Option<&Arc<UiFont>>,
+    words: &str,
+    right: f32,
+    y: f32,
+    h: f32,
+    c: Color,
+) -> f32 {
+    let Some(f) = font else {
+        return right;
+    };
+    let w = text::measure(f, words, 0.0);
+    let ty = y + ((h - f.line_height) * 0.5).round();
+    text::draw(rc, f, words, right - w, ty, TextStyle::plain(c));
+    right - w
+}
+
+/// Spaced capitals at (`x`, `y`) in the soft colour.
+pub fn spaced(rc: &mut RenderContext<'_>, font: Option<&Arc<UiFont>>, words: &str, x: f32, y: f32) {
+    if let Some(f) = font {
+        text::draw(
+            rc,
+            f,
+            words,
+            x,
+            y,
+            TextStyle::plain(SOFT).tracked(LABEL_TRACKING),
+        );
+    }
+}
+
+/// A status pill ending at `right`, centred on `cy`: a dot and `words` in
+/// `ink`, edged `edge`; returns its left edge.
+pub fn pill(
+    rc: &mut RenderContext<'_>,
+    font: Option<&Arc<UiFont>>,
+    right: f32,
+    cy: f32,
+    words: &str,
+    ink: Color,
+    edge: Color,
+) -> f32 {
+    let Some(f) = font else {
+        return right;
+    };
+    let w = text::measure(f, words, 0.0) + 30.0;
+    let r = (right - w, cy - 12.0, w, 24.0);
+    rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(12.0), edge, 1.0);
+    rc.fill_ellipse(r.0 + 10.0, cy - 3.0, 6.0, 6.0, ink);
+    put_mid(rc, Some(f), words, r.0 + 22.0, r.1, r.3, ink);
+    r.0
+}
+
+/// A dark box with a quiet edge (a section, a card).
+pub fn panel(rc: &mut RenderContext<'_>, r: Rect, edge_alpha: f32) {
+    let round = CornerRadii::all(4.0);
+    rc.fill_rounded_rect(r.0, r.1, r.2, r.3, round, hex(0, 0.28));
+    rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, bronze(edge_alpha), 1.0);
+}
+
+/// The quiet grey of hints and notes.
+pub const MUTED: Color = hex(0xA8_9A82, 1.0);
+
 /// An input box in `r` (a field goes over it, [`mount_field`]); `empty`
 /// shows `hint` in it.
 #[allow(clippy::too_many_arguments)]

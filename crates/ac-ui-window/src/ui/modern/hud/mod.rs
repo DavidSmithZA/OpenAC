@@ -42,9 +42,14 @@ pub const COMBAT: &str = "modern-combat";
 /// The fellows on screen's window name.
 pub const FELLOWS: &str = "modern-fellows";
 
+/// The quests on screen's window name.
+pub const QUESTS: &str = "modern-quests";
+
 /// Every HUD piece's window name (not the bars: they keep their own lock
 /// and hiding).
-pub const PIECES: [&str; 7] = [VITALS, TARGET, EFFECTS, RADAR, COMBAT, PANELS, FELLOWS];
+pub const PIECES: [&str; 8] = [
+    VITALS, TARGET, EFFECTS, RADAR, COMBAT, PANELS, FELLOWS, QUESTS,
+];
 
 /// What the player calls piece `name` (its window name).
 #[must_use]
@@ -57,6 +62,7 @@ pub fn piece_words(name: &str) -> &str {
         COMBAT => "Combat strip",
         PANELS => "Panel strip",
         FELLOWS => "Fellows",
+        QUESTS => "Quests",
         other => other.strip_prefix("modern-").unwrap_or(other),
     }
 }

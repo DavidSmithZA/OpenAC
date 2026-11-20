@@ -1252,6 +1252,7 @@ impl WindowUi {
         self.update_map_house(scene);
         self.update_barber(dirty, scene);
         self.update_journal_pages(dirty, scene);
+        self.tick_modern_journal(scene);
         self.refresh_examined_spell(dirty);
         self.keep_modern_appraisals();
         self.feed_modern_inspect();

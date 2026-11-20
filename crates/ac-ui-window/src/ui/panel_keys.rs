@@ -163,6 +163,9 @@ impl WindowUi {
     /// OpenAC `OpenJournalPanel`: the journal on the page, shown (a key
     /// never closes it).
     fn open_journal(&mut self, page: JournalPage) -> bool {
+        if let Some(done) = self.modern_open_journal(page) {
+            return done;
+        }
         let shown =
             self.host
                 .with_controller::<JournalPanelController, _>(JOURNAL_WINDOW, |c, ui| match page {

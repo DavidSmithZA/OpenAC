@@ -20,6 +20,7 @@ pub mod dialogs;
 pub mod fonts;
 pub mod hud;
 pub mod items;
+pub mod journal;
 pub mod kit;
 pub mod magic;
 pub mod options;
@@ -103,6 +104,8 @@ pub struct ModernLayer {
     pub salvage: Option<dealing::salvage_run::SalvageUi>,
     /// The Social window and the fellows on screen.
     pub social: Option<social::run::SocialUi>,
+    /// The Journal and the quests on screen.
+    pub journal: Option<journal::run::JournalUi>,
     /// The question card and the invitations under the target.
     pub questions: Option<dialogs::run::QuestionsUi>,
     /// Packs used anywhere since the inventory last looked.
@@ -355,6 +358,7 @@ impl WindowUi {
         self.mount_modern_salvage();
         self.mount_modern_questions();
         self.mount_modern_social();
+        self.mount_modern_journal();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
