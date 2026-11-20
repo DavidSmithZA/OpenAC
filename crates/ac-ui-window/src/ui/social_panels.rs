@@ -527,6 +527,9 @@ impl WindowUi {
     /// OpenAC `RetailUiRuntime.OpenSocialPanel`: shown on that page, it
     /// closes; else it opens there.
     pub(super) fn open_social(&mut self, page: SocialPage) -> bool {
+        if let Some(done) = self.modern_open_social(page) {
+            return done;
+        }
         let visible = self.host.root.is_window_visible(SOCIAL_WINDOW);
         let Some(on_page) = self.host.with_controller::<SocialPanelController, _>(
             SOCIAL_WINDOW,
@@ -557,6 +560,9 @@ impl WindowUi {
     /// OpenAC `RetailUiRuntime.OpenJournalPanel(Contracts)`: the journal
     /// on its contracts page.
     pub fn open_contracts(&mut self) -> bool {
+        if let Some(done) = self.modern_open_journal(super::panel_keys::JournalPage::Contracts) {
+            return done;
+        }
         let shown = self
             .host
             .with_controller::<JournalPanelController, _>(JOURNAL_WINDOW, |c, ui| {

@@ -461,6 +461,7 @@ fn f10_opens_the_map_with_the_date_the_player_and_the_house() {
                 HouseLineColor::Normal,
             )],
             position_cell: None,
+            ..HouseView::default()
         }),
     )));
     ui.set_calendar(Some(CalendarDate {

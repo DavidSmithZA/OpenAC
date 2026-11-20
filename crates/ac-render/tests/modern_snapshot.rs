@@ -2708,3 +2708,632 @@ fn the_modern_salvage() {
     s.step();
     s.save("salvage-done");
 }
+
+/// The player in an allegiance (Mira's vassal, with vassals of their own;
+/// the monarch when `monarch`), in a locked fellowship Mira leads, with
+/// friends and people ignored.
+fn social_facts(monarch: bool) -> ac_runtime::session::interface::SocialFacts {
+    use ac_core::social::{
+        FriendEntry, FriendsStateParts, SquelchDatabase, SquelchInfo, SquelchStateParts,
+    };
+    use ac_proto::allegiance::{AllegianceMember, AllegianceProfile};
+    use ac_runtime::gameplay::{DepartedFellowView, FellowView, FellowshipView};
+    use std::collections::{HashMap, HashSet};
+    const MIRA: u32 = 0x5000_0002;
+    const ROOK: u32 = 0x5000_0003;
+    let member = |id, parent, name: &str, rank, level, online, tithed| AllegianceMember {
+        character_id: id,
+        parent_guid: parent,
+        is_logged_in: online,
+        name: name.to_owned(),
+        rank,
+        level,
+        loyalty: 140,
+        leadership: 95,
+        cp_cached: 0,
+        cp_tithed: tithed,
+        gender: 1,
+        heritage_group: 1,
+        may_passup_experience: true,
+    };
+    let (monarch_member, records) = if monarch {
+        (
+            member(PLAYER, 0, "Aerin Vale", 6, 126, true, 0),
+            vec![
+                member(0x5000_0010, PLAYER, "Hask", 3, 98, true, 812_400),
+                member(0x5000_0011, PLAYER, "Tarn", 2, 64, false, 140_210),
+            ],
+        )
+    } else {
+        (
+            member(ROOK, 0, "Rook of Arwic", 9, 275, true, 0),
+            vec![
+                member(MIRA, ROOK, "Mira", 7, 201, true, 1_241_880),
+                member(PLAYER, MIRA, "Aerin Vale", 6, 126, true, 964_910),
+                member(0x5000_0010, PLAYER, "Hask", 3, 98, true, 812_400),
+                member(0x5000_0011, PLAYER, "Tarn", 2, 64, false, 140_210),
+                member(0x5000_0012, PLAYER, "Wren", 1, 31, true, 9_880),
+                member(0x5000_0013, PLAYER, "Pell", 1, 12, false, 2_420),
+            ],
+        )
+    };
+    let fellow = |guid, name: &str, level, health: (u32, u32), loot| FellowView {
+        guid,
+        name: name.to_owned(),
+        level,
+        health,
+        stamina: (298, 410),
+        mana: (361, 620),
+        share_loot: loot,
+        vitals_age_seconds: Some(1.0),
+    };
+    let now = i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs()),
+    )
+    .unwrap_or(0);
+    let friend = |id, name: &str, online| FriendEntry {
+        id,
+        name: name.to_owned(),
+        online,
+        appear_offline: false,
+        friends: Vec::new(),
+        friend_of: Vec::new(),
+    };
+    ac_runtime::session::interface::SocialFacts {
+        in_world: true,
+        options: ac_runtime::character::CharacterOptions::default(),
+        friends: FriendsStateParts {
+            entries: vec![
+                friend(MIRA, "Mira", true),
+                friend(0x5000_0020, "Osk", true),
+                friend(0x5000_0011, "Tarn", false),
+                friend(0x5000_0021, "Corvan", false),
+            ],
+            revision: 1,
+        }
+        .into(),
+        squelch: SquelchStateParts {
+            database: SquelchDatabase {
+                accounts: HashMap::from([("Pyreal Dealer".to_owned(), 1)]),
+                characters: HashMap::from([
+                    (
+                        0x5000_0030,
+                        SquelchInfo {
+                            name: "Loudmouth".to_owned(),
+                            account_wide: false,
+                            message_types: HashSet::from([3, 12]),
+                        },
+                    ),
+                    (
+                        0x5000_0031,
+                        SquelchInfo {
+                            name: "Spamtastic".to_owned(),
+                            account_wide: false,
+                            message_types: HashSet::from([1]),
+                        },
+                    ),
+                ]),
+                global: SquelchInfo {
+                    name: String::new(),
+                    account_wide: false,
+                    message_types: HashSet::from([17]),
+                },
+            },
+            revision: 1,
+        }
+        .into(),
+        fellowship: FellowshipView {
+            revision: 1,
+            in_fellowship: true,
+            name: "Ramp Runners".to_owned(),
+            leader_guid: MIRA,
+            share_xp: true,
+            even_xp_split: false,
+            open: true,
+            locked: true,
+            members: vec![
+                fellow(MIRA, "Mira", 201, (1020, 1020), true),
+                fellow(PLAYER, "Aerin Vale", 126, (412, 450), true),
+                fellow(0x5000_0020, "Osk", 126, (305, 305), false),
+                fellow(0x5000_0010, "Hask", 98, (140, 388), true),
+            ],
+            departed: vec![DepartedFellowView {
+                guid: 0x5000_0013,
+                name: "Pell".to_owned(),
+                left_unix_s: now - 12 * 60,
+            }],
+        },
+        allegiance: Some(AllegianceProfile {
+            total_members: 1284,
+            total_vassals: 19,
+            motd: "Mana forge run on Friday. Meet at the Arwic lifestone an hour before."
+                .to_owned(),
+            motd_set_by: "Rook of Arwic".to_owned(),
+            allegiance_name: "House of Arwic".to_owned(),
+            monarch: Some(monarch_member),
+            records,
+            ..AllegianceProfile::default()
+        }),
+        allegiance_rank: 6,
+        allegiance_revision: 1,
+    }
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_social() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_render::ui::window::SocialPage;
+    use ac_runtime::gameplay::{FellowshipCommand, GameplayCommand};
+    use ac_runtime::session::SessionCommand;
+    use ac_ui_window::ui::modern::social::model::Tab;
+    use ac_ui_window::ui::modern::social::window::SocialFrame;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Social(
+            Box::new(social_facts(false)),
+        )));
+    s.step();
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Fellowship(
+                FellowshipCommand::SetPanelOpen(true)
+            ))
+        )),
+        "the fellows on screen keep their vitals coming: {:?}",
+        s.sent
+    );
+    assert!(
+        s.ui.host().root.is_window_visible("modern-fellows"),
+        "the fellows show on screen"
+    );
+    assert!(s.ui.run_hotkey(Hotkey::Social(SocialPage::Allegiance)));
+    s.step();
+    s.step();
+    assert!(s.ui.host().root.is_window_visible("modern-social"));
+    assert!(!s.ui.host().root.is_window_visible("social-panel"));
+    s.save("social-allegiance");
+    let frame = s.ui.host().root.window("modern-social").expect("it").frame;
+    let page = |s: &mut Shot, tab: Tab, name: &str| {
+        if let Some(f) = s.ui.host_mut().root.widget_mut::<SocialFrame>(frame) {
+            f.show(tab);
+        }
+        s.step();
+        s.step();
+        s.save(name);
+    };
+    page(&mut s, Tab::Fellowship, "social-fellowship");
+    page(&mut s, Tab::Friends, "social-friends");
+    page(&mut s, Tab::Ignored, "social-ignored");
+    if let Some(f) = s.ui.host_mut().root.widget_mut::<SocialFrame>(frame) {
+        f.menu = Some(Some(0));
+    }
+    s.step();
+    s.save("social-ignored-menu");
+    // The monarch manages the allegiance.
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Social(
+            Box::new(social_facts(true)),
+        )));
+    page(&mut s, Tab::Allegiance, "social-monarch");
+    if let Some(f) = s.ui.host_mut().root.widget_mut::<SocialFrame>(frame) {
+        f.managing = true;
+    }
+    s.step();
+    s.step();
+    s.save("social-manage");
+    // The fellowship key closes it when on its page.
+    page(&mut s, Tab::Fellowship, "social-fellowship-2");
+    assert!(s.ui.run_hotkey(Hotkey::Social(SocialPage::Fellowship)));
+    s.step();
+    assert!(!s.ui.host().root.is_window_visible("modern-social"));
+}
+
+/// Five quests in every state, the two timed ones shown on screen, and a
+/// journal of three pages with a countdown running on the second.
+fn quests_and_notes(s: &mut Shot) {
+    use ac_core::journal::JournalPage;
+    use ac_core::quests::{ContractCatalog, ContractEntry};
+    use ac_proto::contract::ContractTracker;
+    use ac_runtime::communication::{JournalView, TrackedContract};
+    let now = i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis()),
+    )
+    .unwrap_or(0);
+    let entry = |id, name: &str, desc: &str, progress: &str, repeat: &str| {
+        (
+            id,
+            ContractEntry {
+                contract_id: id,
+                contract_name: name.to_owned(),
+                description: desc.to_owned(),
+                description_progress: progress.to_owned(),
+                questflag_repeat_time: repeat.to_owned(),
+                name_npc_start: "Captain Aldric".to_owned(),
+                name_npc_end: "Captain Aldric".to_owned(),
+                location_npc_start_cell: 0xA9B4_0031,
+                location_npc_end_cell: 0xA9B4_0031,
+                location_quest_area_cell: 0xA5B3_0021,
+                ..ContractEntry::default()
+            },
+        )
+    };
+    let catalog = ContractCatalog::new(HashMap::from([
+        entry(
+            1,
+            "Drudge Raiders of Holtburg",
+            "Drudges have been raiding the farms north-west of Holtburg. Captain Aldric wants their camp broken up: slay the raiders and bring back their totem.",
+            "You have slain %d Drudge Raiders.",
+            "",
+        ),
+        entry(
+            2,
+            "Hearts of the Golems",
+            "The mages of Rithwic pay for golem hearts.",
+            "",
+            "flag",
+        ),
+        entry(
+            3,
+            "The Ramp Watch",
+            "The watch on the old ramp needs another blade.",
+            "",
+            "",
+        ),
+        entry(
+            4,
+            "Tusker Tusks",
+            "Bring the tusks of Tusker Guards to the carver.",
+            "",
+            "",
+        ),
+        entry(
+            5,
+            "The Lost Shipment",
+            "A shipment of mana charges went missing.",
+            "",
+            "",
+        ),
+    ]));
+    let tracked = |id, stage, done, repeats| TrackedContract {
+        tracker: ContractTracker {
+            version: 1,
+            contract_id: id,
+            stage,
+            time_when_done: done,
+            time_when_repeats: repeats,
+        },
+        received_unix_ms: now,
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Contracts(
+            Box::new(ac_runtime::session::interface::ContractFacts {
+                contracts: vec![
+                    tracked(1, 12, 0.0, 0.0),
+                    tracked(2, 3, 0.0, 50_700.0),
+                    tracked(3, 1, 0.0, 0.0),
+                    tracked(4, 3, 0.0, 0.0),
+                    tracked(5, 2, 6_120.0, 0.0),
+                ],
+                display_contract_id: 0,
+                revision: 1,
+                catalog: Arc::new(catalog),
+            }),
+        )));
+    let page = |title: &str, label: &str, notes: &str, running: f64| JournalPage {
+        title: title.to_owned(),
+        label: label.to_owned(),
+        notes: notes.to_owned(),
+        timer_hours: 2,
+        has_location: running == 0.0,
+        location_x: 32.9,
+        location_y: 37.3,
+        running_timer_seconds: running,
+        ..JournalPage::default()
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Journal(
+            Box::new(JournalView {
+                pages: vec![
+                    page(
+                        "Golem hearts",
+                        "farm",
+                        "Rithwic mages buy them.\nTake the pass road.",
+                        0.0,
+                    ),
+                    page("Mana forge", "raid", "Friday, an hour before.", 7200.0),
+                    page("", "", "", 0.0),
+                ],
+                current_page: 1,
+                revision: 1,
+                timer_started_unix_ms: Some(now - 600_000),
+                timer_seconds_at_start: 7200.0,
+            }),
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_journal() {
+    use ac_core::combat::CombatMode;
+    use ac_ui_window::ui::modern::journal::model::JournalTab;
+    use ac_ui_window::ui::modern::journal::window::JournalFrame;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    quests_and_notes(&mut s);
+    assert!(s.ui.open_contracts(), "the quests key opens it");
+    s.step();
+    s.step();
+    assert!(s.ui.host().root.is_window_visible("modern-journal"));
+    assert!(!s.ui.host().root.is_window_visible("journal"));
+    s.save("journal-quests");
+    let frame = s.ui.host().root.window("modern-journal").expect("it").frame;
+    if let Some(f) = s.ui.host_mut().root.widget_mut::<JournalFrame>(frame) {
+        f.pick(5);
+    }
+    s.step();
+    s.step();
+    s.save("journal-timed");
+    if let Some(f) = s.ui.host_mut().root.widget_mut::<JournalFrame>(frame) {
+        f.show(JournalTab::Notes);
+    }
+    s.step();
+    s.step();
+    s.save("journal-notes");
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_book() {
+    use ac_core::combat::CombatMode;
+    use ac_proto::book::BookPage;
+    use ac_runtime::gameplay::{BookCommand, BookView, GameplayCommand};
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let page = |author: u32, name: &str, words: &str| BookPage {
+        author_id: author,
+        author_name: name.to_owned(),
+        author_account: String::new(),
+        text_included: 1,
+        ignore_author: 0,
+        page_text: words.to_owned(),
+    };
+    let view = |current: i32, revision: u64| BookView {
+        revision,
+        book_guid: 0x8000_0901,
+        max_num_pages: 10,
+        max_num_chars_per_page: 1000,
+        pages: vec![
+            page(
+                0x5000_0099,
+                "Mira",
+                "Drudges keep to the hills by day and come down at dusk. They favour the old farms north-west of Holtburg, where the fences are down.",
+            ),
+            page(PLAYER, "Aerin Vale", "My own notes on the raids."),
+        ],
+        current_page: current,
+        inscription: "On the Habits of Drudges".to_owned(),
+        scribe_id: 0x5000_0099,
+        scribe_name: "Mira".to_owned(),
+        request_pending: false,
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Book(
+            Box::new(view(0, 1)),
+        )));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-book"),
+        "a book opens it"
+    );
+    assert!(!s.ui.host().root.is_window_visible("book"));
+    s.save("book-read");
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Book(
+            Box::new(view(1, 2)),
+        )));
+    s.step();
+    s.step();
+    s.save("book-own-page");
+    // The close saves the page.
+    let frame = s.ui.host().root.window("modern-book").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    s.sent.clear();
+    s.click(0, fx + 560 - 12 - 15, fy + 26, Modifiers::NONE);
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Book(BookCommand::CloseWriting(Some(_))))
+        )),
+        "{:?}",
+        s.sent
+    );
+}
+
+/// The player owns a cottage with the maintenance not paid, and the
+/// server has listed who may come in.
+fn own_a_house(s: &mut Shot, paid: bool) {
+    use ac_runtime::gameplay::{HouseAccessView, HouseDetails, HouseView};
+    let now = i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs()),
+    )
+    .unwrap_or(0);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::House(
+            Box::new(HouseView {
+                revision: 2,
+                has_received_notice: true,
+                owns_house: true,
+                lines: Vec::new(),
+                position_cell: Some(0xA9B4_0031),
+                details: Some(HouseDetails {
+                    house_type: 1,
+                    cell: 0xA9B4_0031,
+                    bought_unix_s: now - 80 * 86_400,
+                    period_ends_unix_s: now + 12 * 86_400,
+                    next_due_unix_s: now + 12 * 86_400,
+                    maintenance_free: false,
+                    paid,
+                    rent: vec![
+                        ("Pyreals".to_owned(), 50_000, 50_000),
+                        ("Mana Scarabs".to_owned(), if paid { 5 } else { 3 }, 5),
+                        ("Pearls".to_owned(), if paid { 2 } else { 0 }, 2),
+                    ],
+                }),
+                access: Some(HouseAccessView {
+                    open: false,
+                    allegiance_guests: true,
+                    allegiance_storage: false,
+                    guests: vec![
+                        ("Mira".to_owned(), true),
+                        ("Osk".to_owned(), false),
+                        ("Hask".to_owned(), true),
+                    ],
+                }),
+                buy_another_unix_s: 0,
+                for_sale: Vec::new(),
+            }),
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_house() {
+    use ac_core::combat::CombatMode;
+    use ac_proto::house::{HousePayment, HouseProfile};
+    use ac_runtime::inventory::HousePurchaseView;
+    use ac_ui::input::InputAction;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    own_a_house(&mut s, false);
+    assert!(s.ui.handle_input_action(InputAction::ToggleHousePage));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-house"),
+        "H opens it"
+    );
+    s.save("house-due");
+    own_a_house(&mut s, true);
+    s.save("house-paid");
+    // A slumlord's house for sale, the player carrying pyreals.
+    let mut coins = ClientObject::new(0x8000_0A01);
+    coins.name = "Pyreal".to_owned();
+    coins.weenie_class_id = 273;
+    coins.stack_size = 25_000;
+    coins.container_id = PLAYER;
+    let mut p = ClientObject::new(PLAYER);
+    p.name = "Aerin Vale".to_owned();
+    p.item_type = ItemType::CREATURE;
+    p.properties.ints.insert(25, 126);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: false,
+                objects: vec![p, coins],
+                removed: Vec::new(),
+                contents: vec![(PLAYER, Some(vec![0x8000_0A01]))],
+            },
+        )));
+    let line = |num, wcid, name: &str, plural: &str| HousePayment {
+        num,
+        paid: 0,
+        weenie_id: wcid,
+        name: name.to_owned(),
+        plural_name: plural.to_owned(),
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::HousePurchase(
+            Box::new(HousePurchaseView {
+                revision: 1,
+                profile: Some(HouseProfile {
+                    slumlord_guid: 0x8000_0B01,
+                    dwelling_id: 1,
+                    owner_guid: 0,
+                    bitmask: 0,
+                    min_level: 20,
+                    max_level: -1,
+                    min_allegiance_rank: -1,
+                    max_allegiance_rank: -1,
+                    maintenance_free: false,
+                    house_type: 1,
+                    owner_name: String::new(),
+                    buy: vec![
+                        line(50_000, 273, "Pyreal", "Pyreals"),
+                        line(2, 9001, "Pearl", "Pearls"),
+                    ],
+                    rent: vec![line(25_000, 273, "Pyreal", "Pyreals")],
+                }),
+                buy: vec![0x8000_0A01],
+                rent: Vec::new(),
+                buy_amounts: vec![25_000, 0],
+                rent_amounts: vec![0],
+            }),
+        )));
+    s.step();
+    s.step();
+    assert!(s.ui.host().root.is_window_visible("modern-house-sale"));
+    assert!(!s.ui.host().root.is_window_visible("house-purchase"));
+    s.save("house-sale");
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_map() {
+    use ac_core::combat::CombatMode;
+    use ac_core::world::{CalendarDate, HourName, MonthName};
+    use ac_ui::input::InputAction;
+    use ac_ui_window::ui::modern::world::map::MapView;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    own_a_house(&mut s, true);
+    s.ui.set_calendar(Some(CalendarDate {
+        year: 119,
+        month: MonthName::Frostfell,
+        day: 27,
+        hour: HourName::Dawnsong,
+    }));
+    assert!(s.ui.handle_input_action(InputAction::ToggleMapPage));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-map"),
+        "M opens it"
+    );
+    assert!(!s.ui.host().root.is_window_visible("map-house"));
+    s.save("map");
+    let view = s.ui.host().root.window("modern-map").expect("it").frame;
+    if let Some(v) = s.ui.host_mut().root.widget_mut::<MapView>(view) {
+        let art = v.art.expect("the game's map art");
+        assert!(art.width > 0.0, "{art:?}");
+        v.focus(33.9, 42.1, 3, Some("Holtburg".to_owned()));
+        v.layers.for_sale = true;
+    }
+    s.step();
+    s.step();
+    s.save("map-zoomed");
+    if let Some(v) = s.ui.host_mut().root.widget_mut::<MapView>(view) {
+        v.pick = None;
+        v.new_pin = Some((34.5, 41.0));
+    }
+    s.step();
+    s.step();
+    s.save("map-pin");
+    // Escape closes it.
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    s.step();
+    assert!(!s.ui.host().root.is_window_visible("modern-map"));
+}

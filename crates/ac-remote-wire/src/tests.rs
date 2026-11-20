@@ -61,8 +61,9 @@ use ac_runtime::communication::{
 use ac_runtime::gameplay::selection_cycle::{SelectionCycleDirection, SelectionCycleKind};
 use ac_runtime::gameplay::{
     AllegianceCommand, BarberCommand, BarberView, BookCommand, BookView, ChessCommand, ChessStage,
-    ChessView, CombatAttackCommand, FellowView, FellowshipCommand, FellowshipView, GameplayCommand,
-    HouseLineColor, HouseView, InputActivation, SelectionSource,
+    ChessView, CombatAttackCommand, DepartedFellowView, FellowView, FellowshipCommand,
+    FellowshipView, GameplayCommand, HouseAccessView, HouseDetails, HouseLineColor, HouseView,
+    InputActivation, SelectionSource,
 };
 use ac_runtime::inventory::{
     AppraisalView, HousePurchaseCommand, HousePurchaseTab, HousePurchaseView, InteractionMode,
@@ -633,6 +634,11 @@ fn social_facts() -> SocialFacts {
                 mana: (5, 6),
                 share_loot: true,
                 vitals_age_seconds: Some(1.5),
+            }],
+            departed: vec![DepartedFellowView {
+                guid: 2,
+                name: "Gone".into(),
+                left_unix_s: 1_700_000_000,
             }],
         },
         allegiance: Some(AllegianceProfile {
@@ -1325,6 +1331,24 @@ fn interface_events() -> Vec<InterfaceEvent> {
             owns_house: true,
             lines: vec![("Paid".into(), HouseLineColor::RentPaid)],
             position_cell: Some(0x1234_0001),
+            details: Some(HouseDetails {
+                house_type: 1,
+                cell: 0x1234_0001,
+                bought_unix_s: 1,
+                period_ends_unix_s: 2,
+                next_due_unix_s: 3,
+                maintenance_free: false,
+                paid: true,
+                rent: vec![("Pyreals".into(), 4, 10)],
+            }),
+            access: Some(HouseAccessView {
+                open: true,
+                allegiance_guests: false,
+                allegiance_storage: true,
+                guests: vec![("Osk".into(), true)],
+            }),
+            buy_another_unix_s: 4,
+            for_sale: vec![(1, 12, vec![0xA9B4_FFFF])],
         })),
         InterfaceEvent::HousePurchase(Box::new(HousePurchaseView {
             revision: 2,
@@ -2897,7 +2921,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "261019edc37123ef", "{:#x}", shape());
+    assert_eq!(shape_hex(), "467f1139877c9ed0", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full

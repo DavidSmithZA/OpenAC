@@ -18,12 +18,16 @@ pub mod chat;
 pub mod dealing;
 pub mod dialogs;
 pub mod fonts;
+pub mod house;
 pub mod hud;
 pub mod items;
+pub mod journal;
 pub mod kit;
 pub mod magic;
 pub mod options;
 pub mod places;
+pub mod social;
+pub mod world;
 
 use std::sync::Arc;
 
@@ -100,6 +104,20 @@ pub struct ModernLayer {
     pub trade: Option<dealing::trade_run::TradeUi>,
     /// The Salvage window.
     pub salvage: Option<dealing::salvage_run::SalvageUi>,
+    /// The Social window and the fellows on screen.
+    pub social: Option<social::run::SocialUi>,
+    /// The Journal and the quests on screen.
+    pub journal: Option<journal::run::JournalUi>,
+    /// The book reader.
+    pub book: Option<journal::book::BookUi>,
+    /// The House window and the house sale window.
+    pub house: Option<house::run::HouseUi>,
+    /// The full-screen map.
+    pub map: Option<world::run::MapUi>,
+    /// The player as the radar last read them (the map's arrow).
+    pub last_player: Option<ac_ui::panels::radar::RadarPlayer>,
+    /// The player's vitals as last fed (the map's bar).
+    pub last_vitals: Option<ac_ui::panels::vitals::VitalsView>,
     /// The question card and the invitations under the target.
     pub questions: Option<dialogs::run::QuestionsUi>,
     /// Packs used anywhere since the inventory last looked.
@@ -351,6 +369,11 @@ impl WindowUi {
         self.mount_modern_trade();
         self.mount_modern_salvage();
         self.mount_modern_questions();
+        self.mount_modern_social();
+        self.mount_modern_journal();
+        self.mount_modern_book();
+        self.mount_modern_house();
+        self.mount_modern_map();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -525,6 +548,10 @@ impl WindowUi {
         let inventory = shows(ac_ui::panels::panel_id::INVENTORY);
         let spellbook = shows(ac_ui::panels::panel_id::MAGIC);
         let options = shows(ac_ui::panels::panel_id::OPTIONS);
+        let social = shows(ac_ui::panels::panel_id::SOCIAL);
+        let house_open = self.modern_house_open();
+        let map_open = self.modern_map_open();
+        let journal = shows(ac_ui::panels::panel_id::JOURNAL);
         let ui = &mut self.host.root;
         for id in buttons {
             let Some(panel) = ui.widget::<PanelButton>(id).map(|b| b.panel) else {
@@ -534,10 +561,10 @@ impl WindowUi {
                 Panel::Character => character,
                 Panel::Inventory => inventory,
                 Panel::Spellbook => spellbook,
-                Panel::Journal => ui.is_window_visible(super::social_panels::JOURNAL_WINDOW),
-                Panel::Map => world_open && !on_house,
-                Panel::House => on_house,
-                Panel::Social => ui.is_window_visible(super::social_panels::SOCIAL_WINDOW),
+                Panel::Journal => journal,
+                Panel::Map => world_open && !on_house || map_open,
+                Panel::House => on_house || house_open,
+                Panel::Social => social,
                 Panel::Options => options,
             };
             if let Some(b) = ui.widget_mut::<PanelButton>(id) {
@@ -693,6 +720,9 @@ impl WindowUi {
     /// The modern radar shows `scene`, and its Recall list what the
     /// player can use.
     pub(super) fn feed_modern_radar(&mut self, scene: &ac_ui::panels::radar::RadarScene) {
+        if let Some(m) = self.modern.as_mut() {
+            m.last_player = scene.player;
+        }
         let Some(id) = self.modern.as_ref().and_then(|m| m.radar) else {
             return;
         };
@@ -1232,6 +1262,9 @@ impl WindowUi {
 
     /// The vitals' new values, for the modern vitals.
     pub(super) fn feed_modern_vitals(&mut self, vitals: &ac_ui::panels::vitals::VitalsView) {
+        if let Some(m) = self.modern.as_mut() {
+            m.last_vitals = Some(*vitals);
+        }
         let Some(bars) = self.modern.as_ref().and_then(|m| m.vitals) else {
             return;
         };

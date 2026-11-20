@@ -42,8 +42,8 @@ use ac_runtime::communication::{
     ChatChannelKind, ClientConfirmation, ItemUseConfirmation, JournalView, TrackedContract,
 };
 use ac_runtime::gameplay::{
-    BarberView, BookView, ChessStage, ChessView, FellowView, FellowshipView, HouseLineColor,
-    HouseView,
+    BarberView, BookView, ChessStage, ChessView, DepartedFellowView, FellowView, FellowshipView,
+    HouseAccessView, HouseDetails, HouseLineColor, HouseView,
 };
 use ac_runtime::inventory::{
     AppraisalView, HousePurchaseView, InteractionMode, PendingPlacement, StagedRow, TradeView,
@@ -488,7 +488,9 @@ record! {
         open: bool,
         locked: bool,
         members: Vec<FellowView>,
+        departed: Vec<DepartedFellowView>,
     }
+    DepartedFellowView { guid: u32, name: String, left_unix_s: i64 }
     AllegianceMember {
         character_id: u32,
         parent_guid: u32,
@@ -587,6 +589,26 @@ record! {
         owns_house: bool,
         lines: Vec<(String, HouseLineColor)>,
         position_cell: Option<u32>,
+        details: Option<HouseDetails>,
+        access: Option<HouseAccessView>,
+        buy_another_unix_s: i64,
+        for_sale: Vec<(u32, u32, Vec<u32>)>,
+    }
+    HouseDetails {
+        house_type: u32,
+        cell: u32,
+        bought_unix_s: i64,
+        period_ends_unix_s: i64,
+        next_due_unix_s: i64,
+        maintenance_free: bool,
+        paid: bool,
+        rent: Vec<(String, u32, u32)>,
+    }
+    HouseAccessView {
+        open: bool,
+        allegiance_guests: bool,
+        allegiance_storage: bool,
+        guests: Vec<(String, bool)>,
     }
     HousePayment { num: i32, paid: i32, weenie_id: u32, name: String, plural_name: String }
     HouseProfile {

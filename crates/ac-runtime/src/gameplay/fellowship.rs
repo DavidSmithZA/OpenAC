@@ -51,6 +51,22 @@ pub struct FellowshipView {
     pub locked: bool,
     /// The members, in the order the server listed them.
     pub members: Vec<FellowView>,
+    /// Who left a locked fellowship (and may come back for a while), as
+    /// the server last listed them.
+    pub departed: Vec<DepartedFellowView>,
+}
+
+/// Someone who left a locked fellowship.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DepartedFellowView {
+    /// Character id.
+    pub guid: u32,
+    /// Their name, when they were a member while the player was (else
+    /// empty).
+    pub name: String,
+    /// When they left, Unix seconds; they may rejoin for
+    /// [`DEPARTED_GRACE_SECONDS`] after it.
+    pub left_unix_s: i64,
 }
 
 /// A member leaving, as the server announces it.
@@ -72,6 +88,8 @@ pub struct FellowshipState {
     members: Vec<FellowMember>,
     vitals_updated_at: HashMap<u32, f64>,
     departed: HashMap<u32, i32>,
+    /// The name of everyone who was a member while the player was.
+    known_names: HashMap<u32, String>,
     panel_visible: bool,
     vitals_requested: bool,
     sent_vitals_subscription: bool,
@@ -180,6 +198,7 @@ impl FellowshipState {
     }
 
     fn upsert(&mut self, member: FellowMember) {
+        self.known_names.insert(member.guid, member.name.clone());
         match self.members.iter_mut().find(|m| m.guid == member.guid) {
             Some(slot) => *slot = member,
             None => self.members.push(member),
@@ -340,7 +359,27 @@ impl FellowshipState {
                         .map(|&at| (now - at).max(0.0)),
                 })
                 .collect(),
+            departed: self.departed_view(),
         }
+    }
+
+    /// Who left the locked fellowship, earliest first.
+    fn departed_view(&self) -> Vec<DepartedFellowView> {
+        if !self.in_fellowship || !self.locked {
+            return Vec::new();
+        }
+        let mut out: Vec<DepartedFellowView> = self
+            .departed
+            .iter()
+            .filter(|(guid, _)| self.members.iter().all(|m| m.guid != **guid))
+            .map(|(&guid, &left)| DepartedFellowView {
+                guid,
+                name: self.known_names.get(&guid).cloned().unwrap_or_default(),
+                left_unix_s: i64::from(left),
+            })
+            .collect();
+        out.sort_by_key(|d| (d.left_unix_s, d.guid));
+        out
     }
 
     /// The session ended.

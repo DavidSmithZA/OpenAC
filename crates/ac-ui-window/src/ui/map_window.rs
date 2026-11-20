@@ -129,6 +129,9 @@ impl WindowUi {
 
     /// F10 (OpenAC `ToggleWorldPanel`): the panel opens or closes.
     pub(super) fn toggle_map_house(&mut self) -> bool {
+        if let Some(done) = self.modern_toggle_map() {
+            return done;
+        }
         if !self.host.has_controller(MAP_HOUSE_WINDOW) {
             return false;
         }

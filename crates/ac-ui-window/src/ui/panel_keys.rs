@@ -129,6 +129,12 @@ impl WindowUi {
     /// OpenAC `OpenWorldPanel`: the map and house panel on the page,
     /// closed when it was already showing that page.
     fn open_world_panel(&mut self, house: bool) -> bool {
+        if house && let Some(done) = self.modern_toggle_house() {
+            return done;
+        }
+        if !house && let Some(done) = self.modern_toggle_map() {
+            return done;
+        }
         let visible = self.host.root.is_window_visible(MAP_HOUSE_WINDOW);
         let Some(on_page) =
             self.host
@@ -163,6 +169,9 @@ impl WindowUi {
     /// OpenAC `OpenJournalPanel`: the journal on the page, shown (a key
     /// never closes it).
     fn open_journal(&mut self, page: JournalPage) -> bool {
+        if let Some(done) = self.modern_open_journal(page) {
+            return done;
+        }
         let shown =
             self.host
                 .with_controller::<JournalPanelController, _>(JOURNAL_WINDOW, |c, ui| match page {

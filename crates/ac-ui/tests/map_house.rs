@@ -459,3 +459,24 @@ mod real_dats {
         }
     }
 }
+
+#[test]
+fn the_maps_projection_goes_both_ways_and_matches_the_markers() {
+    use ac_ui::panels::map_house::MapArt;
+    let art = MapArt {
+        image: 0x0600_0000,
+        width: 256.0,
+        height: 256.0,
+        area: (3, 252, 3, 252),
+    };
+    for (x, y) in [(0.0, 0.0), (33.9, 42.1), (-101.9, 101.9), (55.5, -12.3)] {
+        let (px, py) = art.pixel(x, y);
+        let (bx, by) = art.coordinates(px, py);
+        assert!((bx - x).abs() < 1e-9 && (by - y).abs() < 1e-9, "{x},{y}");
+        // A zero-sized marker sits where the pixel says (the game's
+        // integer cut aside).
+        let (mx, my) = map_house::marker_position(3, 252, 3, 252, 0, 0, x, y);
+        assert!((f64::from(mx) - px).abs() <= 1.0, "{mx} vs {px}");
+        assert!((f64::from(my) - py).abs() <= 1.0, "{my} vs {py}");
+    }
+}

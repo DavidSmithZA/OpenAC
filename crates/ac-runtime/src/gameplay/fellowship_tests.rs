@@ -338,6 +338,45 @@ fn a_locked_fellowship_refuses_a_member_who_left_too_long_ago() {
 }
 
 #[test]
+fn the_view_lists_who_left_a_locked_fellowship_by_the_name_they_had() {
+    let mut state = FellowshipState::default();
+    let mut first = locked(Vec::new());
+    first.members.push(member(OTHER, "Pell", 100));
+    state.apply_full_update(&first);
+    let left = i32::try_from(T0).unwrap();
+    state.apply_full_update(&locked(vec![
+        DepartedFellow {
+            guid: OTHER,
+            departed_timestamp: left,
+        },
+        DepartedFellow {
+            guid: 0x5000_0099,
+            departed_timestamp: left - 60,
+        },
+    ]));
+    let view = state.view(0.0);
+    let gone: Vec<(u32, &str, i64)> = view
+        .departed
+        .iter()
+        .map(|d| (d.guid, d.name.as_str(), d.left_unix_s))
+        .collect();
+    assert_eq!(
+        gone,
+        [(0x5000_0099, "", T0 - 60), (OTHER, "Pell", T0)],
+        "earliest first; a stranger has no name"
+    );
+    // Unlocked, nobody is listed.
+    state.apply_full_update(&FellowshipFullUpdate {
+        locked: false,
+        ..locked(vec![DepartedFellow {
+            guid: OTHER,
+            departed_timestamp: left,
+        }])
+    });
+    assert!(state.view(0.0).departed.is_empty());
+}
+
+#[test]
 fn a_locked_fellowship_never_gates_a_member_s_own_refresh() {
     let mut state = FellowshipState::default();
     let mut update_full = locked(Vec::new());

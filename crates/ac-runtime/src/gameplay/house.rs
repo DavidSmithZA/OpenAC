@@ -33,6 +33,68 @@ pub struct HouseView {
     /// Where the house stands (its cell), for the map's marker: none for an
     /// apartment or a house without a place.
     pub position_cell: Option<u32>,
+    /// The house itself, when the player owns one.
+    pub details: Option<HouseDetails>,
+    /// Who may come in, as the server last told (the guest list).
+    pub access: Option<HouseAccessView>,
+    /// When the player may buy another landscape house, Unix seconds (0:
+    /// now).
+    pub buy_another_unix_s: i64,
+    /// The houses for sale of each type the server last listed (type, how
+    /// many in all, the landblocks of the first ones).
+    pub for_sale: Vec<(u32, u32, Vec<u32>)>,
+}
+
+/// The player's house as a window shows it.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct HouseDetails {
+    /// 1 cottage, 2 villa, 3 mansion, 4 apartment.
+    pub house_type: u32,
+    /// Where it stands (0: an apartment or no place).
+    pub cell: u32,
+    /// When it was bought, Unix seconds.
+    pub bought_unix_s: i64,
+    /// When this maintenance period ends, Unix seconds.
+    pub period_ends_unix_s: i64,
+    /// When maintenance is next due, Unix seconds.
+    pub next_due_unix_s: i64,
+    /// No upkeep is due at all.
+    pub maintenance_free: bool,
+    /// This period's maintenance is paid in full.
+    pub paid: bool,
+    /// Each maintenance item: its name (plural when more than one), how
+    /// many are paid and how many are due.
+    pub rent: Vec<(String, u32, u32)>,
+}
+
+/// Who may come into the player's house.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct HouseAccessView {
+    /// Anyone may come in.
+    pub open: bool,
+    /// The allegiance may come in.
+    pub allegiance_guests: bool,
+    /// The allegiance may use the storage.
+    pub allegiance_storage: bool,
+    /// Each guest's name and whether they may use the storage.
+    pub guests: Vec<(String, bool)>,
+}
+
+impl HouseAccessView {
+    /// The view of the server's access record.
+    #[must_use]
+    pub fn of(access: &ac_proto::house::HouseAccess) -> Self {
+        Self {
+            open: access.open_to_everyone(),
+            allegiance_guests: access.allegiance_guests(),
+            allegiance_storage: access.allegiance_storage(),
+            guests: access
+                .guests
+                .iter()
+                .map(|g| (g.name.clone(), g.storage))
+                .collect(),
+        }
+    }
 }
 
 /// The house owner.
@@ -43,6 +105,9 @@ pub struct HouseState {
     revision: u64,
     data: Option<HouseData>,
     lines: Vec<(String, HouseLineColor)>,
+    access: Option<HouseAccessView>,
+    buy_another_unix_s: i64,
+    for_sale: Vec<(u32, u32, Vec<u32>)>,
 }
 
 /// What the panel's lines read beyond the house data: the player's purchase
@@ -85,7 +150,59 @@ impl HouseState {
             owns_house: self.owns_house,
             lines: self.lines.clone(),
             position_cell: self.position_cell(),
+            details: self.details(),
+            access: self.access.clone(),
+            buy_another_unix_s: self.buy_another_unix_s,
+            for_sale: self.for_sale.clone(),
         }
+    }
+
+    /// The server listed the houses of a type for sale (`@hslist`).
+    pub fn apply_for_sale(&mut self, houses: &ac_proto::house::AvailableHouses) {
+        let entry = (
+            houses.house_type,
+            u32::try_from(houses.total_available).unwrap_or(0),
+            houses.locations.clone(),
+        );
+        match self.for_sale.iter_mut().find(|e| e.0 == houses.house_type) {
+            Some(e) => *e = entry,
+            None => self.for_sale.push(entry),
+        }
+        self.revision += 1;
+    }
+
+    /// The house itself, when the player owns one.
+    fn details(&self) -> Option<HouseDetails> {
+        let data = self.data.as_ref()?;
+        let period = rent_period_seconds(data.house_type);
+        let paid = data.maintenance_free || is_paid_in_full(&data.rent);
+        let rent_time = i64::from(data.rent_time);
+        Some(HouseDetails {
+            house_type: data.house_type,
+            cell: self.position_cell().unwrap_or(0),
+            bought_unix_s: i64::from(data.buy_time),
+            period_ends_unix_s: rent_time + period,
+            next_due_unix_s: rent_time + if paid { 2 } else { 1 } * period,
+            maintenance_free: data.maintenance_free,
+            paid,
+            rent: data
+                .rent
+                .iter()
+                .map(|p| {
+                    (
+                        payment_name(p),
+                        u32::try_from(p.paid).unwrap_or(0),
+                        u32::try_from(p.num).unwrap_or(0),
+                    )
+                })
+                .collect(),
+        })
+    }
+
+    /// The server's guest list arrived.
+    pub fn apply_access(&mut self, access: &ac_proto::house::HouseAccess) {
+        self.access = Some(HouseAccessView::of(access));
+        self.revision += 1;
     }
 
     /// Where the house stands (the same rule as [`Self::position_cell`]).
@@ -210,6 +327,11 @@ impl HouseState {
         }
         let timestamp = i64::from(clock.purchase_timestamp);
         let expired = clock.now_unix_s - timestamp > PURCHASE_WAIT_PERIOD_SECONDS;
+        self.buy_another_unix_s = if expired {
+            0
+        } else {
+            timestamp + PURCHASE_WAIT_PERIOD_SECONDS
+        };
         if expired {
             lines.push(normal(if self.owns_house {
                 "You may buy another house immediately after you abandon this one.".to_owned()
