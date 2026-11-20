@@ -587,6 +587,7 @@ impl WindowUi {
                     ChannelMenu::open(ui, menu, (px, py + y - 6.0));
                 }
                 ChatRequest::Name(who, guid, (x, y)) => {
+                    let guid = self.speaker_guid(&who, guid);
                     let nearby = guid != 0 && self.facts.objects.get(guid).is_some();
                     let ui = &mut self.host.root;
                     let place = ui
@@ -673,6 +674,26 @@ impl WindowUi {
         if ui.element(search).is_some_and(|e| e.visible) != searching {
             ui.set_visible(search, searching);
         }
+    }
+
+    /// The object a clicked name stands for: the line's own id, else
+    /// (a tell sent, which names only who it went to) the object nearby
+    /// with that name, a creature first; 0 when there is none.
+    fn speaker_guid(&self, who: &str, guid: u32) -> u32 {
+        if guid != 0 {
+            return guid;
+        }
+        let player = self.facts.state.player;
+        let named = || {
+            self.facts
+                .objects
+                .objects()
+                .filter(move |o| o.object_id() != player && o.name == who)
+        };
+        named()
+            .find(|o| o.item_type.intersects(ac_core::items::ItemType::CREATURE))
+            .or_else(|| named().next())
+            .map_or(0, ac_core::items::ClientObject::object_id)
     }
 
     /// A name menu row chosen for `who` (object `guid`).
@@ -1144,6 +1165,7 @@ impl WindowUi {
                     }
                     ChatRequest::Moved => self.save_modern_chat_tabs(),
                     ChatRequest::Name(who, guid, (x, y)) => {
+                        let guid = self.speaker_guid(&who, guid);
                         let nearby = guid != 0 && self.facts.objects.get(guid).is_some();
                         let ui = &mut self.host.root;
                         let (px, py) = ui.screen_position(panel);
