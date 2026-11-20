@@ -250,6 +250,7 @@ pub fn answer_kind(event: &HostEvent) -> bool {
         | HostEvent::Trade(_)
         | HostEvent::ItemMana(_)
         | HostEvent::OpenSalvage(_)
+        | HostEvent::Salvaged(_)
         | HostEvent::BeginGame(_)
         | HostEvent::LinkStatus(_)
         | HostEvent::Corpses(_)

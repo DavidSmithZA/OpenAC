@@ -2894,6 +2894,18 @@ fn a_salvage_result_reads_in_the_salvaging_class() {
             LogTextType::Salvaging
         )]
     );
+    // The bags reach the interface too.
+    assert!(
+        f.events()
+            .contains(&InventoryEvent::Salvaged(ac_core::items::SalvageOutcome {
+                bags: vec![ac_core::items::SalvageBag {
+                    material_type: 63,
+                    workmanship: 8.0,
+                    units: 1,
+                }],
+                unsuitable: Vec::new(),
+            }))
+    );
     // An item the server would not take is named; one never described
     // reads "item".
     f.server(

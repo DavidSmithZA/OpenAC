@@ -321,6 +321,9 @@ impl InterfaceFeed {
             HostEvent::Appraisal(view) => Some(InterfaceEvent::Appraisal(view.clone())),
             HostEvent::Trade(view) => Some(InterfaceEvent::Trade(Box::new(view.clone()))),
             HostEvent::OpenSalvage(tool) => Some(InterfaceEvent::OpenSalvage(*tool)),
+            HostEvent::Salvaged(outcome) => {
+                Some(InterfaceEvent::Salvaged(Box::new(outcome.clone())))
+            }
             HostEvent::BeginGame(board) => Some(InterfaceEvent::BeginGame(*board)),
             HostEvent::OpenContainedContainer(pack) => {
                 Some(InterfaceEvent::OpenContainedContainer(*pack))

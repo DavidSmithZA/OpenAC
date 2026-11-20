@@ -109,6 +109,9 @@ pub struct InterfaceFacts {
     /// Salvaging tools used, oldest first (the salvage panel opens on
     /// the last).
     pub salvage_opens: Vec<u32>,
+    /// What salvages produced, oldest first (the modern salvage window
+    /// shows the bags).
+    pub salvaged: Vec<ac_core::items::SalvageOutcome>,
     /// The chess game, once sent.
     pub chess: Option<ChessView>,
     /// The barber, once sent.
@@ -186,6 +189,7 @@ impl InterfaceFacts {
                 self.dirty.titles = true;
             }
             InterfaceEvent::OpenSalvage(tool) => self.salvage_opens.push(tool),
+            InterfaceEvent::Salvaged(outcome) => self.salvaged.push(*outcome),
             InterfaceEvent::Chess(view) => self.chess = Some(*view),
             InterfaceEvent::Barber(view) => {
                 self.barber = Some(*view);
