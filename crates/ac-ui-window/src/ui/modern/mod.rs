@@ -16,6 +16,7 @@ pub mod bars;
 pub mod chat;
 pub mod fonts;
 pub mod hud;
+pub mod items;
 pub mod places;
 
 use std::sync::Arc;
