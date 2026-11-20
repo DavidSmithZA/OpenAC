@@ -196,6 +196,73 @@ pub fn marker_position(
     )
 }
 
+/// The world map's art as the panel's layout describes it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MapArt {
+    /// The map image (a render surface).
+    pub image: u32,
+    /// The map's size, pixels (the image fills it).
+    pub width: f32,
+    pub height: f32,
+    /// The marker area, pixels: left, right, top, bottom.
+    pub area: (i32, i32, i32, i32),
+}
+
+impl MapArt {
+    /// Where map coordinates (`x` east, `y` north) fall on the map, pixels.
+    #[must_use]
+    pub fn pixel(&self, x: f64, y: f64) -> (f64, f64) {
+        let (x0, x1, y0, y1) = self.area;
+        let extent_x = f64::from(x1 - x0 + 1);
+        let extent_y = f64::from(y1 - y0 + 1);
+        (
+            f64::from(x0) + extent_x * (x * 10.0 + 1024.0) / 2048.0,
+            f64::from(y0) + extent_y * (2047.0 - (y * 10.0 + 1024.0)) / 2048.0,
+        )
+    }
+
+    /// The map coordinates (`x` east, `y` north) at a pixel of the map.
+    #[must_use]
+    pub fn coordinates(&self, px: f64, py: f64) -> (f64, f64) {
+        let (x0, x1, y0, y1) = self.area;
+        let extent_x = f64::from(x1 - x0 + 1);
+        let extent_y = f64::from(y1 - y0 + 1);
+        (
+            ((px - f64::from(x0)) * 2048.0 / extent_x - 1024.0) / 10.0,
+            (2047.0 - (py - f64::from(y0)) * 2048.0 / extent_y - 1024.0) / 10.0,
+        )
+    }
+}
+
+/// The world map's art in the map and house panel's description
+/// `panel_info` (its slot), if it has the map.
+#[must_use]
+pub fn map_art(panel_info: &ElementInfo) -> Option<MapArt> {
+    let map = find_info(panel_info, MAP_WIDGET_ID)?;
+    let image = map
+        .state_media
+        .get(&map.default_state_name)
+        .or_else(|| map.state_media.values().next())
+        .map(|m| m.file)?;
+    Some(MapArt {
+        image,
+        width: map.width,
+        height: map.height,
+        area: marker_area(map),
+    })
+}
+
+/// A map's marker area, pixels: left, right, top, bottom.
+fn marker_area(map: &ElementInfo) -> (i32, i32, i32, i32) {
+    let v = |id| map.effective_integer(id, None).unwrap_or(0);
+    (
+        v(MARKER_AREA_X0),
+        v(MARKER_AREA_X1),
+        v(MARKER_AREA_Y0),
+        v(MARKER_AREA_Y1),
+    )
+}
+
 /// What the map shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct MapFacts {
@@ -285,15 +352,7 @@ impl MapPageController {
     ) -> Option<Self> {
         let map = ui.find_descendant(page, MAP_WIDGET_ID)?;
         let map_info = find_info(page_info, MAP_WIDGET_ID);
-        let area = map_info.map_or((0, 0, 0, 0), |i| {
-            let v = |id| i.effective_integer(id, None).unwrap_or(0);
-            (
-                v(MARKER_AREA_X0),
-                v(MARKER_AREA_X1),
-                v(MARKER_AREA_Y0),
-                v(MARKER_AREA_Y1),
-            )
-        });
+        let area = map_info.map_or((0, 0, 0, 0), marker_area);
         let mut icon = |ui: &mut UiRoot, id| -> Option<ElementId> {
             let found = match ui.find_descendant(map, id) {
                 Some(e) => Some(e),
