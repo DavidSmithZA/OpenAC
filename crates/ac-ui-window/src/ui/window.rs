@@ -2223,10 +2223,10 @@ impl WindowUi {
 
 /// The appraisal names with the viewer's own skills (OpenAC's appraisal
 /// binding: the effective level and the skill's training).
-struct ViewerNames<'a> {
-    tables: &'a ac_ui::panels::appraisal::NameTables,
-    numbers: Option<&'a ac_core::player::LocalPlayerState>,
-    character_title: &'a dyn Fn(u32) -> Option<String>,
+pub(in crate::ui) struct ViewerNames<'a> {
+    pub tables: &'a ac_ui::panels::appraisal::NameTables,
+    pub numbers: Option<&'a ac_core::player::LocalPlayerState>,
+    pub character_title: &'a dyn Fn(u32) -> Option<String>,
 }
 
 impl ac_ui::panels::appraisal::AppraisalNames for ViewerNames<'_> {
@@ -2267,7 +2267,7 @@ impl ac_ui::panels::appraisal::AppraisalNames for ViewerNames<'_> {
 
 /// The player's skill in a spell's school (the highest of the five when
 /// the school is none of them), as OpenAC's examination binding reads it.
-fn magic_skill(numbers: &ac_core::player::LocalPlayerState, school: &str) -> u32 {
+pub(in crate::ui) fn magic_skill(numbers: &ac_core::player::LocalPlayerState, school: &str) -> u32 {
     let level = |id| numbers.get_skill(id).map_or(0, |s| s.current_level());
     match school {
         "Creature Enchantment" => level(0x1F),
