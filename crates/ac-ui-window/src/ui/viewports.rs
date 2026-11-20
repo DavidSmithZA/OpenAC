@@ -288,6 +288,34 @@ impl WindowUi {
                     aspect,
                     subject: ViewportSubject::Paperdoll {
                         heritage: self.heritage(),
+                        turn: 0.0,
+                    },
+                },
+            ));
+        }
+        // The modern inventory's figure, turned as the player turned it.
+        let modern = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.inventory.as_ref())
+            .map(|i| (i.figure, i.turner));
+        let root = &self.host.root;
+        if let Some((id, turner)) = modern
+            && shown(root, id)
+            && let Some((size, aspect)) = extent(root, id, pixels_per_unit)
+        {
+            let turn = root
+                .widget::<super::modern::items::inventory::FigureTurn>(turner)
+                .map_or(0.0, |t| t.turn);
+            requests.push((
+                id,
+                ViewportRequest {
+                    slot: ViewportSlot::Paperdoll,
+                    size,
+                    aspect,
+                    subject: ViewportSubject::Paperdoll {
+                        heritage: self.heritage(),
+                        turn,
                     },
                 },
             ));

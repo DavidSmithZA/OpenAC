@@ -1822,3 +1822,37 @@ mod real_dats {
         assert_eq!(e.notices(), ["This item is not inscribable."]);
     }
 }
+
+#[test]
+fn the_report_in_parts_is_the_same_report_with_each_part_marked() {
+    use appraisal::ReportPart;
+    let mut obj = object(0x5000_0005, "Black Phyntos Hive", ItemType::CREATURE);
+    obj.items_capacity = -1;
+    obj.containers_capacity = -1;
+    let hive = "A hollowed out tree trunk that has a Phyntos Wasp Hive in it.";
+    let a = parsed(|a| {
+        a.properties.strings.insert(16, hive.into());
+    });
+    let whole = appraisal::item_report(&obj, &a, &none, &NoNames);
+    let parts = appraisal::item_report_in_parts(&obj, &a, &none, &NoNames);
+    assert_eq!(parts.report, whole);
+    // The parts follow one another with nothing between them or left out.
+    let mut next = 0;
+    for (_, range) in &parts.parts {
+        assert_eq!(range.start, next);
+        next = range.end;
+    }
+    assert_eq!(next, whole.fragments.len());
+    assert_eq!(
+        parts.fragments(ReportPart::ValueAndBurden)[0].text,
+        "Value: ???"
+    );
+    assert_eq!(
+        parts
+            .fragments(ReportPart::Description)
+            .last()
+            .map(|f| f.text.as_str()),
+        Some(hive)
+    );
+    assert!(parts.fragments(ReportPart::MagicInfo).is_empty());
+}

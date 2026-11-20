@@ -581,34 +581,151 @@ pub fn item_report(
     spell: &dyn Fn(u32) -> Option<SpellMetadata>,
     names: &dyn AppraisalNames,
 ) -> ItemAppraisalReport {
+    item_report_in_parts(obj, appraisal, spell, names).report
+}
+
+/// The parts of an item report, in the order retail writes them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ReportPart {
+    /// Value and burden.
+    ValueAndBurden,
+    /// Workmanship and tinkering.
+    Tinkering,
+    /// The equipment set and the ratings.
+    SetAndRatings,
+    /// Weapon and armor numbers.
+    WeaponAndArmor,
+    /// Defense modifiers.
+    DefenseModifiers,
+    /// Armor modifiers against each kind of damage.
+    ArmorModifiers,
+    /// A line on the magic it holds.
+    ShortMagic,
+    /// Special properties (attuned, bonded, imbued, ...).
+    SpecialProperties,
+    /// How it is used.
+    Usage,
+    /// Level limits.
+    LevelLimits,
+    /// What wielding it needs.
+    WieldRequirements,
+    /// What using it needs.
+    UsageLimits,
+    /// The item's own level.
+    ItemLevel,
+    /// What activating it needs.
+    ActivationRequirements,
+    /// A caster's numbers.
+    CasterData,
+    /// Boosts and healing.
+    BoostAndHealing,
+    /// Capacity and lock.
+    CapacityAndLock,
+    /// A mana stone's numbers.
+    ManaStone,
+    /// Uses left.
+    RemainingUses,
+    /// Who made it.
+    Craftsman,
+    /// Sale and rare notes.
+    SaleAndRare,
+    /// Its mana and every spell.
+    MagicInfo,
+    /// Its description.
+    Description,
+}
+
+/// An item report and which fragments each part wrote.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ItemReportParts {
+    /// The whole report, as [`item_report`] gives it.
+    pub report: ItemAppraisalReport,
+    /// Each part that wrote something, with its fragments' range in the
+    /// report (a section boundary it opened with included).
+    pub parts: Vec<(ReportPart, std::ops::Range<usize>)>,
+}
+
+impl ItemReportParts {
+    /// The fragments `part` wrote (none when it wrote nothing).
+    #[must_use]
+    pub fn fragments(&self, part: ReportPart) -> &[ReportFragment] {
+        self.parts
+            .iter()
+            .find(|(p, _)| *p == part)
+            .map_or(&[], |(_, range)| &self.report.fragments[range.clone()])
+    }
+}
+
+/// The item report for `obj` from its appraisal, with each part's
+/// fragments marked.
+#[must_use]
+pub fn item_report_in_parts(
+    obj: &ClientObject,
+    appraisal: &IdentifyObjectResponse,
+    spell: &dyn Fn(u32) -> Option<SpellMetadata>,
+    names: &dyn AppraisalNames,
+) -> ItemReportParts {
+    use ReportPart as P;
     use sections as s;
     let p = &appraisal.properties;
     let mut r = ReportBuilder::default();
-    value_and_burden(&mut r, p);
-    tinkering(&mut r, p);
-    s::set_and_ratings(&mut r, p);
-    s::weapon_and_armor(&mut r, obj, appraisal, names);
-    s::defense_modifiers(&mut r, appraisal);
-    s::armor_modifiers(&mut r, appraisal);
-    short_magic_info(&mut r, appraisal, spell);
-    special_properties(&mut r, p, names);
-    usage(&mut r, p);
-    s::level_limits(&mut r, p);
-    s::wield_requirements(&mut r, p, names);
-    s::usage_limits(&mut r, p, names);
-    s::item_level(&mut r, p);
-    s::activation_requirements(&mut r, p, appraisal.success, names);
-    s::caster_data(&mut r, appraisal);
-    s::boost_and_healing(&mut r, obj, appraisal);
-    capacity_and_lock(&mut r, obj, appraisal);
-    s::mana_stone(&mut r, appraisal);
-    s::remaining_uses(&mut r, obj, appraisal);
-    craftsman(&mut r, p);
-    sale_and_rare(&mut r, p);
-    magic_info(&mut r, appraisal, spell);
-    description(&mut r, p, names);
-    ItemAppraisalReport {
-        fragments: r.fragments,
+    let mut parts = Vec::new();
+    let mut part =
+        |r: &mut ReportBuilder, which: ReportPart, write: &dyn Fn(&mut ReportBuilder)| {
+            let start = r.fragments.len();
+            write(r);
+            if r.fragments.len() > start {
+                parts.push((which, start..r.fragments.len()));
+            }
+        };
+    part(&mut r, P::ValueAndBurden, &|r| value_and_burden(r, p));
+    part(&mut r, P::Tinkering, &|r| tinkering(r, p));
+    part(&mut r, P::SetAndRatings, &|r| s::set_and_ratings(r, p));
+    part(&mut r, P::WeaponAndArmor, &|r| {
+        s::weapon_and_armor(r, obj, appraisal, names);
+    });
+    part(&mut r, P::DefenseModifiers, &|r| {
+        s::defense_modifiers(r, appraisal)
+    });
+    part(&mut r, P::ArmorModifiers, &|r| {
+        s::armor_modifiers(r, appraisal)
+    });
+    part(&mut r, P::ShortMagic, &|r| {
+        short_magic_info(r, appraisal, spell)
+    });
+    part(&mut r, P::SpecialProperties, &|r| {
+        special_properties(r, p, names)
+    });
+    part(&mut r, P::Usage, &|r| usage(r, p));
+    part(&mut r, P::LevelLimits, &|r| s::level_limits(r, p));
+    part(&mut r, P::WieldRequirements, &|r| {
+        s::wield_requirements(r, p, names)
+    });
+    part(&mut r, P::UsageLimits, &|r| s::usage_limits(r, p, names));
+    part(&mut r, P::ItemLevel, &|r| s::item_level(r, p));
+    part(&mut r, P::ActivationRequirements, &|r| {
+        s::activation_requirements(r, p, appraisal.success, names);
+    });
+    part(&mut r, P::CasterData, &|r| s::caster_data(r, appraisal));
+    part(&mut r, P::BoostAndHealing, &|r| {
+        s::boost_and_healing(r, obj, appraisal)
+    });
+    part(&mut r, P::CapacityAndLock, &|r| {
+        capacity_and_lock(r, obj, appraisal)
+    });
+    part(&mut r, P::ManaStone, &|r| s::mana_stone(r, appraisal));
+    part(&mut r, P::RemainingUses, &|r| {
+        s::remaining_uses(r, obj, appraisal)
+    });
+    part(&mut r, P::Craftsman, &|r| craftsman(r, p));
+    part(&mut r, P::SaleAndRare, &|r| sale_and_rare(r, p));
+    part(&mut r, P::MagicInfo, &|r| magic_info(r, appraisal, spell));
+    part(&mut r, P::Description, &|r| description(r, p, names));
+    ItemReportParts {
+        report: ItemAppraisalReport {
+            fragments: r.fragments,
+        },
+        parts,
     }
 }
 

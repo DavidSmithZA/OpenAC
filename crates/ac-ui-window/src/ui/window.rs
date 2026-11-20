@@ -1245,6 +1245,8 @@ impl WindowUi {
         self.update_barber(dirty, scene);
         self.update_journal_pages(dirty, scene);
         self.refresh_examined_spell(dirty);
+        self.keep_modern_appraisals();
+        self.feed_modern_inspect();
         self.show_appraisals();
         self.follow_confirmation();
         let link = self.status.link.unwrap_or(ac_runtime::session::LinkStatus {
@@ -1257,6 +1259,8 @@ impl WindowUi {
         self.follow_modern_vitals_settings();
         self.tick_modern_panels();
         self.tick_modern_bars();
+        self.tick_modern_inventory();
+        self.tick_modern_loot();
     }
 
     /// The panels' views from the window's copy of the facts, and each
@@ -1277,10 +1281,14 @@ impl WindowUi {
             status,
             panels,
             reported_sheet,
+            modern,
             ..
         } = self;
         let mana_answers = std::mem::take(&mut facts.item_mana);
         let container_opens = std::mem::take(&mut facts.container_opens);
+        if let Some(m) = modern.as_mut() {
+            m.opened_packs.extend(&container_opens);
+        }
         let state = &facts.state;
         let selection_facts = super::status::selection_facts(state, selected, status);
         let player = state.player;
@@ -1508,6 +1516,7 @@ impl WindowUi {
         self.report_window_layouts();
         self.tick_plugin_ui(now);
         self.tick_examination(dt);
+        self.tick_modern_inspect(dt);
         self.tick_keyboard_dialogs();
         self.tick_tooltips(dt, now_ms);
         self.tick_modern_effects(dt);
@@ -2023,8 +2032,11 @@ impl WindowUi {
             return;
         };
         let magic_skill = magic_skill(numbers, &spell.school);
-        let icon = ac_ui::icons::IconSource::spell_icon(&mut self.icons, spell_id);
         let components = self.spell_examine_components(&spell);
+        if self.modern_examine_spell(&spell, magic_skill, &components) {
+            return;
+        }
+        let icon = ac_ui::icons::IconSource::spell_icon(&mut self.icons, spell_id);
         let Self { host, content, .. } = self;
         let mut cells =
             ac_ui::panels::DatRowTemplates::new(&*content, content.font(DEFAULT_FONT_ID));
@@ -2223,10 +2235,10 @@ impl WindowUi {
 
 /// The appraisal names with the viewer's own skills (OpenAC's appraisal
 /// binding: the effective level and the skill's training).
-struct ViewerNames<'a> {
-    tables: &'a ac_ui::panels::appraisal::NameTables,
-    numbers: Option<&'a ac_core::player::LocalPlayerState>,
-    character_title: &'a dyn Fn(u32) -> Option<String>,
+pub(in crate::ui) struct ViewerNames<'a> {
+    pub tables: &'a ac_ui::panels::appraisal::NameTables,
+    pub numbers: Option<&'a ac_core::player::LocalPlayerState>,
+    pub character_title: &'a dyn Fn(u32) -> Option<String>,
 }
 
 impl ac_ui::panels::appraisal::AppraisalNames for ViewerNames<'_> {
@@ -2267,7 +2279,7 @@ impl ac_ui::panels::appraisal::AppraisalNames for ViewerNames<'_> {
 
 /// The player's skill in a spell's school (the highest of the five when
 /// the school is none of them), as OpenAC's examination binding reads it.
-fn magic_skill(numbers: &ac_core::player::LocalPlayerState, school: &str) -> u32 {
+pub(in crate::ui) fn magic_skill(numbers: &ac_core::player::LocalPlayerState, school: &str) -> u32 {
     let level = |id| numbers.get_skill(id).map_or(0, |s| s.current_level());
     match school {
         "Creature Enchantment" => level(0x1F),

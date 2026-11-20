@@ -16,6 +16,7 @@ pub mod bars;
 pub mod chat;
 pub mod fonts;
 pub mod hud;
+pub mod items;
 pub mod places;
 
 use std::sync::Arc;
@@ -73,6 +74,14 @@ pub struct ModernLayer {
     pub pieces: Option<ac_host::settings::HudPieces>,
     /// The chat.
     pub chat: Option<chat::run::ChatUi>,
+    /// The inventory.
+    pub inventory: Option<items::run::InventoryUi>,
+    /// The Inspect sheet.
+    pub inspect: Option<items::inspect::InspectUi>,
+    /// The Loot window.
+    pub loot: Option<items::loot::LootUi>,
+    /// Packs used anywhere since the inventory last looked.
+    pub opened_packs: Vec<u32>,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -309,6 +318,9 @@ impl WindowUi {
         let panels = self.mount_modern_panels();
         self.mount_modern_bars();
         self.mount_modern_chat();
+        self.mount_modern_inventory();
+        self.mount_modern_inspect();
+        self.mount_modern_loot();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };

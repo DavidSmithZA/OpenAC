@@ -47,7 +47,13 @@ fn the_inventory_figure_is_asked_for_while_the_inventory_shows() {
         .find(|r| r.slot == ViewportSlot::Paperdoll)
         .expect("the figure is asked for");
     // Before the character description the heritage is unknown.
-    assert_eq!(doll.subject, ViewportSubject::Paperdoll { heritage: 0 });
+    assert_eq!(
+        doll.subject,
+        ViewportSubject::Paperdoll {
+            heritage: 0,
+            turn: 0.0
+        }
+    );
     let (w, h) = doll.size;
     assert!(
         w > 100 && h > 100,

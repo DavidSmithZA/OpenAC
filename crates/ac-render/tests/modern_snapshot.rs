@@ -205,6 +205,8 @@ struct Shot {
     scene: Scene,
     now: Instant,
     textures: HashMap<(u32, u32), Held>,
+    /// What the window sent the session.
+    sent: Vec<ac_runtime::session::SessionCommand>,
 }
 
 impl Shot {
@@ -225,6 +227,7 @@ impl Shot {
             scene,
             now: Instant::now(),
             textures: HashMap::new(),
+            sent: Vec::new(),
         };
         // Long enough for the fonts, the layout and the first bars.
         for _ in 0..10 {
@@ -237,7 +240,8 @@ impl Shot {
         self.ui.feed(&mut self.scene);
         self.now += Duration::from_millis(50);
         let _ = self.ui.frame(self.now, (W, H));
-        let _ = self.ui.drain();
+        let sent = self.ui.drain();
+        self.sent.extend(sent);
     }
 
     fn set_mode(&mut self, mode: ac_core::combat::CombatMode) {
@@ -850,4 +854,402 @@ fn the_modern_chat() {
         s.step();
     }
     s.save("chat-window-closed");
+}
+
+/// More of the player's things for the inventory: a side pack with salvage
+/// in it, a worn coat and a wielded wand, and value and burden on all.
+fn more_things(s: &mut Shot) {
+    use ac_core::items::EquipMask;
+    let pack = 0x8000_0201;
+    let mut objects = Vec::new();
+    let mut p = ClientObject::new(PLAYER);
+    p.name = "Aerin Vale".to_owned();
+    p.item_type = ItemType::CREATURE;
+    p.items_capacity = 102;
+    objects.push(p);
+    let mut main = Vec::new();
+    for &(guid, name, item_type, icon, stack) in ITEMS {
+        let mut o = ClientObject::new(guid);
+        o.name = name.to_owned();
+        o.item_type = item_type;
+        o.icon_id = icon;
+        o.stack_size = stack;
+        o.stack_size_max = if stack > 1 { 100 } else { 1 };
+        o.container_id = PLAYER;
+        o.value = 120 * stack.max(1);
+        o.burden = 15 * stack.max(1);
+        if item_type == ItemType::MELEE_WEAPON {
+            o.valid_locations = EquipMask::MELEE_WEAPON;
+            o.value = 18_400;
+            o.burden = 450;
+            o.workmanship = 8.0;
+        }
+        objects.push(o);
+        main.push(guid);
+    }
+    let mut bag = ClientObject::new(pack);
+    bag.name = "Salvage Sack".to_owned();
+    bag.item_type = ItemType::CONTAINER;
+    bag.items_capacity = 24;
+    bag.icon_id = 0x0600_127E;
+    bag.container_id = PLAYER;
+    objects.push(bag);
+    main.push(pack);
+    let mut in_pack = Vec::new();
+    for (i, name) in ["Salvaged Iron", "Salvaged Granite", "Salvaged Steel"]
+        .iter()
+        .enumerate()
+    {
+        let guid = 0x8000_0301 + i as u32;
+        let mut o = ClientObject::new(guid);
+        o.name = (*name).to_owned();
+        o.item_type = ItemType::TINKERING_MATERIAL;
+        o.icon_id = 0x0600_1E3B;
+        o.container_id = pack;
+        o.burden = 100;
+        objects.push(o);
+        in_pack.push(guid);
+    }
+    let mut coat = ClientObject::new(0x8000_0401);
+    coat.name = "Olthoi Amuli Coat".to_owned();
+    coat.item_type = ItemType::ARMOR;
+    coat.icon_id = 0x0600_11CB;
+    coat.valid_locations = EquipMask::CHEST_ARMOR | EquipMask::UPPER_ARM_ARMOR;
+    coat.currently_equipped_location = coat.valid_locations;
+    coat.wielder_id = PLAYER;
+    coat.burden = 1240;
+    objects.push(coat);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: true,
+                objects,
+                removed: Vec::new(),
+                contents: vec![(PLAYER, Some(main)), (pack, Some(in_pack))],
+            },
+        )));
+    s.step();
+    s.step();
+}
+
+/// The inventory window's top left on a 1440 x 900 screen (centred).
+const INV: (i32, i32) = (180, 130);
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_inventory() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    assert!(s.ui.run_hotkey(Hotkey::Inventory));
+    s.step();
+    s.step();
+    s.save("inventory-open");
+    // The figure is asked for, turned by a drag across it.
+    let figure = |s: &mut Shot| {
+        let (requests, _) = s.ui.viewport_requests(&s.scene, 1.0);
+        requests.into_iter().find_map(|r| match r.subject {
+            ac_render::viewport::ViewportSubject::Paperdoll { turn, .. } => Some(turn),
+            _ => None,
+        })
+    };
+    assert_eq!(figure(&mut s), Some(0.0));
+    s.drag((INV.0 + 100, INV.1 + 200), (INV.0 + 180, INV.1 + 200));
+    let turned = figure(&mut s).expect("the figure");
+    println!("figure turned {turned}");
+    assert!(turned > 0.5);
+    // The sword: the first cell of the grid.
+    let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
+    s.click(0, first.0, first.1, Modifiers::NONE);
+    // No server here to answer the selection: it is made as it would be.
+    s.scene.apply(PresentationEvent::Player(PlayerView {
+        selected: Some(0x8000_0101),
+        ..PlayerView::default()
+    }));
+    s.step();
+    s.step();
+    s.save("inventory-selected");
+    // Its appraisal answer.
+    let mut a = ac_proto::appraise::IdentifyObjectResponse {
+        guid: 0x8000_0101,
+        success: true,
+        ..Default::default()
+    };
+    a.properties.ints.insert(19, 18_400);
+    a.properties.ints.insert(5, 450);
+    a.properties.ints.insert(105, 8);
+    a.properties
+        .strings
+        .insert(16, "A plain sword, well kept.".to_owned());
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Appraisal(
+            Box::new(ac_runtime::inventory::AppraisalView {
+                name: Some("Sword".to_owned()),
+                response: a,
+                present_in_ui: true,
+                opens_window: false,
+            }),
+        )));
+    s.step();
+    s.step();
+    s.save("inventory-details");
+    // Its menu.
+    s.click(1, first.0, first.1, Modifiers::NONE);
+    s.save("inventory-item-menu");
+    // A click away closes it.
+    let away = (INV.0 + 200, INV.1 + 560);
+    s.click(0, away.0, away.1, Modifiers::NONE);
+    // The sort menu.
+    s.click(0, INV.0 + 416 + 30, INV.1 + 94 + 13, Modifiers::NONE);
+    s.save("inventory-sort-menu");
+    s.click(0, away.0, away.1, Modifiers::NONE);
+    // All packs, as a list.
+    s.click(0, INV.0 + 348 + 28, INV.1 + 68 + 20, Modifiers::NONE);
+    s.save("inventory-all");
+    s.click(
+        0,
+        INV.0 + 416 + 352 - 12 - 13,
+        INV.1 + 94 + 13,
+        Modifiers::NONE,
+    );
+    s.save("inventory-all-list");
+    // The side pack.
+    s.click(
+        0,
+        INV.0 + 348 + 28,
+        INV.1 + 68 + 40 + 12 + 50 + 6 + 20,
+        Modifiers::NONE,
+    );
+    s.save("inventory-side-pack");
+}
+
+/// An answer about `guid` the player asked for.
+fn answer(s: &mut Shot, a: ac_proto::appraise::IdentifyObjectResponse, opens: bool) {
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Appraisal(
+            Box::new(ac_runtime::inventory::AppraisalView {
+                name: None,
+                response: a,
+                present_in_ui: true,
+                opens_window: opens,
+            }),
+        )));
+    s.step();
+    s.step();
+}
+
+fn creature(guid: u32, success: bool) -> ac_proto::appraise::IdentifyObjectResponse {
+    use ac_proto::appraise::{CreatureAttributes, CreatureProfile, IdentifyObjectResponse};
+    let mut a = IdentifyObjectResponse {
+        guid,
+        success,
+        creature_profile: Some(CreatureProfile {
+            flags: 0,
+            health: 306,
+            health_max: 450,
+            attributes: Some(CreatureAttributes {
+                strength: 170,
+                endurance: 200,
+                quickness: 150,
+                coordination: 160,
+                focus: 90,
+                self_: 90,
+                stamina: 400,
+                mana: 0,
+                stamina_max: 400,
+                mana_max: 0,
+            }),
+            attribute_highlights: Some((0b101, 0b100)),
+        }),
+        ..Default::default()
+    };
+    a.properties.ints.insert(25, 87);
+    a.properties.ints.insert(2, 3);
+    a.properties.ints.insert(307, 10);
+    a.properties.strings.insert(1, "Drudge Ravener".to_owned());
+    a
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_inspect() {
+    use ac_core::combat::CombatMode;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    // A creature the player assessed.
+    answer(&mut s, creature(0x8000_0901, true), true);
+    s.save("inspect-creature");
+    // A failed assessment.
+    answer(&mut s, creature(0x8000_0902, false), true);
+    s.save("inspect-failed");
+    // A player.
+    let mut p = creature(0x5000_0002, true);
+    p.properties.strings.insert(5, "Knight".to_owned());
+    p.properties.ints.insert(0x71, 1);
+    p.properties.ints.insert(0xBC, 3);
+    p.armor_levels = Some(ac_proto::appraise::ArmorLevels {
+        head: 812,
+        chest: 846,
+        abdomen: 846,
+        upper_arm: 790,
+        lower_arm: 790,
+        hand: 744,
+        upper_leg: 802,
+        lower_leg: 802,
+        foot: 760,
+    });
+    answer(&mut s, p, true);
+    s.save("inspect-player");
+    // The sword, with value and a description.
+    let mut a = ac_proto::appraise::IdentifyObjectResponse {
+        guid: 0x8000_0105,
+        success: true,
+        ..Default::default()
+    };
+    a.properties.ints.insert(19, 18_400);
+    a.properties.ints.insert(5, 450);
+    a.properties.ints.insert(105, 8);
+    a.properties.strings.insert(
+        16,
+        "A curved blade of mithril, cold to the touch.".to_owned(),
+    );
+    answer(&mut s, a, true);
+    s.save("inspect-item");
+    // A spell examined from a bar.
+    let spell =
+        s.ui.facts()
+            .numbers()
+            .and_then(|n| n.spellbook())
+            .and_then(|b| b.learned_spells().next())
+            .expect("a spell");
+    let _ = s.ui.handle(vec![ac_ui::root::UiOutput::Panel(
+        ac_ui::panels::PanelOutput::ExamineSpell(spell),
+    )]);
+    s.step();
+    s.save("inspect-spell");
+}
+
+/// A corpse beside the player with a few things in it, open (or out of
+/// reach when `in_range` is false).
+fn open_corpse(s: &mut Shot, in_range: bool) {
+    let corpse = 0x8000_0A01;
+    let mut objects = Vec::new();
+    let mut c = ClientObject::new(corpse);
+    c.name = "Corpse of Drudge Ravener".to_owned();
+    c.item_type = ItemType::CONTAINER;
+    c.items_capacity = 120;
+    c.icon_id = 0x0600_127E;
+    objects.push(c);
+    let things: &[(u32, &str, ItemType, u32, i32, i32)] = &[
+        (0x8000_0A11, "Pyreal", ItemType::MONEY, 0x0600_1A8B, 212, 0),
+        (
+            0x8000_0A12,
+            "Drudge Raider Totem",
+            ItemType::MISC,
+            0x0600_1E3B,
+            1,
+            50,
+        ),
+        (
+            0x8000_0A13,
+            "Short Sword",
+            ItemType::MELEE_WEAPON,
+            0x0600_11CB,
+            1,
+            180,
+        ),
+        (
+            0x8000_0A14,
+            "Healing Kit",
+            ItemType::MISC,
+            0x0600_1E3B,
+            1,
+            40,
+        ),
+    ];
+    let mut inside = Vec::new();
+    for &(guid, name, t, icon, stack, burden) in things {
+        let mut o = ClientObject::new(guid);
+        o.name = name.to_owned();
+        o.plural_name = format!("{name}s");
+        o.item_type = t;
+        o.icon_id = icon;
+        o.stack_size = stack;
+        o.container_id = corpse;
+        o.burden = burden;
+        o.value = if t == ItemType::MONEY { stack } else { 860 };
+        o.attuned = name.contains("Totem");
+        objects.push(o);
+        inside.push(guid);
+    }
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: false,
+                objects,
+                removed: Vec::new(),
+                contents: vec![(corpse, Some(inside))],
+            },
+        )));
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::State(
+            Box::new(InterfaceState {
+                player: PLAYER,
+                can_make_request: true,
+                external_container: corpse,
+                external_container_in_range: in_range,
+                ..InterfaceState::default()
+            }),
+        )));
+    s.step();
+    s.step();
+}
+
+/// The Loot window's top left on a 1440 x 900 screen.
+const LOOT: (i32, i32) = (1440 - 60 - 400, 250);
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_loot() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::inventory::{ItemCommand, ObjectRef};
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    open_corpse(&mut s, true);
+    s.save("loot-corpse");
+    // The sword selected: its row's buttons.
+    s.scene.apply(PresentationEvent::Player(PlayerView {
+        selected: Some(0x8000_0A13),
+        ..PlayerView::default()
+    }));
+    s.step();
+    s.step();
+    s.save("loot-selected");
+    // Its Loot button (the third row, 42 a row, the list 64 down).
+    s.sent.clear();
+    let row = (LOOT.0 + 8, LOOT.1 + 64 + 2 * 44);
+    s.click(0, row.0 + 384 - 12 - 6 - 29, row.1 + 20, Modifiers::NONE);
+    println!("loot: {:?}", s.sent);
+    assert!(s.sent.iter().any(|c| matches!(
+        c,
+        SessionCommand::Item(ItemCommand::DropInto {
+            item: ObjectRef::Guid(0x8000_0A13),
+            pickup: true,
+            ..
+        })
+    )));
+    // The right-click menu on the totem.
+    s.click(1, row.0 + 100, LOOT.1 + 64 + 44 + 20, Modifiers::NONE);
+    s.save("loot-menu");
+    s.click(0, 300, 300, Modifiers::NONE);
+    // Walking away closes it.
+    s.sent.clear();
+    open_corpse(&mut s, false);
+    s.save("loot-gone");
+    assert!(s.sent.iter().any(|c| matches!(
+        c,
+        SessionCommand::Item(ItemCommand::CloseContainer(ObjectRef::Guid(0x8000_0A01)))
+    )));
 }

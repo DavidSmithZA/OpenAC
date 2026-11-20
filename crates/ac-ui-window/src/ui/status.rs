@@ -744,6 +744,10 @@ impl WindowUi {
     /// `RetailUiRuntime.HandleInputAction`): the panel toggles, the compass;
     /// false when it is not the interface's (the world gets it).
     pub fn handle_input_action(&mut self, action: InputAction) -> bool {
+        // The modern Inspect sheet, likewise.
+        if action == InputAction::SelectionExamine && self.modern_inspect_key() {
+            return true;
+        }
         // The examination window takes the examine key first: it closes
         // while it shows (else the key examines the selection).
         if self
