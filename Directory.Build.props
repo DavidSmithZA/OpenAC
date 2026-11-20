@@ -17,7 +17,7 @@
     <OpenACReleaseNumber>1</OpenACReleaseNumber>
     <!-- The GitHub repository whose releases are the launcher's update feed and the
          publish script's asset addresses: the fork's own until it merges back upstream. -->
-    <OpenACReleaseRepository>davidc-smith/OpenAC</OpenACReleaseRepository>
+    <OpenACReleaseRepository>DavidSmithZA/OpenAC</OpenACReleaseRepository>
 
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <NuGetLockFilePath Condition="'$(RuntimeIdentifier)' == ''">$(MSBuildProjectDirectory)/packages.neutral.lock.json</NuGetLockFilePath>

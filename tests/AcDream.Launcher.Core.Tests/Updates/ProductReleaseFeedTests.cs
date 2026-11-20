@@ -5,7 +5,7 @@ namespace AcDream.Launcher.Core.Tests.Updates;
 
 public sealed class ProductReleaseFeedTests
 {
-    private const string Repo = "davidc-smith/OpenAC";
+    private const string Repo = "DavidSmithZA/OpenAC";
 
     [Fact]
     public void TheHighestOwnReleaseWinsWhateverTheFeedOrder()
@@ -45,9 +45,9 @@ public sealed class ProductReleaseFeedTests
 
     [Theory]
     [InlineData("https://github.com/someone-else/OpenAC/releases/tag/gateway-v0.1.27-gateway.1")]
-    [InlineData("http://github.com/davidc-smith/OpenAC/releases/tag/gateway-v0.1.27-gateway.1")]
-    [InlineData("https://github.com/davidc-smith/OpenAC/releases/tag/gateway-v0.1.27-gateway.1?x=1")]
-    [InlineData("https://example.test/davidc-smith/OpenAC/releases/tag/gateway-v0.1.27-gateway.1")]
+    [InlineData("http://github.com/DavidSmithZA/OpenAC/releases/tag/gateway-v0.1.27-gateway.1")]
+    [InlineData("https://github.com/DavidSmithZA/OpenAC/releases/tag/gateway-v0.1.27-gateway.1?x=1")]
+    [InlineData("https://example.test/DavidSmithZA/OpenAC/releases/tag/gateway-v0.1.27-gateway.1")]
     public void LinksOutsideThisRepoOrHttpsAreIgnored(string href)
     {
         Assert.Null(Parse(Entry($"""<link rel="alternate" href="{href}"/>""")));
@@ -71,8 +71,8 @@ public sealed class ProductReleaseFeedTests
     }
 
     [Theory]
-    [InlineData("davidc-smith")]
-    [InlineData("davidc-smith/OpenAC/extra")]
+    [InlineData("DavidSmithZA")]
+    [InlineData("DavidSmithZA/OpenAC/extra")]
     public void ARepoThatIsNotOwnerSlashNameIsRejected(string repo) =>
         Assert.Throws<ArgumentException>(() =>
             ProductReleaseFeed.Newest(Encoding.UTF8.GetBytes(Feed(Entry(Link("gateway-v1.0.0")))), repo, "gateway-v"));

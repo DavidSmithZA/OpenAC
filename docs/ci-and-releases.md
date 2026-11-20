@@ -207,14 +207,14 @@ runtime described above; `-MacVulkanRuntimeDirectory` overrides where).
 
 Until the fork merges back upstream, its launcher updates from the fork's own releases:
 `OpenACReleaseRepository` in `Directory.Build.props` names the repository
-(`davidc-smith/OpenAC`), and both the launcher's feed and `publish-bin.ps1`'s asset addresses
+(`DavidSmithZA/OpenAC`), and both the launcher's feed and `publish-bin.ps1`'s asset addresses
 come from it. Each product has its own tag prefix, derived from `OpenACProduct` as
 `OpenACReleaseTagPrefix`: `gateway-v` for OpenAC Gateway and `gateway-rynth-v` for OpenAC Gateway
 Rynth. A release's tag is `<prefix><version>`, for example `gateway-v0.1.26-gateway.1` or
 `gateway-rynth-v0.1.26-rynth.1`; plain `v…` tags are never used in the fork.
 
 The launcher never calls the GitHub API. It reads
-`https://github.com/davidc-smith/OpenAC/releases.atom`, keeps the entries whose tag is its own
+`https://github.com/DavidSmithZA/OpenAC/releases.atom`, keeps the entries whose tag is its own
 prefix plus a SemVer version, and takes the highest version among them. It then downloads the
 manifest from `releases/download/<tag>/manifest.json` and the launcher fingerprint from the same
 tag folder; the manifest's version must equal the tag's version. `--update-manifest-uri` still

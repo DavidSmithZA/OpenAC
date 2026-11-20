@@ -95,7 +95,7 @@ public sealed class ReleaseManifestClientTests
         // Both products release from one repository; each launcher reads the releases feed and
         // takes only its own tag prefix (Directory.Build.props OpenACReleaseRepository/OpenACProduct).
         Assert.Equal(
-            "https://github.com/davidc-smith/OpenAC/releases.atom",
+            "https://github.com/DavidSmithZA/OpenAC/releases.atom",
             ReleaseManifestClient.ProductionUpdateFeedUri.AbsoluteUri);
         Assert.Equal(
             OpenACProductIdentity.Slug["openac-".Length..] + "-v",
@@ -235,10 +235,10 @@ public sealed class ReleaseManifestClientTests
         {"schemaVersion":1,"version":"2.0.0","minimumLauncherVersion":"1.0.0","clients":{"win-x64":{"url":"https://example.test/client","sha256":"{{{{new string('a', 64)}}}}","size":12}},"launchers":{"win-x64":{"url":"https://example.test/launcher","sha256":"{{{{new string('b', 64)}}}}","size":12}}}
         """;
 
-    private static readonly Uri FeedUri = new("https://github.com/davidc-smith/OpenAC/releases.atom");
+    private static readonly Uri FeedUri = new("https://github.com/DavidSmithZA/OpenAC/releases.atom");
 
     private static string Download(string tag, string file) =>
-        $"https://github.com/davidc-smith/OpenAC/releases/download/{tag}/{file}";
+        $"https://github.com/DavidSmithZA/OpenAC/releases/download/{tag}/{file}";
 
     private static HttpResponseMessage Ok(string body) =>
         new(HttpStatusCode.OK) { Content = new ByteArrayContent(Encoding.UTF8.GetBytes(body)) };
@@ -256,7 +256,7 @@ public sealed class ReleaseManifestClientTests
             _ => new HttpResponseMessage(HttpStatusCode.NotFound),
         });
         using var source = ReleaseManifestClient.CreateFeedForTransportTest(
-            FeedUri, "davidc-smith/OpenAC", "gateway-v", handler);
+            FeedUri, "DavidSmithZA/OpenAC", "gateway-v", handler);
 
         ReleaseManifest manifest = await source.FetchAsync();
         _ = await source.FetchLauncherFingerprintAsync();
@@ -277,7 +277,7 @@ public sealed class ReleaseManifestClientTests
             ? Ok(FeedOf("gateway-v2.0.1"))
             : Ok(ValidJson()));
         using var source = ReleaseManifestClient.CreateFeedForTransportTest(
-            FeedUri, "davidc-smith/OpenAC", "gateway-v", handler);
+            FeedUri, "DavidSmithZA/OpenAC", "gateway-v", handler);
 
         LauncherUpdateException error = await Assert.ThrowsAsync<LauncherUpdateException>(
             () => source.FetchAsync());
@@ -290,7 +290,7 @@ public sealed class ReleaseManifestClientTests
     {
         var handler = new SequenceHandler((request, _) => Ok(FeedOf("gateway-rynth-v2.0.0", "v2.0.0")));
         using var source = ReleaseManifestClient.CreateFeedForTransportTest(
-            FeedUri, "davidc-smith/OpenAC", "gateway-v", handler);
+            FeedUri, "DavidSmithZA/OpenAC", "gateway-v", handler);
 
         LauncherUpdateException error = await Assert.ThrowsAsync<LauncherUpdateException>(
             () => source.FetchAsync());
@@ -311,7 +311,7 @@ public sealed class ReleaseManifestClientTests
             _ => Ok(ValidJson()),
         });
         using var source = ReleaseManifestClient.CreateFeedForTransportTest(
-            FeedUri, "davidc-smith/OpenAC", "gateway-v", handler);
+            FeedUri, "DavidSmithZA/OpenAC", "gateway-v", handler);
 
         await source.FetchAsync();
         await Assert.ThrowsAsync<LauncherUpdateException>(() => source.FetchAsync());
@@ -345,7 +345,7 @@ public sealed class ReleaseManifestClientTests
             }
         });
         using var source = ReleaseManifestClient.CreateFeedForTransportTest(
-            FeedUri, "davidc-smith/OpenAC", "gateway-v", handler);
+            FeedUri, "DavidSmithZA/OpenAC", "gateway-v", handler);
 
         await source.FetchAsync();
         Task<ReleaseManifest> refetch = source.FetchAsync();
@@ -365,7 +365,7 @@ public sealed class ReleaseManifestClientTests
     {
         var handler = new SequenceHandler((request, _) => new HttpResponseMessage(HttpStatusCode.NotFound));
         using var source = ReleaseManifestClient.CreateFeedForTransportTest(
-            FeedUri, "davidc-smith/OpenAC", "gateway-v", handler);
+            FeedUri, "DavidSmithZA/OpenAC", "gateway-v", handler);
 
         Assert.Null(await source.FetchLauncherFingerprintAsync());
         Assert.Empty(handler.Requests);
