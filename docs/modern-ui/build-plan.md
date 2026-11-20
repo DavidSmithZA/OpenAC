@@ -268,10 +268,21 @@ a new stack just after it), drawn glyphs in empty equipment slots
 
 **M4 accepted live 2026-11-20** (install 38de12d1: all of M4).
 
+Step 9, plugin item hooks (2026-11-20; user chose plugins push, not the
+client asking): API 1.15 (31d4bbe5) adds `ui_item_notes_set` (per item:
+a mark in a tone, card lines, menu entries; up to 4,096 notes, replaced
+whole) and `ui_window_foot_set` (a summary and up to 3 buttons for the
+Inventory, Loot, Trade or Vendor window), with events `ItemMenuChosen`
+and `FootButtonPressed`; notes go at logoff and unload. The modern
+screens draw them (25e213ad, `items/plugin_notes.rs`): marks on cells and
+rows, a card per plugin at the head of the details and Inspect, plugin
+entries in the item menus, a band over the inventory grid's foot and the
+loot window's foot. Trade and Vendor draw theirs with M7. Offscreen test
+`the_modern_plugin_notes`. Not live-tested: needs a plugin built for 1.15.
+
 Not done yet in M4: the details as a pop-up card on small screens
 (Docked / Pop-up / Auto belongs with Options, M6); Close gaps (packs in
-this game hold no gaps); step 9 (plugin item hooks, after the live
-check).
+this game hold no gaps).
 
 ## Shape of the build
 
