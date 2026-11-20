@@ -13,10 +13,7 @@
 
 use std::sync::Arc;
 
-use ac_core::items::vendor::{
-    UNLIMITED_STOCK, VendorSellCandidate, evaluate_sell, per_unit_value,
-    resolve_authored_stack_size,
-};
+use ac_core::items::vendor::{UNLIMITED_STOCK, resolve_authored_stack_size};
 use ac_core::items::{ClientObject, ItemType, VendorShopItem, VendorShopProfile};
 use ac_core::properties::PropertyInt;
 use ac_runtime::inventory::shop::{
@@ -32,6 +29,7 @@ use crate::import::ImportedLayout;
 use crate::panels::PanelOutput;
 use crate::panels::inventory::SelectionEcho;
 use crate::panels::items::{ItemsView, bind_click, emit};
+use crate::panels::vendor_rules::{PendingSplit, SplitOutcome, removal_amount, sell_check};
 use crate::root::{ElementMessage, UiRoot};
 use crate::text::Line;
 use crate::tree::ElementId;
@@ -166,8 +164,7 @@ pub const CLOSE_CONFIRMATION_MESSAGE: &str =
     "You have not completed all transactions. Are you sure you want to leave this vendor?";
 /// A staged row is lifted with only part of its stack selected.
 pub const CANNOT_SPLIT_HERE_MESSAGE: &str = "You cannot split items from this panel";
-/// A split before selling could not be asked for.
-pub const CANNOT_SPLIT_TO_SELL_MESSAGE: &str = "Cannot split the stack to sell it";
+pub use super::vendor_rules::CANNOT_SPLIT_TO_SELL_MESSAGE;
 
 /// The empty-cell images of the three rows (from the cell prototypes; see
 /// [`crate::panels::cell_template::empty_sprite`]).
@@ -191,16 +188,6 @@ pub enum VendorTab {
     Buying,
     /// The sell list.
     Selling,
-}
-
-/// A split asked for so part of a stack can be sold: the new stack is
-/// staged when it appears.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct PendingSplit {
-    source: u32,
-    weenie_class_id: u32,
-    quantity: i32,
-    seen_in_flight: bool,
 }
 
 /// The vendor window's controller.
@@ -329,30 +316,6 @@ pub fn listing_caption(item: &VendorShopItem, quantity: i32) -> String {
         .filter(|p| !p.is_empty())
         .unwrap_or(name);
     format!("{quantity} {plural}")
-}
-
-/// Whether the vendor takes `item`, as the window checks a drag over the
-/// sell list.
-fn sell_check(
-    items: &ItemsView<'_>,
-    profile: &VendorShopProfile,
-    guid: u32,
-) -> Result<(), ac_core::items::VendorSellRejection> {
-    let Some(item) = items.get(guid) else {
-        return Err(ac_core::items::VendorSellRejection::WrongType);
-    };
-    let player = items.player;
-    evaluate_sell(
-        &VendorSellCandidate {
-            owned_by_player: items.objects.is_owned_by_object(guid, player),
-            contained_item_count: i32::try_from(items.objects.get_contained_items(guid).len())
-                .unwrap_or(i32::MAX),
-            item_type: item.item_type.bits(),
-            per_unit_value: per_unit_value(item.value, Some(item.stack_size)),
-            public_weenie_bitfield: item.public_weenie_bitfield.map_or(0, |f| f.bits()),
-        },
-        profile,
-    )
 }
 
 fn split_of(items: &ItemsView<'_>, guid: u32, selected: Option<u32>, stack: u32) -> u32 {
@@ -1315,63 +1278,30 @@ impl VendorController {
         quantity: i32,
         items: &ItemsView<'_>,
     ) {
-        if !items.can_make_request {
-            notice(ui, CANNOT_SPLIT_TO_SELL_MESSAGE);
-            return;
+        match PendingSplit::start(item, quantity, items.can_make_request) {
+            Ok((pending, command, words)) => {
+                self.pending_split = Some(pending);
+                session(ui, command);
+                notice(ui, &words);
+            }
+            Err(words) => notice(ui, words),
         }
-        let guid = item.object_id();
-        self.pending_split = Some(PendingSplit {
-            source: guid,
-            weenie_class_id: item.weenie_class_id,
-            quantity,
-            seen_in_flight: false,
-        });
-        session(
-            ui,
-            SessionCommand::Item(ItemCommand::MoveToContainer {
-                item: ObjectRef::Guid(guid),
-                container: ObjectRef::Guid(item.container_id),
-                slot: 0,
-                amount: quantity.unsigned_abs(),
-                join_stack: false,
-            }),
-        );
-        let name = if item.name.trim().is_empty() {
-            "item"
-        } else {
-            item.name.as_str()
-        };
-        notice(ui, &format!("Splitting the {name} before selling them"));
     }
 
     /// The new stack of a split asked for to sell part of a stack: staged
     /// once it is in the player's pack; forgotten when the split failed
     /// (the request ended without one).
     fn resolve_pending_split(&mut self, ui: &mut UiRoot, items: &ItemsView<'_>) {
-        let Some(mut pending) = self.pending_split else {
+        let Some(pending) = self.pending_split.as_mut() else {
             return;
         };
-        let found = items.objects.objects().find(|o| {
-            o.object_id() != pending.source
-                && o.weenie_class_id == pending.weenie_class_id
-                && o.stack_size == pending.quantity
-                && items
-                    .objects
-                    .is_owned_by_object(o.object_id(), items.player)
-        });
-        if let Some(o) = found {
-            self.pending_split = None;
-            vendor_command(
-                ui,
-                VendorCommand::AddToSellList(ObjectRef::Guid(o.object_id())),
-            );
-            return;
-        }
-        if items.is_pending(pending.source) {
-            pending.seen_in_flight = true;
-            self.pending_split = Some(pending);
-        } else if pending.seen_in_flight {
-            self.pending_split = None;
+        match pending.follow(items) {
+            SplitOutcome::Arrived(guid) => {
+                self.pending_split = None;
+                vendor_command(ui, VendorCommand::AddToSellList(ObjectRef::Guid(guid)));
+            }
+            SplitOutcome::Waiting => {}
+            SplitOutcome::Failed => self.pending_split = None,
         }
     }
 
@@ -1419,16 +1349,6 @@ impl VendorController {
         if mx > x0 && mx < x0 + w && my > y0 && my < y0 + h {
             self.show_tab(ui, VendorTab::Selling);
         }
-    }
-}
-
-/// How much of a listing the buy list gives up when its row is bought or
-/// cleared: the whole row for a stacking kind, else one.
-fn removal_amount(item: &VendorShopItem) -> i32 {
-    if item.max_stack_size.unwrap_or(1) > 1 {
-        -1
-    } else {
-        1
     }
 }
 

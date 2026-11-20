@@ -47,6 +47,7 @@ pub mod toolbar;
 pub mod trade;
 pub mod transcript;
 pub mod vendor;
+pub mod vendor_rules;
 pub mod vitals;
 
 use std::collections::HashMap;
