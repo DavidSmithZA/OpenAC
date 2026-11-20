@@ -55,6 +55,7 @@ const DO_SALVAGE: u32 = 7;
 const DO_INSCRIBE: u32 = 8;
 const DO_BAR: u32 = 9;
 const DO_LINK: u32 = 10;
+const DO_SPLIT: u32 = 11;
 /// The sort menu's own entries (the sorts are their index).
 const DO_REVERSE: u32 = 100;
 const DO_MERGE: u32 = 200;
@@ -70,12 +71,16 @@ pub struct InventoryUi {
     pub grid: ElementId,
     /// The item details.
     pub details: ElementId,
+    /// The field writing an inscription in the details.
+    pub scribe: super::scribe::Scribe,
     /// The equipment slots, in [`EQUIP_SLOTS`]' order.
     pub slots: Vec<ElementId>,
     /// The pack rail's buttons: All, Main, then the side packs.
     pub packs: Vec<ElementId>,
     /// The menus.
     pub menu: ElementId,
+    /// The split pop-up.
+    pub split: ElementId,
     /// The figure's viewport and the overlay that turns it.
     pub figure: ElementId,
     pub turner: ElementId,
@@ -178,7 +183,7 @@ impl WindowUi {
         // The equipment slots.
         let mut slots = Vec::with_capacity(EQUIP_SLOTS.len());
         let (mut left, mut right, mut jewel, mut held) = (0, 0, 0, 0);
-        for s in &EQUIP_SLOTS {
+        for (i, s) in EQUIP_SLOTS.iter().enumerate() {
             let step = inv::SLOT + inv::SLOT_GAP;
             let (x, y) = match s.row {
                 SlotRow::Left => {
@@ -203,6 +208,7 @@ impl WindowUi {
             };
             let mut cell = ItemCell::new(theme, grid_fonts.small.clone(), strong.clone());
             cell.source = ItemDragSource::Equipment;
+            cell.glyph = Some(super::glyphs::SlotGlyph::SLOTS[i]);
             slots.push(ui.add(
                 frame,
                 Element::at(x, y, inv::SLOT, inv::SLOT).with_anchors(AnchorEdges::NONE),
@@ -237,7 +243,15 @@ impl WindowUi {
                 .with_visible(false),
             sheet,
         );
+        let scribe = super::scribe::Scribe::mount(ui, details, theme, body.clone());
         let menu = PopMenu::mount(ui, theme, menu_fonts);
+        let split_fonts = super::split::SplitFonts {
+            title: self.modern_font(Weight::SemiBold, 13.0),
+            small: self.modern_font(Weight::Regular, 11.0),
+            body: self.modern_font(Weight::SemiBold, 12.0),
+        };
+        let ui = &mut self.host.root;
+        let split = super::split::SplitPopover::mount(ui, theme, split_fonts);
         ui.hide_window(INVENTORY);
         let Some(modern) = self.modern.as_mut() else {
             return;
@@ -247,9 +261,11 @@ impl WindowUi {
             search,
             grid,
             details,
+            scribe,
             slots,
             packs: Vec::new(),
             menu,
+            split,
             figure,
             turner,
             options: ViewOptions::default(),
@@ -357,6 +373,7 @@ impl WindowUi {
         }
         inv.was_open = open;
         if !open {
+            self.write_inscriptions();
             return;
         }
         let search = self
@@ -368,7 +385,34 @@ impl WindowUi {
         inv.options.search = search;
         self.next_tidy_merge();
         self.feed_modern_inventory(frame);
+        self.write_inscriptions();
         self.answer_pack_drags();
+    }
+
+    /// The details' inscription field: what was written goes out, and
+    /// the kept answer takes it so the details show it from now on.
+    fn write_inscriptions(&mut self) {
+        let open = self.host.root.is_window_visible(INVENTORY);
+        let me = self.status.playing.clone().unwrap_or_default();
+        let Some(inv) = self.modern.as_mut().and_then(|m| m.inventory.as_mut()) else {
+            return;
+        };
+        let ui = &mut self.host.root;
+        if !open && ui.keyboard_focus() == Some(inv.scribe.field) {
+            ui.set_keyboard_focus(None);
+        }
+        let Some(command) = inv.scribe.tick(ui, inv.details) else {
+            return;
+        };
+        if let ItemCommand::Inscribe {
+            item: ObjectRef::Guid(id),
+            text,
+        } = &command
+            && let Some(a) = inv.appraisals.get_mut(id)
+        {
+            super::sheets::note_inscription(a, text, &me);
+        }
+        self.send_item(command);
     }
 
     /// Carries out what the window's parts asked for.
@@ -411,6 +455,10 @@ impl WindowUi {
             .map(|s| std::mem::take(&mut s.requests))
             .unwrap_or_default();
         let chosen = PopMenu::take(ui, menu);
+        let splits = super::split::SplitPopover::take(ui, inv.split);
+        for super::split::SplitRequest::Split { item, amount } in splits {
+            self.split_stack(item, amount);
+        }
         for ask in frame_asks {
             self.run_frame_request(ask);
         }
@@ -502,13 +550,18 @@ impl WindowUi {
                 SheetRequest::Small(1, _) => self.item_do(id, DO_DROP),
                 SheetRequest::Small(2, _) => self.item_do(id, DO_SALVAGE),
                 SheetRequest::Small(_, (x, y)) => {
-                    let rows = vec![
+                    let stack = self.own_item(id).is_some_and(|o| o.stack_size > 1);
+                    let mut rows = Vec::new();
+                    if stack {
+                        rows.push(Row::entry(DO_SPLIT, "Split the stack\u{2026}"));
+                    }
+                    rows.extend([
                         Row::entry(DO_INSCRIBE, "Inscribe"),
                         Row::entry(DO_BAR, "Add to a shortcut bar"),
                         Row::entry(DO_LINK, "Link in chat"),
                         Row::Line,
                         Row::entry(DO_INSPECT, "Inspect"),
-                    ];
+                    ]);
                     PopMenu::open(
                         &mut self.host.root,
                         menu,
@@ -626,6 +679,7 @@ impl WindowUi {
         };
         let worn = item.currently_equipped_location != EquipMask::NONE;
         let wearable = item.valid_locations != EquipMask::NONE;
+        let stack = item.stack_size > 1;
         let name = item.appropriate_name().into_owned();
         let mut rows = vec![Row::Header(name.to_uppercase())];
         rows.push(Row::entry(DO_INSPECT, "Inspect"));
@@ -639,6 +693,9 @@ impl WindowUi {
         rows.push(Row::entry(DO_GIVE, "Give to your target"));
         rows.push(Row::entry(DO_DROP, "Drop on the ground"));
         rows.push(Row::entry(DO_SALVAGE, "Salvage"));
+        if stack {
+            rows.push(Row::entry(DO_SPLIT, "Split the stack\u{2026}"));
+        }
         rows.push(Row::Line);
         rows.push(Row::entry(DO_BAR, "Add to a shortcut bar"));
         rows.push(Row::entry(DO_LINK, "Link in chat"));
@@ -702,8 +759,64 @@ impl WindowUi {
             }
             DO_BAR => self.put_item_on_bars(id),
             DO_LINK => self.link_item_in_chat(id),
+            DO_SPLIT => self.open_split(id),
             _ => {}
         }
+    }
+
+    /// The split pop-up on stack `id`, where its menu was.
+    fn open_split(&mut self, id: u32) {
+        let Some((name, stack)) = self.own_item(id).map(|o| {
+            (
+                o.appropriate_name().into_owned(),
+                o.stack_size.max(0).unsigned_abs(),
+            )
+        }) else {
+            return;
+        };
+        let Some((menu, split)) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.inventory.as_ref())
+            .map(|i| (i.menu, i.split))
+        else {
+            return;
+        };
+        let ui = &mut self.host.root;
+        let at = ui
+            .element(menu)
+            .map_or((0.0, 0.0), |e| (e.left, e.top + 8.0));
+        super::split::SplitPopover::open(ui, split, id, &name, stack, at);
+    }
+
+    /// `amount` of stack `id` taken off into a stack of its own, just
+    /// after it in the same pack.
+    fn split_stack(&mut self, id: u32, amount: u32) {
+        let Some(item) = self.own_item(id) else {
+            return;
+        };
+        let full = item.stack_size.max(0).unsigned_abs();
+        if amount == 0 || amount >= full {
+            return;
+        }
+        let player = self.facts.state.player;
+        let pack = item.container_id;
+        let slot = ac_core::items::placement::loose_contents(&self.facts.objects, pack)
+            .iter()
+            .position(|&g| g == id)
+            .map_or(-1, |i| i as i32 + 1);
+        let container = if pack == player {
+            ObjectRef::Player
+        } else {
+            ObjectRef::Guid(pack)
+        };
+        self.send_item(ItemCommand::MoveToContainer {
+            item: ObjectRef::Guid(id),
+            container,
+            slot,
+            amount,
+            join_stack: false,
+        });
     }
 
     /// Item `id` on the first free slot of the player's bars.
@@ -1113,6 +1226,7 @@ impl WindowUi {
                 &status.names,
                 numbers,
                 &me,
+                true,
                 objects,
                 icons,
             );

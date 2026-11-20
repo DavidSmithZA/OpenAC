@@ -157,6 +157,19 @@ impl PopMenu {
         PAD * 2.0 + self.rows.iter().map(Row::height).sum::<f32>()
     }
 
+    /// The top and height of the entry with words `words`.
+    #[must_use]
+    pub fn entry_rows(&self, words: &str) -> Option<(f32, f32)> {
+        let mut top = PAD;
+        for row in &self.rows {
+            if matches!(row, Row::Entry { words: w, .. } if w == words) {
+                return Some((top, row.height()));
+            }
+            top += row.height();
+        }
+        None
+    }
+
     fn row_at(&self, y: f32) -> Option<usize> {
         let mut top = PAD;
         for (i, row) in self.rows.iter().enumerate() {

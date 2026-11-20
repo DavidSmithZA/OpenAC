@@ -177,6 +177,12 @@ pub struct SheetView {
     hover: Option<(f32, f32)>,
     /// What it asked for since the window last looked.
     pub requests: Vec<SheetRequest>,
+    /// A field lies over the writable inscription: its words are the
+    /// field's, not drawn by the sheet.
+    pub covered: bool,
+    /// The writable inscription's box (top and height in the body) and
+    /// the lines of its words.
+    writing: Option<(f32, f32, std::ops::Range<usize>)>,
 }
 
 impl SheetView {
@@ -198,6 +204,8 @@ impl SheetView {
             dirty: true,
             hover: None,
             requests: Vec::new(),
+            covered: false,
+            writing: None,
         }
     }
 
@@ -227,6 +235,49 @@ impl SheetView {
             self.scroll = 0.0;
             self.dirty = true;
         }
+    }
+
+    /// Where a field writing the inscription goes, in the sheet's own
+    /// coordinates: the writable box while it shows whole in the body.
+    #[must_use]
+    pub fn writing_box(&mut self, w: f32, h: f32) -> Option<(f32, f32, f32, f32)> {
+        if self.dirty || (self.laid_width - w).abs() > 0.5 {
+            self.lay_out(w);
+        }
+        let (y, bh, _) = self.writing.clone()?;
+        let top = self.body_top();
+        let y = top - self.scroll.clamp(0.0, self.most(h)) + y;
+        (y >= top && y + bh <= self.body_bottom(h)).then_some((PAD, y, w - PAD * 2.0 - BAR, bh))
+    }
+
+    /// The inscription the sheet shows as writable, if any.
+    #[must_use]
+    pub fn writable_inscription(&self) -> Option<&str> {
+        self.sheet.tabs.get(self.tab_index()).and_then(|t| {
+            t.sections
+                .iter()
+                .flat_map(|s| &s.entries)
+                .find_map(|e| match e {
+                    Entry::Inscription {
+                        text,
+                        editable: true,
+                        ..
+                    } => Some(text.as_str()),
+                    _ => None,
+                })
+        })
+    }
+
+    /// Tab `label`'s place in the tab row of a sheet `w` wide (none when
+    /// the sheet has no row or no such tab).
+    #[must_use]
+    pub fn tab_rect(&self, label: &str, w: f32) -> Option<(f32, f32, f32, f32)> {
+        let n = self.sheet.tabs.len();
+        let i = self.sheet.tabs.iter().position(|t| t.label == label)?;
+        (n > 1).then(|| {
+            let tab_w = (w - 12.0) / n as f32;
+            (6.0 + i as f32 * tab_w, self.head_height(), tab_w, TABS)
+        })
     }
 
     fn tab_index(&self) -> usize {
@@ -265,6 +316,7 @@ impl SheetView {
         self.laid_width = width;
         self.dirty = false;
         self.lines.clear();
+        self.writing = None;
         let (Some(body), Some(small), Some(strong)) =
             (&self.fonts.body, &self.fonts.small, &self.fonts.strong)
         else {
@@ -366,6 +418,7 @@ impl SheetView {
                             h,
                             editable: *editable,
                         });
+                        let first = self.lines.len();
                         let mut ty = y + 10.0;
                         for l in words {
                             self.lines.push(Line::Words {
@@ -376,6 +429,9 @@ impl SheetView {
                                 small: false,
                             });
                             ty += body.line_height + 3.0;
+                        }
+                        if *editable {
+                            self.writing = Some((y + 2.0, h, first..self.lines.len()));
                         }
                         y += h + 8.0;
                         for l in wrap(small, note, inner) {
@@ -510,12 +566,13 @@ impl Widget for SheetView {
                     self.requests.push(SheetRequest::Close);
                     return true;
                 }
-                let tabs_top = self.head_height();
-                let n = self.sheet.tabs.len();
-                if n > 1 && y >= tabs_top && y < tabs_top + TABS {
-                    let tab_w = (w - 12.0) / n as f32;
-                    let i = (((x - 6.0) / tab_w).floor().max(0.0) as usize).min(n - 1);
-                    let label = self.sheet.tabs[i].label.clone();
+                let hit = self
+                    .sheet
+                    .tabs
+                    .iter()
+                    .map(|t| t.label.clone())
+                    .find(|l| self.tab_rect(l, w).is_some_and(|r| inside(r, x, y)));
+                if let Some(label) = hit {
                     self.choose_tab(&label);
                     return true;
                 }
@@ -752,7 +809,14 @@ impl Widget for SheetView {
         rc.push_clip(0.0, body_top, w, body_bottom - body_top);
         let off = body_top - self.scroll;
         let inner_right = w - PAD - BAR;
-        for line in &self.lines {
+        let hidden = match (&self.writing, self.covered) {
+            (Some((_, _, r)), true) => r.clone(),
+            _ => 0..0,
+        };
+        for (i, line) in self.lines.iter().enumerate() {
+            if hidden.contains(&i) {
+                continue;
+            }
             match line {
                 Line::Title { y, title, count } => {
                     let y = off + y;

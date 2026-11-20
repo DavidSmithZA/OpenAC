@@ -47,6 +47,8 @@ pub struct InspectUi {
     pub subject: Option<Subject>,
     /// The selection it last followed.
     followed: Option<u32>,
+    /// The field writing an inscription on the sheet.
+    scribe: super::scribe::Scribe,
     /// Time since the last combat refresh.
     since: f64,
 }
@@ -54,6 +56,7 @@ pub struct InspectUi {
 impl WindowUi {
     /// The Inspect sheet, hidden, in place of retail's examination window.
     pub(in crate::ui) fn mount_modern_inspect(&mut self) {
+        let writing = self.modern_font(Weight::Regular, 12.5);
         let fonts = SheetFonts {
             name: self.modern_font(Weight::SemiBold, 16.0),
             small: self.modern_font(Weight::Regular, 11.0),
@@ -75,6 +78,8 @@ impl WindowUi {
         if let Some(e) = self.host.root.element_mut(sheet) {
             e.draggable = true;
         }
+        let scribe =
+            super::scribe::Scribe::mount(&mut self.host.root, sheet, Horizon::BRONZE, writing);
         self.host.root.hide_window(INSPECT);
         let Some(modern) = self.modern.as_mut() else {
             return;
@@ -83,6 +88,7 @@ impl WindowUi {
             sheet,
             subject: None,
             followed: None,
+            scribe,
             since: 0.0,
         });
         modern.replace(crate::ui::window::EXAMINATION_WINDOW);
@@ -153,6 +159,7 @@ impl WindowUi {
             )),
             AppraisalPage::Item | AppraisalPage::Spell => o.map(|o| {
                 let composed = crate::ui::facts::composed_names(&self.status.names);
+                let owned = guid != player && objects.is_owned_by_object(guid, player);
                 let sheet = sheets::item_sheet(
                     o,
                     Some(&a.response),
@@ -161,10 +168,10 @@ impl WindowUi {
                     &self.status.names,
                     self.facts.numbers(),
                     &me,
+                    owned,
                     objects,
                     &mut self.icons,
                 );
-                let owned = guid != player && objects.is_owned_by_object(guid, player);
                 let place = o
                     .item_type
                     .intersects(ItemType::PORTAL | ItemType::LOCKABLE | ItemType::LIFE_STONE)
@@ -272,6 +279,16 @@ impl WindowUi {
             self.host.root.hide_window(INSPECT);
         }
         let open = self.host.root.is_window_visible(INSPECT);
+        // The inscription field: what was written goes out.
+        if let Some(i) = self.modern.as_mut().and_then(|m| m.inspect.as_mut()) {
+            let ui = &mut self.host.root;
+            if !open && ui.keyboard_focus() == Some(i.scribe.field) {
+                ui.set_keyboard_focus(None);
+            }
+            if let Some(c) = i.scribe.tick(ui, sheet) {
+                emit(ui, PanelOutput::Session(SessionCommand::Item(c)));
+            }
+        }
         let selected = self.player_view.and_then(|v| v.selected);
         let in_combat = self.facts.state.combat_mode != CombatMode::NON_COMBAT;
         let Some(i) = self.modern.as_mut().and_then(|m| m.inspect.as_mut()) else {
