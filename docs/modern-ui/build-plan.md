@@ -135,31 +135,44 @@ Gaps closed after M2 (2026-11-20, same branch):
 Still not done: the Options › Controls row for the quick-move key (M6);
 moving the quests panel and fellows in Edit layout (they come in M8).
 
-**M3 started 2026-11-20** on `feat/modern-ui-m3` (off `feat/modern-ui-m2`).
-Steps, one or more commits each:
+**M3 built 2026-11-20** on `feat/modern-ui-m3` (off `feat/modern-ui-m2`),
+one or more commits per step:
 
-1. Model: line kind (tag, colour), speaker and words, mentions; tabs as
-   text-class filters with a talk channel; unread counts. Done.
-2. The panel bottom left: tabs with unread badges, wrapped lines, idle
-   fade with "Enter to chat", read-back hold with "N new messages".
-3. The entry: channel button and menu (12 channels, recent tells, greyed
-   with reasons), typed lines through the retail chat submission; then
-   the modern chat replaces the retail chat window.
-   How: mount window `modern-chat` (bottom left, 16 / -14, 440 x 300)
-   with the panel and a `Field` child for the entry, and attach a
-   `PanelController` to it so the field's `Submitted`, `TextChanged` and
-   `Recall` messages reach it; it sends `ChatEntryCommand`s exactly as
-   retail's `ChatWindowController` does (make its `entry_command` and
-   send helpers public). Feed it `set_entry(ChatEntryView)` (channel,
-   tell target, draft on a new shown revision, composed takes focus) and
-   the lines (`ShownLine::of(line, player name)`). Route
-   `chat_entry_key` and `run_chat_action` (status.rs) to it when it is
-   mounted. Retail's menu greys every channel but Say, General, Trade
-   and LFG (`channel_available`): check why before choosing the modern
-   menu's greying.
-4. @ suggestions, the name menu, search.
-5. New tab, pop-out windows (own filter, opacity, channel), saved; they
-   replace the four floating chat windows.
+1. Model (`ui/modern/chat/model.rs`): line kind (tag, colour), speaker
+   and words, mentions; tabs as text-class filters with a talk channel,
+   an id, a window flag, opacity and place; unread counts; the message
+   type groups the tab dialog toggles.
+2. Panel (`chat/panel.rs`): tabs with unread badges (they give up
+   padding so +, pop-out and search fit), wrapped lines, idle fade with
+   "Enter to chat", read-back hold with "N new messages"; window mode
+   for popped-out tabs.
+3. Entry (`chat/run.rs`, `chat/channels.rs`): window `modern-chat` in
+   place of retail's chat window; the field is wired to the session's
+   chat entry exactly as retail's (a `PanelController` on the window);
+   channel button and two-column menu with @ commands and recent tells.
+   Retail's port greys every channel but Say, General, Trade and LFG;
+   retail itself keeps a mask of usable talk channels that our runtime
+   does not track, so the modern menu greys only what the client knows
+   (no fellowship, no allegiance; Olthoi always) and leaves the rest to
+   the server. The chat keys go to the modern entry.
+4. @ suggestions (`chat/commands.rs`; Tab or a click completes; the
+   button says where a command sends the line, from the runtime's parser,
+   now exported), the name menu (`chat/names.rs`), search.
+5. New tab / change tab dialog (`chat/tab_dialog.rs`), pop-out windows
+   with their own entry (straight to the session on the tab's channel),
+   saved in settings section `modernChat`; they stand in for the four
+   floating chat windows, whose keys show or hide the first four.
+
+Checked offscreen (`the_modern_chat` in `modern_snapshot.rs`): idle,
+active with typing, Enter sends through the chat entry, channel menu,
+suggestions, name menu, search, the dialog, a popped-out window.
+
+Not done in M3: arrows to choose a suggestion (the field keeps Up and
+Down for sent lines); dragging a tab off to pop it out (button and
+dialog instead); coordinate links in plugin lines; the chat settings
+button (Options › Chat is M6); the retail chat font option (the modern
+chat uses Inter); allegiance patron and vassals greying (the client
+cannot tell them apart from the allegiance's records yet).
 
 ## Shape of the build
 
