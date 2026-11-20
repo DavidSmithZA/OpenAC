@@ -3,7 +3,10 @@
 
 pub mod cell;
 pub mod grid;
+pub mod inventory;
+pub mod menu;
 pub mod model;
+pub mod run;
 pub mod sheet;
 pub mod sheet_view;
 

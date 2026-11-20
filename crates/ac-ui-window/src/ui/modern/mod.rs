@@ -74,6 +74,10 @@ pub struct ModernLayer {
     pub pieces: Option<ac_host::settings::HudPieces>,
     /// The chat.
     pub chat: Option<chat::run::ChatUi>,
+    /// The inventory.
+    pub inventory: Option<items::run::InventoryUi>,
+    /// Packs used anywhere since the inventory last looked.
+    pub opened_packs: Vec<u32>,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -310,6 +314,7 @@ impl WindowUi {
         let panels = self.mount_modern_panels();
         self.mount_modern_bars();
         self.mount_modern_chat();
+        self.mount_modern_inventory();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };

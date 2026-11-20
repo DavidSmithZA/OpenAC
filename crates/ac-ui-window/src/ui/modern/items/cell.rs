@@ -74,6 +74,8 @@ pub struct CellView {
     pub cooldown: f32,
     /// Shown faint (a drag elsewhere is under way).
     pub faint: bool,
+    /// Lit: what is being dragged may go here.
+    pub lit: bool,
 }
 
 /// What a cell asks of the window.
@@ -286,7 +288,7 @@ impl Widget for ItemCell {
     }
 
     fn tooltip_text(&self, _element: &Element) -> Option<String> {
-        (self.view.id != 0 && self.look != CellLook::List).then(|| self.view.name.clone())
+        (!self.view.name.is_empty() && self.look != CellLook::List).then(|| self.view.name.clone())
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
@@ -342,7 +344,7 @@ impl Widget for ItemCell {
             rc.fill_rounded_rect(bx, ty + side - hh, bw, hh, round, hex(0, 0.55));
         }
         // The edge.
-        let (edge, width) = if self.over == Some(true) || v.selected && !list {
+        let (edge, width) = if self.over == Some(true) || v.lit || v.selected && !list {
             (p.accent, 2.0)
         } else if self.hovered && filled {
             (p.accent, 1.0)
@@ -351,7 +353,7 @@ impl Widget for ItemCell {
         } else {
             (hex(0xC9_A062, 0.14), 1.0)
         };
-        if self.over == Some(true) {
+        if self.over == Some(true) || v.lit {
             rc.soft_shadow(bx, ty, bw, side, 4.0, 0.0, 10.0, hex(0xE0_B068, 0.45));
         }
         rc.stroke_rounded_rect(bx, ty, bw, side, round, edge, width);

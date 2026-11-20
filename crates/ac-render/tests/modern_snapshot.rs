@@ -851,3 +851,158 @@ fn the_modern_chat() {
     }
     s.save("chat-window-closed");
 }
+
+/// More of the player's things for the inventory: a side pack with salvage
+/// in it, a worn coat and a wielded wand, and value and burden on all.
+fn more_things(s: &mut Shot) {
+    use ac_core::items::EquipMask;
+    let pack = 0x8000_0201;
+    let mut objects = Vec::new();
+    let mut p = ClientObject::new(PLAYER);
+    p.name = "Aerin Vale".to_owned();
+    p.item_type = ItemType::CREATURE;
+    p.items_capacity = 102;
+    objects.push(p);
+    let mut main = Vec::new();
+    for &(guid, name, item_type, icon, stack) in ITEMS {
+        let mut o = ClientObject::new(guid);
+        o.name = name.to_owned();
+        o.item_type = item_type;
+        o.icon_id = icon;
+        o.stack_size = stack;
+        o.stack_size_max = if stack > 1 { 100 } else { 1 };
+        o.container_id = PLAYER;
+        o.value = 120 * stack.max(1);
+        o.burden = 15 * stack.max(1);
+        if item_type == ItemType::MELEE_WEAPON {
+            o.valid_locations = EquipMask::MELEE_WEAPON;
+            o.value = 18_400;
+            o.burden = 450;
+            o.workmanship = 8.0;
+        }
+        objects.push(o);
+        main.push(guid);
+    }
+    let mut bag = ClientObject::new(pack);
+    bag.name = "Salvage Sack".to_owned();
+    bag.item_type = ItemType::CONTAINER;
+    bag.items_capacity = 24;
+    bag.icon_id = 0x0600_127E;
+    bag.container_id = PLAYER;
+    objects.push(bag);
+    main.push(pack);
+    let mut in_pack = Vec::new();
+    for (i, name) in ["Salvaged Iron", "Salvaged Granite", "Salvaged Steel"]
+        .iter()
+        .enumerate()
+    {
+        let guid = 0x8000_0301 + i as u32;
+        let mut o = ClientObject::new(guid);
+        o.name = (*name).to_owned();
+        o.item_type = ItemType::TINKERING_MATERIAL;
+        o.icon_id = 0x0600_1E3B;
+        o.container_id = pack;
+        o.burden = 100;
+        objects.push(o);
+        in_pack.push(guid);
+    }
+    let mut coat = ClientObject::new(0x8000_0401);
+    coat.name = "Olthoi Amuli Coat".to_owned();
+    coat.item_type = ItemType::ARMOR;
+    coat.icon_id = 0x0600_11CB;
+    coat.valid_locations = EquipMask::CHEST_ARMOR | EquipMask::UPPER_ARM_ARMOR;
+    coat.currently_equipped_location = coat.valid_locations;
+    coat.wielder_id = PLAYER;
+    coat.burden = 1240;
+    objects.push(coat);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: true,
+                objects,
+                removed: Vec::new(),
+                contents: vec![(PLAYER, Some(main)), (pack, Some(in_pack))],
+            },
+        )));
+    s.step();
+    s.step();
+}
+
+/// The inventory window's top left on a 1440 x 900 screen (centred).
+const INV: (i32, i32) = (180, 130);
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_inventory() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    assert!(s.ui.run_hotkey(Hotkey::Inventory));
+    s.step();
+    s.step();
+    s.save("inventory-open");
+    // The sword: the first cell of the grid.
+    let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
+    s.click(0, first.0, first.1, Modifiers::NONE);
+    // No server here to answer the selection: it is made as it would be.
+    s.scene.apply(PresentationEvent::Player(PlayerView {
+        selected: Some(0x8000_0101),
+        ..PlayerView::default()
+    }));
+    s.step();
+    s.step();
+    s.save("inventory-selected");
+    // Its appraisal answer.
+    let mut a = ac_proto::appraise::IdentifyObjectResponse {
+        guid: 0x8000_0101,
+        success: true,
+        ..Default::default()
+    };
+    a.properties.ints.insert(19, 18_400);
+    a.properties.ints.insert(5, 450);
+    a.properties.ints.insert(105, 8);
+    a.properties
+        .strings
+        .insert(16, "A plain sword, well kept.".to_owned());
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Appraisal(
+            Box::new(ac_runtime::inventory::AppraisalView {
+                name: Some("Sword".to_owned()),
+                response: a,
+                present_in_ui: true,
+                opens_window: false,
+            }),
+        )));
+    s.step();
+    s.step();
+    s.save("inventory-details");
+    // Its menu.
+    s.click(1, first.0, first.1, Modifiers::NONE);
+    s.save("inventory-item-menu");
+    // A click away closes it.
+    let away = (INV.0 + 200, INV.1 + 560);
+    s.click(0, away.0, away.1, Modifiers::NONE);
+    // The sort menu.
+    s.click(0, INV.0 + 416 + 30, INV.1 + 94 + 13, Modifiers::NONE);
+    s.save("inventory-sort-menu");
+    s.click(0, away.0, away.1, Modifiers::NONE);
+    // All packs, as a list.
+    s.click(0, INV.0 + 348 + 28, INV.1 + 68 + 20, Modifiers::NONE);
+    s.save("inventory-all");
+    s.click(
+        0,
+        INV.0 + 416 + 352 - 12 - 13,
+        INV.1 + 94 + 13,
+        Modifiers::NONE,
+    );
+    s.save("inventory-all-list");
+    // The side pack.
+    s.click(
+        0,
+        INV.0 + 348 + 28,
+        INV.1 + 68 + 40 + 12 + 50 + 6 + 20,
+        Modifiers::NONE,
+    );
+    s.save("inventory-side-pack");
+}

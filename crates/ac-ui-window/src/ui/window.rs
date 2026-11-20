@@ -1245,6 +1245,7 @@ impl WindowUi {
         self.update_barber(dirty, scene);
         self.update_journal_pages(dirty, scene);
         self.refresh_examined_spell(dirty);
+        self.keep_modern_appraisals();
         self.show_appraisals();
         self.follow_confirmation();
         let link = self.status.link.unwrap_or(ac_runtime::session::LinkStatus {
@@ -1257,6 +1258,7 @@ impl WindowUi {
         self.follow_modern_vitals_settings();
         self.tick_modern_panels();
         self.tick_modern_bars();
+        self.tick_modern_inventory();
     }
 
     /// The panels' views from the window's copy of the facts, and each
@@ -1277,10 +1279,14 @@ impl WindowUi {
             status,
             panels,
             reported_sheet,
+            modern,
             ..
         } = self;
         let mana_answers = std::mem::take(&mut facts.item_mana);
         let container_opens = std::mem::take(&mut facts.container_opens);
+        if let Some(m) = modern.as_mut() {
+            m.opened_packs.extend(&container_opens);
+        }
         let state = &facts.state;
         let selection_facts = super::status::selection_facts(state, selected, status);
         let player = state.player;

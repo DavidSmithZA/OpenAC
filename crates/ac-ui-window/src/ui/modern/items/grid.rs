@@ -273,7 +273,8 @@ impl ItemGrid {
                 } else {
                     let c = ui.add(
                         me,
-                        Element::at(0.0, 0.0, 40.0, 40.0),
+                        Element::at(0.0, 0.0, 40.0, 40.0)
+                            .with_anchors(ac_ui::geometry::AnchorEdges::NONE),
                         ItemCell::new(
                             self.theme,
                             self.fonts.small.clone(),

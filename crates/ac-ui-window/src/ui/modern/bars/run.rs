@@ -1467,7 +1467,7 @@ impl WindowUi {
         }
     }
 
-    fn put_on_first_empty_item(&mut self, item: u32) -> bool {
+    pub(in crate::ui) fn put_on_first_empty_item(&mut self, item: u32) -> bool {
         let player = self.facts.state.player;
         if item == 0 || !self.facts.objects.is_owned_by_object(item, player) {
             return false;
