@@ -13,6 +13,7 @@
 //! [`places`].
 
 pub mod bars;
+pub mod chat;
 pub mod fonts;
 pub mod hud;
 pub mod places;
