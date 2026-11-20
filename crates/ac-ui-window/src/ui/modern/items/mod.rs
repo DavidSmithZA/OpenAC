@@ -4,6 +4,8 @@
 pub mod cell;
 pub mod grid;
 pub mod model;
+pub mod sheet;
+pub mod sheet_view;
 
 use ac_ui::UiFont;
 use ac_ui::modern::text;
