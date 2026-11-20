@@ -1517,6 +1517,7 @@ impl WindowUi {
         self.tick_plugin_ui(now);
         self.tick_examination(dt);
         self.tick_modern_inspect(dt);
+        self.tick_modern_effects_window();
         self.tick_keyboard_dialogs();
         self.tick_tooltips(dt, now_ms);
         self.tick_modern_effects(dt);
@@ -1802,9 +1803,11 @@ impl WindowUi {
             return;
         }
         match output {
+            PanelOutput::TogglePanel(panel) if self.modern_effects_toggle(panel, false) => {}
             PanelOutput::TogglePanel(panel) => {
                 self.panels.toggle(&mut self.host.root, panel);
             }
+            PanelOutput::ClosePanel(panel) if self.modern_effects_toggle(panel, true) => {}
             PanelOutput::ClosePanel(panel) => {
                 self.panels
                     .set_visibility(&mut self.host.root, panel, false);

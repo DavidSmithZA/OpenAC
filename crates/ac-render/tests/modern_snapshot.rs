@@ -1559,3 +1559,220 @@ fn the_modern_plugin_notes() {
         "the loot window's band"
     );
 }
+
+/// An effect made up for the pictures: spell name, layer, caster, start,
+/// duration, stat-mod type, key and value, category.
+type MadeEffect = (&'static str, u32, u32, f64, f64, u32, u32, f32, u32);
+
+/// The first spell of the dats' table whose name is `name`.
+fn spell_named(tables: &ac_runtime::gameplay::GameTables, name: &str) -> Option<u32> {
+    let spells = tables.spells();
+    spells
+        .spell_ids()
+        .find(|id| spells.get(*id).is_some_and(|m| m.name == name))
+}
+
+/// Effects on the player: helpful ones of its own (one ending soon, one
+/// with a weaker copy underneath), one from someone else, a cantrip from
+/// worn gear, two harmful ones and vitae. Returns the spells used.
+fn effects_on_player(s: &mut Shot) -> Vec<u32> {
+    use ac_core::spells::{ActiveEnchantmentRecord, EnchantmentTypeFlags};
+    let dats = dats();
+    let tables = ac_runtime::gameplay::GameTables::load(&dats).expect("the game tables");
+    let mut book = Spellbook::new(Some(Arc::clone(tables.spells())));
+    let attr = EnchantmentTypeFlags::ATTRIBUTE.bits() | EnchantmentTypeFlags::ADDITIVE.bits();
+    let skill = EnchantmentTypeFlags::SKILL.bits() | EnchantmentTypeFlags::ADDITIVE.bits();
+    let resist = EnchantmentTypeFlags::FLOAT.bits() | EnchantmentTypeFlags::MULTIPLICATIVE.bits();
+    let list: &[MadeEffect] = &[
+        (
+            "Focus Self VI",
+            1,
+            PLAYER,
+            -2500.0,
+            2700.0,
+            attr,
+            5,
+            35.0,
+            900,
+        ),
+        (
+            "Strength Self VI",
+            1,
+            PLAYER,
+            -900.0,
+            2700.0,
+            attr,
+            1,
+            35.0,
+            901,
+        ),
+        (
+            "Strength Other V",
+            2,
+            0x5000_0099,
+            -600.0,
+            1800.0,
+            attr,
+            1,
+            25.0,
+            901,
+        ),
+        (
+            "Invulnerability Self VI",
+            1,
+            PLAYER,
+            -100.0,
+            2700.0,
+            skill,
+            6,
+            35.0,
+            902,
+        ),
+        (
+            "Fire Protection Self VI",
+            1,
+            0x5000_0099,
+            -50.0,
+            2700.0,
+            resist,
+            67,
+            0.5,
+            903,
+        ),
+        (
+            "Minor Strength",
+            1,
+            0x8000_0105,
+            0.0,
+            -1.0,
+            attr,
+            1,
+            10.0,
+            904,
+        ),
+        (
+            "Weakness Other VI",
+            1,
+            0x5000_00AA,
+            -60.0,
+            240.0,
+            attr,
+            1,
+            -35.0,
+            905,
+        ),
+        (
+            "Clumsiness Other VI",
+            1,
+            0x5000_00AA,
+            -10.0,
+            240.0,
+            attr,
+            4,
+            -35.0,
+            906,
+        ),
+    ];
+    let mut used = Vec::new();
+    for &(name, layer, caster, start, duration, kind, key, value, category) in list {
+        let Some(id) = spell_named(&tables, name) else {
+            println!("no spell named {name}");
+            continue;
+        };
+        book.on_spell_learned(id, 1.0);
+        used.push(id);
+        book.on_enchantment_added(ActiveEnchantmentRecord {
+            stat_mod_type: Some(kind),
+            stat_mod_key: Some(key),
+            stat_mod_value: Some(value),
+            bucket: if kind & EnchantmentTypeFlags::ADDITIVE.bits() != 0 {
+                2
+            } else {
+                1
+            },
+            start_time: start,
+            spell_category: category,
+            power_level: if layer == 1 { 300 } else { 250 },
+            ..ActiveEnchantmentRecord::new(id, layer, duration, caster)
+        });
+    }
+    // Vitae.
+    book.on_enchantment_added(ActiveEnchantmentRecord {
+        stat_mod_type: Some(0),
+        stat_mod_value: Some(0.94),
+        bucket: 4,
+        start_time: -100.0,
+        ..ActiveEnchantmentRecord::new(666, 1, -1.0, 0)
+    });
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Player(
+            Box::new(PlayerFacts {
+                revision: 3,
+                numbers: ac_core::player::LocalPlayerState::new(Some(book)),
+                session_seconds: 0.0,
+            }),
+        )));
+    s.step();
+    s.step();
+    used
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_effects() {
+    use ac_core::combat::CombatMode;
+    use ac_ui_window::ui::modern::magic::effects_window::EffectsWindow;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let used = effects_on_player(&mut s);
+    assert!(used.len() >= 4, "the dats' spells: {used:?}");
+    s.save("effects-hud");
+    // The helpful count opens the window on Helpful.
+    s.click(0, 16 + 24, 14 + 14, Modifiers::NONE);
+    assert!(
+        s.ui.host().root.is_window_visible("modern-effects-window"),
+        "the window opens from the count"
+    );
+    s.save("effects-helpful");
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-effects-window")
+            .expect("the window")
+            .frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    {
+        let w = s.ui.host().root.widget::<EffectsWindow>(frame).expect("it");
+        assert!(!w.harmful);
+        assert!(w.list.helpful.len() >= 3, "{:?}", w.list.helpful);
+        assert!(w.list.vitae.is_some());
+    }
+    // The Strength row (with the weaker copy underneath) chosen.
+    let strength = {
+        let w = s.ui.host().root.widget::<EffectsWindow>(frame).expect("it");
+        w.list
+            .helpful
+            .iter()
+            .position(|e| e.under.is_some())
+            .expect("an effect with a copy underneath")
+    };
+    let _ = strength;
+    // The Timed group's first row: after Ending soon's heading and row.
+    let y = fy + 104 + 32 + 8 + 26 + 8 + 26 + 46 + 26 + 20;
+    s.click(0, fx + 120, y, Modifiers::NONE);
+    s.save("effects-chosen");
+    // The Skills chip.
+    s.click(
+        0,
+        fx + 20 + 60 + 4 + 90 + 4 + 30,
+        fy + 104 + 40 + 13,
+        Modifiers::NONE,
+    );
+    s.save("effects-skills");
+    // The Harmful tab, with vitae.
+    s.click(0, fx + 150, fy + 52 + 20, Modifiers::NONE);
+    {
+        let w = s.ui.host().root.widget::<EffectsWindow>(frame).expect("it");
+        assert!(w.harmful, "the Harmful tab shows");
+    }
+    s.save("effects-harmful");
+}
