@@ -8,6 +8,7 @@ use std::collections::HashSet;
 use ac_core::combat::CombatMode;
 use ac_host::settings::SavedBars;
 use ac_runtime::gameplay::GameplayCommand;
+use ac_runtime::gameplay::magic::{SpellCastGate, cast_gate};
 use ac_runtime::inventory::{InteractionMode, ItemCommand, ObjectRef};
 use ac_runtime::session::SessionCommand;
 use ac_ui::bundled_font::Weight;
@@ -103,10 +104,6 @@ pub struct BarsUi {
     /// A spell is being carried out of the spellbook: the book's opacity
     /// before it faded.
     spell_drag: Option<f32>,
-    /// A spell clicked in Peace with a caster held: it is cast once the
-    /// switch to Magic has taken, unless this time (the clock) passes
-    /// first.
-    pending_cast: Option<(u32, f64)>,
 }
 
 impl BarsUi {
@@ -300,7 +297,6 @@ impl WindowUi {
             shown: false,
             hint,
             spell_drag: None,
-            pending_cast: None,
         });
         modern.replace(crate::ui::window::TOOLBAR_WINDOW);
         modern.replace(crate::ui::window::COMBAT_WINDOW);
@@ -379,7 +375,6 @@ impl WindowUi {
         }
         self.follow_spell_drag(b);
         self.bar_requests(b, now);
-        self.follow_pending_cast(b, now);
         // A slot taken off (fewer slots, a bar deleted) takes its key
         // pop-up with it.
         if let Some(at) = b.popover_for
@@ -679,8 +674,12 @@ impl WindowUi {
                         let known = book.as_deref().is_none_or(|bk| bk.knows(*id));
                         view.missing = !known;
                         let meta = book.as_deref().and_then(|bk| bk.try_get_metadata(*id));
-                        let no_target = meta.is_some_and(needs_target) && selected.is_none();
-                        view.off = !castable || no_target;
+                        let gate = book
+                            .as_deref()
+                            .map(|bk| cast_gate(objects, player, bk, *id, selected));
+                        let no_target = gate == Some(SpellCastGate::NoTargetSelected);
+                        let wrong_target = gate == Some(SpellCastGate::TargetIncompatible);
+                        view.off = !castable || no_target || wrong_target;
                         let shown = meta.map_or(name.clone(), |m| m.name.clone());
                         let mut tip = shown;
                         if let Some(k) = key {
@@ -692,6 +691,8 @@ impl WindowUi {
                             tip.push_str(" \u{b7} Magic mode, or a caster in hand");
                         } else if no_target {
                             tip.push_str(" \u{b7} select a target first");
+                        } else if wrong_target {
+                            tip.push_str(" \u{b7} not on what is selected");
                         }
                         view.tip = Some(tip);
                     }
@@ -1037,8 +1038,8 @@ impl WindowUi {
     /// use or examine waits for a target, offered as it); a spell is cast
     /// in Magic; in Peace with a caster held, the player goes to Magic and
     /// the spell is cast once there (not a spell that needs a target with
-    /// nothing selected: it would find none); otherwise nothing.
-    fn use_bar_slot(&mut self, b: &mut BarsUi, at: SlotRef) {
+    /// no fit target selected); otherwise nothing.
+    fn use_bar_slot(&mut self, b: &BarsUi, at: SlotRef) {
         let Some(content) = b
             .layout
             .as_ref()
@@ -1081,22 +1082,24 @@ impl WindowUi {
                     cast(&mut self.host.root, id);
                 } else if self.peace_with_caster() {
                     let selected = self.player_view.and_then(|v| v.selected);
-                    let no_target = self
+                    let player = self.facts.state.player;
+                    let gate = self
                         .facts
                         .numbers()
                         .and_then(|n| n.spellbook())
-                        .and_then(|bk| bk.try_get_metadata(id))
-                        .is_some_and(needs_target)
-                        && selected.is_none();
-                    if no_target {
+                        .map(|bk| cast_gate(&self.facts.objects, player, bk, id, selected));
+                    if matches!(
+                        gate,
+                        Some(SpellCastGate::NoTargetSelected | SpellCastGate::TargetIncompatible)
+                    ) {
                         return;
                     }
-                    let now = self.status.clock.elapsed().as_secs_f64();
-                    b.pending_cast = Some((id, now + CAST_AFTER_SWITCH));
+                    // The runtime goes to Magic and casts once the stance
+                    // is taken up.
                     emit(
                         &mut self.host.root,
                         PanelOutput::Session(SessionCommand::Gameplay(
-                            GameplayCommand::SetCombatMode(CombatMode::MAGIC),
+                            GameplayCommand::CastInMagic { spell: id },
                         )),
                     );
                 }
@@ -1121,22 +1124,6 @@ impl WindowUi {
             .map(ac_runtime::gameplay::combat::carried_item)
             .collect();
         ac_core::combat::default_combat_mode(&carried) == CombatMode::MAGIC
-    }
-
-    /// A spell waiting on the switch to Magic is cast once the player is
-    /// there, or forgotten when the switch does not come in time (or the
-    /// player went somewhere else).
-    fn follow_pending_cast(&mut self, b: &mut BarsUi, now: f64) {
-        let Some((spell, until)) = b.pending_cast else {
-            return;
-        };
-        let mode = self.facts.state.combat_mode;
-        if mode == CombatMode::MAGIC {
-            b.pending_cast = None;
-            cast(&mut self.host.root, spell);
-        } else if now >= until || mode != CombatMode::NON_COMBAT {
-            b.pending_cast = None;
-        }
     }
 
     /// A slot right-clicked: what it holds is inspected; an empty one
@@ -1971,10 +1958,6 @@ impl WindowUi {
 }
 
 /// The HUD piece window name of `piece`, if it is one.
-/// How long a spell clicked in Peace waits for the switch to Magic,
-/// seconds.
-const CAST_AFTER_SWITCH: f64 = 4.0;
-
 /// Casts `spell` at the selection (the runtime picks the caster for a
 /// spell on the caster, and refuses one that needs a target it lacks).
 fn cast(ui: &mut ac_ui::UiRoot, spell: u32) {
@@ -1985,12 +1968,6 @@ fn cast(ui: &mut ac_ui::UiRoot, spell: u32) {
             target: None,
         })),
     );
-}
-
-/// The spell is cast at something other than its caster: it needs a
-/// target selected.
-fn needs_target(spell: &ac_core::spells::SpellMetadata) -> bool {
-    !spell.is_self_targeted() && !spell.is_untargeted && spell.target_mask != 0
 }
 
 fn piece_name(ui: &ac_ui::UiRoot, piece: ElementId) -> Option<&'static str> {

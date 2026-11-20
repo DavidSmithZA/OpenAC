@@ -2010,6 +2010,7 @@ fn every_command() -> Vec<SessionCommand> {
             spell: 1,
             target: 2,
         },
+        GameplayCommand::CastInMagic { spell: 3 },
         GameplayCommand::ListSpells(Some("bolt".into())),
         GameplayCommand::ShowEnchantments,
         GameplayCommand::ShowCharacter,
@@ -2853,7 +2854,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "6b4571b7d94555c6", "{:#x}", shape());
+    assert_eq!(shape_hex(), "2798a08c3846192c", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full
@@ -2920,6 +2921,7 @@ variants! {
         SetSpellbookFilter, SetDesiredComponent, ClearDesiredComponents, ToggleCombat,
         SetCombatMode, Attack, AttackInput, SetAttackPower, ShowCombat, Book, Chess, Barber,
         Fellowship, Allegiance, QueryHouse, ShowHouse, ShowVitae, SetTitle, ShowTitles,
+        CastInMagic,
     }
     lifecycle_variant, LIFECYCLE: LifecycleCommand {
         Reconnect, LogOff, EndCharacterSession, ShowSelection, Highlight, Enter,

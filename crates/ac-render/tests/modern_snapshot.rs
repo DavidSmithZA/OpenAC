@@ -713,6 +713,22 @@ fn the_modern_chat() {
     }
     s.step();
     s.save("chat-active");
+    // An NPC with a long name selected: the menu offers a tell to it,
+    // its name cut short before the note.
+    let npc = 0x8000_0A01;
+    let mut guard = player_object();
+    guard.guid = npc;
+    guard.key.local_id = 2;
+    guard.name = Some("Royal Guard Adrana of the Northern Watch".to_owned());
+    s.scene.apply(PresentationEvent::Snapshot(WorldSnapshot {
+        player_guid: Some(PLAYER),
+        objects: vec![player_object(), guard],
+    }));
+    s.scene.apply(PresentationEvent::Player(PlayerView {
+        selected: Some(npc),
+        ..PlayerView::default()
+    }));
+    s.step();
     // The channel button (bottom left: the panel's entry at 900 - 14 - 32).
     s.click(0, 16 + 30, 900 - 14 - 16, Modifiers::NONE);
     s.save("chat-channels");

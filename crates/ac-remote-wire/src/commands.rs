@@ -317,6 +317,7 @@ union! {
         36 => ShowVitae,
         37 => SetTitle(title: u32),
         38 => ShowTitles,
+        39 => CastInMagic { spell: u32 },
     }
     CharacterSelector: "character selector" {
         0 => FirstAvailable,

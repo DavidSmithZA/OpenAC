@@ -435,13 +435,24 @@ impl Widget for ChannelMenu {
                         rc.push_alpha(if *off { 0.5 } else { 1.0 });
                         let mid = top + ITEM * 0.5;
                         rc.fill_ellipse(x + 6.0, mid - 3.5, 7.0, 7.0, *color);
+                        let nw = self
+                            .fonts
+                            .note
+                            .as_ref()
+                            .map_or(0.0, |f| text::measure(f, note, 0.0));
                         if let Some(f) = &self.fonts.label {
                             let fg = if *off { hex(0xC8_B89C, 1.0) } else { p.text };
                             let ty = (mid - f.line_height * 0.5).round();
-                            text::draw(rc, f, label, x + 21.0, ty, TextStyle::plain(fg));
+                            // A long name gives way to the note after it.
+                            let room = w - 21.0 - 6.0 - if nw > 0.0 { nw + 10.0 } else { 0.0 };
+                            let shown = if text::measure(f, label, 0.0) > room {
+                                super::panel::shorten(f, label, room)
+                            } else {
+                                label.clone()
+                            };
+                            text::draw(rc, f, &shown, x + 21.0, ty, TextStyle::plain(fg));
                         }
                         if let Some(f) = &self.fonts.note {
-                            let nw = text::measure(f, note, 0.0);
                             let ty = (mid - f.line_height * 0.5).round();
                             text::draw(
                                 rc,
