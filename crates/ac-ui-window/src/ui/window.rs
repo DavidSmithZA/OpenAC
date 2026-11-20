@@ -1247,6 +1247,7 @@ impl WindowUi {
         self.update_external_container();
         self.tick_modern_salvage();
         self.tick_modern_social();
+        self.tick_modern_house();
         self.update_salvage();
         self.update_book(dirty);
         self.tick_modern_book();

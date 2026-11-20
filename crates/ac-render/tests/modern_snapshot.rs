@@ -3159,3 +3159,133 @@ fn the_modern_book() {
         s.sent
     );
 }
+
+/// The player owns a cottage with the maintenance not paid, and the
+/// server has listed who may come in.
+fn own_a_house(s: &mut Shot, paid: bool) {
+    use ac_runtime::gameplay::{HouseAccessView, HouseDetails, HouseView};
+    let now = i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs()),
+    )
+    .unwrap_or(0);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::House(
+            Box::new(HouseView {
+                revision: 2,
+                has_received_notice: true,
+                owns_house: true,
+                lines: Vec::new(),
+                position_cell: Some(0xA9B4_0031),
+                details: Some(HouseDetails {
+                    house_type: 1,
+                    cell: 0xA9B4_0031,
+                    bought_unix_s: now - 80 * 86_400,
+                    period_ends_unix_s: now + 12 * 86_400,
+                    next_due_unix_s: now + 12 * 86_400,
+                    maintenance_free: false,
+                    paid,
+                    rent: vec![
+                        ("Pyreals".to_owned(), 50_000, 50_000),
+                        ("Mana Scarabs".to_owned(), if paid { 5 } else { 3 }, 5),
+                        ("Pearls".to_owned(), if paid { 2 } else { 0 }, 2),
+                    ],
+                }),
+                access: Some(HouseAccessView {
+                    open: false,
+                    allegiance_guests: true,
+                    allegiance_storage: false,
+                    guests: vec![
+                        ("Mira".to_owned(), true),
+                        ("Osk".to_owned(), false),
+                        ("Hask".to_owned(), true),
+                    ],
+                }),
+                buy_another_unix_s: 0,
+                for_sale: Vec::new(),
+            }),
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_house() {
+    use ac_core::combat::CombatMode;
+    use ac_proto::house::{HousePayment, HouseProfile};
+    use ac_runtime::inventory::HousePurchaseView;
+    use ac_ui::input::InputAction;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    own_a_house(&mut s, false);
+    assert!(s.ui.handle_input_action(InputAction::ToggleHousePage));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-house"),
+        "H opens it"
+    );
+    s.save("house-due");
+    own_a_house(&mut s, true);
+    s.save("house-paid");
+    // A slumlord's house for sale, the player carrying pyreals.
+    let mut coins = ClientObject::new(0x8000_0A01);
+    coins.name = "Pyreal".to_owned();
+    coins.weenie_class_id = 273;
+    coins.stack_size = 25_000;
+    coins.container_id = PLAYER;
+    let mut p = ClientObject::new(PLAYER);
+    p.name = "Aerin Vale".to_owned();
+    p.item_type = ItemType::CREATURE;
+    p.properties.ints.insert(25, 126);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: false,
+                objects: vec![p, coins],
+                removed: Vec::new(),
+                contents: vec![(PLAYER, Some(vec![0x8000_0A01]))],
+            },
+        )));
+    let line = |num, wcid, name: &str, plural: &str| HousePayment {
+        num,
+        paid: 0,
+        weenie_id: wcid,
+        name: name.to_owned(),
+        plural_name: plural.to_owned(),
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::HousePurchase(
+            Box::new(HousePurchaseView {
+                revision: 1,
+                profile: Some(HouseProfile {
+                    slumlord_guid: 0x8000_0B01,
+                    dwelling_id: 1,
+                    owner_guid: 0,
+                    bitmask: 0,
+                    min_level: 20,
+                    max_level: -1,
+                    min_allegiance_rank: -1,
+                    max_allegiance_rank: -1,
+                    maintenance_free: false,
+                    house_type: 1,
+                    owner_name: String::new(),
+                    buy: vec![
+                        line(50_000, 273, "Pyreal", "Pyreals"),
+                        line(2, 9001, "Pearl", "Pearls"),
+                    ],
+                    rent: vec![line(25_000, 273, "Pyreal", "Pyreals")],
+                }),
+                buy: vec![0x8000_0A01],
+                rent: Vec::new(),
+                buy_amounts: vec![25_000, 0],
+                rent_amounts: vec![0],
+            }),
+        )));
+    s.step();
+    s.step();
+    assert!(s.ui.host().root.is_window_visible("modern-house-sale"));
+    assert!(!s.ui.host().root.is_window_visible("house-purchase"));
+    s.save("house-sale");
+}

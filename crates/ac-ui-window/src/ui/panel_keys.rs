@@ -129,6 +129,9 @@ impl WindowUi {
     /// OpenAC `OpenWorldPanel`: the map and house panel on the page,
     /// closed when it was already showing that page.
     fn open_world_panel(&mut self, house: bool) -> bool {
+        if house && let Some(done) = self.modern_toggle_house() {
+            return done;
+        }
         let visible = self.host.root.is_window_visible(MAP_HOUSE_WINDOW);
         let Some(on_page) =
             self.host

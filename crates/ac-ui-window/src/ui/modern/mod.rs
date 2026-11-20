@@ -18,6 +18,7 @@ pub mod chat;
 pub mod dealing;
 pub mod dialogs;
 pub mod fonts;
+pub mod house;
 pub mod hud;
 pub mod items;
 pub mod journal;
@@ -108,6 +109,8 @@ pub struct ModernLayer {
     pub journal: Option<journal::run::JournalUi>,
     /// The book reader.
     pub book: Option<journal::book::BookUi>,
+    /// The House window and the house sale window.
+    pub house: Option<house::run::HouseUi>,
     /// The question card and the invitations under the target.
     pub questions: Option<dialogs::run::QuestionsUi>,
     /// Packs used anywhere since the inventory last looked.
@@ -362,6 +365,7 @@ impl WindowUi {
         self.mount_modern_social();
         self.mount_modern_journal();
         self.mount_modern_book();
+        self.mount_modern_house();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -537,6 +541,7 @@ impl WindowUi {
         let spellbook = shows(ac_ui::panels::panel_id::MAGIC);
         let options = shows(ac_ui::panels::panel_id::OPTIONS);
         let social = shows(ac_ui::panels::panel_id::SOCIAL);
+        let house_open = self.modern_house_open();
         let journal = shows(ac_ui::panels::panel_id::JOURNAL);
         let ui = &mut self.host.root;
         for id in buttons {
@@ -549,7 +554,7 @@ impl WindowUi {
                 Panel::Spellbook => spellbook,
                 Panel::Journal => journal,
                 Panel::Map => world_open && !on_house,
-                Panel::House => on_house,
+                Panel::House => on_house || house_open,
                 Panel::Social => social,
                 Panel::Options => options,
             };
