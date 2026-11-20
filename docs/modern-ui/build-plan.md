@@ -258,12 +258,18 @@ commands sent):
   chest tabs and drop zone, burden now and with all, Loot all (OPENAC),
   closes the container itself out of reach.
 
-Not done yet in M4: the split popover (the target line's split amount
-already applies to every drag); writing an inscription (shown read-only
-with who signed it); the details as a pop-up card on small screens
-(Docked / Pop-up / Auto belongs with Options, M6); drawn glyphs in empty
-equipment slots; Close gaps (packs in this game hold no gaps); step 9
-(plugin item hooks).
+Then (2026-11-20, while the M4 live check was open): writing an
+inscription in the details and in Inspect (7e64014e; a field over the
+writable box, retail's rule: an inscribable item you carry, unsigned or
+signed by you; sent when the field is left), the split pop-up from the
+right-click and More menus (ee868c56; track, count box, Enter splits into
+a new stack just after it), drawn glyphs in empty equipment slots
+(fa583cfd). Offscreen tests `the_modern_inscription`, `the_modern_split`.
+
+Not done yet in M4: the details as a pop-up card on small screens
+(Docked / Pop-up / Auto belongs with Options, M6); Close gaps (packs in
+this game hold no gaps); step 9 (plugin item hooks, after the live
+check).
 
 ## Shape of the build
 
