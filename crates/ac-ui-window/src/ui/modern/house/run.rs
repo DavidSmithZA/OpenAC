@@ -231,7 +231,7 @@ impl WindowUi {
             }
             HouseAsk::ShowOnMap(cell) => {
                 if let Some(c) = ac_ui::radar::RadarCoordinates::from_cell(cell) {
-                    self.show_on_modern_map(c.x, c.y);
+                    self.show_on_modern_map(c.x, c.y, "Your house");
                 }
                 return;
             }
@@ -310,12 +310,6 @@ impl WindowUi {
         {
             emit(&mut self.host.root, house_chat("@house guest list"));
         }
-    }
-
-    /// Free houses of type `kind` on the map: retail's map page until the
-    /// modern map stands in for it (the server's list comes in chat).
-    pub(in crate::ui) fn show_houses_for_sale(&mut self, _kind: u32) {
-        self.run_page_key(crate::ui::panel_keys::PageKey::World { house: false });
     }
 
     /// The house sale window follows the slumlord's profile: it opens and

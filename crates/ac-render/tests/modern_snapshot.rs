@@ -3289,3 +3289,51 @@ fn the_modern_house() {
     assert!(!s.ui.host().root.is_window_visible("house-purchase"));
     s.save("house-sale");
 }
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_map() {
+    use ac_core::combat::CombatMode;
+    use ac_core::world::{CalendarDate, HourName, MonthName};
+    use ac_ui::input::InputAction;
+    use ac_ui_window::ui::modern::world::map::MapView;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    own_a_house(&mut s, true);
+    s.ui.set_calendar(Some(CalendarDate {
+        year: 119,
+        month: MonthName::Frostfell,
+        day: 27,
+        hour: HourName::Dawnsong,
+    }));
+    assert!(s.ui.handle_input_action(InputAction::ToggleMapPage));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-map"),
+        "M opens it"
+    );
+    assert!(!s.ui.host().root.is_window_visible("map-house"));
+    s.save("map");
+    let view = s.ui.host().root.window("modern-map").expect("it").frame;
+    if let Some(v) = s.ui.host_mut().root.widget_mut::<MapView>(view) {
+        let art = v.art.expect("the game's map art");
+        assert!(art.width > 0.0, "{art:?}");
+        v.focus(33.9, 42.1, 3, Some("Holtburg".to_owned()));
+        v.layers.for_sale = true;
+    }
+    s.step();
+    s.step();
+    s.save("map-zoomed");
+    if let Some(v) = s.ui.host_mut().root.widget_mut::<MapView>(view) {
+        v.pick = None;
+        v.new_pin = Some((34.5, 41.0));
+    }
+    s.step();
+    s.step();
+    s.save("map-pin");
+    // Escape closes it.
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    s.step();
+    assert!(!s.ui.host().root.is_window_visible("modern-map"));
+}

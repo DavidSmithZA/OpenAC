@@ -132,6 +132,9 @@ impl WindowUi {
         if house && let Some(done) = self.modern_toggle_house() {
             return done;
         }
+        if !house && let Some(done) = self.modern_toggle_map() {
+            return done;
+        }
         let visible = self.host.root.is_window_visible(MAP_HOUSE_WINDOW);
         let Some(on_page) =
             self.host

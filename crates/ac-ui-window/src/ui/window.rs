@@ -1248,6 +1248,7 @@ impl WindowUi {
         self.tick_modern_salvage();
         self.tick_modern_social();
         self.tick_modern_house();
+        self.tick_modern_map();
         self.update_salvage();
         self.update_book(dirty);
         self.tick_modern_book();
@@ -1605,6 +1606,13 @@ impl WindowUi {
         modifiers: Modifiers,
         text: Option<&str>,
     ) -> Routed<K> {
+        // Escape closes the full-screen map first.
+        if pressed && key == Key::Escape && !self.pregame_active() && self.modern_map_escape() {
+            return Routed {
+                world: None,
+                outputs: self.host.take_outputs(),
+            };
+        }
         // The bars' key pop-up takes a key while it listens.
         if !self.pregame_active() && self.modern_bars_key_first(key, modifiers, pressed) {
             return Routed {

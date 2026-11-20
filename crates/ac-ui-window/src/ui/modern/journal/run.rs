@@ -21,7 +21,7 @@ use super::window::{HEIGHT, JournalAsk, JournalFonts, JournalFrame, Slot, WIDTH}
 use crate::scene::Scene;
 use crate::ui::modern::dialogs::look::{Glyph, Look, RED};
 use crate::ui::modern::{hud, kit};
-use crate::ui::panel_keys::{JournalPage, PageKey};
+use crate::ui::panel_keys::JournalPage;
 use crate::ui::social_panels::JOURNAL_WINDOW;
 use crate::ui::window::{DialogAction, WindowUi};
 
@@ -526,12 +526,12 @@ impl WindowUi {
             }
             JournalAsk::Map(cell) => {
                 if let Some(c) = RadarCoordinates::from_cell(cell) {
-                    self.show_on_modern_map(c.x, c.y);
+                    self.show_on_modern_map(c.x, c.y, "Quest place");
                 }
                 return;
             }
             JournalAsk::MapAt(x, y) => {
-                self.show_on_modern_map(f64::from(x), f64::from(y));
+                self.show_on_modern_map(f64::from(x), f64::from(y), "Recorded place");
                 return;
             }
             JournalAsk::NewPage => {
@@ -586,12 +586,6 @@ impl WindowUi {
             JournalAsk::Stop => journal(JournalCommand::ResetTimer),
         };
         emit(&mut self.host.root, out);
-    }
-
-    /// Opens the map on map coordinates (`x` east, `y` north): retail's map
-    /// page until the modern map stands in for it.
-    pub(in crate::ui) fn show_on_modern_map(&mut self, _x: f64, _y: f64) {
-        self.run_page_key(PageKey::World { house: false });
     }
 
     /// The quests on screen follow the shown quests; a click opens one in
