@@ -208,6 +208,16 @@ impl ShownLine {
             }
             text.trim().to_owned()
         };
+        // The server's own sentence for a tell sent ("You tell Bob,
+        // \"hi\"") under the YOU TELL tag: the addressee and the words.
+        let (who, words) = match (named, kind) {
+            (true, _) => (Some(line.sender.clone()), words),
+            (false, LineKind::TellOut) => match split_tell_out(&words) {
+                Some((to, said)) => (Some(to.to_owned()), said.to_owned()),
+                None => (None, words),
+            },
+            (false, _) => (None, words),
+        };
         let mention =
             !me.is_empty() && line.sender != me && line.sender != "You" && mentions(&words, me);
         Self {
@@ -215,12 +225,20 @@ impl ShownLine {
             class: line.log_text_type,
             kind,
             time,
-            who: named.then(|| line.sender.clone()),
+            who,
             who_guid: line.sender_guid,
             words,
             mention,
         }
     }
+}
+
+/// "You tell Bob, \"hi\"" as ("Bob", "hi").
+fn split_tell_out(text: &str) -> Option<(&str, &str)> {
+    let rest = text.strip_prefix("You tell ")?;
+    let (to, said) = rest.split_once(", \"")?;
+    let said = said.strip_suffix('"').unwrap_or(said);
+    (!to.is_empty()).then_some((to, said))
 }
 
 /// `text` names `name` as a whole word (any case).
@@ -491,6 +509,22 @@ mod tests {
             channel_id: 0,
             spans: None,
         }
+    }
+
+    #[test]
+    fn a_tell_sent_names_who_it_went_to_once() {
+        // The server's sentence for a tell to an NPC: no speaker of its own.
+        let l = line(
+            ChatKind::System,
+            LogTextType::SpeechDirectSend,
+            "",
+            "",
+            "You tell Royal Guard Adrana, \"hey, there\"",
+        );
+        let shown = ShownLine::of(&l, "Kestrel");
+        assert_eq!(shown.kind.tag(), Some("YOU TELL"));
+        assert_eq!(shown.who.as_deref(), Some("Royal Guard Adrana"));
+        assert_eq!(shown.words, "hey, there");
     }
 
     #[test]
