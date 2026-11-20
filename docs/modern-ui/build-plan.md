@@ -186,8 +186,18 @@ cannot tell them apart from the allegiance's records yet).
 - A popped-out tab's close button puts it back in the panel; a full tab
   row cuts the longest names short.
 - Bar spells in Peace with a caster in hand are live: a click goes to
-  Magic and casts there. A spell that needs a target stays greyed while
-  nothing is selected.
+  Magic and casts there, through the runtime's `CastInMagic` (bfb3aca0),
+  which waits for the server's Magic and the magic stance with no motion
+  queued (sent at once, the server refused it as too busy). A spell that
+  needs a target is greyed unless the selection can take it (the spell
+  bars' cast gate).
+- Second round (87f11d7a, 48945f3d, ff24354b): long names in the channel
+  menu's tell rows are cut short before their note; a tell sent reads
+  "YOU TELL Name: words" (the server's sentence is split); a clicked name
+  with no id is looked up among the objects nearby, so the name menu's
+  Tell and Select reach an NPC.
+
+**M1, M2 and M3 accepted live 2026-11-20.** Next: M4 (items).
 
 ## Shape of the build
 
