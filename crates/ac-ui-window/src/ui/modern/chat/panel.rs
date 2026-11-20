@@ -112,6 +112,18 @@ pub enum ChatRequest {
     Complete(&'static str),
     /// Search opens (true) or closes.
     Search(bool),
+    /// A new tab (the + button).
+    NewTab,
+    /// Tab `n` to edit (a right-click on it, a window's filter button).
+    EditTab(usize),
+    /// Tab `n` pops out into its own window.
+    PopOut(usize),
+    /// The window goes back to being a tab.
+    PutBack,
+    /// The window closes (its tab stays popped out).
+    Close,
+    /// The window was let go after a move.
+    Moved,
 }
 
 /// The chat panel.
@@ -144,7 +156,14 @@ pub struct ChatPanel {
     /// What the rows were made for: the times shown.
     rows_for: bool,
     /// Where each tab was last drawn (left, width).
-    tab_spots: Vec<(f32, f32)>,
+    tab_spots: Vec<(usize, f32, f32)>,
+    /// The + button and the pop-out button on the tab row; a window's
+    /// title buttons: edit, put back, close.
+    row_spots: [Option<Spot>; 5],
+    /// It is a popped-out tab's window (its only tab is the one shown).
+    pub window: bool,
+    /// Held by its title: where the pointer took hold.
+    grip: Option<(f32, f32)>,
     /// Where each speaker's name was last drawn: the box, its name, its id.
     names: Vec<(Spot, String, u32)>,
     /// The "N new messages" button, when shown.
@@ -201,6 +220,9 @@ impl ChatPanel {
             rows: HashMap::new(),
             rows_for: false,
             tab_spots: Vec::new(),
+            row_spots: [None; 5],
+            window: false,
+            grip: None,
             names: Vec::new(),
             new_button: None,
             enter_button: None,
@@ -464,7 +486,35 @@ impl ChatPanel {
         }
         self.tab_spots
             .iter()
-            .position(|(left, w)| (*left..left + w).contains(&x))
+            .find(|(_, left, w)| (*left..left + w).contains(&x))
+            .map(|(i, ..)| *i)
+    }
+
+    /// A window: the tab it shows, popped out.
+    #[must_use]
+    pub fn for_window(theme: Horizon, fonts: ChatFonts, tab: ChatTab) -> Self {
+        let mut panel = Self::new(theme, fonts);
+        panel.tabs = vec![tab];
+        panel.window = true;
+        panel.active = true;
+        panel
+    }
+
+    /// The tab has an entry (the dock always; a window when its tab talks
+    /// on a channel).
+    #[must_use]
+    pub fn has_entry(&self) -> bool {
+        !self.window || self.tabs.first().is_some_and(|t| t.talk.is_some())
+    }
+
+    /// The panel's height.
+    #[must_use]
+    pub fn height(&self) -> f32 {
+        if self.has_entry() {
+            HEIGHT
+        } else {
+            HEIGHT - GAP - ENTRY
+        }
     }
 
     fn inside(r: Option<Spot>, x: f32, y: f32) -> bool {
@@ -528,7 +578,7 @@ impl Widget for ChatPanel {
         false
     }
 
-    fn on_event(&mut self, _ui: &mut UiRoot, me: ElementId, e: &UiEvent) -> bool {
+    fn on_event(&mut self, ui: &mut UiRoot, me: ElementId, e: &UiEvent) -> bool {
         if e.kind == kind::KEY_DOWN
             && e.key == ac_ui::Key::Tab
             && let Some(first) = self.suggestions.first()
@@ -544,10 +594,39 @@ impl Widget for ChatPanel {
             kind::MOUSE_MOVE | kind::HOVER_ENTER => {
                 self.hovered = true;
                 self.touched = self.clock;
+                if let Some((gx, gy)) = self.grip {
+                    let (mx, my) = ui.mouse();
+                    let screen = ui.size();
+                    let h = self.height();
+                    if let Some(el) = ui.element_mut(me) {
+                        el.left = (mx as f32 - gx).clamp(0.0, (screen.0 - WIDTH).max(0.0));
+                        el.top = (my as f32 - gy).clamp(0.0, (screen.1 - h).max(0.0));
+                    }
+                }
                 true
             }
             kind::HOVER_LEAVE => {
                 self.hovered = false;
+                true
+            }
+            kind::RIGHT_CLICK => {
+                if let Some(tab) = self.tab_at(x, y) {
+                    self.requests.push(ChatRequest::EditTab(tab));
+                }
+                true
+            }
+            kind::MOUSE_DOWN
+                if self.window
+                    && y < TABS
+                    && !(2..5).any(|i| Self::inside(self.row_spots[i], x, y)) =>
+            {
+                self.grip = Some((x, y));
+                true
+            }
+            kind::MOUSE_UP | kind::CAPTURE_CHANGED => {
+                if self.grip.take().is_some() {
+                    self.requests.push(ChatRequest::Moved);
+                }
                 true
             }
             kind::SCROLL if self.active => {
@@ -564,7 +643,15 @@ impl Widget for ChatPanel {
                 true
             }
             kind::CLICK => {
-                if let Some(i) = (0..4).find(|&i| Self::inside(self.search_spots[i], x, y)) {
+                if let Some(i) = (0..5).find(|&i| Self::inside(self.row_spots[i], x, y)) {
+                    self.requests.push(match i {
+                        0 => ChatRequest::NewTab,
+                        1 => ChatRequest::PopOut(self.current),
+                        2 => ChatRequest::EditTab(0),
+                        3 => ChatRequest::PutBack,
+                        _ => ChatRequest::Close,
+                    });
+                } else if let Some(i) = (0..4).find(|&i| Self::inside(self.search_spots[i], x, y)) {
                     match i {
                         0 => self.step_match(true),
                         1 => self.step_match(false),
@@ -608,6 +695,9 @@ impl Widget for ChatPanel {
 
     fn tick(&mut self, _ui: &mut UiRoot, _me: ElementId, dt: f64) {
         self.clock += dt;
+        if self.window {
+            self.touched = self.clock;
+        }
         if self.typing || self.hovered || self.scroll > 0 {
             self.touched = self.clock;
         }
@@ -635,9 +725,12 @@ impl Widget for ChatPanel {
         self.suggestion_spots.clear();
         self.search_spots = [None; 4];
         self.tab_spots.clear();
+        self.row_spots = [None; 5];
         let box_h = if self.active { BOX } else { IDLE_BOX };
         let box_top = BOX_TOP + BOX - box_h;
-        if self.active {
+        if self.window {
+            self.draw_window_frame(rc);
+        } else if self.active {
             if self.searching {
                 self.draw_search_row(rc);
             } else {
@@ -725,7 +818,9 @@ impl Widget for ChatPanel {
                 self.draw_reading_back(rc, box_top, box_h);
             }
             let _ = more;
-            self.draw_entry(rc);
+            if self.has_entry() {
+                self.draw_entry(rc);
+            }
             if self.typing && !self.suggestions.is_empty() {
                 self.draw_suggestions(rc);
             }
@@ -1058,12 +1153,85 @@ impl ChatPanel {
         }
     }
 
+    /// A window's frame and title bar: the tab's name, then its buttons
+    /// (what it shows, put back as a tab, close).
+    fn draw_window_frame(&mut self, rc: &mut RenderContext<'_>) {
+        let h = self.height();
+        let opacity = self.tabs.first().map_or(0.62, |t| t.opacity);
+        let round = CornerRadii::all(self.theme.metrics.window_radius);
+        rc.soft_shadow(0.0, 0.0, WIDTH, h, 6.0, 10.0, 30.0, hex(0, 0.45));
+        rc.fill_rounded_rect(0.0, 0.0, WIDTH, h, round, hex(0x14_100C, opacity));
+        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, h, round, hex(0xC9_A062, 0.8), 1.0);
+        rc.fill_rounded_rect(
+            0.0,
+            TABS + 2.0,
+            WIDTH,
+            1.0,
+            CornerRadii::all(0.0),
+            hex(0xC9_A062, 0.3),
+        );
+        if let (Some(f), Some(tab)) = (self.fonts.tab.clone(), self.tabs.first()) {
+            let ty = ((TABS - f.line_height) * 0.5).round() + 2.0;
+            text::draw(rc, &f, &tab.name, 10.0, ty, TextStyle::plain(TEXT));
+        }
+        let c = hex(0xE9_D3AE, 1.0);
+        for (i, slot) in [2usize, 3, 4].into_iter().enumerate() {
+            let x = WIDTH - 4.0 - (3 - i) as f32 * TABS;
+            let (cx, cy) = (x + TABS * 0.5, 2.0 + TABS * 0.5);
+            match slot {
+                2 => {
+                    // What it shows: three lines narrowing.
+                    for (k, w) in [10.0, 7.0, 4.0].into_iter().enumerate() {
+                        let y = cy - 4.0 + k as f32 * 4.0;
+                        rc.smooth_line(cx - w * 0.5, y, cx + w * 0.5, y, c, 1.6);
+                    }
+                }
+                3 => {
+                    // Put back: an arrow down into a tray.
+                    rc.smooth_line(cx, cy - 6.0, cx, cy + 2.0, c, 1.6);
+                    rc.smooth_line(cx - 3.5, cy - 1.5, cx, cy + 2.0, c, 1.6);
+                    rc.smooth_line(cx + 3.5, cy - 1.5, cx, cy + 2.0, c, 1.6);
+                    rc.smooth_line(cx - 6.0, cy + 5.0, cx + 6.0, cy + 5.0, c, 1.6);
+                }
+                _ => {
+                    rc.smooth_line(cx - 4.5, cy - 4.5, cx + 4.5, cy + 4.5, c, 1.6);
+                    rc.smooth_line(cx + 4.5, cy - 4.5, cx - 4.5, cy + 4.5, c, 1.6);
+                }
+            }
+            self.row_spots[slot] = Some((x, 2.0, TABS, TABS));
+        }
+    }
+
     fn draw_tabs(&mut self, rc: &mut RenderContext<'_>) {
         let (Some(f), Some(badge)) = (self.fonts.tab.clone(), self.fonts.tag.clone()) else {
             return;
         };
+        // The tabs share what the + , pop-out and search buttons leave,
+        // their padding giving way first.
+        let shown: Vec<(usize, f32)> = self
+            .tabs
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| !t.window)
+            .map(|(i, t)| {
+                let unread = self.log.unread(i);
+                let badge_w = if unread > 0 && i != self.current {
+                    (text::measure(&badge, &unread.to_string(), 0.0) + 8.0).max(15.0) + 5.0
+                } else {
+                    0.0
+                };
+                (i, text::measure(&f, &t.name, 0.0) + badge_w)
+            })
+            .collect();
+        let room = WIDTH - 3.0 * (TABS + TAB_GAP) - 4.0;
+        let natural: f32 = shown.iter().map(|(_, w)| w + 18.0 + TAB_GAP).sum();
+        let excess = (natural - room).max(0.0);
+        let pad = (9.0 - excess / (2.0 * shown.len().max(1) as f32)).max(4.0);
         let mut x = 0.0;
         for (i, tab) in self.tabs.iter().enumerate() {
+            if tab.window {
+                continue;
+            }
             let on = i == self.current;
             let unread = self.log.unread(i);
             let label_w = text::measure(&f, &tab.name, 0.0);
@@ -1073,7 +1241,7 @@ impl ChatPanel {
             } else {
                 0.0
             };
-            let w = 9.0 + label_w + badge_w + 9.0;
+            let w = pad + label_w + badge_w + pad;
             let round = CornerRadii::all(3.0);
             rc.fill_rounded_rect(x, 0.0, w, TABS, round, hex(0, if on { 0.62 } else { 0.3 }));
             if on {
@@ -1084,13 +1252,13 @@ impl ChatPanel {
                 rc,
                 &f,
                 &tab.name,
-                x + 9.0,
+                x + pad,
                 ty,
                 TextStyle::plain(if on { GOLD } else { TEXT }),
             );
             if badge_w > 0.0 {
                 let bw = badge_w - 5.0;
-                let bx = x + 9.0 + label_w + 5.0;
+                let bx = x + pad + label_w + 5.0;
                 let fill = match tab.talk {
                     Some(ac_runtime::communication::ChatChannelKind::Fellowship) => {
                         LineKind::Fellow.color()
@@ -1118,8 +1286,19 @@ impl ChatPanel {
                     TextStyle::plain(INK),
                 );
             }
-            self.tab_spots.push((x, w));
+            self.tab_spots.push((i, x, w));
             x += w + TAB_GAP;
+        }
+        // + for a new tab after the tabs.
+        if x + TABS <= WIDTH - 2.0 * (TABS + TAB_GAP) {
+            square_button(rc, x, PlusOrPop::Plus);
+            self.row_spots[0] = Some((x, 0.0, TABS, TABS));
+        }
+        // Pop the shown tab out (not Main), left of search.
+        if self.current != 0 {
+            let px = WIDTH - 2.0 * TABS - TAB_GAP;
+            square_button(rc, px, PlusOrPop::Pop);
+            self.row_spots[1] = Some((px, 0.0, TABS, TABS));
         }
         // Search, at the row's right end.
         let sx = WIDTH - TABS;
@@ -1201,6 +1380,34 @@ fn line_holds(line: &ShownLine, query: &str) -> bool {
             .who
             .as_ref()
             .is_some_and(|w| w.to_lowercase().contains(query))
+}
+
+/// What a small square button on the tab row shows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PlusOrPop {
+    Plus,
+    Pop,
+}
+
+/// A small square button on the tab row at `x`.
+fn square_button(rc: &mut RenderContext<'_>, x: f32, what: PlusOrPop) {
+    rc.fill_rounded_rect(x, 0.0, TABS, TABS, CornerRadii::all(3.0), hex(0, 0.3));
+    let c = hex(0xE9_D3AE, 1.0);
+    let (cx, cy) = (x + TABS * 0.5, TABS * 0.5);
+    match what {
+        PlusOrPop::Plus => {
+            rc.smooth_line(cx - 5.0, cy, cx + 5.0, cy, c, 2.0);
+            rc.smooth_line(cx, cy - 5.0, cx, cy + 5.0, c, 2.0);
+        }
+        PlusOrPop::Pop => {
+            // A box with an arrow leaving its corner.
+            rc.smooth_line(cx - 5.0, cy - 2.0, cx - 5.0, cy + 5.0, c, 1.6);
+            rc.smooth_line(cx - 5.0, cy + 5.0, cx + 2.0, cy + 5.0, c, 1.6);
+            rc.smooth_line(cx - 1.0, cy + 1.0, cx + 5.0, cy - 5.0, c, 1.6);
+            rc.smooth_line(cx + 1.0, cy - 5.0, cx + 5.0, cy - 5.0, c, 1.6);
+            rc.smooth_line(cx + 5.0, cy - 5.0, cx + 5.0, cy - 1.0, c, 1.6);
+        }
+    }
 }
 
 /// A magnifying glass in a 12-unit box.

@@ -246,14 +246,124 @@ pub const fn bit(class: LogTextType) -> u64 {
 }
 
 /// A chat tab.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ChatTab {
+    /// Its stable number.
+    pub id: u32,
     /// What it is called.
     pub name: String,
     /// The text classes it shows (bit `n` = class `n`).
     pub filter: u64,
     /// The channel it talks on (none: it keeps the last one used).
     pub talk: Option<ChatChannelKind>,
+    /// It is popped out into a window of its own.
+    pub window: bool,
+    /// That window's background opacity, 0..=1.
+    pub opacity: f32,
+    /// Where its window was left.
+    pub place: Option<(f32, f32)>,
+}
+
+/// The message types a tab can show, as the tab dialog names them, and
+/// the text classes each stands for.
+pub const GROUPS: [(&str, &[LogTextType]); 15] = {
+    use LogTextType as T;
+    [
+        ("Say", &[T::Speech, T::All, T::Default]),
+        ("Tells", &[T::Tell, T::SpeechDirectSend, T::AdminTell]),
+        ("Emotes", &[T::Emote]),
+        ("Fellowship", &[T::Fellowship]),
+        ("Allegiance", &[T::Allegiance, T::Social, T::SocialSend]),
+        ("General", &[T::TurbineGeneral]),
+        ("Trade", &[T::TurbineTrade]),
+        ("LFG", &[T::TurbineLfg]),
+        ("Roleplay", &[T::TurbineRoleplay]),
+        ("Society", &[T::TurbineSociety]),
+        (
+            "Other channels",
+            &[T::Channel, T::ChannelSend, T::WorldBroadcast],
+        ),
+        ("Combat", &[T::Combat, T::CombatEnemy, T::CombatSelf]),
+        ("Magic", &[T::Magic, T::Spellcasting]),
+        ("Experience", &[T::Advancement]),
+        (
+            "System",
+            &[
+                T::System,
+                T::Help,
+                T::Appraisal,
+                T::Recall,
+                T::Craft,
+                T::Salvaging,
+                T::Abuse,
+            ],
+        ),
+    ]
+};
+
+/// The mask of group `i` of [`GROUPS`].
+#[must_use]
+pub fn group_mask(i: usize) -> u64 {
+    GROUPS
+        .get(i)
+        .map_or(0, |(_, classes)| classes.iter().fold(0, |m, c| m | bit(*c)))
+}
+
+/// The channel a saved tab talks on, from its saved name.
+#[must_use]
+pub fn talk_from_name(name: &str) -> Option<ChatChannelKind> {
+    use ChatChannelKind as K;
+    [
+        K::Say,
+        K::Tell,
+        K::Fellowship,
+        K::Allegiance,
+        K::Monarch,
+        K::Patron,
+        K::Vassals,
+        K::CoVassals,
+        K::General,
+        K::Trade,
+        K::Lfg,
+        K::Roleplay,
+        K::Society,
+        K::Olthoi,
+    ]
+    .into_iter()
+    .find(|k| super::channels::channel_name(*k) == name)
+}
+
+impl ChatTab {
+    /// The saved form.
+    #[must_use]
+    pub fn to_data(&self) -> ac_host::settings::ChatTabData {
+        ac_host::settings::ChatTabData {
+            id: self.id,
+            name: self.name.clone(),
+            filter: self.filter,
+            talk: self
+                .talk
+                .map(|k| super::channels::channel_name(k).to_owned())
+                .unwrap_or_default(),
+            window: self.window,
+            opacity: self.opacity,
+            place: self.place,
+        }
+    }
+
+    /// The tab a saved form describes.
+    #[must_use]
+    pub fn from_data(data: &ac_host::settings::ChatTabData) -> Self {
+        Self {
+            id: data.id,
+            name: data.name.clone(),
+            filter: data.filter,
+            talk: talk_from_name(&data.talk),
+            window: data.window,
+            opacity: data.opacity.clamp(0.0, 1.0),
+            place: data.place,
+        }
+    }
 }
 
 impl ChatTab {
@@ -268,10 +378,18 @@ impl ChatTab {
     #[must_use]
     pub fn defaults() -> Vec<Self> {
         use LogTextType as T;
-        let tab = |name: &str, filter: u64, talk| Self {
-            name: name.to_owned(),
-            filter,
-            talk,
+        let mut id = 0;
+        let mut tab = |name: &str, filter: u64, talk| {
+            id += 1;
+            Self {
+                id,
+                name: name.to_owned(),
+                filter,
+                talk,
+                window: false,
+                opacity: DEFAULT_OPACITY,
+                place: None,
+            }
         };
         vec![
             tab("Main", MAIN_WINDOW_DEFAULT_FILTER, None),
@@ -302,6 +420,9 @@ impl ChatTab {
         ]
     }
 }
+
+/// A popped-out tab's background to start with.
+pub const DEFAULT_OPACITY: f32 = 0.62;
 
 /// The lines kept, and how many each tab has not seen.
 #[derive(Debug, Clone, Default)]
@@ -458,5 +579,16 @@ mod tests {
         assert_eq!(log.unread(2), 0);
         assert!(tabs[0].shows(&log.lines[0]));
         assert!(!tabs[1].shows(&log.lines[0]));
+    }
+
+    #[test]
+    fn a_tab_reads_back_from_its_saved_form() {
+        let mut tab = ChatTab::defaults().remove(2);
+        tab.window = true;
+        tab.opacity = 0.8;
+        assert_eq!(ChatTab::from_data(&tab.to_data()), tab);
+        assert_eq!(tab.to_data().talk, "Fellowship");
+        assert_ne!(group_mask(1) & bit(LogTextType::Tell), 0);
+        assert_eq!(group_mask(99), 0);
     }
 }

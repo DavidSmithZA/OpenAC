@@ -22,9 +22,11 @@ use ac_ui::widgets::Field;
 use ac_ui::{Key, UiRoot};
 
 use super::channels::{ChannelMenu, MenuFonts, TalkFacts, TalkTo};
+use super::model::ChatTab;
 use super::model::ShownLine;
 use super::names::{NameAction, NameFonts, NameMenu};
 use super::panel::{ChatFonts, ChatPanel, ChatRequest};
+use super::tab_dialog::{TabDialog, TabDialogDone};
 use crate::ui::modern::hud;
 use crate::ui::window::WindowUi;
 
@@ -59,6 +61,78 @@ pub struct ChatUi {
     shown: Option<u64>,
     /// The entry had the keyboard last frame.
     had_keys: bool,
+    /// The dialog that makes and changes tabs.
+    pub dialog: ElementId,
+    /// The popped-out tabs' windows made so far (hidden, not destroyed,
+    /// when put back or deleted).
+    windows: Vec<TabWindow>,
+    /// Windows closed by the player (their tabs stay popped out).
+    closed: std::collections::HashSet<u32>,
+    /// The saved tabs have been read.
+    loaded: bool,
+    /// The fonts new windows are made with.
+    fonts: ChatFonts,
+    /// What a window's entry talks on and to, by tab id.
+    window_talk: WindowTalk,
+}
+
+/// What each popped-out tab's entry talks on and to, by tab id.
+type WindowTalk = Rc<RefCell<std::collections::HashMap<u32, (ChatChannelKind, Option<String>)>>>;
+
+/// A popped-out tab's window.
+#[derive(Debug)]
+struct TabWindow {
+    /// The tab's id.
+    id: u32,
+    /// The window's name.
+    name: String,
+    /// Its panel.
+    panel: ElementId,
+    /// Its entry's field.
+    field: ElementId,
+}
+
+/// A popped-out tab's entry: it talks on the tab's own channel, straight
+/// to the session (the shared entry keeps its own channel and draft).
+struct WindowEntryController {
+    field: ElementId,
+    id: u32,
+    talk: WindowTalk,
+}
+
+impl PanelController for WindowEntryController {
+    fn on_element_message(
+        &mut self,
+        ui: &mut UiRoot,
+        element: ElementId,
+        message: &ElementMessage,
+    ) -> bool {
+        if element != self.field {
+            return false;
+        }
+        if let ElementMessage::Submitted(text) = message {
+            let (channel, tell_target) = self
+                .talk
+                .borrow()
+                .get(&self.id)
+                .cloned()
+                .unwrap_or((ChatChannelKind::Say, None));
+            let line = ac_ui::panels::chat::ChatSubmission {
+                text: text.clone(),
+                channel,
+                tell_target,
+                tell_target_guid: 0,
+            };
+            if let Some(command) = line.to_session_command() {
+                ac_ui::panels::items::emit(ui, ac_ui::panels::PanelOutput::Session(command));
+            }
+            return true;
+        }
+        matches!(
+            message,
+            ElementMessage::TextChanged(_) | ElementMessage::Recall(_)
+        )
+    }
 }
 
 /// Wires the entry's field to the session's chat entry, as retail's chat
@@ -119,6 +193,12 @@ impl WindowUi {
             note: fonts.small.clone(),
         };
         let body = fonts.body.clone();
+        let kept_fonts = fonts.clone();
+        let dialog_fonts = super::tab_dialog::TabDialogFonts {
+            title: self.modern_font(Weight::SemiBold, 13.5),
+            body: self.modern_font(Weight::Medium, 12.0),
+            small: fonts.small.clone(),
+        };
         let search_font = fonts.small.clone();
         let name_fonts = NameFonts {
             label: menu_fonts.label.clone(),
@@ -192,6 +272,7 @@ impl WindowUi {
                 .with_anchors(AnchorEdges::NONE),
             NameMenu::new(Horizon::BRONZE, name_fonts),
         );
+        let dialog = TabDialog::mount(ui, Horizon::BRONZE, dialog_fonts);
         if let Err(e) = self
             .host
             .attach_controller(CHAT, Box::new(EntryController { field }))
@@ -211,8 +292,17 @@ impl WindowUi {
             entry: ChatEntryView::default(),
             shown: None,
             had_keys: false,
+            dialog,
+            windows: Vec::new(),
+            closed: std::collections::HashSet::new(),
+            loaded: false,
+            fonts: kept_fonts,
+            window_talk: Rc::new(RefCell::new(std::collections::HashMap::new())),
         });
         modern.replace(crate::ui::window::CHAT_WINDOW);
+        for name in crate::ui::chat_windows::FLOATING_CHAT_WINDOWS {
+            modern.replace(name);
+        }
     }
 
     /// New chat lines for the modern chat.
@@ -226,6 +316,19 @@ impl WindowUi {
             return;
         };
         let me = self.status.playing.clone().unwrap_or_default();
+        let windows: Vec<ElementId> = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.chat.as_ref())
+            .map(|c| c.windows.iter().map(|w| w.panel).collect())
+            .unwrap_or_default();
+        for w in windows {
+            if let Some(p) = self.host.root.widget_mut::<ChatPanel>(w) {
+                for line in lines {
+                    p.push(ShownLine::of(line, &me));
+                }
+            }
+        }
         if let Some(p) = self.host.root.widget_mut::<ChatPanel>(panel) {
             for line in lines {
                 p.push(ShownLine::of(line, &me));
@@ -359,6 +462,9 @@ impl WindowUi {
         else {
             return;
         };
+        self.load_modern_chat_tabs();
+        self.tick_modern_chat_windows();
+        self.follow_modern_chat_dialog();
         self.follow_modern_chat_search();
         // Escape gave the keyboard up: the entry's menus close with it.
         let focus = self.host.root.keyboard_focus();
@@ -451,6 +557,19 @@ impl WindowUi {
                     self.focus_modern_chat(None);
                 }
                 ChatRequest::Search(open) => self.modern_chat_search(open),
+                ChatRequest::NewTab => {
+                    if let Some(d) = self
+                        .modern
+                        .as_ref()
+                        .and_then(|m| m.chat.as_ref())
+                        .map(|c| c.dialog)
+                    {
+                        TabDialog::show(&mut self.host.root, d, None);
+                    }
+                }
+                ChatRequest::EditTab(n) => self.edit_modern_chat_tab(n),
+                ChatRequest::PopOut(n) => self.set_modern_chat_window(n, true),
+                ChatRequest::PutBack | ChatRequest::Close | ChatRequest::Moved => {}
                 ChatRequest::Complete(verb) => {
                     self.start_modern_chat_line(&format!("{verb} "));
                 }
@@ -588,6 +707,458 @@ impl WindowUi {
             &mut self.host.root,
             ac_ui::panels::PanelOutput::Session(command),
         );
+    }
+
+    /// The saved tabs, read once (the starting tabs when none are saved),
+    /// and their windows made.
+    fn load_modern_chat_tabs(&mut self) {
+        let Some(chat) = self.modern.as_mut().and_then(|m| m.chat.as_mut()) else {
+            return;
+        };
+        if chat.loaded {
+            return;
+        }
+        chat.loaded = true;
+        let panel = chat.panel;
+        let saved = self
+            .status
+            .settings_store
+            .as_ref()
+            .map(ac_host::settings::SettingsStore::load_chat_tabs)
+            .unwrap_or_default();
+        if saved.is_empty() {
+            return;
+        }
+        let mut tabs: Vec<ChatTab> = saved.iter().map(ChatTab::from_data).collect();
+        tabs[0].window = false;
+        let popped: Vec<usize> = (0..tabs.len()).filter(|&i| tabs[i].window).collect();
+        if let Some(p) = self.host.root.widget_mut::<ChatPanel>(panel) {
+            p.tabs = tabs;
+            p.current = 0;
+        }
+        for n in popped {
+            self.show_modern_chat_window(n);
+        }
+    }
+
+    /// The tabs as they stand, saved (each window's place with them).
+    fn save_modern_chat_tabs(&mut self) {
+        let Some(chat) = self.modern.as_ref().and_then(|m| m.chat.as_ref()) else {
+            return;
+        };
+        let places: Vec<(u32, (f32, f32))> = chat
+            .windows
+            .iter()
+            .filter_map(|w| {
+                self.host
+                    .root
+                    .element(w.panel)
+                    .map(|e| (w.id, (e.left, e.top)))
+            })
+            .collect();
+        let panel = chat.panel;
+        let Some(p) = self.host.root.widget_mut::<ChatPanel>(panel) else {
+            return;
+        };
+        for tab in &mut p.tabs {
+            if let Some((_, at)) = places.iter().find(|(id, _)| *id == tab.id) {
+                tab.place = Some(*at);
+            }
+        }
+        let data: Vec<_> = p.tabs.iter().map(ChatTab::to_data).collect();
+        if let Some(store) = &self.status.settings_store
+            && let Err(e) = store.save_chat_tabs(&data)
+        {
+            self.notices.push(format!("ui: saving the chat tabs: {e}"));
+        }
+    }
+
+    /// The dialog for tab `n`.
+    fn edit_modern_chat_tab(&mut self, n: usize) {
+        let Some((panel, dialog)) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.chat.as_ref())
+            .map(|c| (c.panel, c.dialog))
+        else {
+            return;
+        };
+        let tab = self
+            .host
+            .root
+            .widget::<ChatPanel>(panel)
+            .and_then(|p| p.tabs.get(n).cloned());
+        if let Some(tab) = tab {
+            TabDialog::show(&mut self.host.root, dialog, Some((n, &tab)));
+        }
+    }
+
+    /// What the dialog ended with is done: a tab made, changed or deleted.
+    fn follow_modern_chat_dialog(&mut self) {
+        let Some((panel, dialog)) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.chat.as_ref())
+            .map(|c| (c.panel, c.dialog))
+        else {
+            return;
+        };
+        let Some(done) = self
+            .host
+            .root
+            .widget_mut::<TabDialog>(dialog)
+            .and_then(|d| d.done.take())
+        else {
+            return;
+        };
+        let Some(p) = self.host.root.widget_mut::<ChatPanel>(panel) else {
+            return;
+        };
+        let mut window_change: Option<(usize, bool)> = None;
+        match done {
+            TabDialogDone::Save(None, mut tab) => {
+                tab.id = p.tabs.iter().map(|t| t.id).max().unwrap_or(0) + 1;
+                let popped = tab.window;
+                tab.window = false;
+                p.tabs.push(tab);
+                let n = p.tabs.len() - 1;
+                if popped {
+                    window_change = Some((n, true));
+                } else {
+                    p.pick_tab(n);
+                }
+            }
+            TabDialogDone::Save(Some(n), tab) => {
+                if let Some(old) = p.tabs.get_mut(n) {
+                    let was = old.window;
+                    let popped = tab.window;
+                    *old = ChatTab { window: was, ..tab };
+                    if was != popped {
+                        window_change = Some((n, popped));
+                    } else if was {
+                        window_change = Some((n, true));
+                    }
+                }
+            }
+            TabDialogDone::Delete(n) if n > 0 && n < p.tabs.len() => {
+                let id = p.tabs[n].id;
+                p.tabs.remove(n);
+                if n < p.log.unread.len() {
+                    p.log.unread.remove(n);
+                }
+                if p.current >= n {
+                    p.current = p.current.saturating_sub(1);
+                }
+                self.hide_modern_chat_window(id);
+            }
+            TabDialogDone::Delete(_) => {}
+        }
+        if let Some((n, popped)) = window_change {
+            self.set_modern_chat_window(n, popped);
+        }
+        self.save_modern_chat_tabs();
+    }
+
+    /// Tab `n` pops out into its window (`popped`) or goes back to being a
+    /// tab.
+    fn set_modern_chat_window(&mut self, n: usize, popped: bool) {
+        let Some(panel) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.chat.as_ref())
+            .map(|c| c.panel)
+        else {
+            return;
+        };
+        let Some(id) = self.host.root.widget_mut::<ChatPanel>(panel).and_then(|p| {
+            let tab = p.tabs.get_mut(n).filter(|_| n > 0)?;
+            tab.window = popped;
+            let id = tab.id;
+            if popped && p.current == n {
+                p.pick_tab(0);
+            }
+            Some(id)
+        }) else {
+            return;
+        };
+        if popped {
+            if let Some(chat) = self.modern.as_mut().and_then(|m| m.chat.as_mut()) {
+                chat.closed.remove(&id);
+            }
+            self.show_modern_chat_window(n);
+        } else {
+            self.hide_modern_chat_window(id);
+        }
+        self.save_modern_chat_tabs();
+    }
+
+    /// Tab `n`'s window shows (made the first time), showing the tab as it
+    /// is now.
+    fn show_modern_chat_window(&mut self, n: usize) {
+        let Some(chat) = self.modern.as_ref().and_then(|m| m.chat.as_ref()) else {
+            return;
+        };
+        let main = chat.panel;
+        let fonts = chat.fonts.clone();
+        let talk = chat.window_talk.clone();
+        let Some((tab, lines)) = self
+            .host
+            .root
+            .widget::<ChatPanel>(main)
+            .and_then(|p| Some((p.tabs.get(n)?.clone(), p.log.lines.clone())))
+        else {
+            return;
+        };
+        let known = chat
+            .windows
+            .iter()
+            .find(|w| w.id == tab.id)
+            .map(|w| (w.panel, w.name.clone()));
+        let screen = self.host.root.size();
+        let (panel, name) = match known {
+            Some(found) => found,
+            None => {
+                let name = format!("modern-chat-tab-{}", tab.id);
+                let mut window = ChatPanel::for_window(Horizon::BRONZE, fonts.clone(), tab.clone());
+                for line in lines {
+                    window.push(line);
+                }
+                let height = window.height();
+                let id = match hud::mount_piece(
+                    &mut self.host.root,
+                    &name,
+                    (super::panel::WIDTH, height),
+                    window,
+                ) {
+                    Ok(id) => id,
+                    Err(e) => {
+                        self.notices.push(format!("ui: chat window: {e}"));
+                        return;
+                    }
+                };
+                let field = self.mount_window_field(id, fonts.body.clone());
+                if let Err(e) = self.host.attach_controller(
+                    &name,
+                    Box::new(WindowEntryController {
+                        field,
+                        id: tab.id,
+                        talk,
+                    }),
+                ) {
+                    self.notices.push(format!("ui: chat window entry: {e}"));
+                }
+                if let Some(chat) = self.modern.as_mut().and_then(|m| m.chat.as_mut()) {
+                    let k = chat.windows.len() as f32;
+                    chat.windows.push(TabWindow {
+                        id: tab.id,
+                        name: name.clone(),
+                        panel: id,
+                        field,
+                    });
+                    let (x, y) = tab
+                        .place
+                        .unwrap_or((screen.0 * 0.5 - 220.0 + 24.0 * k, 120.0 + 30.0 * k));
+                    if let Some(e) = self.host.root.element_mut(id) {
+                        e.left = x.clamp(0.0, (screen.0 - super::panel::WIDTH).max(0.0));
+                        e.top = y.clamp(0.0, (screen.1 - height).max(0.0));
+                    }
+                }
+                (id, name)
+            }
+        };
+        let ui = &mut self.host.root;
+        if let Some(w) = ui.widget_mut::<ChatPanel>(panel) {
+            w.tabs = vec![tab];
+            w.current = 0;
+            let h = w.height();
+            if let Some(e) = ui.element_mut(panel) {
+                e.height = h;
+            }
+        }
+        ui.show_window(&name);
+    }
+
+    /// A popped-out tab's entry field, under its window `panel`.
+    fn mount_window_field(
+        &mut self,
+        panel: ElementId,
+        font: Option<std::sync::Arc<ac_ui::UiFont>>,
+    ) -> ElementId {
+        let ui = &mut self.host.root;
+        let mut e = Element::at(0.0, 0.0, 200.0, 24.0)
+            .with_visible(false)
+            .with_anchors(AnchorEdges::NONE);
+        Field::configure(&mut e);
+        let mut f = Field::default();
+        f.font = font;
+        f.one_line = true;
+        f.selectable = true;
+        f.padding = 5.0;
+        f.record_history = false;
+        f.text_color = Horizon::BRONZE.palette.text;
+        f.background_color = Color::TRANSPARENT;
+        f.selection_color = hex(0xE0_B068, 0.35);
+        f.set_editable_detached(&mut e, true);
+        ui.add(panel, e, f)
+    }
+
+    /// Tab `id`'s window hides.
+    fn hide_modern_chat_window(&mut self, id: u32) {
+        let Some(name) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.chat.as_ref())
+            .and_then(|c| c.windows.iter().find(|w| w.id == id))
+            .map(|w| w.name.clone())
+        else {
+            return;
+        };
+        let ui = &mut self.host.root;
+        if ui.is_window_visible(&name) {
+            ui.hide_window(&name);
+        }
+    }
+
+    /// The floating chat keys: key `n` shows or hides the `n`th popped-out
+    /// tab's window. False without the modern chat.
+    pub(in crate::ui) fn toggle_modern_chat_window(&mut self, n: u8) -> bool {
+        let Some(chat) = self.modern.as_ref().and_then(|m| m.chat.as_ref()) else {
+            return false;
+        };
+        let panel = chat.panel;
+        let id = self.host.root.widget::<ChatPanel>(panel).and_then(|p| {
+            p.tabs
+                .iter()
+                .filter(|t| t.window)
+                .nth(usize::from(n).wrapping_sub(1))
+                .map(|t| t.id)
+        });
+        let Some(id) = id else {
+            return true;
+        };
+        let shown = chat
+            .windows
+            .iter()
+            .find(|w| w.id == id)
+            .is_some_and(|w| self.host.root.is_window_visible(&w.name));
+        if let Some(chat) = self.modern.as_mut().and_then(|m| m.chat.as_mut()) {
+            if shown {
+                chat.closed.insert(id);
+            } else {
+                chat.closed.remove(&id);
+            }
+        }
+        if shown {
+            self.hide_modern_chat_window(id);
+        } else if let Some(n) = self
+            .host
+            .root
+            .widget::<ChatPanel>(panel)
+            .and_then(|p| p.tabs.iter().position(|t| t.id == id))
+        {
+            self.show_modern_chat_window(n);
+        }
+        true
+    }
+
+    /// Each window, each frame: its entry follows it, what it talks on is
+    /// kept for its entry, and what it asked for is done.
+    fn tick_modern_chat_windows(&mut self) {
+        let Some(chat) = self.modern.as_ref().and_then(|m| m.chat.as_ref()) else {
+            return;
+        };
+        let windows: Vec<(u32, String, ElementId, ElementId)> = chat
+            .windows
+            .iter()
+            .map(|w| (w.id, w.name.clone(), w.panel, w.field))
+            .collect();
+        let teller = chat.entry.last_incoming_tell_sender.clone();
+        let talk = chat.window_talk.clone();
+        let names = chat.names;
+        let main = chat.panel;
+        for (id, name, panel, field) in windows {
+            let ui = &mut self.host.root;
+            if !ui.is_window_visible(&name) {
+                continue;
+            }
+            let typing = ui.keyboard_focus() == Some(field);
+            let empty = ui
+                .widget::<Field>(field)
+                .is_none_or(|f| f.text().is_empty());
+            let Some((rect, entry, requests, channel)) =
+                ui.widget_mut::<ChatPanel>(panel).map(|p| {
+                    p.typing = typing;
+                    p.entry_empty = empty;
+                    let channel = p.tabs.first().and_then(|t| t.talk);
+                    p.channel = channel.unwrap_or(ChatChannelKind::Say);
+                    p.tell_target = teller
+                        .clone()
+                        .filter(|_| channel == Some(ChatChannelKind::Tell));
+                    (
+                        p.field_rect(),
+                        p.has_entry(),
+                        std::mem::take(&mut p.requests),
+                        channel,
+                    )
+                })
+            else {
+                continue;
+            };
+            if let Some(c) = channel {
+                talk.borrow_mut().insert(id, (c, teller.clone()));
+            }
+            if let Some(e) = ui.element_mut(field) {
+                e.left = rect.0;
+                e.top = rect.1;
+                e.width = rect.2;
+                e.height = rect.3;
+            }
+            if ui.element(field).is_some_and(|e| e.visible) != entry {
+                ui.set_visible(field, entry);
+            }
+            let n = ui
+                .widget::<ChatPanel>(main)
+                .and_then(|p| p.tabs.iter().position(|t| t.id == id));
+            for request in requests {
+                match request {
+                    ChatRequest::Focus if entry => {
+                        self.host.root.set_keyboard_focus(Some(field));
+                    }
+                    ChatRequest::EditTab(_) => {
+                        if let Some(n) = n {
+                            self.edit_modern_chat_tab(n);
+                        }
+                    }
+                    ChatRequest::PutBack => {
+                        if let Some(n) = n {
+                            self.set_modern_chat_window(n, false);
+                        }
+                    }
+                    ChatRequest::Close => {
+                        if let Some(chat) = self.modern.as_mut().and_then(|m| m.chat.as_mut()) {
+                            chat.closed.insert(id);
+                        }
+                        self.hide_modern_chat_window(id);
+                    }
+                    ChatRequest::Moved => self.save_modern_chat_tabs(),
+                    ChatRequest::Name(who, guid, (x, y)) => {
+                        let nearby = guid != 0 && self.facts.objects.get(guid).is_some();
+                        let ui = &mut self.host.root;
+                        let (px, py) = ui.screen_position(panel);
+                        let place = ui
+                            .widget::<ChatPanel>(panel)
+                            .and_then(|p| p.tabs.first())
+                            .map(|t| t.name.clone())
+                            .unwrap_or_default();
+                        if let Some(m) = ui.widget_mut::<NameMenu>(names) {
+                            m.fill(&who, guid, &place, nearby);
+                        }
+                        NameMenu::open(ui, names, (px + x, py + y - 4.0));
+                    }
+                    _ => {}
+                }
+            }
+        }
     }
 
     /// Where the entry talks now.

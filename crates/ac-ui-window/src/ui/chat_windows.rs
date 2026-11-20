@@ -137,6 +137,9 @@ impl WindowUi {
 
     /// Show or hide floating chat window `n` (1..=4).
     pub(super) fn toggle_floating_chat(&mut self, n: u8) -> bool {
+        if self.modern.as_ref().is_some_and(|m| m.chat.is_some()) {
+            return self.toggle_modern_chat_window(n);
+        }
         match FLOATING_CHAT_WINDOWS.get(usize::from(n).wrapping_sub(1)) {
             Some(name) => self.host.root.toggle_window(name),
             None => false,

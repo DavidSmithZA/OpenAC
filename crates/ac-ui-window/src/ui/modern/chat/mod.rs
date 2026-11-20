@@ -8,3 +8,4 @@ pub mod model;
 pub mod names;
 pub mod panel;
 pub mod run;
+pub mod tab_dialog;

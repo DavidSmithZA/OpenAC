@@ -767,4 +767,62 @@ fn the_modern_chat() {
     }
     s.step();
     s.save("chat-search");
+    // Close search; a new tab from the + after the tabs.
+    s.click(0, 16 + 440 - 4 - 22 + 11 - 22, 598, Modifiers::NONE);
+    s.click(0, 16 + 440 - 4 - 11, 598, Modifiers::NONE);
+    s.ui.chat_entry_key(ac_ui::input::InputAction::EnterChatMode, None);
+    s.step();
+    s.click(0, 386, 598, Modifiers::NONE);
+    for c in "Trade watch".chars() {
+        let r: Routed<u32> = s.ui.key(
+            0,
+            Key::A,
+            true,
+            false,
+            Modifiers::NONE,
+            Some(c.to_string().as_str()),
+        );
+        let _ = s.ui.handle(r.outputs);
+    }
+    // The dialog sits in the middle: 380 x 400 at (530, 250).
+    let (dx, dy) = (530, 250);
+    s.click(0, dx + 16 + 116 + 20, dy + 130 + 22 + 11, Modifiers::NONE); // Trade
+    s.click(0, dx + 16 + 116 + 20, dy + 130 + 44 + 11, Modifiers::NONE); // LFG
+    s.click(0, dx + 16 + 20, dy + 130 + 22 + 11, Modifiers::NONE); // Tells
+    for _ in 0..8 {
+        s.click(0, dx + 16 + 90 + 20, dy + 252 + 13, Modifiers::NONE); // Talks on
+    }
+    s.click(0, dx + 16 + 15, dy + 286 + 11, Modifiers::NONE); // Own window
+    s.save("chat-new-tab");
+    s.click(0, dx + 380 - 16 - 30, dy + 356 + 14, Modifiers::NONE); // Make tab
+    s.scene.apply(PresentationEvent::Chat(vec![
+        chat_line(
+            20,
+            K::Channel,
+            T::TurbineTrade,
+            "Osk",
+            "WTS Major Coordination, 40k",
+            "",
+        ),
+        chat_line(
+            21,
+            K::Channel,
+            T::TurbineLfg,
+            "Varn",
+            "LF2M Lugian quest, meet at the Holtburg lifestone",
+            "",
+        ),
+        chat_line(
+            22,
+            K::Channel,
+            T::TurbineTrade,
+            "Corvan",
+            "WTB Mana Scarabs, paying well",
+            "",
+        ),
+    ]));
+    for _ in 0..12 {
+        s.step();
+    }
+    s.save("chat-window");
 }
