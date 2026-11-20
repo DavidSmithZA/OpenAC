@@ -42,8 +42,8 @@ use ac_runtime::communication::{
     ChatChannelKind, ClientConfirmation, ItemUseConfirmation, JournalView, TrackedContract,
 };
 use ac_runtime::gameplay::{
-    BarberView, BookView, ChessStage, ChessView, FellowView, FellowshipView, HouseLineColor,
-    HouseView,
+    BarberView, BookView, ChessStage, ChessView, DepartedFellowView, FellowView, FellowshipView,
+    HouseLineColor, HouseView,
 };
 use ac_runtime::inventory::{
     AppraisalView, HousePurchaseView, InteractionMode, PendingPlacement, StagedRow, TradeView,
@@ -488,7 +488,9 @@ record! {
         open: bool,
         locked: bool,
         members: Vec<FellowView>,
+        departed: Vec<DepartedFellowView>,
     }
+    DepartedFellowView { guid: u32, name: String, left_unix_s: i64 }
     AllegianceMember {
         character_id: u32,
         parent_guid: u32,

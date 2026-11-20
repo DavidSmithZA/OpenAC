@@ -61,8 +61,8 @@ use ac_runtime::communication::{
 use ac_runtime::gameplay::selection_cycle::{SelectionCycleDirection, SelectionCycleKind};
 use ac_runtime::gameplay::{
     AllegianceCommand, BarberCommand, BarberView, BookCommand, BookView, ChessCommand, ChessStage,
-    ChessView, CombatAttackCommand, FellowView, FellowshipCommand, FellowshipView, GameplayCommand,
-    HouseLineColor, HouseView, InputActivation, SelectionSource,
+    ChessView, CombatAttackCommand, DepartedFellowView, FellowView, FellowshipCommand,
+    FellowshipView, GameplayCommand, HouseLineColor, HouseView, InputActivation, SelectionSource,
 };
 use ac_runtime::inventory::{
     AppraisalView, HousePurchaseCommand, HousePurchaseTab, HousePurchaseView, InteractionMode,
@@ -633,6 +633,11 @@ fn social_facts() -> SocialFacts {
                 mana: (5, 6),
                 share_loot: true,
                 vitals_age_seconds: Some(1.5),
+            }],
+            departed: vec![DepartedFellowView {
+                guid: 2,
+                name: "Gone".into(),
+                left_unix_s: 1_700_000_000,
             }],
         },
         allegiance: Some(AllegianceProfile {
@@ -2897,7 +2902,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "261019edc37123ef", "{:#x}", shape());
+    assert_eq!(shape_hex(), "e69f7c1ea4037301", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full

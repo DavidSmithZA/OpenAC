@@ -66,7 +66,7 @@ pub use death::{
     CorpseSummary, DeathState, LAST_OUTSIDE_DEATH_POSITION, VitaeView, corpses,
     last_outside_corpse_cell, vitae_view,
 };
-pub use fellowship::{Departure, FellowView, FellowshipState, FellowshipView};
+pub use fellowship::{DepartedFellowView, Departure, FellowView, FellowshipState, FellowshipView};
 pub use house::{HouseLineColor, HouseState, HouseView};
 pub use magic::{
     CastRequestResult, CharacterSheet, EnchantmentView, SheetLine, SpellCast, SpellCastCompletion,
