@@ -39,6 +39,7 @@ pub mod paperdoll;
 pub mod projectile_debug;
 pub mod radar;
 pub mod salvage;
+pub mod salvage_list;
 pub mod selected_object;
 pub mod social;
 pub mod spell_components;
