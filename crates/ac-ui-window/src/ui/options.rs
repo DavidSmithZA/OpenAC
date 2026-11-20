@@ -240,6 +240,7 @@ impl WindowUi {
             return;
         };
         let (options1, options2) = (view.options1, view.options2);
+        self.follow_modern_option_values();
         self.host
             .with_controller::<OptionsWindowController, _>(OPTIONS_WINDOW, |c, ui| {
                 let mut live = c.live().clone();
@@ -398,7 +399,7 @@ impl WindowUi {
     /// OpenAC `ApplyMouseTurningSettingsMacro`: the camera to the mouse
     /// turning targets, the character option on, a line per change, then
     /// the Configuration page applied.
-    fn use_mouse_turning_settings(&mut self, commands: &mut Vec<SessionCommand>) {
+    pub(super) fn use_mouse_turning_settings(&mut self, commands: &mut Vec<SessionCommand>) {
         let use_mouse_turning = self.player_view.is_some_and(|v| {
             ac_runtime::character::option(option_id::USE_MOUSE_TURNING)
                 .is_some_and(|e| v.options2 & e.mask != 0)

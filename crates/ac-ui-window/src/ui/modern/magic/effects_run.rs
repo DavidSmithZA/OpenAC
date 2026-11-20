@@ -175,7 +175,7 @@ impl WindowUi {
                         .set_visibility(&mut self.host.root, panel_id::INVENTORY, true);
                 }
                 EffectsRequest::Settings => {
-                    let _ = self.panels.toggle(&mut self.host.root, panel_id::OPTIONS);
+                    self.modern_options_on(crate::ui::modern::options::spec::Section::Interface);
                 }
             }
         }

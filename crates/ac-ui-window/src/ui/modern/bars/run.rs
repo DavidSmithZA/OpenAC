@@ -228,6 +228,12 @@ impl WindowUi {
         Some(out)
     }
 
+    /// Edit layout opens (Options' Shortcut bars button). False without
+    /// the bars.
+    pub(in crate::ui) fn modern_open_bar_edit(&mut self) -> bool {
+        self.with_bars(|ui, b| ui.enter_bar_edit(b)).is_some()
+    }
+
     /// The bars: the edit layer's pieces, hidden; the bars themselves are
     /// built once the character's layout is known. They stand in for the
     /// retail toolbar and the combat window's spell bars.

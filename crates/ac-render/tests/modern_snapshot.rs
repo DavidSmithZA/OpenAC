@@ -2148,3 +2148,77 @@ fn the_modern_character() {
         assert!(!f.extras.info.is_empty(), "the information cards");
     }
 }
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_options() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    assert!(s.ui.run_hotkey(Hotkey::Options));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-options"),
+        "the window opens from its key"
+    );
+    assert!(
+        !s.ui.host().root.is_window_visible("options"),
+        "retail's stays hidden"
+    );
+    s.save("options");
+    let frame = s.ui.host().root.window("modern-options").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    let nav = |k: i32| fy + 52 + 14 + k * 38 + 18;
+    // Gameplay; Auto target switched off sends the option.
+    s.click(0, fx + 60, nav(1), Modifiers::NONE);
+    s.sent.clear();
+    s.click(0, fx + 950, fy + 52 + 114 + 26, Modifiers::NONE);
+    s.save("options-gameplay");
+    let set: Vec<bool> = s
+        .sent
+        .iter()
+        .filter_map(|c| match c {
+            SessionCommand::SetCharacterOption { value, .. } => Some(*value),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(set.len(), 1, "{:?}", s.sent);
+    // The other sections.
+    for (k, name) in [
+        (3, "options-chat"),
+        (4, "options-controls"),
+        (5, "options-graphics"),
+        (6, "options-sound"),
+    ] {
+        s.click(0, fx + 60, nav(k), Modifiers::NONE);
+        s.save(name);
+    }
+    // Graphics' resolution menu.
+    s.click(0, fx + 60, nav(5), Modifiers::NONE);
+    s.click(0, fx + 900, fy + 52 + 114 + 26, Modifiers::NONE);
+    s.save("options-menu");
+    s.click(0, fx + 500, fy + 300, Modifiers::NONE);
+    // The search.
+    let field = shown_in::<ac_ui::widgets::Field>(&s, frame).expect("the search field");
+    s.ui.host_mut()
+        .root
+        .with::<ac_ui::widgets::Field, _>(field, |f, _| f.set_text("run"));
+    s.step();
+    s.save("options-search");
+    // Closing without Apply puts the change back.
+    s.sent.clear();
+    s.click(0, fx + 1000 - 12 - 15, fy + 26, Modifiers::NONE);
+    s.step();
+    assert!(!s.ui.host().root.is_window_visible("modern-options"));
+    let back: Vec<bool> = s
+        .sent
+        .iter()
+        .filter_map(|c| match c {
+            SessionCommand::SetCharacterOption { value, .. } => Some(*value),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(back, vec![!set[0]], "{:?}", s.sent);
+}

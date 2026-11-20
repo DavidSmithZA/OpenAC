@@ -20,6 +20,7 @@ pub mod hud;
 pub mod items;
 pub mod kit;
 pub mod magic;
+pub mod options;
 pub mod places;
 
 use std::sync::Arc;
@@ -89,6 +90,8 @@ pub struct ModernLayer {
     pub spellbook: Option<magic::spellbook_run::BookUi>,
     /// The Character window.
     pub character: Option<character::run::CharacterUi>,
+    /// The Options window.
+    pub options: Option<options::run::OptionsUi>,
     /// Packs used anywhere since the inventory last looked.
     pub opened_packs: Vec<u32>,
 }
@@ -333,6 +336,7 @@ impl WindowUi {
         self.mount_modern_effects_window();
         self.mount_modern_spellbook();
         self.mount_modern_character();
+        self.mount_modern_options();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -506,6 +510,7 @@ impl WindowUi {
         let character = shows(ac_ui::panels::panel_id::CHARACTER);
         let inventory = shows(ac_ui::panels::panel_id::INVENTORY);
         let spellbook = shows(ac_ui::panels::panel_id::MAGIC);
+        let options = shows(ac_ui::panels::panel_id::OPTIONS);
         let ui = &mut self.host.root;
         for id in buttons {
             let Some(panel) = ui.widget::<PanelButton>(id).map(|b| b.panel) else {
@@ -519,7 +524,7 @@ impl WindowUi {
                 Panel::Map => world_open && !on_house,
                 Panel::House => on_house,
                 Panel::Social => ui.is_window_visible(super::social_panels::SOCIAL_WINDOW),
-                Panel::Options => ui.is_window_visible(super::options::OPTIONS_WINDOW),
+                Panel::Options => options,
             };
             if let Some(b) = ui.widget_mut::<PanelButton>(id) {
                 b.open = open;
