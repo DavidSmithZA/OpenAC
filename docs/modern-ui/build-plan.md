@@ -174,6 +174,21 @@ button (Options › Chat is M6); the retail chat font option (the modern
 chat uses Inter); allegiance patron and vassals greying (the client
 cannot tell them apart from the allegiance's records yet).
 
+**Live check 2026-11-20** (M1 to M3; everything else worked). Fixed on
+`feat/modern-ui-m3` (edcb5ecd, 012988ba, 5a964043):
+
+- The combat mode button is the combat toggle (Peace and combat; what is
+  wielded picks Melee, Missile or Magic), not a menu of four modes.
+- The idle chat comes up when the pointer rests on it (0.2 s).
+- Tell to the selected thing (retail's Tell to Selected, by id, so NPCs
+  answer) in the channel menu, for anything selected, not only players;
+  the name menu's Tell aims at a creature or NPC by id.
+- A popped-out tab's close button puts it back in the panel; a full tab
+  row cuts the longest names short.
+- Bar spells in Peace with a caster in hand are live: a click goes to
+  Magic and casts there. A spell that needs a target stays greyed while
+  nothing is selected.
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
