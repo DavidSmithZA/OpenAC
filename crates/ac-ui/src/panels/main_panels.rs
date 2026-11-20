@@ -153,6 +153,17 @@ impl MainPanels {
     }
 
     /// The window of main panel `panel`.
+    /// From now on `panel` shows as `window`, which keeps its own place
+    /// and size: a window standing in for the one registered (another
+    /// interface's). Showing and hiding it still closes the other panels
+    /// as before.
+    pub fn stand_in(&mut self, panel: u32, window: &str) {
+        if let Some(e) = self.entries.iter_mut().find(|e| e.panel == panel) {
+            e.window = window.to_owned();
+            e.shares_geometry = false;
+        }
+    }
+
     #[must_use]
     pub fn window_of(&self, panel: u32) -> Option<&str> {
         self.entry(panel).map(|e| e.window.as_str())
