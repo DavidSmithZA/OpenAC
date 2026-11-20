@@ -731,4 +731,40 @@ fn the_modern_chat() {
     let _ = s.ui.frame(s.now, (W, H));
     sent.push_str(&format!("{:?}", s.ui.drain()));
     assert!(sent.contains("Submit(Some(\"hello there\"))"), "{sent}");
+    // Typing @r suggests @reply first.
+    s.ui.chat_entry_key(ac_ui::input::InputAction::EnterChatMode, None);
+    s.step();
+    for c in ["@", "r"] {
+        let r: Routed<u32> = s.ui.key(0, Key::A, true, false, Modifiers::NONE, Some(c));
+        let _ = s.ui.handle(r.outputs);
+    }
+    s.step();
+    s.save("chat-commands");
+    for _ in 0..2 {
+        let r: Routed<u32> =
+            s.ui.key(0, Key::Backspace, true, false, Modifiers::NONE, None);
+        let _ = s.ui.handle(r.outputs);
+    }
+    s.step();
+    // Osk's name: the menu.
+    s.click(0, 98, 758, Modifiers::NONE);
+    s.save("chat-name");
+    s.click(0, 700, 300, Modifiers::NONE);
+    // Search, for "drudge".
+    s.ui.chat_entry_key(ac_ui::input::InputAction::EnterChatMode, None);
+    s.step();
+    s.click(0, 16 + 440 - 12, 900 - 14 - 300 + 12, Modifiers::NONE);
+    for c in "drudge".chars() {
+        let r: Routed<u32> = s.ui.key(
+            0,
+            Key::A,
+            true,
+            false,
+            Modifiers::NONE,
+            Some(c.to_string().as_str()),
+        );
+        let _ = s.ui.handle(r.outputs);
+    }
+    s.step();
+    s.save("chat-search");
 }

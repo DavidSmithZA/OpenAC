@@ -23,6 +23,7 @@ use ac_ui::{Key, UiRoot};
 
 use super::channels::{ChannelMenu, MenuFonts, TalkFacts, TalkTo};
 use super::model::ShownLine;
+use super::names::{NameAction, NameFonts, NameMenu};
 use super::panel::{ChatFonts, ChatPanel, ChatRequest};
 use crate::ui::modern::hud;
 use crate::ui::window::WindowUi;
@@ -46,12 +47,18 @@ pub struct ChatUi {
     pub field: ElementId,
     /// The channel menu.
     pub menu: ElementId,
+    /// The menu a speaker's name opens.
+    pub names: ElementId,
+    /// The search field.
+    pub search: ElementId,
     /// Who last sent the player a tell (for "/r " in the field).
     teller: Rc<RefCell<Option<String>>>,
     /// The entry as the session last told it.
     entry: ChatEntryView,
     /// The shown revision of the draft last put in the field.
     shown: Option<u64>,
+    /// The entry had the keyboard last frame.
+    had_keys: bool,
 }
 
 /// Wires the entry's field to the session's chat entry, as retail's chat
@@ -112,6 +119,11 @@ impl WindowUi {
             note: fonts.small.clone(),
         };
         let body = fonts.body.clone();
+        let search_font = fonts.small.clone();
+        let name_fonts = NameFonts {
+            label: menu_fonts.label.clone(),
+            note: fonts.small.clone(),
+        };
         let panel = match hud::mount_piece(
             &mut self.host.root,
             CHAT,
@@ -148,6 +160,23 @@ impl WindowUi {
         }));
         f.set_editable_detached(&mut e, true);
         let field = ui.add(panel, e, f);
+        let mut e = Element::at(0.0, 0.0, 200.0, 22.0)
+            .with_visible(false)
+            .with_anchors(AnchorEdges::NONE);
+        Field::configure(&mut e);
+        let mut f = Field::default();
+        f.font = search_font;
+        f.one_line = true;
+        f.selectable = true;
+        f.padding = 4.0;
+        f.record_history = false;
+        f.clear_on_submit = false;
+        f.stay_focused_after_submit = true;
+        f.text_color = Horizon::BRONZE.palette.text;
+        f.background_color = Color::TRANSPARENT;
+        f.selection_color = hex(0xE0_B068, 0.35);
+        f.set_editable_detached(&mut e, true);
+        let search = ui.add(panel, e, f);
         let root = ui.root();
         let menu = ui.add(
             root,
@@ -155,6 +184,13 @@ impl WindowUi {
                 .with_visible(false)
                 .with_anchors(AnchorEdges::NONE),
             ChannelMenu::new(Horizon::BRONZE, menu_fonts),
+        );
+        let names = ui.add(
+            root,
+            Element::at(0.0, 0.0, super::names::WIDTH, 100.0)
+                .with_visible(false)
+                .with_anchors(AnchorEdges::NONE),
+            NameMenu::new(Horizon::BRONZE, name_fonts),
         );
         if let Err(e) = self
             .host
@@ -169,9 +205,12 @@ impl WindowUi {
             panel,
             field,
             menu,
+            names,
+            search,
             teller,
             entry: ChatEntryView::default(),
             shown: None,
+            had_keys: false,
         });
         modern.replace(crate::ui::window::CHAT_WINDOW);
     }
@@ -312,20 +351,58 @@ impl WindowUi {
     /// Each frame: the field follows the panel, and what the panel and its
     /// menu asked for is done.
     pub(in crate::ui) fn tick_modern_chat(&mut self) {
-        let Some((panel, field, menu)) = self
+        let Some((panel, field, menu, names)) = self
             .modern
             .as_ref()
             .and_then(|m| m.chat.as_ref())
-            .map(|c| (c.panel, c.field, c.menu))
+            .map(|c| (c.panel, c.field, c.menu, c.names))
         else {
             return;
         };
+        self.follow_modern_chat_search();
+        // Escape gave the keyboard up: the entry's menus close with it.
+        let focus = self.host.root.keyboard_focus();
+        if let Some(chat) = self.modern.as_mut().and_then(|m| m.chat.as_mut()) {
+            let had = std::mem::replace(&mut chat.had_keys, focus == Some(field));
+            if had && focus.is_none() {
+                for popup in [menu, names] {
+                    let ui = &mut self.host.root;
+                    if ui.element(popup).is_some_and(|e| e.visible) {
+                        ui.clear_active_popup(popup);
+                        ui.set_visible(popup, false);
+                    }
+                }
+            }
+        }
         let stay = self.context.stay_in_chat_mode;
+        let (channel, teller, target) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.chat.as_ref())
+            .map(|c| {
+                (
+                    c.entry.channel,
+                    c.entry.last_incoming_tell_sender.clone(),
+                    c.entry.tell_target.clone(),
+                )
+            })
+            .unwrap_or_default();
+        let search = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.chat.as_ref())
+            .map(|c| c.search);
         let ui = &mut self.host.root;
-        let typing = ui.keyboard_focus() == Some(field);
-        let empty = ui
+        let in_search = search.is_some() && ui.keyboard_focus() == search;
+        let typing = ui.keyboard_focus() == Some(field) || in_search;
+        let typed = ui
             .widget::<Field>(field)
-            .is_none_or(|f| f.text().is_empty());
+            .map(Field::text)
+            .unwrap_or_default();
+        let empty = typed.is_empty();
+        let suggestions = super::commands::suggestions(&typed, 5);
+        let going =
+            super::commands::going_to(&typed, channel, teller.as_deref(), target.as_deref());
         if let Some(f) = ui.widget_mut::<Field>(field) {
             f.stay_focused_after_submit = stay;
         }
@@ -333,6 +410,9 @@ impl WindowUi {
             Some(p) => {
                 p.typing = typing;
                 p.entry_empty = empty;
+                p.suggestions = suggestions;
+                p.going_to = going;
+                p.last_teller = teller;
                 (
                     p.active || typing,
                     p.field_rect(),
@@ -357,10 +437,22 @@ impl WindowUi {
             self.aim_modern_chat(to);
             self.focus_modern_chat(None);
         }
+        let named = self
+            .host
+            .root
+            .widget_mut::<NameMenu>(names)
+            .and_then(|m| m.chosen.take().map(|a| (a, m.who.clone())));
+        if let Some((action, (who, guid, _))) = named {
+            self.name_chosen(action, &who, guid);
+        }
         for request in requests {
             match request {
                 ChatRequest::Focus => {
                     self.focus_modern_chat(None);
+                }
+                ChatRequest::Search(open) => self.modern_chat_search(open),
+                ChatRequest::Complete(verb) => {
+                    self.start_modern_chat_line(&format!("{verb} "));
                 }
                 ChatRequest::Tab(tab) => self.modern_chat_tab_picked(tab),
                 ChatRequest::Channels((x, y)) => {
@@ -374,11 +466,128 @@ impl WindowUi {
                     let _ = x;
                     ChannelMenu::open(ui, menu, (px, py + y - 6.0));
                 }
-                ChatRequest::Name(who, _, _) => {
-                    self.start_modern_chat_line(&format!("@tell {who}, "));
+                ChatRequest::Name(who, guid, (x, y)) => {
+                    let nearby = guid != 0 && self.facts.objects.get(guid).is_some();
+                    let ui = &mut self.host.root;
+                    let place = ui
+                        .widget::<ChatPanel>(panel)
+                        .and_then(|p| p.tabs.get(p.current))
+                        .map(|t| t.name.clone())
+                        .unwrap_or_default();
+                    let (px, py) = ui.screen_position(panel);
+                    if let Some(m) = ui.widget_mut::<NameMenu>(names) {
+                        m.fill(&who, guid, &place, nearby);
+                    }
+                    NameMenu::open(ui, names, (px + x, py + y - 4.0));
                 }
             }
         }
+    }
+
+    /// Search opens (its field takes the keyboard) or closes.
+    fn modern_chat_search(&mut self, open: bool) {
+        let Some((panel, search)) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.chat.as_ref())
+            .map(|c| (c.panel, c.search))
+        else {
+            return;
+        };
+        let ui = &mut self.host.root;
+        if let Some(p) = ui.widget_mut::<ChatPanel>(panel) {
+            p.searching = open;
+            p.query.clear();
+            p.match_at = 0;
+            if open {
+                p.wake();
+            } else {
+                p.follow();
+            }
+        }
+        if let Some(f) = ui.widget_mut::<Field>(search) {
+            f.set_text("");
+        }
+        ui.set_visible(search, open);
+        ui.set_keyboard_focus(open.then_some(search));
+    }
+
+    /// The search field follows the panel; what is typed in it is searched
+    /// for, the newest match brought into view as it changes.
+    fn follow_modern_chat_search(&mut self) {
+        let Some((panel, search)) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.chat.as_ref())
+            .map(|c| (c.panel, c.search))
+        else {
+            return;
+        };
+        let ui = &mut self.host.root;
+        let typed = ui
+            .widget::<Field>(search)
+            .map(Field::text)
+            .unwrap_or_default();
+        let focused = ui.keyboard_focus() == Some(search);
+        let Some(p) = ui.widget_mut::<ChatPanel>(panel) else {
+            return;
+        };
+        if p.searching && !p.active {
+            p.searching = false;
+        }
+        let (searching, rect) = (p.searching, p.search_field_rect());
+        if searching && p.query != typed {
+            p.query = typed;
+            p.match_at = 0;
+            p.step_match(false);
+        }
+        if focused {
+            p.typing = true;
+        }
+        if let Some(e) = ui.element_mut(search) {
+            e.left = rect.0;
+            e.top = rect.1;
+            e.width = rect.2;
+            e.height = rect.3;
+        }
+        if ui.element(search).is_some_and(|e| e.visible) != searching {
+            ui.set_visible(search, searching);
+        }
+    }
+
+    /// A name menu row chosen for `who` (object `guid`).
+    fn name_chosen(&mut self, action: NameAction, who: &str, guid: u32) {
+        use ac_runtime::gameplay::{FellowshipCommand, GameplayCommand};
+        use ac_runtime::inventory::ObjectRef;
+        use ac_runtime::session::SessionCommand;
+        let command = match action {
+            NameAction::Tell => {
+                self.start_modern_chat_line(&format!("@tell {who}, "));
+                return;
+            }
+            NameAction::Copy => {
+                if let Err(Some(e)) = self.clipboard.set_text(who) {
+                    self.notices.push(format!("ui: copying the name: {e}"));
+                }
+                return;
+            }
+            NameAction::Select => {
+                SessionCommand::Gameplay(GameplayCommand::Select(ObjectRef::Guid(guid)))
+            }
+            NameAction::Invite => SessionCommand::Gameplay(GameplayCommand::Fellowship(
+                FellowshipCommand::Recruit(ObjectRef::Guid(guid)),
+            )),
+            NameAction::AddFriend => SessionCommand::AddFriend(who.to_owned()),
+            NameAction::Squelch => SessionCommand::Squelch {
+                add: true,
+                name: who.to_owned(),
+                account: false,
+            },
+        };
+        ac_ui::panels::items::emit(
+            &mut self.host.root,
+            ac_ui::panels::PanelOutput::Session(command),
+        );
     }
 
     /// Where the entry talks now.

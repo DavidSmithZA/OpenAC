@@ -3,6 +3,8 @@
 //! for retail's chat window and its four floating chat windows.
 
 pub mod channels;
+pub mod commands;
 pub mod model;
+pub mod names;
 pub mod panel;
 pub mod run;

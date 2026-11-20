@@ -19,6 +19,7 @@ use ac_ui::{UiFont, UiRoot};
 use ac_runtime::communication::ChatChannelKind;
 
 use super::channels::{channel_color, channel_name, channel_prompt};
+use super::commands::Command;
 use super::model::{ChatLog, ChatTab, LineKind, ShownLine};
 
 /// The panel's width.
@@ -107,6 +108,10 @@ pub enum ChatRequest {
     Name(String, u32, (f32, f32)),
     /// The channel button was pressed: its top left on the panel.
     Channels((f32, f32)),
+    /// A suggested command was picked (a click, Tab).
+    Complete(&'static str),
+    /// Search opens (true) or closes.
+    Search(bool),
 }
 
 /// The chat panel.
@@ -155,6 +160,23 @@ pub struct ChatPanel {
     pub entry_empty: bool,
     /// The channel button, when shown.
     button: Option<Spot>,
+    /// The commands suggested for what is being typed.
+    pub suggestions: Vec<Command>,
+    /// The last teller (a reply suggestion names them).
+    pub last_teller: Option<String>,
+    /// Where the typed command sends the line, when not the channel.
+    pub going_to: Option<String>,
+    /// Where each suggestion was drawn.
+    suggestion_spots: Vec<Spot>,
+    /// Searching: the search row stands in for the tabs.
+    pub searching: bool,
+    /// What is searched for (the window copies it from its field).
+    pub query: String,
+    /// The match looked at, counted from the newest (0: the newest).
+    pub match_at: usize,
+    /// The search row's buttons: previous, next, close; and the search
+    /// button on the tab row.
+    search_spots: [Option<Spot>; 4],
     /// What it asked for since the window last looked.
     pub requests: Vec<ChatRequest>,
 }
@@ -187,6 +209,14 @@ impl ChatPanel {
             tell_target: None,
             entry_empty: true,
             button: None,
+            suggestions: Vec::new(),
+            last_teller: None,
+            going_to: None,
+            suggestion_spots: Vec::new(),
+            searching: false,
+            query: String::new(),
+            match_at: 0,
+            search_spots: [None; 4],
             requests: Vec::new(),
         }
     }
@@ -194,6 +224,9 @@ impl ChatPanel {
     /// The channel button's words.
     #[must_use]
     pub fn channel_words(&self) -> String {
+        if let Some(to) = &self.going_to {
+            return to.clone();
+        }
         match (&self.tell_target, self.channel) {
             (Some(who), ChatChannelKind::Tell) => format!("Tell {who}"),
             _ => channel_name(self.channel).to_owned(),
@@ -370,6 +403,57 @@ impl ChatPanel {
         lines.iter().map(|l| self.rows_of(l).len()).sum()
     }
 
+    /// The shown tab's lines that hold the query, newest first.
+    #[must_use]
+    pub fn matches(&self) -> Vec<u64> {
+        let q = self.query.trim().to_lowercase();
+        if !self.searching || q.is_empty() {
+            return Vec::new();
+        }
+        let Some(tab) = self.tabs.get(self.current) else {
+            return Vec::new();
+        };
+        self.log
+            .lines
+            .iter()
+            .rev()
+            .filter(|l| tab.shows(l) && line_holds(l, &q))
+            .map(|l| l.sequence)
+            .collect()
+    }
+
+    /// Steps to the older (`older`) or newer match and scrolls it into
+    /// view.
+    pub fn step_match(&mut self, older: bool) {
+        let found = self.matches();
+        if found.is_empty() {
+            return;
+        }
+        self.match_at = if older {
+            (self.match_at + 1) % found.len()
+        } else {
+            (self.match_at + found.len() - 1) % found.len()
+        };
+        self.show_line(found[self.match_at]);
+    }
+
+    /// Scrolls so line `sequence` sits in the middle of the view.
+    fn show_line(&mut self, sequence: u64) {
+        let tab = self.tabs.get(self.current).cloned();
+        let newer: Vec<ShownLine> = self
+            .log
+            .lines
+            .iter()
+            .rev()
+            .take_while(|l| l.sequence != sequence)
+            .filter(|l| tab.as_ref().is_some_and(|t| t.shows(l)))
+            .cloned()
+            .collect();
+        let below: usize = newer.iter().map(|l| self.rows_of(l).len()).sum();
+        let most = self.all_rows().saturating_sub(self.room());
+        self.scroll = below.saturating_sub(self.room() / 2).min(most);
+    }
+
     fn room(&self) -> usize {
         ((BOX - PAD.0 - PAD.2) / ROW).floor() as usize
     }
@@ -445,6 +529,13 @@ impl Widget for ChatPanel {
     }
 
     fn on_event(&mut self, _ui: &mut UiRoot, me: ElementId, e: &UiEvent) -> bool {
+        if e.kind == kind::KEY_DOWN
+            && e.key == ac_ui::Key::Tab
+            && let Some(first) = self.suggestions.first()
+        {
+            self.requests.push(ChatRequest::Complete(first.verb));
+            return true;
+        }
         if e.target != Some(me) {
             return false;
         }
@@ -473,7 +564,22 @@ impl Widget for ChatPanel {
                 true
             }
             kind::CLICK => {
-                if Self::inside(self.enter_button, x, y) {
+                if let Some(i) = (0..4).find(|&i| Self::inside(self.search_spots[i], x, y)) {
+                    match i {
+                        0 => self.step_match(true),
+                        1 => self.step_match(false),
+                        2 => self.requests.push(ChatRequest::Search(false)),
+                        _ => self.requests.push(ChatRequest::Search(true)),
+                    }
+                } else if let Some(i) = self
+                    .suggestion_spots
+                    .iter()
+                    .position(|r| Self::inside(Some(*r), x, y))
+                {
+                    if let Some(cmd) = self.suggestions.get(i) {
+                        self.requests.push(ChatRequest::Complete(cmd.verb));
+                    }
+                } else if Self::inside(self.enter_button, x, y) {
                     self.wake();
                     self.requests.push(ChatRequest::Focus);
                 } else if let Some(b) = self.button.filter(|_| Self::inside(self.button, x, y)) {
@@ -526,11 +632,17 @@ impl Widget for ChatPanel {
         self.new_button = None;
         self.enter_button = None;
         self.button = None;
+        self.suggestion_spots.clear();
+        self.search_spots = [None; 4];
         self.tab_spots.clear();
         let box_h = if self.active { BOX } else { IDLE_BOX };
         let box_top = BOX_TOP + BOX - box_h;
         if self.active {
-            self.draw_tabs(rc);
+            if self.searching {
+                self.draw_search_row(rc);
+            } else {
+                self.draw_tabs(rc);
+            }
             // The transcript's glass.
             let round = CornerRadii::all(self.theme.metrics.window_radius);
             rc.fill_rounded_rect(0.0, box_top, WIDTH, box_h, round, hex(0, 0.45));
@@ -565,7 +677,12 @@ impl Widget for ChatPanel {
             };
             let y = top + i as f32 * ROW;
             let alpha = if self.active {
-                1.0
+                let q = self.query.trim().to_lowercase();
+                if self.searching && !q.is_empty() && !line_holds(line, &q) {
+                    0.38
+                } else {
+                    1.0
+                }
             } else {
                 IDLE_OPACITY
                     .get(i - idle_from.min(i))
@@ -609,6 +726,9 @@ impl Widget for ChatPanel {
             }
             let _ = more;
             self.draw_entry(rc);
+            if self.typing && !self.suggestions.is_empty() {
+                self.draw_suggestions(rc);
+            }
         } else if let Some(f) = self.fonts.small.clone() {
             // "Enter to chat" under the lines.
             let w = text::measure(&f, ENTER_WORDS, 0.0) + 16.0;
@@ -701,6 +821,24 @@ impl ChatPanel {
                 color
             };
             let ty = baseline(y, f);
+            let q = self.query.trim().to_lowercase();
+            if self.searching && !q.is_empty() {
+                let low = row.text.to_lowercase();
+                if low.len() == row.text.len() {
+                    for (at, _) in low.match_indices(&q) {
+                        let left = x + row.x + text::measure(f, &row.text[..at], 0.0);
+                        let w = text::measure(f, &row.text[at..at + q.len()], 0.0);
+                        rc.fill_rounded_rect(
+                            left - 1.0,
+                            y + 1.0,
+                            w + 2.0,
+                            ROW - 2.0,
+                            CornerRadii::all(2.0),
+                            Color { a: 0.55, ..GOLD },
+                        );
+                    }
+                }
+            }
             text::draw(
                 rc,
                 f,
@@ -784,6 +922,142 @@ impl ChatPanel {
         }
     }
 
+    fn draw_suggestions(&mut self, rc: &mut RenderContext<'_>) {
+        let (Some(bold), Some(small)) = (self.fonts.name.clone(), self.fonts.small.clone()) else {
+            return;
+        };
+        const ROW_H: f32 = 30.0;
+        const FOOT: f32 = 24.0;
+        let h = 12.0 + self.suggestions.len() as f32 * ROW_H + FOOT;
+        let top = ENTRY_TOP - 6.0 - h;
+        rc.begin_overlay();
+        let round = CornerRadii::all(self.theme.metrics.window_radius);
+        rc.soft_shadow(
+            0.0,
+            top,
+            WIDTH,
+            h,
+            6.0,
+            14.0,
+            34.0,
+            self.theme.palette.shadow,
+        );
+        rc.fill_rounded_rect(0.0, top, WIDTH, h, round, hex(0x18_130E, 0.97));
+        rc.stroke_rounded_rect(0.0, top, WIDTH, h, round, hex(0xC9_A062, 0.8), 1.0);
+        for (i, cmd) in self.suggestions.clone().iter().enumerate() {
+            let y = top + 6.0 + i as f32 * ROW_H;
+            if i == 0 {
+                rc.fill_rounded_rect(
+                    6.0,
+                    y,
+                    WIDTH - 12.0,
+                    ROW_H,
+                    CornerRadii::all(3.0),
+                    hex(0xE0_B068, 0.16),
+                );
+            }
+            let ty = (y + (ROW_H - bold.line_height) * 0.5).round();
+            text::draw(rc, &bold, cmd.verb, 14.0, ty, TextStyle::plain(GOLD));
+            let mut x = 14.0 + text::measure(&bold, cmd.verb, 0.0) + 8.0;
+            let sty = (y + (ROW_H - small.line_height) * 0.5).round();
+            if !cmd.alias.is_empty() {
+                let also = format!("also {}", cmd.alias);
+                text::draw(rc, &small, &also, x, sty, TextStyle::plain(TIME_COLOR));
+                x += text::measure(&small, &also, 0.0) + 12.0;
+            }
+            let target = cmd
+                .reply
+                .then(|| self.last_teller.clone())
+                .flatten()
+                .unwrap_or_default();
+            let tw = text::measure(&small, &target, 0.0);
+            if !target.is_empty() {
+                text::draw(
+                    rc,
+                    &small,
+                    &target,
+                    WIDTH - 14.0 - tw,
+                    sty,
+                    TextStyle::plain(LineKind::Tell.color()),
+                );
+            }
+            let room = WIDTH - 14.0 - tw - 12.0 - x;
+            let about = crate::ui::modern::hud::target::fit(&small, cmd.about, room.max(0.0));
+            text::draw(rc, &small, &about, x, sty, TextStyle::plain(MUTED));
+            self.suggestion_spots.push((6.0, y, WIDTH - 12.0, ROW_H));
+        }
+        let fy = top + h - FOOT + ((FOOT - small.line_height) * 0.5).round() - 3.0;
+        text::draw(
+            rc,
+            &small,
+            "Tab completes \u{b7} click to pick \u{b7} @help lists every command",
+            14.0,
+            fy,
+            TextStyle::plain(TIME_COLOR),
+        );
+        rc.end_overlay();
+    }
+
+    /// Where the search field goes on the panel: left, top, width, height.
+    #[must_use]
+    pub fn search_field_rect(&self) -> (f32, f32, f32, f32) {
+        let count_w = self
+            .fonts
+            .small
+            .as_deref()
+            .map_or(110.0, |f| text::measure(f, &self.count_words(), 0.0));
+        (
+            26.0,
+            1.0,
+            (WIDTH - 26.0 - count_w - 8.0 - 3.0 * 22.0 - 12.0).max(60.0),
+            TABS - 2.0,
+        )
+    }
+
+    fn count_words(&self) -> String {
+        let found = self.matches().len();
+        let tab = self.tabs.get(self.current).map_or("", |t| t.name.as_str());
+        match found {
+            0 if self.query.trim().is_empty() => format!("in {tab}"),
+            0 => format!("none in {tab}"),
+            n => format!("{} of {n} in {tab}", self.match_at.min(n - 1) + 1),
+        }
+    }
+
+    fn draw_search_row(&mut self, rc: &mut RenderContext<'_>) {
+        let round = CornerRadii::all(4.0);
+        rc.fill_rounded_rect(0.0, 0.0, WIDTH, TABS, round, hex(0, 0.6));
+        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, TABS, round, hex(0xC9_A062, 0.8), 1.0);
+        magnifier(rc, 8.0, (TABS - 12.0) * 0.5, GOLD);
+        let mut x = WIDTH - 4.0 - 3.0 * 22.0;
+        if let Some(f) = self.fonts.small.clone() {
+            let words = self.count_words();
+            let w = text::measure(&f, &words, 0.0);
+            let ty = ((TABS - f.line_height) * 0.5).round();
+            text::draw(rc, &f, &words, x - 8.0 - w, ty, TextStyle::plain(MUTED));
+        }
+        let mid = TABS * 0.5;
+        for i in 0..3 {
+            let cx = x + 11.0;
+            match i {
+                0 => {
+                    rc.smooth_line(cx - 4.0, mid + 2.0, cx, mid - 2.0, TEXT, 1.6);
+                    rc.smooth_line(cx, mid - 2.0, cx + 4.0, mid + 2.0, TEXT, 1.6);
+                }
+                1 => {
+                    rc.smooth_line(cx - 4.0, mid - 2.0, cx, mid + 2.0, TEXT, 1.6);
+                    rc.smooth_line(cx, mid + 2.0, cx + 4.0, mid - 2.0, TEXT, 1.6);
+                }
+                _ => {
+                    rc.smooth_line(cx - 4.0, mid - 4.0, cx + 4.0, mid + 4.0, TEXT, 1.6);
+                    rc.smooth_line(cx + 4.0, mid - 4.0, cx - 4.0, mid + 4.0, TEXT, 1.6);
+                }
+            }
+            self.search_spots[i] = Some((x, 1.0, 22.0, TABS - 2.0));
+            x += 22.0;
+        }
+    }
+
     fn draw_tabs(&mut self, rc: &mut RenderContext<'_>) {
         let (Some(f), Some(badge)) = (self.fonts.tab.clone(), self.fonts.tag.clone()) else {
             return;
@@ -847,6 +1121,16 @@ impl ChatPanel {
             self.tab_spots.push((x, w));
             x += w + TAB_GAP;
         }
+        // Search, at the row's right end.
+        let sx = WIDTH - TABS;
+        rc.fill_rounded_rect(sx, 0.0, TABS, TABS, CornerRadii::all(3.0), hex(0, 0.3));
+        magnifier(
+            rc,
+            sx + (TABS - 12.0) * 0.5,
+            (TABS - 12.0) * 0.5,
+            hex(0xE9_D3AE, 1.0),
+        );
+        self.search_spots[3] = Some((sx, 0.0, TABS, TABS));
     }
 
     fn draw_reading_back(&mut self, rc: &mut RenderContext<'_>, box_top: f32, box_h: f32) {
@@ -908,6 +1192,23 @@ impl ChatPanel {
         rc.smooth_line(ax + 4.0, ay + 1.0, ax, ay + 5.0, INK, 2.0);
         self.new_button = Some((bx, by, bw, 26.0));
     }
+}
+
+/// `line` holds `query` (lower case) in its words or its speaker's name.
+fn line_holds(line: &ShownLine, query: &str) -> bool {
+    line.words.to_lowercase().contains(query)
+        || line
+            .who
+            .as_ref()
+            .is_some_and(|w| w.to_lowercase().contains(query))
+}
+
+/// A magnifying glass in a 12-unit box.
+fn magnifier(rc: &mut RenderContext<'_>, x: f32, y: f32, color: Color) {
+    let r = 4.2;
+    let (cx, cy) = (x + 5.0, y + 5.0);
+    rc.stroke_arc(cx, cy, r, 0.0, std::f32::consts::TAU, color, 1.5);
+    rc.smooth_line(cx + 3.2, cy + 3.2, x + 11.5, y + 11.5, color, 1.6);
 }
 
 /// Where text in `font` sits in a row starting at `y`.
