@@ -228,6 +228,12 @@ impl WindowUi {
         Some(out)
     }
 
+    /// Edit layout opens (Options' Shortcut bars button). False without
+    /// the bars.
+    pub(in crate::ui) fn modern_open_bar_edit(&mut self) -> bool {
+        self.with_bars(|ui, b| ui.enter_bar_edit(b)).is_some()
+    }
+
     /// The bars: the edit layer's pieces, hidden; the bars themselves are
     /// built once the character's layout is known. They stand in for the
     /// retail toolbar and the combat window's spell bars.
@@ -401,7 +407,11 @@ impl WindowUi {
     fn follow_spell_drag(&mut self, b: &mut BarsUi) {
         use ac_ui::panels::magic::{SpellFavoritePayload, SpellbookShortcutPayload};
         const FADED: f32 = 0.12;
-        let book = crate::ui::window::SPELLBOOK_WINDOW;
+        let book = if self.modern.as_ref().is_some_and(|m| m.spellbook.is_some()) {
+            crate::ui::modern::magic::spellbook_run::SPELLBOOK
+        } else {
+            crate::ui::window::SPELLBOOK_WINDOW
+        };
         let ui = &mut self.host.root;
         let carrying = ui.drag_payload().is_some_and(|p| {
             p.get::<SpellbookShortcutPayload>().is_some()
@@ -1075,36 +1085,130 @@ impl WindowUi {
                 }
             }
             SlotContent::Spell { id, .. } => {
-                if target_mode {
-                    return;
-                }
-                if self.facts.state.combat_mode == CombatMode::MAGIC {
-                    cast(&mut self.host.root, id);
-                } else if self.peace_with_caster() {
-                    let selected = self.player_view.and_then(|v| v.selected);
-                    let player = self.facts.state.player;
-                    let gate = self
-                        .facts
-                        .numbers()
-                        .and_then(|n| n.spellbook())
-                        .map(|bk| cast_gate(&self.facts.objects, player, bk, id, selected));
-                    if matches!(
-                        gate,
-                        Some(SpellCastGate::NoTargetSelected | SpellCastGate::TargetIncompatible)
-                    ) {
-                        return;
-                    }
-                    // The runtime goes to Magic and casts once the stance
-                    // is taken up.
-                    emit(
-                        &mut self.host.root,
-                        PanelOutput::Session(SessionCommand::Gameplay(
-                            GameplayCommand::CastInMagic { spell: id },
-                        )),
-                    );
+                if !target_mode {
+                    self.modern_cast(id);
                 }
             }
         }
+    }
+
+    /// Casts `spell` as a bar slot does: in Magic at once; in Peace with a
+    /// caster held, the player goes to Magic and it is cast once there
+    /// (not a spell that needs a target with no fit target selected);
+    /// otherwise nothing. False when nothing was sent.
+    pub(in crate::ui) fn modern_cast(&mut self, id: u32) -> bool {
+        if self.facts.state.combat_mode == CombatMode::MAGIC {
+            cast(&mut self.host.root, id);
+            return true;
+        }
+        if !self.peace_with_caster() {
+            return false;
+        }
+        let selected = self.player_view.and_then(|v| v.selected);
+        let player = self.facts.state.player;
+        let gate = self
+            .facts
+            .numbers()
+            .and_then(|n| n.spellbook())
+            .map(|bk| cast_gate(&self.facts.objects, player, bk, id, selected));
+        if matches!(
+            gate,
+            Some(SpellCastGate::NoTargetSelected | SpellCastGate::TargetIncompatible)
+        ) {
+            return false;
+        }
+        // The runtime goes to Magic and casts once the stance is taken up.
+        emit(
+            &mut self.host.root,
+            PanelOutput::Session(SessionCommand::Gameplay(GameplayCommand::CastInMagic {
+                spell: id,
+            })),
+        );
+        true
+    }
+
+    /// Whether a spell can be cast from a window now: in Magic, or in Peace
+    /// with a caster held.
+    pub(in crate::ui) fn modern_can_cast(&self) -> bool {
+        self.facts.state.combat_mode == CombatMode::MAGIC || self.peace_with_caster()
+    }
+
+    /// Every slot of the player's bars holding `spell`: where ("Spells bar,
+    /// slot 1") and its key ("Magic: 1"; "no key").
+    pub(in crate::ui) fn modern_bar_spots(&self, spell: u32) -> Vec<(String, String)> {
+        let Some(layout) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.bars.as_ref())
+            .and_then(|b| b.layout.as_ref())
+        else {
+            return Vec::new();
+        };
+        let mut out = Vec::new();
+        for bar in &layout.bars {
+            for (i, slot) in bar.slots.iter().enumerate() {
+                if !matches!(&slot.content, Some(SlotContent::Spell { id, .. }) if *id == spell) {
+                    continue;
+                }
+                let key = match (slot.key(KeyMode::Magic), slot.key(KeyMode::Normal)) {
+                    (Some(k), _) => format!("Magic: {}", keys::words(k)),
+                    (None, Some(k)) => keys::words(k),
+                    (None, None) => "no key".to_owned(),
+                };
+                out.push((format!("{} bar, slot {}", bar.name, i + 1), key));
+            }
+        }
+        out
+    }
+
+    /// The first bar each spell on the bars sits on, by name.
+    pub(in crate::ui) fn modern_spell_bars(&self) -> std::collections::HashMap<u32, String> {
+        let mut out = std::collections::HashMap::new();
+        let Some(layout) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.bars.as_ref())
+            .and_then(|b| b.layout.as_ref())
+        else {
+            return out;
+        };
+        for bar in &layout.bars {
+            for slot in &bar.slots {
+                if let Some(SlotContent::Spell { id, .. }) = &slot.content {
+                    out.entry(*id).or_insert_with(|| bar.name.clone());
+                }
+            }
+        }
+        out
+    }
+
+    /// Where `spell` sits on the player's bars, in a few words ("On Buffs
+    /// bar, Shift+4"; "Not on a bar").
+    pub(in crate::ui) fn modern_bar_spot(&self, spell: u32) -> String {
+        let Some(layout) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.bars.as_ref())
+            .and_then(|b| b.layout.as_ref())
+        else {
+            return "Not on a bar".to_owned();
+        };
+        for bar in &layout.bars {
+            for slot in &bar.slots {
+                if let Some(SlotContent::Spell { id, .. }) = &slot.content
+                    && *id == spell
+                {
+                    let key = slot
+                        .key(KeyMode::Magic)
+                        .or_else(|| slot.key(KeyMode::Normal));
+                    return match key {
+                        Some(k) => format!("On {} bar, {}", bar.name, keys::words(k)),
+                        None => format!("On {} bar", bar.name),
+                    };
+                }
+            }
+        }
+        "Not on a bar".to_owned()
     }
 
     /// In Peace, holding a caster: the combat toggle would go to Magic.

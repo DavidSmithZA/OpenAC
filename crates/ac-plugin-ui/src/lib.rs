@@ -40,11 +40,12 @@ pub use images::{DecodedImage, ImageBudget};
 pub use markup::{MarkupDocument, MarkupError, parse};
 pub use model::{
     ActionValue, CanvasAnchor, CanvasDescriptor, CanvasPlace, CanvasView, ClientWindow,
-    ClientWindowAction, Color8, DialogView, DrawingScale, GroundShape, GroundShapeKind,
-    ImageSource, ImageView, MapPoint, MarkerAnchor, PaintCmd, PaintRect, PanelDescriptor,
-    PanelView, PluginIcon, PointerEvent, PointerKind, ProjectileSample, UiChange, UiEvent, UiInput,
-    UiOwner, WindowIcon, WorldDrawing, WorldDrawingEntry, WorldIcon, WorldIconEntry, WorldLabel,
-    WorldLine, WorldTriangle, canvas_origin, window_name,
+    ClientWindowAction, Color8, DialogView, DrawingScale, FootButton, GroundShape, GroundShapeKind,
+    ImageSource, ImageView, ItemMenuEntry, ItemNote, ItemNoteEntry, ItemWindow, MapPoint,
+    MarkerAnchor, NoteTone, PaintCmd, PaintRect, PanelDescriptor, PanelView, PluginIcon,
+    PointerEvent, PointerKind, ProjectileSample, UiChange, UiEvent, UiInput, UiOwner, WindowFoot,
+    WindowFootEntry, WindowIcon, WorldDrawing, WorldDrawingEntry, WorldIcon, WorldIconEntry,
+    WorldLabel, WorldLine, WorldTriangle, canvas_origin, window_name,
 };
 pub use state::{
     DEFAULT_DIALOG_BUTTONS, MAXIMUM_CANVASES, MAXIMUM_DIALOG_BUTTONS, MAXIMUM_DRAWING_COMMANDS,

@@ -150,7 +150,9 @@ pub const VITAL_ROWS: [(&str, u32, u32); 3] = [
     ("Mana", 0x0600_4C3D, 5),
 ];
 
-fn attribute_description(id: u32) -> Option<&'static str> {
+/// What an attribute is, in the game's words.
+#[must_use]
+pub fn attribute_description(id: u32) -> Option<&'static str> {
     Some(match id {
         1 => "Measures your character's muscular power.",
         2 => "Measures how healthy your character is.",
@@ -162,7 +164,9 @@ fn attribute_description(id: u32) -> Option<&'static str> {
     })
 }
 
-fn vital_description(id: u32) -> Option<&'static str> {
+/// What a vital is, in the game's words (its attribute first).
+#[must_use]
+pub fn vital_description(id: u32) -> Option<&'static str> {
     Some(match id {
         1 => "(Endurance/2)\nIf you run out of health, you will die!",
         3 => "(Endurance)\nAffects your actions and movement.",
@@ -232,6 +236,9 @@ pub struct CharacterSkill {
     pub raise_cost: u64,
     /// Experience to raise by ten.
     pub raise10_cost: u64,
+    /// The most points the unassigned experience raises it by, and what
+    /// they cost.
+    pub max_raise: (u32, u64),
     /// What vitae takes off (zero or negative).
     pub vitae_modifier: i32,
     /// Hover text (the formula and the description).
@@ -289,6 +296,9 @@ pub struct CharacterSheet {
     pub attribute_raise_costs: [u64; 9],
     /// By ten.
     pub attribute_raise10_costs: [u64; 9],
+    /// The most points the unassigned experience raises each row by, and
+    /// what they cost.
+    pub attribute_max_raises: [(u32, u64); 9],
     /// The skills.
     pub skills: Vec<CharacterSkill>,
 }
@@ -335,6 +345,32 @@ pub fn raise_cost_from_curve(curve: &[u32], ranks: u32, spent: u32, amount: u32)
     }
     let target = (u64::from(ranks) + u64::from(amount)).min(max_index);
     u64::from(curve[target as usize]).saturating_sub(u64::from(spent))
+}
+
+/// The most ranks `budget` experience raises a stat by from `ranks` with
+/// `spent` already spent, and what they cost: (0, 0) when it cannot buy
+/// one or the stat is at the top.
+#[must_use]
+pub fn max_raise(curve: &[u32], ranks: u32, spent: u32, budget: u64) -> (u32, u64) {
+    let room = (curve.len() as u64)
+        .saturating_sub(1)
+        .saturating_sub(u64::from(ranks));
+    let room = u32::try_from(room).unwrap_or(u32::MAX);
+    let cost = |n| raise_cost_from_curve(curve, ranks, spent, n);
+    if room == 0 || cost(1) == 0 || cost(1) > budget {
+        return (0, 0);
+    }
+    // The curve only rises, so the costs do: the last affordable point.
+    let (mut low, mut high) = (1, room);
+    while low < high {
+        let mid = low + (high - low).div_ceil(2);
+        if cost(mid) <= budget {
+            low = mid;
+        } else {
+            high = mid - 1;
+        }
+    }
+    (low, cost(low))
 }
 
 /// Experience to the next level, the meter's fill, and whether there is no
@@ -481,6 +517,22 @@ impl CharacterSheet {
         };
         let vitals = VitalKind::ALL;
         let attr_current = |k| p.get_attribute(k).map_or(0, |a| sat(a.current()));
+        let attr_max = || {
+            let mut out = [(0, 0); 9];
+            if let Some(x) = src.experience {
+                for (i, k) in ROW_ATTRIBUTES.iter().enumerate() {
+                    if let Some(a) = p.get_attribute(*k) {
+                        out[i] = max_raise(&x.attributes, a.ranks, a.xp, unassigned_xp);
+                    }
+                }
+                for (i, k) in vitals.iter().enumerate() {
+                    if let Some(v) = p.get(*k) {
+                        out[6 + i] = max_raise(&x.vitals, v.ranks, v.xp, unassigned_xp);
+                    }
+                }
+            }
+            out
+        };
         let attr_raise = |amount| {
             let mut costs = [0; 9];
             if let Some(x) = src.experience {
@@ -535,6 +587,7 @@ impl CharacterSheet {
                 specialized_cost: base.map_or(0, |b| b.specialized_cost),
                 raise_cost: cost(1),
                 raise10_cost: cost(10),
+                max_raise: curve.map_or((0, 0), |c| max_raise(c, s.ranks, s.xp, unassigned_xp)),
                 vitae_modifier: values.map_or(0, |v| v.vitae_modifier),
                 tooltip,
             });
@@ -576,6 +629,7 @@ impl CharacterSheet {
             unassigned_xp,
             attribute_raise_costs: attr_raise(1),
             attribute_raise10_costs: attr_raise(10),
+            attribute_max_raises: attr_max(),
             skills,
         }
     }
@@ -599,6 +653,7 @@ impl CharacterSheet {
         }
         self.attribute_raise_costs = [0; 9];
         self.attribute_raise10_costs = [0; 9];
+        self.attribute_max_raises = [(0, 0); 9];
         let mut skills = Vec::new();
         for r in &reported.skills {
             if r.advancement == SkillAdvancement::Inactive {
@@ -624,6 +679,7 @@ impl CharacterSheet {
                 specialized_cost: base.specialized_cost,
                 raise_cost: 0,
                 raise10_cost: 0,
+                max_raise: (0, 0),
                 vitae_modifier: 0,
                 tooltip: skill_tooltip(base),
             });
@@ -2122,5 +2178,23 @@ impl PanelController for CharacterStatController {
             return true;
         }
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_most_a_budget_raises_is_the_last_affordable_rank() {
+        // Cumulative experience at ranks 0..=5.
+        let curve = [0, 10, 30, 60, 100, 150];
+        assert_eq!(max_raise(&curve, 0, 0, 5), (0, 0));
+        assert_eq!(max_raise(&curve, 0, 0, 10), (1, 10));
+        assert_eq!(max_raise(&curve, 0, 0, 59), (2, 30));
+        assert_eq!(max_raise(&curve, 1, 10, 90), (3, 90));
+        assert_eq!(max_raise(&curve, 0, 0, 1_000), (5, 150));
+        assert_eq!(max_raise(&curve, 5, 150, 1_000), (0, 0));
+        assert_eq!(max_raise(&[], 0, 0, 1_000), (0, 0));
     }
 }

@@ -770,6 +770,48 @@ impl WindowUi {
         }
     }
 
+    /// Each chat tab's name and the message types it shows (Options'
+    /// grid).
+    pub(in crate::ui) fn modern_chat_tab_filters(&self) -> Vec<(String, u64)> {
+        let Some(panel) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.chat.as_ref())
+            .map(|c| c.panel)
+        else {
+            return Vec::new();
+        };
+        self.host
+            .root
+            .widget::<ChatPanel>(panel)
+            .map(|p| p.tabs.iter().map(|t| (t.name.clone(), t.filter)).collect())
+            .unwrap_or_default()
+    }
+
+    /// Chat tab `tab` shows the message types `filter` from now on; the
+    /// tabs are saved.
+    pub(in crate::ui) fn set_modern_chat_tab_filter(&mut self, tab: usize, filter: u64) {
+        let Some(panel) = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.chat.as_ref())
+            .map(|c| c.panel)
+        else {
+            return;
+        };
+        let Some(p) = self.host.root.widget_mut::<ChatPanel>(panel) else {
+            return;
+        };
+        let Some(t) = p.tabs.get_mut(tab) else {
+            return;
+        };
+        if t.filter == filter {
+            return;
+        }
+        t.filter = filter;
+        self.save_modern_chat_tabs();
+    }
+
     /// The tabs as they stand, saved (each window's place with them).
     fn save_modern_chat_tabs(&mut self) {
         let Some(chat) = self.modern.as_ref().and_then(|m| m.chat.as_ref()) else {

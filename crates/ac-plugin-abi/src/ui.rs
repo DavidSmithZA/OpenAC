@@ -1587,6 +1587,140 @@ wire_record! {
     }
 }
 
+wire_enum! {
+    /// How an item's mark reads: the client draws each in its own colour.
+    /// API 1.15.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+    pub enum NoteTone ("note tone") {
+        /// No judgement.
+        #[default]
+        Plain = 0,
+        /// Good: keep it, it is wanted.
+        Good = 1,
+        /// Worth a look: salvage it, it is close.
+        Warning = 2,
+        /// Bad: sell or drop it.
+        Bad = 3,
+        /// The plugin's own emphasis.
+        Accent = 4,
+    }
+}
+
+wire_record! {
+    /// An entry a plugin adds to an item's menu, under the plugin's name.
+    /// Choosing it raises [`crate::Event::ItemMenuChosen`]. API 1.15.
+    pub struct ItemMenuEntry {
+        /// The plugin's own name for it, given back when it is chosen.
+        pub id: String,
+        /// Its words.
+        pub label: String,
+    }
+}
+
+wire_record! {
+    /// What a plugin says about one item. The client shows it wherever the
+    /// item is on screen, in its own style, and does nothing else with it:
+    /// the mark beside the item (in the inventory and the loot window), a
+    /// card under the plugin's name on the item's details and its Inspect
+    /// sheet (the mark, then the lines), and the menu entries in the item's
+    /// menus. A note with no mark, no lines and no entries says nothing.
+    /// API 1.15.
+    pub struct ItemNote {
+        /// The item.
+        pub object_id: u32,
+        /// A word or two beside the item ("Keep", "Salvage"); empty for
+        /// none. Cut to 16 characters.
+        pub mark: String,
+        /// How the mark reads.
+        pub tone: NoteTone,
+        /// The card's lines (the rule that matched, a reason); at most 6,
+        /// each cut to 160 characters.
+        pub lines: Vec<String>,
+        /// Entries for the item's menus; at most 6.
+        pub menu: Vec<ItemMenuEntry>,
+    }
+}
+
+wire_record! {
+    /// A plugin's notes on items ([`crate::Import::UiItemNotesSet`]): they
+    /// replace every note the plugin set before, so an empty set clears
+    /// them. Reply `bool`: false, and the notes stay as they were, when
+    /// there are more than 4,096 or two are about one item. API 1.15.
+    pub struct ItemNoteSet {
+        /// The notes from now on.
+        pub notes: Vec<ItemNote>,
+    }
+}
+
+wire_enum! {
+    /// The item windows a plugin may add a foot to. API 1.15.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+    pub enum ItemWindow ("item window") {
+        /// The inventory.
+        #[default]
+        Inventory = 0,
+        /// The loot window (a corpse or chest that is open).
+        Loot = 1,
+        /// The trade window.
+        Trade = 2,
+        /// The vendor window.
+        Vendor = 3,
+    }
+}
+
+wire_record! {
+    /// A button a plugin adds to an item window's foot. Pressing it raises
+    /// [`crate::Event::FootButtonPressed`]. API 1.15.
+    pub struct FootButton {
+        /// The plugin's own name for it, given back when it is pressed.
+        pub id: String,
+        /// Its words ("Loot 4 kept"); cut to 32 characters.
+        pub label: String,
+        /// It can be pressed.
+        pub enabled: bool,
+    }
+}
+
+wire_record! {
+    /// A plugin's part of an item window's foot
+    /// ([`crate::Import::UiWindowFootSet`]): a summary line and up to 3
+    /// buttons, replacing what the plugin set there before (an empty
+    /// summary and no buttons clear it). The client shows it while the
+    /// window shows, under the plugin's name. Reply `bool`: false, and the
+    /// foot stays as it was, with more than 3 buttons or two sharing an
+    /// id. API 1.15.
+    pub struct WindowFoot {
+        /// The window.
+        pub window: ItemWindow,
+        /// One line ("4 kept, 2 to salvage"); cut to 120 characters.
+        pub summary: String,
+        /// The buttons.
+        pub buttons: Vec<FootButton>,
+    }
+}
+
+wire_record! {
+    /// One of the plugin's item menu entries was chosen
+    /// ([`crate::Event::ItemMenuChosen`]). API 1.15.
+    pub struct ItemMenuChoice {
+        /// The entry's id.
+        pub id: String,
+        /// The item whose menu it was.
+        pub object_id: u32,
+    }
+}
+
+wire_record! {
+    /// One of the plugin's foot buttons was pressed
+    /// ([`crate::Event::FootButtonPressed`]). API 1.15.
+    pub struct FootPress {
+        /// The window.
+        pub window: ItemWindow,
+        /// The button's id.
+        pub id: String,
+    }
+}
+
 wire_record! {
     /// A projectile marker (OpenAC `PluginProjectileDebugSample`).
     pub struct ProjectileSample {

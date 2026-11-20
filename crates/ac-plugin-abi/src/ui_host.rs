@@ -790,6 +790,46 @@ pub fn handle(
                 .collect();
             state.set_drawings(id, r.layer, drawings).to_bytes()
         }
+        Import::UiItemNotesSet => {
+            let r = abi::ItemNoteSet::from_bytes_at(request, version).map_err(bad)?;
+            let notes = r
+                .notes
+                .into_iter()
+                .map(|n| ui::ItemNote {
+                    object_id: n.object_id,
+                    mark: n.mark,
+                    tone: note_tone(n.tone),
+                    lines: n.lines,
+                    menu: n
+                        .menu
+                        .into_iter()
+                        .map(|e| ui::ItemMenuEntry {
+                            id: e.id,
+                            label: e.label,
+                        })
+                        .collect(),
+                })
+                .collect();
+            state.set_item_notes(owner, notes).to_bytes()
+        }
+        Import::UiWindowFootSet => {
+            let r = abi::WindowFoot::from_bytes_at(request, version).map_err(bad)?;
+            let foot = ui::WindowFoot {
+                summary: r.summary,
+                buttons: r
+                    .buttons
+                    .into_iter()
+                    .map(|b| ui::FootButton {
+                        id: b.id,
+                        label: b.label,
+                        enabled: b.enabled,
+                    })
+                    .collect(),
+            };
+            state
+                .set_window_foot(owner, item_window(r.window), foot)
+                .to_bytes()
+        }
         Import::UiMarkersRemove => {
             let layer = u32::from_bytes(request).map_err(bad)?;
             state.remove_marker_layer(id, layer).to_bytes()
@@ -909,9 +949,52 @@ fn apply_window(
         })
 }
 
+fn note_tone(tone: abi::NoteTone) -> ui::NoteTone {
+    match tone {
+        abi::NoteTone::Plain => ui::NoteTone::Plain,
+        abi::NoteTone::Good => ui::NoteTone::Good,
+        abi::NoteTone::Warning => ui::NoteTone::Warning,
+        abi::NoteTone::Bad => ui::NoteTone::Bad,
+        abi::NoteTone::Accent => ui::NoteTone::Accent,
+    }
+}
+
+fn item_window(window: abi::ItemWindow) -> ui::ItemWindow {
+    match window {
+        abi::ItemWindow::Inventory => ui::ItemWindow::Inventory,
+        abi::ItemWindow::Loot => ui::ItemWindow::Loot,
+        abi::ItemWindow::Trade => ui::ItemWindow::Trade,
+        abi::ItemWindow::Vendor => ui::ItemWindow::Vendor,
+    }
+}
+
+fn abi_item_window(window: ui::ItemWindow) -> abi::ItemWindow {
+    match window {
+        ui::ItemWindow::Inventory => abi::ItemWindow::Inventory,
+        ui::ItemWindow::Loot => abi::ItemWindow::Loot,
+        ui::ItemWindow::Trade => abi::ItemWindow::Trade,
+        ui::ItemWindow::Vendor => abi::ItemWindow::Vendor,
+    }
+}
+
 /// The session's UI event as the plugin's event.
 #[must_use]
 pub fn event(event: ui::UiEvent) -> Event {
+    match event {
+        ui::UiEvent::ItemMenu { id, object } => {
+            return Event::ItemMenuChosen(abi::ItemMenuChoice {
+                id,
+                object_id: object,
+            });
+        }
+        ui::UiEvent::FootButton { window, id } => {
+            return Event::FootButtonPressed(abi::FootPress {
+                window: abi_item_window(window),
+                id,
+            });
+        }
+        _ => {}
+    }
     if let ui::UiEvent::CanvasResized {
         canvas,
         width,
@@ -971,7 +1054,9 @@ pub fn event(event: ui::UiEvent) -> Event {
             handler: format!("{}{handle}", abi::DIALOG_HANDLER_PREFIX),
             value: ActionValue::Int(button),
         }),
-        ui::UiEvent::CanvasResized { .. } => unreachable!("answered above"),
+        ui::UiEvent::CanvasResized { .. }
+        | ui::UiEvent::ItemMenu { .. }
+        | ui::UiEvent::FootButton { .. } => unreachable!("answered above"),
     })
 }
 

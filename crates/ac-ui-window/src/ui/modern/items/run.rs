@@ -81,6 +81,11 @@ pub struct InventoryUi {
     pub menu: ElementId,
     /// The split pop-up.
     pub split: ElementId,
+    /// The plugins' band over the grid's foot.
+    pub band: ElementId,
+    /// What the plugins' menu entries in the menu last opened stand for:
+    /// (plugin id, entry id), by tag from the plugins' base tag.
+    plugin_menu: Vec<(String, String)>,
     /// The figure's viewport and the overlay that turns it.
     pub figure: ElementId,
     pub turner: ElementId,
@@ -252,6 +257,18 @@ impl WindowUi {
         };
         let ui = &mut self.host.root;
         let split = super::split::SplitPopover::mount(ui, theme, split_fonts);
+        let band = ui.add(
+            frame,
+            Element::at(
+                inv::GRID_X - 12.0,
+                inv::GRID_Y + inv::GRID_H,
+                inv::GRID_W + 24.0,
+                1.0,
+            )
+            .with_anchors(AnchorEdges::NONE)
+            .with_visible(false),
+            super::plugin_notes::FootBand::new(theme, label.clone(), small.clone(), strong.clone()),
+        );
         ui.hide_window(INVENTORY);
         let Some(modern) = self.modern.as_mut() else {
             return;
@@ -266,6 +283,8 @@ impl WindowUi {
             packs: Vec::new(),
             menu,
             split,
+            band,
+            plugin_menu: Vec::new(),
             figure,
             turner,
             options: ViewOptions::default(),
@@ -422,6 +441,7 @@ impl WindowUi {
             return;
         };
         let (frame, grid, details, menu) = (inv.frame, inv.grid, inv.details, inv.menu);
+        let (band, split, turner) = (inv.band, inv.split, inv.turner);
         let slots = inv.slots.clone();
         let packs = inv.packs.clone();
         let ui = &mut self.host.root;
@@ -447,7 +467,7 @@ impl WindowUi {
             }
         }
         let worn_drops = ui
-            .widget_mut::<inv::FigureTurn>(inv.turner)
+            .widget_mut::<inv::FigureTurn>(turner)
             .map(|t| std::mem::take(&mut t.dropped))
             .unwrap_or_default();
         let sheet_asks = ui
@@ -455,7 +475,16 @@ impl WindowUi {
             .map(|s| std::mem::take(&mut s.requests))
             .unwrap_or_default();
         let chosen = PopMenu::take(ui, menu);
-        let splits = super::split::SplitPopover::take(ui, inv.split);
+        let pressed = super::plugin_notes::FootBand::take(ui, band);
+        for (owner, id) in pressed {
+            self.send_plugin_input(ac_plugin_ui::UiInput::FootButton {
+                owner,
+                window: ac_plugin_ui::ItemWindow::Inventory,
+                id,
+            });
+        }
+        let ui = &mut self.host.root;
+        let splits = super::split::SplitPopover::take(ui, split);
         for super::split::SplitRequest::Split { item, amount } in splits {
             self.split_stack(item, amount);
         }
@@ -562,6 +591,11 @@ impl WindowUi {
                         Row::Line,
                         Row::entry(DO_INSPECT, "Inspect"),
                     ]);
+                    let (extra, tags) = super::plugin_notes::menu_rows(&self.facts.plugin_ui, id);
+                    rows.extend(extra);
+                    if let Some(inv) = self.inventory_mut() {
+                        inv.plugin_menu = tags;
+                    }
                     PopMenu::open(
                         &mut self.host.root,
                         menu,
@@ -699,6 +733,11 @@ impl WindowUi {
         rows.push(Row::Line);
         rows.push(Row::entry(DO_BAR, "Add to a shortcut bar"));
         rows.push(Row::entry(DO_LINK, "Link in chat"));
+        let (extra, tags) = super::plugin_notes::menu_rows(&self.facts.plugin_ui, id);
+        rows.extend(extra);
+        if let Some(inv) = self.inventory_mut() {
+            inv.plugin_menu = tags;
+        }
         let Some(menu) = self
             .modern
             .as_ref()
@@ -729,6 +768,22 @@ impl WindowUi {
     /// Does `tag` with item `id`.
     fn item_do(&mut self, id: u32, tag: u32) {
         if self.own_item(id).is_none() {
+            return;
+        }
+        if tag >= super::plugin_notes::MENU_TAG_BASE {
+            // A plugin's entry: it goes back to the plugin.
+            let chosen = self.inventory_mut().and_then(|inv| {
+                inv.plugin_menu
+                    .get((tag - super::plugin_notes::MENU_TAG_BASE) as usize)
+                    .cloned()
+            });
+            if let Some((owner, entry)) = chosen {
+                self.send_plugin_input(ac_plugin_ui::UiInput::ItemMenu {
+                    owner,
+                    id: entry,
+                    object: id,
+                });
+            }
             return;
         }
         let item = ObjectRef::Guid(id);
@@ -1066,6 +1121,7 @@ impl WindowUi {
             lit: false,
             actions: false,
             note: None,
+            mark: super::plugin_notes::mark_on(&facts.plugin_ui, &Horizon::BRONZE, o.object_id()),
         };
         let groups: Vec<GridGroup> = grid_view
             .groups
@@ -1230,6 +1286,10 @@ impl WindowUi {
                 objects,
                 icons,
             );
+            let sheet = super::plugin_notes::with_cards(
+                sheet,
+                super::plugin_notes::cards(&facts.plugin_ui, &Horizon::BRONZE, o.object_id()),
+            );
             let worn = o.currently_equipped_location != EquipMask::NONE;
             let primary = if worn {
                 "Take off"
@@ -1255,6 +1315,22 @@ impl WindowUi {
                     ],
                 });
             }
+        }
+        // The plugins' band, over the grid's foot; the grid gives it room.
+        let rows =
+            super::plugin_notes::feet_of(&facts.plugin_ui, ac_plugin_ui::ItemWindow::Inventory);
+        let band_h = super::plugin_notes::band_height(rows.len());
+        super::plugin_notes::FootBand::show(
+            ui,
+            inv.band,
+            rows,
+            inv::GRID_Y + inv::GRID_H - band_h,
+            inv::GRID_W + 24.0,
+        );
+        if let Some(e) = ui.element_mut(inv.grid)
+            && (e.height - (inv::GRID_H - band_h)).abs() > 0.5
+        {
+            e.height = inv::GRID_H - band_h;
         }
         // The frame.
         let burden = model::Burden::of(objects, player, strength);

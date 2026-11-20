@@ -80,6 +80,9 @@ pub struct CellView {
     pub actions: bool,
     /// In the list, a note on the right ("Looting\u{2026}").
     pub note: Option<String>,
+    /// A plugin's mark on it ("Keep") and its colour: a chip on the
+    /// list's right, a corner tab on a tile.
+    pub mark: Option<(String, Color)>,
 }
 
 /// What a cell asks of the window.
@@ -329,7 +332,10 @@ impl Widget for ItemCell {
     }
 
     fn tooltip_text(&self, _element: &Element) -> Option<String> {
-        (!self.view.name.is_empty() && self.look != CellLook::List).then(|| self.view.name.clone())
+        (!self.view.name.is_empty() && self.look != CellLook::List).then(|| match &self.view.mark {
+            Some((mark, _)) => format!("{} \u{b7} {mark}", self.view.name),
+            None => self.view.name.clone(),
+        })
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
@@ -444,9 +450,28 @@ impl Widget for ItemCell {
                 );
             }
         }
+        // A plugin's mark: on a tile, a tab in its top right corner.
+        if let (false, Some((_, color))) = (list, &v.mark) {
+            let c = Color::rgba(color.r, color.g, color.b, color.a * fade);
+            let at = |x: f32, y: f32| ac_ui::draw::ColorVertex { x, y, color: c };
+            let (rx, ry) = (bx + bw - 1.0, ty + 1.0);
+            let _ = rc.fill_convex_polygon(&[at(rx - 11.0, ry), at(rx, ry), at(rx, ry + 11.0)]);
+        }
+        let mark_w = match (&v.mark, &self.small) {
+            (Some((m, _)), Some(f)) if list && v.note.is_none() && !(v.actions && v.selected) => {
+                text::measure(f, m, 0.0).ceil() + 14.0
+            }
+            _ => 0.0,
+        };
         if list {
             let x = bx + bw + 10.0;
-            let reserved = if v.actions && v.selected { 110.0 } else { 0.0 };
+            let reserved = if v.actions && v.selected {
+                110.0
+            } else if mark_w > 0.0 {
+                mark_w + 8.0
+            } else {
+                0.0
+            };
             let room = (w - x - 8.0 - reserved).max(0.0);
             if let Some(f) = &self.name {
                 let name = match v.count {
@@ -526,6 +551,31 @@ impl Widget for ItemCell {
                         TextStyle::plain(p.accent_ink),
                     );
                 }
+            } else if let (true, Some((mark, color)), Some(f)) =
+                (mark_w > 0.0, &v.mark, &self.small)
+            {
+                // A plugin's mark: a chip on the right.
+                let ch = f.line_height + 6.0;
+                let (cx, cy) = (w - 10.0 - mark_w, ((h - ch) * 0.5).round());
+                let r = CornerRadii::all(ch * 0.5);
+                rc.fill_rounded_rect(
+                    cx,
+                    cy,
+                    mark_w,
+                    ch,
+                    r,
+                    Color::rgba(color.r, color.g, color.b, 0.16),
+                );
+                rc.stroke_rounded_rect(
+                    cx,
+                    cy,
+                    mark_w,
+                    ch,
+                    r,
+                    Color::rgba(color.r, color.g, color.b, 0.6),
+                    1.0,
+                );
+                text::draw(rc, f, mark, cx + 7.0, cy + 3.0, TextStyle::plain(*color));
             } else if let (Some(note), Some(f)) = (&v.note, &self.small) {
                 let nw = text::measure(f, note, 0.0);
                 text::draw(

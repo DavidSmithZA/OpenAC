@@ -14,10 +14,10 @@ use crate::images::{ImageBudget, ImageTable};
 use crate::markup::{self, normalize_icon};
 use crate::model::{
     CanvasDescriptor, CanvasView, ClientWindow, ClientWindowAction, DrawingScale, GroundShape,
-    GroundShapeKind, ImageSource, MarkerAnchor, PaintCmd, PanelDescriptor, PanelView, PluginIcon,
-    PointerKind, ProjectileSample, UiChange, UiEvent, UiInput, UiOwner, WorldDrawing,
-    WorldDrawingEntry, WorldIcon, WorldIconEntry, WorldLabel, WorldLine, WorldTriangle,
-    canvas_origin,
+    GroundShapeKind, ImageSource, ItemNote, ItemWindow, MarkerAnchor, PaintCmd, PanelDescriptor,
+    PanelView, PluginIcon, PointerKind, ProjectileSample, UiChange, UiEvent, UiInput, UiOwner,
+    WindowFoot, WorldDrawing, WorldDrawingEntry, WorldIcon, WorldIconEntry, WorldLabel, WorldLine,
+    WorldTriangle, canvas_origin,
 };
 use crate::value::{BindingSchema, UiValue};
 
@@ -57,6 +57,21 @@ pub const MAXIMUM_SHAPE_RADIUS: f32 = 100.0;
 /// The most world drawings one plugin may have set at once, across its
 /// layers; counted apart from its icons and shapes.
 pub const MAXIMUM_DRAWINGS: usize = 256;
+/// The most item notes one plugin may have set at once.
+pub const MAXIMUM_ITEM_NOTES: usize = 4096;
+/// The longest mark beside an item, characters.
+pub const MAXIMUM_NOTE_MARK: usize = 16;
+/// The most lines on a note's card, and the longest line, characters.
+pub const MAXIMUM_NOTE_LINES: usize = 6;
+pub const MAXIMUM_NOTE_LINE: usize = 160;
+/// The most menu entries on one note, and the longest, characters.
+pub const MAXIMUM_NOTE_MENU: usize = 6;
+pub const MAXIMUM_MENU_LABEL: usize = 48;
+/// The most buttons one plugin may put in a window's foot, the longest
+/// button and the longest summary, characters.
+pub const MAXIMUM_FOOT_BUTTONS: usize = 3;
+pub const MAXIMUM_FOOT_LABEL: usize = 32;
+pub const MAXIMUM_FOOT_SUMMARY: usize = 120;
 /// The most paint commands one world drawing may hold.
 pub const MAXIMUM_DRAWING_COMMANDS: usize = 256;
 /// The smallest side a world drawing's box may have, points.
@@ -343,6 +358,10 @@ pub struct PluginUi {
     layers: Vec<LineLayer>,
     triangle_layers: Vec<TriangleLayer>,
     marker_layers: Vec<MarkerLayer>,
+    /// Each plugin's notes on items, by plugin id.
+    item_notes: BTreeMap<String, (UiOwner, Vec<ItemNote>)>,
+    /// Each plugin's part of each item window's foot.
+    feet: BTreeMap<(String, ItemWindow), (UiOwner, WindowFoot)>,
     window_attached: bool,
     client_mounted: u16,
     client_visible: u16,
@@ -406,6 +425,11 @@ fn check_items(item: &BindingSchema, rows: &[crate::value::ItemRecord]) -> Resul
 
 fn same_owner(a: &str, b: &str) -> bool {
     a == b
+}
+
+/// `text` cut to `most` characters.
+fn cut(text: &str, most: usize) -> String {
+    text.trim().chars().take(most).collect()
 }
 
 fn blank(text: &str) -> bool {
@@ -1686,6 +1710,183 @@ impl PluginUi {
         }
     }
 
+    // ── Item notes and window feet ───────────────────────────────────────
+
+    /// `owner`'s notes on items from now on, replacing those it set before.
+    /// False, and the notes stay, with more than [`MAXIMUM_ITEM_NOTES`] or
+    /// two about one item. Words are cut to their limits; menu entries
+    /// without an id or words, and notes that say nothing, are dropped.
+    pub fn set_item_notes(&mut self, owner: &UiOwner, notes: Vec<ItemNote>) -> bool {
+        if notes.len() > MAXIMUM_ITEM_NOTES {
+            return false;
+        }
+        let mut seen = BTreeSet::new();
+        if !notes.iter().all(|n| seen.insert(n.object_id)) {
+            return false;
+        }
+        let kept: Vec<ItemNote> = notes
+            .into_iter()
+            .filter(|n| n.object_id != 0)
+            .map(|n| {
+                let mut ids = BTreeSet::new();
+                ItemNote {
+                    object_id: n.object_id,
+                    mark: cut(&n.mark, MAXIMUM_NOTE_MARK),
+                    tone: n.tone,
+                    lines: n
+                        .lines
+                        .iter()
+                        .map(|l| cut(l, MAXIMUM_NOTE_LINE))
+                        .filter(|l| !l.is_empty())
+                        .take(MAXIMUM_NOTE_LINES)
+                        .collect(),
+                    menu: n
+                        .menu
+                        .into_iter()
+                        .filter(|e| !blank(&e.id) && !blank(&e.label) && ids.insert(e.id.clone()))
+                        .take(MAXIMUM_NOTE_MENU)
+                        .map(|e| crate::model::ItemMenuEntry {
+                            id: e.id,
+                            label: cut(&e.label, MAXIMUM_MENU_LABEL),
+                        })
+                        .collect(),
+                }
+            })
+            .filter(|n| !n.mark.is_empty() || !n.lines.is_empty() || !n.menu.is_empty())
+            .collect();
+        if kept.is_empty() && !self.item_notes.contains_key(&owner.id) {
+            return true;
+        }
+        if kept.is_empty() {
+            self.item_notes.remove(&owner.id);
+        } else {
+            self.item_notes
+                .insert(owner.id.clone(), (owner.clone(), kept.clone()));
+        }
+        self.changes.push(UiChange::ItemNotes {
+            owner: owner.clone(),
+            notes: Arc::new(kept),
+        });
+        true
+    }
+
+    /// `owner`'s notes on items as they stand.
+    #[must_use]
+    pub fn item_notes(&self, owner: &str) -> &[ItemNote] {
+        self.item_notes
+            .get(owner)
+            .map_or(&[], |(_, n)| n.as_slice())
+    }
+
+    /// `owner`'s part of `window`'s foot from now on (empty: none). False,
+    /// and it stays, with more than [`MAXIMUM_FOOT_BUTTONS`] buttons or two
+    /// sharing an id; words are cut to their limits.
+    pub fn set_window_foot(
+        &mut self,
+        owner: &UiOwner,
+        window: ItemWindow,
+        foot: WindowFoot,
+    ) -> bool {
+        if foot.buttons.len() > MAXIMUM_FOOT_BUTTONS {
+            return false;
+        }
+        let mut ids = BTreeSet::new();
+        if !foot.buttons.iter().all(|b| ids.insert(b.id.as_str())) {
+            return false;
+        }
+        let foot = WindowFoot {
+            summary: cut(&foot.summary, MAXIMUM_FOOT_SUMMARY),
+            buttons: foot
+                .buttons
+                .into_iter()
+                .filter(|b| !blank(&b.id) && !blank(&b.label))
+                .map(|b| crate::model::FootButton {
+                    label: cut(&b.label, MAXIMUM_FOOT_LABEL),
+                    ..b
+                })
+                .collect(),
+        };
+        let key = (owner.id.clone(), window);
+        if self.feet.get(&key).map(|(_, f)| f) == Some(&foot)
+            || (foot.is_empty() && !self.feet.contains_key(&key))
+        {
+            return true;
+        }
+        if foot.is_empty() {
+            self.feet.remove(&key);
+        } else {
+            self.feet.insert(key, (owner.clone(), foot.clone()));
+        }
+        self.changes.push(UiChange::WindowFoot {
+            owner: owner.clone(),
+            window,
+            foot,
+        });
+        true
+    }
+
+    /// The window tells of an item menu entry chosen: the plugin hears it
+    /// when it has that entry on that item.
+    fn item_menu_chosen(&mut self, owner: String, id: String, object: u32) {
+        let has = self.item_notes.get(&owner).is_some_and(|(_, notes)| {
+            notes
+                .iter()
+                .any(|n| n.object_id == object && n.menu.iter().any(|e| e.id == id))
+        });
+        if has {
+            self.events.push((owner, UiEvent::ItemMenu { id, object }));
+        }
+    }
+
+    /// The window tells of a foot button pressed: the plugin hears it when
+    /// it has that button, able to be pressed, in that window's foot.
+    fn foot_pressed(&mut self, owner: String, window: ItemWindow, id: String) {
+        let has = self
+            .feet
+            .get(&(owner.clone(), window))
+            .is_some_and(|(_, f)| f.buttons.iter().any(|b| b.id == id && b.enabled));
+        if has {
+            self.events
+                .push((owner, UiEvent::FootButton { window, id }));
+        }
+    }
+
+    /// Every plugin's notes go: the character left the world, and the next
+    /// stay names other objects.
+    pub fn clear_item_notes(&mut self) {
+        for (_, (owner, _)) in std::mem::take(&mut self.item_notes) {
+            self.changes.push(UiChange::ItemNotes {
+                owner,
+                notes: Arc::default(),
+            });
+        }
+    }
+
+    /// `owner`'s notes and feet go (it was unloaded).
+    fn release_item_notes(&mut self, owner: &str) {
+        if let Some((o, _)) = self.item_notes.remove(owner) {
+            self.changes.push(UiChange::ItemNotes {
+                owner: o,
+                notes: Arc::default(),
+            });
+        }
+        let windows: Vec<ItemWindow> = self
+            .feet
+            .keys()
+            .filter(|(o, _)| o == owner)
+            .map(|(_, w)| *w)
+            .collect();
+        for window in windows {
+            if let Some((o, _)) = self.feet.remove(&(owner.to_owned(), window)) {
+                self.changes.push(UiChange::WindowFoot {
+                    owner: o,
+                    window,
+                    foot: WindowFoot::default(),
+                });
+            }
+        }
+    }
+
     // ── Lifetime ─────────────────────────────────────────────────────────
 
     /// Everything `owner` registered goes (it was unloaded).
@@ -1741,6 +1942,7 @@ impl PluginUi {
         if self.marker_layers.len() != before {
             self.push_markers(&[owner]);
         }
+        self.release_item_notes(owner);
         self.hotkeys.release(owner);
         self.follow_hotkeys();
         let dialogs: Vec<u32> = self
@@ -1804,6 +2006,23 @@ impl PluginUi {
         drawing_owners.sort_unstable();
         drawing_owners.dedup();
         out.extend(drawing_owners.into_iter().map(|o| self.drawings_change(o)));
+        out.extend(
+            self.item_notes
+                .values()
+                .map(|(owner, notes)| UiChange::ItemNotes {
+                    owner: owner.clone(),
+                    notes: Arc::new(notes.clone()),
+                }),
+        );
+        out.extend(
+            self.feet
+                .iter()
+                .map(|((_, window), (owner, foot))| UiChange::WindowFoot {
+                    owner: owner.clone(),
+                    window: *window,
+                    foot: foot.clone(),
+                }),
+        );
         out.push(UiChange::Hotkeys(Arc::new(self.hotkeys.bound())));
         out.extend(
             self.dialogs
@@ -1965,6 +2184,8 @@ impl PluginUi {
                     self.window_mirror.update(windows);
                 }
             }
+            UiInput::ItemMenu { owner, id, object } => self.item_menu_chosen(owner, id, object),
+            UiInput::FootButton { owner, window, id } => self.foot_pressed(owner, window, id),
         }
     }
 

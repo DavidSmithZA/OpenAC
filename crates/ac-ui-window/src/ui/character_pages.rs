@@ -128,6 +128,42 @@ impl WindowUi {
         Ok(())
     }
 
+    /// What the character information report is made from: the player's
+    /// int properties, attributes (from the character sheet) and birth.
+    pub(super) fn character_info_source(&mut self) -> Option<CharacterInfoSource> {
+        let player = self.facts.state.player;
+        let object = self.facts.objects.get(player)?;
+        let ints = object.properties.ints.clone();
+        let (attributes, base, innate) = self
+            .host
+            .with_controller::<CharacterStatController, _>(CHARACTER_WINDOW, |c, _| {
+                let s = c.sheet();
+                (s.attributes, s.attribute_base, s.attribute_innate)
+            })
+            .unwrap_or_default();
+        let birth_text = ints.get(&CREATION_TIMESTAMP).map(|&born| {
+            let offset = self
+                .character_pages
+                .zone
+                .utc_offset_seconds(i64::from(born) * 1000);
+            format_birth_date(born, offset)
+        });
+        Some(CharacterInfoSource {
+            ints,
+            attributes,
+            base,
+            innate,
+            birth_text,
+        })
+    }
+
+    /// The character information report's six parts, as the game words
+    /// them.
+    pub(super) fn character_info_parts(&mut self) -> Option<[String; 6]> {
+        let source = self.character_info_source()?;
+        Some(info::report_parts(&source, &self.character_pages.phrases))
+    }
+
     /// Feed the titles page when the titles change or the character window
     /// shows again, and the information panel while it shows.
     pub(super) fn update_character_pages(&mut self, dirty: Dirty, stale: &[&str]) {
@@ -154,31 +190,8 @@ impl WindowUi {
         if !shown || !(dirty.player || dirty.items || stale.contains(&CHARACTER_INFO_WINDOW)) {
             return;
         }
-        let player = self.facts.state.player;
-        let Some(object) = self.facts.objects.get(player) else {
+        let Some(source) = self.character_info_source() else {
             return;
-        };
-        let ints = object.properties.ints.clone();
-        let (attributes, base, innate) = self
-            .host
-            .with_controller::<CharacterStatController, _>(CHARACTER_WINDOW, |c, _| {
-                let s = c.sheet();
-                (s.attributes, s.attribute_base, s.attribute_innate)
-            })
-            .unwrap_or_default();
-        let birth_text = ints.get(&CREATION_TIMESTAMP).map(|&born| {
-            let offset = self
-                .character_pages
-                .zone
-                .utc_offset_seconds(i64::from(born) * 1000);
-            format_birth_date(born, offset)
-        });
-        let source = CharacterInfoSource {
-            ints,
-            attributes,
-            base,
-            innate,
-            birth_text,
         };
         let Self {
             host,

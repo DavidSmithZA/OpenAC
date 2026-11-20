@@ -1441,11 +1441,13 @@ impl SessionState {
 
     /// The character left the world: the journal is saved, every piece of
     /// server-owned state is forgotten and the plugins' labels and markers
-    /// over objects come down (what they draw at fixed positions stays).
+    /// over objects come down (what they draw at fixed positions stays), as
+    /// do their notes on items.
     pub fn left_world(&mut self, wall_unix_ms: i64) {
         self.wall_unix_ms = wall_unix_ms;
         self.plugin_ui.clear_labels();
         self.plugin_ui.clear_object_markers();
+        self.plugin_ui.clear_item_notes();
         self.communication.left_world(wall_unix_ms);
         self.options.reset_session();
         self.inventory.reset_session(&mut self.world);

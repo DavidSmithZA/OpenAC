@@ -2022,3 +2022,81 @@ impl Host<'_> {
         decode(Import::UiPanelSetTyped, &reply)
     }
 }
+
+pub use ac_plugin_abi::ui::{
+    FootButton, FootPress, ItemMenuChoice, ItemMenuEntry, ItemNote, ItemWindow, NoteTone,
+};
+
+impl Host<'_> {
+    /// Replaces the plugin's notes on items (API 1.15): a mark beside each
+    /// item, a card of lines under the plugin's name on its details and
+    /// Inspect sheet, and entries for its menus, wherever the client shows
+    /// the item. An entry chosen arrives as
+    /// [`Event::ItemMenuChosen`](crate::Event::ItemMenuChosen). An empty
+    /// slice clears them; they also go when the character leaves the world.
+    /// False, and the notes stay as they were, with more than 4,096 notes or
+    /// two about one item. Marks are cut to 16 characters, lines to 6 of
+    /// 160 characters, menus to 6 entries.
+    pub fn set_item_notes(&mut self, notes: &[ItemNote]) -> bool {
+        let request = ac_plugin_abi::ui::ItemNoteSet {
+            notes: notes.to_vec(),
+        }
+        .to_bytes();
+        let reply = ui_call!(self, UiItemNotesSet, ui_item_notes_set, &request);
+        decode(Import::UiItemNotesSet, &reply)
+    }
+
+    /// Replaces the plugin's part of an item window's foot (API 1.15): a
+    /// summary line and up to 3 buttons, shown under the plugin's name
+    /// while the window shows. A button pressed arrives as
+    /// [`Event::FootButtonPressed`](crate::Event::FootButtonPressed). An
+    /// empty summary and no buttons clear it. False, and the foot stays as
+    /// it was, with more than 3 buttons or two sharing an id.
+    pub fn set_window_foot(
+        &mut self,
+        window: ItemWindow,
+        summary: &str,
+        buttons: &[FootButton],
+    ) -> bool {
+        let request = ac_plugin_abi::ui::WindowFoot {
+            window,
+            summary: summary.to_owned(),
+            buttons: buttons.to_vec(),
+        }
+        .to_bytes();
+        let reply = ui_call!(self, UiWindowFootSet, ui_window_foot_set, &request);
+        decode(Import::UiWindowFootSet, &reply)
+    }
+}
+
+/// A note on `object` with `mark` beside it in `tone`, and no card lines or
+/// menu entries yet.
+#[must_use]
+pub fn item_note(object: u32, mark: &str, tone: NoteTone) -> ItemNote {
+    ItemNote {
+        object_id: object,
+        mark: mark.to_owned(),
+        tone,
+        lines: Vec::new(),
+        menu: Vec::new(),
+    }
+}
+
+/// A menu entry `label`, given back as `id` when chosen.
+#[must_use]
+pub fn menu_entry(id: &str, label: &str) -> ItemMenuEntry {
+    ItemMenuEntry {
+        id: id.to_owned(),
+        label: label.to_owned(),
+    }
+}
+
+/// A foot button `label` that can be pressed, given back as `id`.
+#[must_use]
+pub fn foot_button(id: &str, label: &str) -> FootButton {
+    FootButton {
+        id: id.to_owned(),
+        label: label.to_owned(),
+        enabled: true,
+    }
+}

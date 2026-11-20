@@ -132,6 +132,8 @@ pub struct KeyRow {
     pub input_map: u32,
     /// Action id.
     pub action_id: u32,
+    /// The class (the page it is listed on).
+    pub class: RetailActionClass,
     /// The client's action for it.
     pub mapped: Option<InputAction>,
     /// The caption.
@@ -440,6 +442,7 @@ impl KeyboardConfigController {
         self.rows.push(KeyRow {
             input_map: row.input_map,
             action_id: row.action_id,
+            class: row.class,
             mapped,
             label,
             caption,
@@ -579,15 +582,15 @@ impl KeyboardConfigController {
         if self.rows[capture.row].current.contains(&chord) {
             return CaptureReply::Ended;
         }
-        match self.find_conflicts(chord, capture.row) {
-            Conflict::NonBindable => {
+        match self.conflict(chord, capture.row) {
+            KeyConflict::Reserved => {
                 let mut v = HashMap::new();
                 v.insert(compute_hash("KEY"), self.names.describe(chord));
                 if let Some(text) = (self.templates)("ID_ActionKeyMap_NonUserBindableBinding", &v) {
                     emit(ui, KeyboardConfigOutput::ShowMessage(text));
                 }
             }
-            Conflict::Rows(conflicts) => {
+            KeyConflict::Rows(conflicts) => {
                 if let Some(message) = self.overwrite_message(chord, &conflicts) {
                     self.pending = Some(PendingOverwrite {
                         row: capture.row,
@@ -598,9 +601,62 @@ impl KeyboardConfigController {
                     emit(ui, KeyboardConfigOutput::ConfirmOverwrite(message));
                 }
             }
-            Conflict::None => self.apply_slot(ui, capture.row, capture.slot, chord),
+            KeyConflict::None => self.apply_slot(ui, capture.row, capture.slot, chord),
         }
         CaptureReply::Ended
+    }
+
+    /// Key `chord` in slot `slot` of row `row`, taken first from the rows
+    /// `take_from` (the rows [`Self::conflict`] named), live.
+    pub fn assign(
+        &mut self,
+        ui: &mut UiRoot,
+        row: usize,
+        slot: usize,
+        chord: KeyChord,
+        take_from: &[usize],
+    ) {
+        if row >= self.rows.len() {
+            return;
+        }
+        for &r in take_from {
+            let Some(other) = self.rows.get(r) else {
+                continue;
+            };
+            let value: Vec<KeyChord> = other
+                .current
+                .iter()
+                .copied()
+                .filter(|c| *c != chord)
+                .collect();
+            self.replace_slot_value(ui, r, value);
+        }
+        self.apply_slot(ui, row, slot, chord);
+    }
+
+    /// Slot `slot` of row `row` emptied, live.
+    pub fn erase(&mut self, ui: &mut UiRoot, row: usize, slot: usize) {
+        if row < self.rows.len() {
+            self.erase_slot(ui, row, slot);
+        }
+    }
+
+    /// The keys now are the saved ones; the active profile is saved when
+    /// any changed (the screen's OK, without closing it).
+    pub fn keep(&mut self, ui: &mut UiRoot) {
+        if self.changed() {
+            emit(ui, KeyboardConfigOutput::Save);
+        }
+        for row in &mut self.rows {
+            row.saved = row.current.clone();
+        }
+        self.refresh_revert(ui);
+    }
+
+    /// The name of `chord`, as the key buttons show it.
+    #[must_use]
+    pub fn describe(&self, chord: KeyChord) -> String {
+        self.names.describe(chord)
     }
 
     /// The overwrite question was answered.
@@ -611,16 +667,7 @@ impl KeyboardConfigController {
         if !accepted {
             return;
         }
-        for &r in &p.conflicts {
-            let value: Vec<KeyChord> = self.rows[r]
-                .current
-                .iter()
-                .copied()
-                .filter(|c| *c != p.chord)
-                .collect();
-            self.replace_slot_value(ui, r, value);
-        }
-        self.apply_slot(ui, p.row, p.slot, p.chord);
+        self.assign(ui, p.row, p.slot, p.chord, &p.conflicts);
     }
 
     fn overwrite_message(&self, chord: KeyChord, conflicts: &[usize]) -> Option<String> {
@@ -646,7 +693,12 @@ impl KeyboardConfigController {
         (self.templates)("ID_ActionKeyMap_OverwriteExistingBindings", &v)
     }
 
-    fn find_conflicts(&self, chord: KeyChord, exclude: usize) -> Conflict {
+    /// What already holds `chord` that row `exclude` would take it from: a
+    /// key the client keeps for itself, or the rows bound to it that
+    /// conflict with the row (the same input map, or one the dat lists as
+    /// conflicting).
+    #[must_use]
+    pub fn conflict(&self, chord: KeyChord, exclude: usize) -> KeyConflict {
         // A key the client keeps for an action of its own (no retail
         // identity) cannot be taken.
         if self
@@ -655,9 +707,11 @@ impl KeyboardConfigController {
             .iter()
             .any(|b| b.chord == chord && identity::retail_identity(b.action).is_none())
         {
-            return Conflict::NonBindable;
+            return KeyConflict::Reserved;
         }
-        let map = self.rows[exclude].input_map;
+        let Some(map) = self.rows.get(exclude).map(|r| r.input_map) else {
+            return KeyConflict::None;
+        };
         let rows: Vec<usize> = self
             .rows
             .iter()
@@ -671,9 +725,9 @@ impl KeyboardConfigController {
             .map(|(i, _)| i)
             .collect();
         if rows.is_empty() {
-            Conflict::None
+            KeyConflict::None
         } else {
-            Conflict::Rows(rows)
+            KeyConflict::Rows(rows)
         }
     }
 
@@ -860,9 +914,14 @@ impl crate::host::PanelController for KeyboardConfigController {
     }
 }
 
-enum Conflict {
+/// What holds a key a row would take ([`KeyboardConfigController::conflict`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KeyConflict {
+    /// Nothing.
     None,
-    NonBindable,
+    /// The client keeps it for an action of its own.
+    Reserved,
+    /// These rows hold it.
     Rows(Vec<usize>),
 }
 

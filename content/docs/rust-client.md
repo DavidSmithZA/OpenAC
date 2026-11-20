@@ -55,9 +55,10 @@ keeps loading and receives exactly what it did before:
 | 1.12 | 0.2.4 | a projectile path query's launch speed: a missile or arc probe flies at the launcher's speed (capped at 50 m/s) on the lower arc to its aim point; canvases inside plugin windows (a markup `<canvas>` element hosts an in-markup canvas, and the plugin hears its laid-out size), and resizing a canvas on the screen |
 | 1.13 | 0.2.10 | WebP images (lossy, lossless, with alpha; an animation's first frame) among the plugin's own art the client decodes |
 | 1.14 | 0.2.15 | the screen the interface lays out in and every registered window (owner, title, layout, limits, whether the game shows and hides it), placing them as a saved layout is restored, and events for a new screen size and a window registered or unregistered; which windows share one place (the main panels), and holding windows out of sight without changing what is saved; drawings in the marker layers, pictures a plugin paints with canvas commands in its own fonts and images and hangs over objects or at positions, at a fixed size or shrinking with distance |
+| 1.15 | (next) | notes on items: a mark beside each item, a card of lines on its details and Inspect sheet, entries for its menus; a summary line and buttons in an item window's foot; events for an entry chosen and a button pressed |
 
 From 1.6 on, a released version never changes: a new function, event or
-field comes with the next minor version. 0.2.0 adds none; 1.14 is current.
+field comes with the next minor version. 0.2.0 adds none; 1.15 is current.
 
 To use a newer version, move the plugin's SDK to that release and set
 `"apiVersion"` in its `plugin.json`.

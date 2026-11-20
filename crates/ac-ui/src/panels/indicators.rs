@@ -1138,6 +1138,23 @@ pub fn current_vitae(book: Option<&Spellbook>) -> f32 {
     .unwrap_or(1.0)
 }
 
+/// The experience the player still has to earn to regain the next 1% of
+/// `vitae`: the pool's threshold for the level at death (else the level
+/// now) less what the pool holds.
+#[must_use]
+pub fn vitae_experience_to_recover(vitae: f32, objects: &ClientObjectTable, player: u32) -> i32 {
+    let p = objects.get(player);
+    let pool = p.map_or(0, |p| p.properties.get_int(VITAE_CP_POOL_PROPERTY, 0));
+    let level = p.map_or(0, |p| {
+        p.properties
+            .ints
+            .get(&DEATH_LEVEL_PROPERTY)
+            .copied()
+            .unwrap_or_else(|| p.properties.get_int(LEVEL_PROPERTY, 0))
+    });
+    vitae_cp_pool_threshold(vitae, level) - pool
+}
+
 /// The vitae panel's text for the player.
 #[must_use]
 pub fn vitae_text(
@@ -1151,16 +1168,7 @@ pub fn vitae_text(
     if lost <= 0 {
         return strings.full_strength.clone();
     }
-    let p = objects.get(player);
-    let pool = p.map_or(0, |p| p.properties.get_int(VITAE_CP_POOL_PROPERTY, 0));
-    let level = p.map_or(0, |p| {
-        p.properties
-            .ints
-            .get(&DEATH_LEVEL_PROPERTY)
-            .copied()
-            .unwrap_or_else(|| p.properties.get_int(LEVEL_PROPERTY, 0))
-    });
-    let remaining = vitae_cp_pool_threshold(vitae, level) - pool;
+    let remaining = vitae_experience_to_recover(vitae, objects, player);
     format!(
         "{}{lost}{}{}{lost}{}{}{}{}",
         strings.lost_prefix,

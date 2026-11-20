@@ -1406,3 +1406,852 @@ fn the_modern_loot() {
         SessionCommand::Item(ItemCommand::CloseContainer(ObjectRef::Guid(0x8000_0A01)))
     )));
 }
+
+/// A plugin's notes on the potions (kept, with a card and a menu entry),
+/// the sword and a corpse's sword (to salvage), and its part of the
+/// inventory's and loot window's feet, as the session hands them over.
+fn plugin_notes(s: &mut Shot) {
+    use ac_plugin_ui::{
+        FootButton, ItemMenuEntry, ItemNote, ItemWindow, NoteTone, PluginUi, UiOwner, WindowFoot,
+    };
+    let owner = UiOwner::new("example.looter", "Looter");
+    let mut state = PluginUi::new();
+    let note = |object_id, mark: &str, tone| ItemNote {
+        object_id,
+        mark: mark.to_owned(),
+        tone,
+        lines: Vec::new(),
+        menu: Vec::new(),
+    };
+    let mut potions = note(0x8000_0101, "Keep", NoteTone::Good);
+    potions.lines = vec![
+        "Rule: Healing kept up to 20".to_owned(),
+        "Carrying 12 of 20.".to_owned(),
+    ];
+    potions.menu = vec![ItemMenuEntry {
+        id: "never".to_owned(),
+        label: "Never loot this".to_owned(),
+    }];
+    assert!(state.set_item_notes(
+        &owner,
+        vec![
+            potions,
+            note(0x8000_0105, "Salvage", NoteTone::Warning),
+            note(0x8000_0A13, "Salvage", NoteTone::Warning),
+            note(0x8000_0A12, "Sell", NoteTone::Bad),
+        ]
+    ));
+    let foot = |summary: &str, label: &str| WindowFoot {
+        summary: summary.to_owned(),
+        buttons: vec![FootButton {
+            id: "go".to_owned(),
+            label: label.to_owned(),
+            enabled: true,
+        }],
+    };
+    assert!(state.set_window_foot(
+        &owner,
+        ItemWindow::Inventory,
+        foot("1 to salvage", "Salvage 1")
+    ));
+    assert!(state.set_window_foot(
+        &owner,
+        ItemWindow::Loot,
+        foot("1 to salvage, 1 to sell", "Loot 2")
+    ));
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::PluginUi(
+            state.snapshot(),
+        )));
+    s.step();
+    s.step();
+}
+
+/// The first visible element under `root`'s children holding a `T`.
+fn shown_in<T: ac_ui::tree::Widget>(
+    s: &Shot,
+    parent: ac_ui::tree::ElementId,
+) -> Option<ac_ui::tree::ElementId> {
+    let root = &s.ui.host().root;
+    root.children(parent)
+        .into_iter()
+        .find(|&c| root.widget::<T>(c).is_some() && root.element(c).is_some_and(|e| e.visible))
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_plugin_notes() {
+    use ac_core::combat::CombatMode;
+    use ac_plugin_ui::{ItemWindow, UiInput};
+    use ac_render::ui::window::Hotkey;
+    use ac_runtime::session::SessionCommand;
+    use ac_ui_window::ui::modern::items::menu::PopMenu;
+    use ac_ui_window::ui::modern::items::plugin_notes::FootBand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    plugin_notes(&mut s);
+    assert!(s.ui.run_hotkey(Hotkey::Inventory));
+    s.step();
+    s.step();
+    s.save("plugin-notes-inventory");
+    // The potions selected: the details carry the plugin's card.
+    let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
+    s.click(0, first.0, first.1, Modifiers::NONE);
+    s.scene.apply(PresentationEvent::Player(PlayerView {
+        selected: Some(0x8000_0101),
+        ..PlayerView::default()
+    }));
+    let a = ac_proto::appraise::IdentifyObjectResponse {
+        guid: 0x8000_0101,
+        success: true,
+        ..Default::default()
+    };
+    answer(&mut s, a, false);
+    s.save("plugin-notes-details");
+    // Its menu carries the plugin's entry; choosing it goes to the plugin.
+    s.sent.clear();
+    s.click(1, first.0, first.1, Modifiers::NONE);
+    s.save("plugin-notes-menu");
+    let menu = shown::<PopMenu>(&s).expect("the menu");
+    let (mx, my, mw, _) = rect_of(&s, menu);
+    let (top, h) =
+        s.ui.host()
+            .root
+            .widget::<PopMenu>(menu)
+            .and_then(|m| m.entry_rows("Never loot this"))
+            .expect("the plugin's entry");
+    s.click(0, mx + mw / 2, my + (top + h / 2.0) as i32, Modifiers::NONE);
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::PluginUi(UiInput::ItemMenu { owner, id, object })
+                if owner == "example.looter" && id == "never" && *object == 0x8000_0101
+        )),
+        "{:?}",
+        s.sent
+    );
+    // The band's button, at the right of its row.
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-inventory")
+            .expect("inventory")
+            .frame;
+    let band = shown_in::<FootBand>(&s, frame).expect("the inventory's band");
+    let (bx, by, bw, _) = rect_of(&s, band);
+    s.sent.clear();
+    s.click(0, bx + bw - 12 - 20, by + 2 + 4 + 12, Modifiers::NONE);
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::PluginUi(UiInput::FootButton { owner, window: ItemWindow::Inventory, id })
+                if owner == "example.looter" && id == "go"
+        )),
+        "{:?}",
+        s.sent
+    );
+    // The loot window: marks on its rows, its band over the foot.
+    open_corpse(&mut s, true);
+    s.save("plugin-notes-loot");
+    let frame = s.ui.host().root.window("modern-loot").expect("loot").frame;
+    assert!(
+        shown_in::<FootBand>(&s, frame).is_some(),
+        "the loot window's band"
+    );
+}
+
+/// An effect made up for the pictures: spell name, layer, caster, start,
+/// duration, stat-mod type, key and value, category.
+type MadeEffect = (&'static str, u32, u32, f64, f64, u32, u32, f32, u32);
+
+/// The first spell of the dats' table whose name is `name`.
+fn spell_named(tables: &ac_runtime::gameplay::GameTables, name: &str) -> Option<u32> {
+    let spells = tables.spells();
+    spells
+        .spell_ids()
+        .find(|id| spells.get(*id).is_some_and(|m| m.name == name))
+}
+
+/// Effects on the player: helpful ones of its own (one ending soon, one
+/// with a weaker copy underneath), one from someone else, a cantrip from
+/// worn gear, two harmful ones and vitae. Returns the spells used.
+fn effects_on_player(s: &mut Shot) -> Vec<u32> {
+    use ac_core::spells::{ActiveEnchantmentRecord, EnchantmentTypeFlags};
+    let dats = dats();
+    let tables = ac_runtime::gameplay::GameTables::load(&dats).expect("the game tables");
+    let mut book = Spellbook::new(Some(Arc::clone(tables.spells())));
+    let attr = EnchantmentTypeFlags::ATTRIBUTE.bits() | EnchantmentTypeFlags::ADDITIVE.bits();
+    let skill = EnchantmentTypeFlags::SKILL.bits() | EnchantmentTypeFlags::ADDITIVE.bits();
+    let resist = EnchantmentTypeFlags::FLOAT.bits() | EnchantmentTypeFlags::MULTIPLICATIVE.bits();
+    let list: &[MadeEffect] = &[
+        (
+            "Focus Self VI",
+            1,
+            PLAYER,
+            -2500.0,
+            2700.0,
+            attr,
+            5,
+            35.0,
+            900,
+        ),
+        (
+            "Strength Self VI",
+            1,
+            PLAYER,
+            -900.0,
+            2700.0,
+            attr,
+            1,
+            35.0,
+            901,
+        ),
+        (
+            "Strength Other V",
+            2,
+            0x5000_0099,
+            -600.0,
+            1800.0,
+            attr,
+            1,
+            25.0,
+            901,
+        ),
+        (
+            "Invulnerability Self VI",
+            1,
+            PLAYER,
+            -100.0,
+            2700.0,
+            skill,
+            6,
+            35.0,
+            902,
+        ),
+        (
+            "Fire Protection Self VI",
+            1,
+            0x5000_0099,
+            -50.0,
+            2700.0,
+            resist,
+            67,
+            0.5,
+            903,
+        ),
+        (
+            "Minor Strength",
+            1,
+            0x8000_0105,
+            0.0,
+            -1.0,
+            attr,
+            1,
+            10.0,
+            904,
+        ),
+        (
+            "Weakness Other VI",
+            1,
+            0x5000_00AA,
+            -60.0,
+            240.0,
+            attr,
+            1,
+            -35.0,
+            905,
+        ),
+        (
+            "Clumsiness Other VI",
+            1,
+            0x5000_00AA,
+            -10.0,
+            240.0,
+            attr,
+            4,
+            -35.0,
+            906,
+        ),
+    ];
+    let mut used = Vec::new();
+    for &(name, layer, caster, start, duration, kind, key, value, category) in list {
+        let Some(id) = spell_named(&tables, name) else {
+            println!("no spell named {name}");
+            continue;
+        };
+        book.on_spell_learned(id, 1.0);
+        used.push(id);
+        book.on_enchantment_added(ActiveEnchantmentRecord {
+            stat_mod_type: Some(kind),
+            stat_mod_key: Some(key),
+            stat_mod_value: Some(value),
+            bucket: if kind & EnchantmentTypeFlags::ADDITIVE.bits() != 0 {
+                2
+            } else {
+                1
+            },
+            start_time: start,
+            spell_category: category,
+            power_level: if layer == 1 { 300 } else { 250 },
+            ..ActiveEnchantmentRecord::new(id, layer, duration, caster)
+        });
+    }
+    // Vitae.
+    book.on_enchantment_added(ActiveEnchantmentRecord {
+        stat_mod_type: Some(0),
+        stat_mod_value: Some(0.94),
+        bucket: 4,
+        start_time: -100.0,
+        ..ActiveEnchantmentRecord::new(666, 1, -1.0, 0)
+    });
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Player(
+            Box::new(PlayerFacts {
+                revision: 3,
+                numbers: ac_core::player::LocalPlayerState::new(Some(book)),
+                session_seconds: 0.0,
+            }),
+        )));
+    s.step();
+    s.step();
+    used
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_effects() {
+    use ac_core::combat::CombatMode;
+    use ac_ui_window::ui::modern::magic::effects_window::EffectsWindow;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let used = effects_on_player(&mut s);
+    assert!(used.len() >= 4, "the dats' spells: {used:?}");
+    s.save("effects-hud");
+    // The helpful count opens the window on Helpful.
+    s.click(0, 16 + 24, 14 + 14, Modifiers::NONE);
+    assert!(
+        s.ui.host().root.is_window_visible("modern-effects-window"),
+        "the window opens from the count"
+    );
+    s.save("effects-helpful");
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-effects-window")
+            .expect("the window")
+            .frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    {
+        let w = s.ui.host().root.widget::<EffectsWindow>(frame).expect("it");
+        assert!(!w.harmful);
+        assert!(w.list.helpful.len() >= 3, "{:?}", w.list.helpful);
+        assert!(w.list.vitae.is_some());
+    }
+    // The Strength row (with the weaker copy underneath) chosen.
+    let strength = {
+        let w = s.ui.host().root.widget::<EffectsWindow>(frame).expect("it");
+        w.list
+            .helpful
+            .iter()
+            .position(|e| e.under.is_some())
+            .expect("an effect with a copy underneath")
+    };
+    let _ = strength;
+    // The Timed group's first row: after Ending soon's heading and row.
+    let y = fy + 104 + 32 + 8 + 26 + 8 + 26 + 46 + 26 + 20;
+    s.click(0, fx + 120, y, Modifiers::NONE);
+    s.save("effects-chosen");
+    // The Skills chip.
+    s.click(
+        0,
+        fx + 20 + 60 + 4 + 90 + 4 + 30,
+        fy + 104 + 40 + 13,
+        Modifiers::NONE,
+    );
+    s.save("effects-skills");
+    // The Harmful tab, with vitae.
+    s.click(0, fx + 150, fy + 52 + 20, Modifiers::NONE);
+    {
+        let w = s.ui.host().root.widget::<EffectsWindow>(frame).expect("it");
+        assert!(w.harmful, "the Harmful tab shows");
+    }
+    s.save("effects-harmful");
+}
+
+/// The player carries packs of the first six components the dats name
+/// (by their weenie classes), a few of each.
+fn carry_components(s: &mut Shot) {
+    let dats = dats();
+    let table: ac_dat::objects::SpellComponentTable = dats
+        .get(ac_dat::objects::SPELL_COMPONENT_TABLE_ID)
+        .expect("read")
+        .expect("the component table");
+    let map: ac_dat::objects::EnumIdMap = dats.get(0x2700_0002).expect("read").expect("the map");
+    let mut objects = Vec::new();
+    let mut guids = Vec::new();
+    for (i, (id, base)) in table.components.iter().take(6).enumerate() {
+        let Some(class) = map.client_id(*id) else {
+            continue;
+        };
+        let guid = 0x8000_0C00 + i as u32;
+        let mut o = ClientObject::new(guid);
+        o.name = base.name.clone();
+        o.weenie_class_id = class;
+        o.item_type = ItemType::SPELL_COMPONENTS;
+        o.icon_id = base.icon;
+        o.stack_size = [48, 4, 0, 22, 9, 120][i];
+        o.container_id = PLAYER;
+        if o.stack_size > 0 {
+            objects.push(o);
+            guids.push(guid);
+        }
+    }
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: false,
+                objects,
+                removed: Vec::new(),
+                contents: Vec::new(),
+            },
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_spellbook() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_runtime::gameplay::GameplayCommand;
+    use ac_runtime::session::SessionCommand;
+    use ac_ui::panels::magic::SpellbookPage;
+    use ac_ui_window::ui::modern::magic::spellbook_window::{BookFrame, ComponentTable, SpellList};
+    let mut s = Shot::new(CombatMode::MAGIC);
+    carry_components(&mut s);
+    assert!(s.ui.run_hotkey(Hotkey::Spellbook(SpellbookPage::Spells)));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-spellbook"),
+        "the book opens from its key"
+    );
+    s.save("spellbook");
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-spellbook")
+            .expect("book")
+            .frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    let list = shown_in::<SpellList>(&s, frame).expect("the list");
+    let (lx, ly, _, _) = rect_of(&s, list);
+    {
+        let l = s.ui.host().root.widget::<SpellList>(list).expect("it");
+        assert!(!l.groups.is_empty(), "spells listed");
+    }
+    // The first spell chosen: its details.
+    s.click(0, lx + 100, ly + 30 + 19, Modifiers::NONE);
+    s.step();
+    s.step();
+    s.save("spellbook-chosen");
+    let chosen = {
+        let f = s.ui.host().root.widget::<BookFrame>(frame).expect("it");
+        f.details.as_ref().map(|d| d.id).expect("details")
+    };
+    // Cast (in Magic) goes out.
+    s.sent.clear();
+    s.click(0, fx + 612 + 40, fy + 68 + 556 - 56 + 28, Modifiers::NONE);
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Cast { spell, .. }) if *spell == chosen.to_string()
+        )),
+        "{:?}",
+        s.sent
+    );
+    // Forget asks first.
+    s.sent.clear();
+    s.click(
+        0,
+        fx + 612 + 304 - 14 - 16,
+        fy + 68 + 556 - 56 + 28,
+        Modifiers::NONE,
+    );
+    s.save("spellbook-forget");
+    assert!(s.sent.is_empty());
+    s.click(
+        0,
+        fx + 612 + 304 - 14 - 52,
+        fy + 68 + 556 - 56 - 140 + 136 - 14 - 15,
+        Modifiers::NONE,
+    );
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::ForgetSpell(spell)) if *spell == chosen.to_string()
+        )),
+        "{:?}",
+        s.sent
+    );
+    // One school: the filter goes to the server.
+    s.sent.clear();
+    s.click(0, fx + 24 + 60, fy + 68 + 18 + 32 + 15, Modifiers::NONE);
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::SetSpellbookFilter(_))
+        )),
+        "{:?}",
+        s.sent
+    );
+    s.save("spellbook-school");
+    // The components page.
+    assert!(s.ui.run_hotkey(Hotkey::Spellbook(SpellbookPage::Components)));
+    s.step();
+    s.step();
+    s.save("spellbook-components");
+    let table = shown_in::<ComponentTable>(&s, frame).expect("the table shows");
+    let (tx, ty, _, _) = rect_of(&s, table);
+    // The first row's restock box: type 30 and Enter.
+    let (bx, by, bw, bh) = ComponentTable::restock_rect(0.0);
+    s.click(
+        0,
+        tx + (bx + bw / 2.0) as i32,
+        ty + (by + bh / 2.0) as i32,
+        Modifiers::NONE,
+    );
+    s.sent.clear();
+    for c in "30".chars() {
+        let r: Routed<u32> = s.ui.key(
+            0,
+            Key::Number3,
+            true,
+            false,
+            Modifiers::NONE,
+            Some(c.to_string().as_str()),
+        );
+        let _ = s.ui.handle(r.outputs);
+        s.step();
+    }
+    s.save("spellbook-restock");
+    s.key(Key::Enter, Modifiers::NONE, true);
+    s.key(Key::Enter, Modifiers::NONE, false);
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::SetDesiredComponent { amount: 30, .. })
+        )),
+        "{:?}",
+        s.sent
+    );
+}
+
+/// The player's numbers for the character window: level 126, every
+/// attribute raised a way, the vitals, a dozen skills in every group,
+/// experience to spend and a Focus buff.
+fn character_numbers(s: &mut Shot) {
+    use ac_core::spells::{ActiveEnchantmentRecord, EnchantmentTypeFlags};
+    let dats = dats();
+    let curves: ac_dat::objects::ExperienceTable = dats
+        .get(ac_dat::objects::EXPERIENCE_TABLE_ID)
+        .expect("read")
+        .expect("the experience table");
+    let tables = ac_runtime::gameplay::GameTables::load(&dats).expect("the game tables");
+    let mut book = Spellbook::new(Some(Arc::clone(tables.spells())));
+    if let Some(id) = spell_named(&tables, "Focus Self VI") {
+        book.on_spell_learned(id, 1.0);
+        book.on_enchantment_added(ActiveEnchantmentRecord {
+            stat_mod_type: Some(
+                EnchantmentTypeFlags::ATTRIBUTE.bits() | EnchantmentTypeFlags::ADDITIVE.bits(),
+            ),
+            stat_mod_key: Some(5),
+            stat_mod_value: Some(35.0),
+            bucket: 2,
+            start_time: -100.0,
+            spell_category: 900,
+            power_level: 300,
+            ..ActiveEnchantmentRecord::new(id, 1, 2700.0, PLAYER)
+        });
+    }
+    let mut n = ac_core::player::LocalPlayerState::new(Some(book));
+    let a = |r: u32| curves.attributes.get(r as usize).copied().unwrap_or(0);
+    for (id, start, ranks) in [
+        (1, 60, 40),
+        (2, 60, 40),
+        (3, 60, 40),
+        (4, 60, 40),
+        (5, 100, 190),
+        (6, 100, 190),
+    ] {
+        n.on_attribute_update(id, ranks, start, a(ranks));
+    }
+    let v = |r: u32| curves.vitals.get(r as usize).copied().unwrap_or(0);
+    for (id, ranks, current) in [(2, 80, 310), (4, 60, 380), (6, 120, 290)] {
+        n.on_vital_update(id, ranks, 0, v(ranks), current);
+    }
+    let t = |r: u32| curves.trained_skills.get(r as usize).copied().unwrap_or(0);
+    let sp = |r: u32| {
+        curves
+            .specialized_skills
+            .get(r as usize)
+            .copied()
+            .unwrap_or(0)
+    };
+    // id, status (1 untrained, 2 trained, 3 specialized), ranks
+    for (id, status, ranks) in [
+        (34, 3, 180),
+        (33, 3, 160),
+        (16, 2, 150),
+        (15, 3, 170),
+        (31, 2, 150),
+        (32, 2, 140),
+        (14, 2, 120),
+        (6, 2, 130),
+        (24, 2, 100),
+        (22, 2, 90),
+        (21, 2, 60),
+        (23, 1, 0),
+        (20, 1, 0),
+        (38, 1, 0),
+        (37, 1, 0),
+    ] {
+        let xp = match status {
+            3 => sp(ranks),
+            2 => t(ranks),
+            _ => 0,
+        };
+        n.on_skill_update(id, ranks, status, xp, 0, 0, 0.0, 0);
+    }
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Player(
+            Box::new(PlayerFacts {
+                revision: 4,
+                numbers: n,
+                session_seconds: 0.0,
+            }),
+        )));
+    let mut player = ClientObject::new(PLAYER);
+    player.name = "Aerin Vale".to_owned();
+    player.item_type = ItemType::CREATURE;
+    player.properties.ints.insert(0x19, 126);
+    player.properties.ints.insert(0x18, 7);
+    player.properties.ints.insert(0x71, 2);
+    player.properties.ints.insert(0xBC, 1);
+    player.properties.ints.insert(0x2B, 38);
+    player.properties.ints.insert(0x7D, 5_270_400);
+    let at = |l: usize| i64::try_from(curves.levels.get(l).copied().unwrap_or(0)).unwrap_or(0);
+    player
+        .properties
+        .int64s
+        .insert(1, at(126) + (at(127) - at(126)) * 64 / 100);
+    player.properties.int64s.insert(2, 4_210_880_000);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: false,
+                objects: vec![player],
+                removed: Vec::new(),
+                contents: Vec::new(),
+            },
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_character() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_runtime::session::SessionCommand;
+    use ac_ui::panels::character::CharacterTab;
+    use ac_ui_window::ui::modern::character::window::{CharacterFrame, SkillList};
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    character_numbers(&mut s);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Titles(
+            Box::new(ac_runtime::session::interface::TitleFacts {
+                display_title_id: 2,
+                title_ids: (1..=20).collect(),
+                revision: 1,
+                table_generation: 1,
+            }),
+        )));
+    s.step();
+    assert!(s.ui.run_hotkey(Hotkey::Character(CharacterTab::Attributes)));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-character"),
+        "the window opens from its key"
+    );
+    s.save("character");
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-character")
+            .expect("it")
+            .frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    {
+        let f =
+            s.ui.host()
+                .root
+                .widget::<CharacterFrame>(frame)
+                .expect("it");
+        assert_eq!(f.sheet.level, Some(126), "the sheet is read");
+    }
+    // Focus chosen: how it adds up, with its spell.
+    let focus_y = fy + 172 + 26 + 4 * 44 + 21;
+    s.click(0, fx + 80, focus_y, Modifiers::NONE);
+    s.step();
+    s.save("character-focus");
+    // Strength's "+" raises it by one.
+    s.sent.clear();
+    s.click(
+        0,
+        fx + 24 + 300 - 6 - 13,
+        fy + 172 + 26 + 21,
+        Modifiers::NONE,
+    );
+    assert!(
+        s.sent
+            .iter()
+            .any(|c| matches!(c, SessionCommand::Character(_))),
+        "{:?}",
+        s.sent
+    );
+    // A skill chosen in the list.
+    let list = shown_in::<SkillList>(&s, frame).expect("the skills");
+    let (lx, ly, _, _) = rect_of(&s, list);
+    s.click(0, lx + 100, ly + 30 + 17, Modifiers::NONE);
+    s.step();
+    s.save("character-skill");
+    // The titles and information pages.
+    s.click(0, fx + 300, fy + 26, Modifiers::NONE);
+    s.click(0, fx + 24 + 120, fy + 210 + 20, Modifiers::NONE);
+    s.save("character-titles");
+    assert!(
+        shown_in::<ac_ui_window::ui::modern::character::window::TitleGrid>(&s, frame).is_some(),
+        "the titles page shows its grid"
+    );
+    s.click(0, fx + 380, fy + 26, Modifiers::NONE);
+    s.save("character-info");
+    {
+        let f =
+            s.ui.host()
+                .root
+                .widget::<CharacterFrame>(frame)
+                .expect("it");
+        assert!(!f.extras.info.is_empty(), "the information cards");
+    }
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_options() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    s.ui.attach_key_bindings(&ac_ui::input::KeyBindings::retail_defaults());
+    assert!(s.ui.run_hotkey(Hotkey::Options));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-options"),
+        "the window opens from its key"
+    );
+    assert!(
+        !s.ui.host().root.is_window_visible("options"),
+        "retail's stays hidden"
+    );
+    s.save("options");
+    let frame = s.ui.host().root.window("modern-options").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    let nav = |k: i32| fy + 52 + 14 + k * 38 + 18;
+    // Gameplay; Auto target switched off sends the option.
+    s.click(0, fx + 60, nav(1), Modifiers::NONE);
+    s.sent.clear();
+    s.click(0, fx + 950, fy + 52 + 114 + 26, Modifiers::NONE);
+    s.save("options-gameplay");
+    let set: Vec<bool> = s
+        .sent
+        .iter()
+        .filter_map(|c| match c {
+            SessionCommand::SetCharacterOption { value, .. } => Some(*value),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(set.len(), 1, "{:?}", s.sent);
+    // The other sections.
+    for (k, name) in [
+        (3, "options-chat"),
+        (4, "options-controls"),
+        (5, "options-graphics"),
+        (6, "options-sound"),
+    ] {
+        s.click(0, fx + 60, nav(k), Modifiers::NONE);
+        s.save(name);
+    }
+    // Graphics' resolution menu.
+    s.click(0, fx + 60, nav(5), Modifiers::NONE);
+    s.click(0, fx + 900, fy + 52 + 114 + 26, Modifiers::NONE);
+    s.save("options-menu");
+    s.click(0, fx + 500, fy + 300, Modifiers::NONE);
+    // The search.
+    let field = shown_in::<ac_ui::widgets::Field>(&s, frame).expect("the search field");
+    s.ui.host_mut()
+        .root
+        .with::<ac_ui::widgets::Field, _>(field, |f, _| f.set_text("run"));
+    s.step();
+    s.save("options-search");
+    // Keys: the movement keys, a new key caught in place, then one the
+    // game uses for something else.
+    s.ui.host_mut()
+        .root
+        .with::<ac_ui::widgets::Field, _>(field, |f, _| f.set_text("movement keys"));
+    s.step();
+    let _ = s.ui.take_keyboard_requests();
+    s.click(0, fx + 690, fy + 52 + 114 + 20, Modifiers::NONE);
+    assert_eq!(
+        s.ui.take_keyboard_requests(),
+        [ac_render::ui::keyboard_window::KeyboardRequest::BeginCapture]
+    );
+    s.save("options-key-catch");
+    let f13 = ac_ui::input::KeyChord::key(Key::F13, Modifiers::NONE);
+    assert!(!s.ui.keyboard_captured(Some(f13)));
+    s.step();
+    s.step();
+    let changed = |s: &Shot| {
+        s.ui.host()
+            .root
+            .widget::<ac_ui_window::ui::modern::options::window::OptionsFrame>(frame)
+            .map(|f| (f.keys_changed, f.clash.is_some()))
+    };
+    assert_eq!(changed(&s), Some((1, false)));
+    s.click(0, fx + 690 + 114, fy + 52 + 114 + 20, Modifiers::NONE);
+    let _ = s.ui.take_keyboard_requests();
+    let w = ac_ui::input::KeyChord::key(Key::S, Modifiers::NONE);
+    assert!(!s.ui.keyboard_captured(Some(w)));
+    s.step();
+    assert_eq!(changed(&s), Some((1, true)), "S is in use: it asks");
+    s.save("options-key-clash");
+    // Closing without Apply puts the change back.
+    s.sent.clear();
+    s.click(0, fx + 1000 - 12 - 15, fy + 26, Modifiers::NONE);
+    s.step();
+    assert!(!s.ui.host().root.is_window_visible("modern-options"));
+    let back: Vec<bool> = s
+        .sent
+        .iter()
+        .filter_map(|c| match c {
+            SessionCommand::SetCharacterOption { value, .. } => Some(*value),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(back, vec![!set[0]], "{:?}", s.sent);
+    assert_eq!(changed(&s), Some((0, false)), "the keys are put back too");
+}

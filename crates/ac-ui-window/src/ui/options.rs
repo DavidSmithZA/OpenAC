@@ -240,6 +240,7 @@ impl WindowUi {
             return;
         };
         let (options1, options2) = (view.options1, view.options2);
+        self.follow_modern_option_values();
         self.host
             .with_controller::<OptionsWindowController, _>(OPTIONS_WINDOW, |c, ui| {
                 let mut live = c.live().clone();
@@ -336,41 +337,10 @@ impl WindowUi {
                 else {
                     return;
                 };
-                if let Section::Character(id) = section {
-                    if let Some(value) = live.character_option(id) {
-                        commands.push(SessionCommand::SetCharacterOption { option: id, value });
-                    }
-                    return;
-                }
-                // Only the section the window changed is taken from its
-                // copy, onto the settings in force.
-                self.edit_settings(section, persist, |s| {
-                    take_section(s, &live.settings, section);
-                });
-                if section == Section::Chat {
-                    self.apply_chat_settings();
-                }
+                self.option_changed(&live, section, persist, commands);
             }
             OptionsOutput::Applied => commands.push(SessionCommand::SaveCharacterOptions),
-            OptionsOutput::ExitToCharacterSelection => {
-                let text = self
-                    .content
-                    .strings()
-                    .resolve(
-                        UI_STRING_TABLE,
-                        compute_hash("ID_Client_EndCharacterSessionConfirm"),
-                        0,
-                    )
-                    .unwrap_or_else(|| {
-                        "Are you sure you want to end this character session?".to_owned()
-                    });
-                self.ask(
-                    text,
-                    DialogAction::Panel(PanelOutput::Session(SessionCommand::Lifecycle(
-                        LifecycleCommand::EndCharacterSession,
-                    ))),
-                );
-            }
+            OptionsOutput::ExitToCharacterSelection => self.ask_end_character_session(),
             OptionsOutput::ExitGame => commands.push(SessionCommand::Shutdown),
             OptionsOutput::UseMouseTurningSettings => self.use_mouse_turning_settings(commands),
             OptionsOutput::SystemMessage(text) => self.local_line(LogTextType::ClientLocal, &text),
@@ -380,10 +350,56 @@ impl WindowUi {
         }
     }
 
+    /// Character selection, after the game's question.
+    pub(super) fn ask_end_character_session(&mut self) {
+        let text = self
+            .content
+            .strings()
+            .resolve(
+                UI_STRING_TABLE,
+                compute_hash("ID_Client_EndCharacterSessionConfirm"),
+                0,
+            )
+            .unwrap_or_else(|| "Are you sure you want to end this character session?".to_owned());
+        self.ask(
+            text,
+            DialogAction::Panel(PanelOutput::Session(SessionCommand::Lifecycle(
+                LifecycleCommand::EndCharacterSession,
+            ))),
+        );
+    }
+
+    /// An options window changed `section` of its copy `live` of the
+    /// values: a character option goes to the session; anything else is
+    /// taken from the copy onto the settings in force (saved unless
+    /// `persist` is off), and the chat follows its own.
+    pub(super) fn option_changed(
+        &mut self,
+        live: &LiveValues,
+        section: Section,
+        persist: bool,
+        commands: &mut Vec<SessionCommand>,
+    ) {
+        if let Section::Character(id) = section {
+            if let Some(value) = live.character_option(id) {
+                commands.push(SessionCommand::SetCharacterOption { option: id, value });
+            }
+            return;
+        }
+        // Only the section the window changed is taken from its copy, onto
+        // the settings in force.
+        self.edit_settings(section, persist, |s| {
+            take_section(s, &live.settings, section);
+        });
+        if section == Section::Chat {
+            self.apply_chat_settings();
+        }
+    }
+
     /// OpenAC `ApplyMouseTurningSettingsMacro`: the camera to the mouse
     /// turning targets, the character option on, a line per change, then
     /// the Configuration page applied.
-    fn use_mouse_turning_settings(&mut self, commands: &mut Vec<SessionCommand>) {
+    pub(super) fn use_mouse_turning_settings(&mut self, commands: &mut Vec<SessionCommand>) {
         let use_mouse_turning = self.player_view.is_some_and(|v| {
             ac_runtime::character::option(option_id::USE_MOUSE_TURNING)
                 .is_some_and(|e| v.options2 & e.mask != 0)

@@ -1189,6 +1189,31 @@ fn plugin_ui_changes() -> Vec<UiChange> {
                 },
             ]),
         },
+        UiChange::ItemNotes {
+            owner: ac_plugin_ui::UiOwner::new("example", "Example"),
+            notes: Arc::new(vec![ac_plugin_ui::ItemNote {
+                object_id: 0x8000_0105,
+                mark: "Keep".into(),
+                tone: ac_plugin_ui::NoteTone::Good,
+                lines: vec!["Rule: Sets 5+".into()],
+                menu: vec![ac_plugin_ui::ItemMenuEntry {
+                    id: "never".into(),
+                    label: "Never loot this".into(),
+                }],
+            }]),
+        },
+        UiChange::WindowFoot {
+            owner: ac_plugin_ui::UiOwner::new("example", "Example"),
+            window: ac_plugin_ui::ItemWindow::Loot,
+            foot: ac_plugin_ui::WindowFoot {
+                summary: "4 kept".into(),
+                buttons: vec![ac_plugin_ui::FootButton {
+                    id: "loot".into(),
+                    label: "Loot 4 kept".into(),
+                    enabled: false,
+                }],
+            },
+        },
     ]
 }
 
@@ -2236,6 +2261,16 @@ fn every_command() -> Vec<SessionCommand> {
             resizable: (true, true),
             shares_place: None,
         }]),
+        UiInput::ItemMenu {
+            owner: "example".into(),
+            id: "never".into(),
+            object: 0x8000_0105,
+        },
+        UiInput::FootButton {
+            owner: "example".into(),
+            window: ac_plugin_ui::ItemWindow::Vendor,
+            id: "sell".into(),
+        },
     ];
     let mut commands = vec![
         C::Chat("/who".into()),
@@ -2854,7 +2889,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "2798a08c3846192c", "{:#x}", shape());
+    assert_eq!(shape_hex(), "eb0df3699bc1e88b", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full
@@ -2951,6 +2986,7 @@ variants! {
     ui_input_variant, UI_INPUT: UiInput {
         Action, PanelShown, Pointer, ClientWindows, ClientChords, Hotkey, InputAction, Theme,
         FileIconsShown, DisplayDensity, CanvasHosted, DialogAnswered, Windows, WindowsChanged,
+        ItemMenu, FootButton,
     }
     interface_variant, INTERFACE: InterfaceEvent {
         Items, Player, State, Appraisal, Trade, Vendor, Social, Contracts, Book, House,
@@ -2963,7 +2999,7 @@ variants! {
         CanvasListening, CanvasReleasePointer, CanvasResized, ImageAdded, FileIcon,
         ImageRemoved, Labels, Lines, Triangles, Icons, Shapes, ProjectileDebug, ClientWindow,
         Hotkeys, FontAdded, FontRemoved, DialogAdded, DialogRemoved, Modal, WindowApply, WindowsHeld,
-        Drawings,
+        Drawings, ItemNotes, WindowFoot,
     }
     pregame_variant, PREGAME: PreGameEvent { Connection, Selection, Creation, Options, Refused }
     portal_variant, PORTAL: PortalSpaceEvent {

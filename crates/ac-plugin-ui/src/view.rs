@@ -6,9 +6,9 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::model::{
-    CanvasView, ClientWindow, ClientWindowAction, GroundShape, ImageView, PanelView,
-    ProjectileSample, UiChange, WorldDrawing, WorldDrawingEntry, WorldIconEntry, WorldLabel,
-    WorldLine, WorldTriangle,
+    CanvasView, ClientWindow, ClientWindowAction, GroundShape, ImageView, ItemNote, ItemNoteEntry,
+    ItemWindow, PanelView, ProjectileSample, UiChange, UiOwner, WindowFoot, WindowFootEntry,
+    WorldDrawing, WorldDrawingEntry, WorldIconEntry, WorldLabel, WorldLine, WorldTriangle,
 };
 
 /// What changed in the copy since the window last looked.
@@ -51,6 +51,14 @@ pub struct PluginUiView {
     pub drawings: Arc<Vec<WorldDrawingEntry>>,
     /// The same by plugin, as each last sent its own.
     drawings_by_owner: BTreeMap<String, Arc<Vec<WorldDrawing>>>,
+    /// The plugins' notes on items, by item: each plugin's, by plugin id.
+    pub item_notes: Arc<BTreeMap<u32, Vec<ItemNoteEntry>>>,
+    /// The same by plugin, as each last sent its own.
+    notes_by_owner: BTreeMap<String, (UiOwner, Arc<Vec<ItemNote>>)>,
+    /// The plugins' parts of the item windows' feet, by window, then by
+    /// plugin id.
+    pub feet: Arc<Vec<WindowFootEntry>>,
+    feet_by_key: BTreeMap<(ItemWindow, String), (UiOwner, WindowFoot)>,
     /// The projectile markers last sent, with how many sets have come
     /// (the window shows each set for a moment).
     pub projectile: (u64, Arc<Vec<ProjectileSample>>),
@@ -159,6 +167,10 @@ impl PluginUiView {
                 self.shapes = Arc::default();
                 self.drawings = Arc::default();
                 self.drawings_by_owner.clear();
+                self.item_notes = Arc::default();
+                self.notes_by_owner.clear();
+                self.feet = Arc::default();
+                self.feet_by_key.clear();
                 self.hotkeys = Arc::default();
                 self.client_requests.clear();
                 self.window_applies.clear();
@@ -291,6 +303,48 @@ impl PluginUiView {
                                 owner: owner.clone(),
                                 drawing: drawing.clone(),
                             })
+                        })
+                        .collect(),
+                );
+            }
+            UiChange::ItemNotes { owner, notes } => {
+                if notes.is_empty() {
+                    self.notes_by_owner.remove(&owner.id);
+                } else {
+                    self.notes_by_owner.insert(owner.id.clone(), (owner, notes));
+                }
+                let mut by_item: BTreeMap<u32, Vec<ItemNoteEntry>> = BTreeMap::new();
+                for (owner, notes) in self.notes_by_owner.values() {
+                    for note in notes.iter() {
+                        by_item
+                            .entry(note.object_id)
+                            .or_default()
+                            .push(ItemNoteEntry {
+                                owner: owner.clone(),
+                                note: note.clone(),
+                            });
+                    }
+                }
+                self.item_notes = Arc::new(by_item);
+            }
+            UiChange::WindowFoot {
+                owner,
+                window,
+                foot,
+            } => {
+                let key = (window, owner.id.clone());
+                if foot.is_empty() {
+                    self.feet_by_key.remove(&key);
+                } else {
+                    self.feet_by_key.insert(key, (owner, foot));
+                }
+                self.feet = Arc::new(
+                    self.feet_by_key
+                        .iter()
+                        .map(|((window, _), (owner, foot))| WindowFootEntry {
+                            owner: owner.clone(),
+                            window: *window,
+                            foot: foot.clone(),
                         })
                         .collect(),
                 );

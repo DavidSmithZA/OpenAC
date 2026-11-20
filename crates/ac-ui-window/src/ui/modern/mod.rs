@@ -13,10 +13,14 @@
 //! [`places`].
 
 pub mod bars;
+pub mod character;
 pub mod chat;
 pub mod fonts;
 pub mod hud;
 pub mod items;
+pub mod kit;
+pub mod magic;
+pub mod options;
 pub mod places;
 
 use std::sync::Arc;
@@ -80,6 +84,14 @@ pub struct ModernLayer {
     pub inspect: Option<items::inspect::InspectUi>,
     /// The Loot window.
     pub loot: Option<items::loot::LootUi>,
+    /// The Effects window.
+    pub effects_window: Option<magic::effects_run::EffectsUi>,
+    /// The Spellbook.
+    pub spellbook: Option<magic::spellbook_run::BookUi>,
+    /// The Character window.
+    pub character: Option<character::run::CharacterUi>,
+    /// The Options window.
+    pub options: Option<options::run::OptionsUi>,
     /// Packs used anywhere since the inventory last looked.
     pub opened_packs: Vec<u32>,
 }
@@ -321,6 +333,10 @@ impl WindowUi {
         self.mount_modern_inventory();
         self.mount_modern_inspect();
         self.mount_modern_loot();
+        self.mount_modern_effects_window();
+        self.mount_modern_spellbook();
+        self.mount_modern_character();
+        self.mount_modern_options();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -489,20 +505,26 @@ impl WindowUi {
                     .iter()
                     .any(|(_, c)| *c == ac_runtime::gameplay::HouseLineColor::RentNotPaid)
         });
+        // The main panels follow the windows standing in for retail's.
+        let shows = |panel| self.panels.is_visible(&self.host.root, panel);
+        let character = shows(ac_ui::panels::panel_id::CHARACTER);
+        let inventory = shows(ac_ui::panels::panel_id::INVENTORY);
+        let spellbook = shows(ac_ui::panels::panel_id::MAGIC);
+        let options = shows(ac_ui::panels::panel_id::OPTIONS);
         let ui = &mut self.host.root;
         for id in buttons {
             let Some(panel) = ui.widget::<PanelButton>(id).map(|b| b.panel) else {
                 continue;
             };
             let open = match panel {
-                Panel::Character => ui.is_window_visible(super::window::CHARACTER_WINDOW),
-                Panel::Inventory => ui.is_window_visible(super::window::INVENTORY_WINDOW),
-                Panel::Spellbook => ui.is_window_visible(super::window::SPELLBOOK_WINDOW),
+                Panel::Character => character,
+                Panel::Inventory => inventory,
+                Panel::Spellbook => spellbook,
                 Panel::Journal => ui.is_window_visible(super::social_panels::JOURNAL_WINDOW),
                 Panel::Map => world_open && !on_house,
                 Panel::House => on_house,
                 Panel::Social => ui.is_window_visible(super::social_panels::SOCIAL_WINDOW),
-                Panel::Options => ui.is_window_visible(super::options::OPTIONS_WINDOW),
+                Panel::Options => options,
             };
             if let Some(b) = ui.widget_mut::<PanelButton>(id) {
                 b.open = open;

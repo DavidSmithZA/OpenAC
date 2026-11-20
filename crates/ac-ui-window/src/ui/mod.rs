@@ -15,7 +15,7 @@ pub mod character_pages;
 pub mod chat_windows;
 pub mod clipboard;
 mod combat_window;
-mod components_page;
+pub(crate) mod components_page;
 pub mod container_window;
 mod cooldowns;
 pub mod facts;

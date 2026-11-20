@@ -63,6 +63,7 @@ fn skill(
         specialized_cost: trained * 2,
         raise_cost: raise,
         raise10_cost: raise10,
+        max_raise: (0, 0),
         vitae_modifier: 0,
         tooltip: None,
     }

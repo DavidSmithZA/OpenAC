@@ -80,6 +80,36 @@ impl Place {
 /// windows are built).
 const PLACES: &[(&str, Place)] = &[
     (
+        super::character::run::CHARACTER,
+        Place {
+            anchor: Anchor::Center,
+            dx: 0.0,
+            dy: 0.0,
+            width: super::character::window::WIDTH,
+            height: super::character::window::HEIGHT,
+        },
+    ),
+    (
+        super::magic::spellbook_run::SPELLBOOK,
+        Place {
+            anchor: Anchor::Center,
+            dx: 0.0,
+            dy: 0.0,
+            width: super::magic::spellbook_window::WIDTH,
+            height: super::magic::spellbook_window::HEIGHT,
+        },
+    ),
+    (
+        super::magic::effects_run::EFFECTS_WINDOW,
+        Place {
+            anchor: Anchor::Center,
+            dx: 0.0,
+            dy: 0.0,
+            width: super::magic::effects_window::WIDTH,
+            height: super::magic::effects_window::HEIGHT,
+        },
+    ),
+    (
         super::items::loot::LOOT,
         Place {
             anchor: Anchor::TopRight,

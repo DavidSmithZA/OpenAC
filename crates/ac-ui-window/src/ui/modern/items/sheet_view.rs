@@ -150,6 +150,8 @@ enum Line {
     },
     /// An inscription's box.
     Box { y: f32, h: f32, editable: bool },
+    /// A plugin's mark: a chip.
+    Chip { y: f32, words: String, color: Color },
     /// The legend of the spell marks.
     Legend { y: f32 },
 }
@@ -382,6 +384,14 @@ impl SheetView {
                             y += body.line_height + 3.0;
                         }
                         y += 3.0;
+                    }
+                    Entry::Verdict { words, color } => {
+                        self.lines.push(Line::Chip {
+                            y,
+                            words: words.clone(),
+                            color: *color,
+                        });
+                        y += strong.line_height + 12.0;
                     }
                     Entry::Spell { name, text, gold } => {
                         y += 2.0;
@@ -968,6 +978,32 @@ impl Widget for SheetView {
                         let x = PAD + 11.0 + text::measure(s, "raised by a spell", 0.0) + 14.0;
                         draw_mark(rc, Mark::Down, x, cy, p.bad_text);
                         text::draw(rc, s, "lowered", x + 11.0, y, TextStyle::plain(p.muted));
+                    }
+                }
+                Line::Chip { y, words, color } => {
+                    if let Some(f) = &f.strong {
+                        let cw = text::measure(f, words, 0.0).ceil() + 18.0;
+                        let ch = f.line_height + 8.0;
+                        let r = CornerRadii::all(ch * 0.5);
+                        let c = *color;
+                        rc.fill_rounded_rect(
+                            PAD,
+                            off + y,
+                            cw,
+                            ch,
+                            r,
+                            Color::rgba(c.r, c.g, c.b, 0.16),
+                        );
+                        rc.stroke_rounded_rect(
+                            PAD,
+                            off + y,
+                            cw,
+                            ch,
+                            r,
+                            Color::rgba(c.r, c.g, c.b, 0.65),
+                            1.0,
+                        );
+                        text::draw(rc, f, words, PAD + 9.0, off + y + 4.0, TextStyle::plain(c));
                     }
                 }
                 Line::Box { y, h, editable } => {

@@ -590,6 +590,8 @@ pub struct WindowUi {
     /// The modern interface, while the launcher asked for it
     /// (`super::modern`).
     pub(super) modern: Option<super::modern::ModernLayer>,
+    /// The resolutions the display offers (the options windows' menu).
+    pub(super) resolutions: Vec<String>,
 }
 
 /// Handles on caches of dat reads held elsewhere (see
@@ -687,6 +689,7 @@ impl WindowUi {
             barber: super::barber_window::BarberWindow::default(),
             miss_caches: MissCaches::default(),
             modern: None,
+            resolutions: resolution_choices.clone(),
         };
         let pregame_dats = dats.clone();
         ui.load_tables(&dats);
@@ -842,6 +845,7 @@ impl WindowUi {
 
     /// The options window's copy of the settings follows this window's.
     fn show_settings_in_options(&mut self) {
+        self.follow_modern_option_values();
         let settings = self.settings.clone();
         self.host
             .with_controller::<ac_ui::panels::options::OptionsWindowController, _>(
@@ -1517,6 +1521,10 @@ impl WindowUi {
         self.tick_plugin_ui(now);
         self.tick_examination(dt);
         self.tick_modern_inspect(dt);
+        self.tick_modern_effects_window();
+        self.tick_modern_spellbook(dt);
+        self.tick_modern_character(dt);
+        self.tick_modern_options();
         self.tick_keyboard_dialogs();
         self.tick_tooltips(dt, now_ms);
         self.tick_modern_effects(dt);
@@ -1692,6 +1700,9 @@ impl WindowUi {
     /// OpenAC `RetailUiRuntime.OpenSpellbook`: shown on that page, it
     /// closes; else it opens there.
     fn open_spellbook(&mut self, page: SpellbookPage) -> bool {
+        if let Some(done) = self.modern_open_spellbook(page) {
+            return done;
+        }
         let visible = self.host.root.is_window_visible(SPELLBOOK_WINDOW);
         let Some(on_page) = self
             .host
@@ -1717,6 +1728,9 @@ impl WindowUi {
 
     /// OpenAC `RetailUiRuntime.OpenCharacterPanel`.
     pub(super) fn open_character(&mut self, tab: CharacterTab) -> bool {
+        if let Some(done) = self.modern_open_character(tab) {
+            return done;
+        }
         let visible = self.host.root.is_window_visible(CHARACTER_WINDOW);
         let Some(on_tab) = self
             .host
@@ -1802,9 +1816,13 @@ impl WindowUi {
             return;
         }
         match output {
+            PanelOutput::TogglePanel(panel) if self.modern_effects_toggle(panel, false) => {}
+            PanelOutput::TogglePanel(panel) if self.modern_character_toggle(panel, false) => {}
             PanelOutput::TogglePanel(panel) => {
                 self.panels.toggle(&mut self.host.root, panel);
             }
+            PanelOutput::ClosePanel(panel) if self.modern_effects_toggle(panel, true) => {}
+            PanelOutput::ClosePanel(panel) if self.modern_character_toggle(panel, true) => {}
             PanelOutput::ClosePanel(panel) => {
                 self.panels
                     .set_visibility(&mut self.host.root, panel, false);

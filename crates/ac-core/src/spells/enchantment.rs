@@ -29,7 +29,14 @@ wire_enum! {
         ATTRIBUTE = 0x0000_0001 => "Attribute",
         /// A vital maximum (health, stamina, mana).
         SECOND_ATT = 0x0000_0002 => "SecondAtt",
+        /// A whole-number property (its key a property id).
+        INT = 0x0000_0004 => "Int",
+        /// A floating-point property (its key a property id: the damage
+        /// resistances, the regeneration rates).
+        FLOAT = 0x0000_0008 => "Float",
         SKILL = 0x0000_0010 => "Skill",
+        /// The body's natural armor.
+        BODY_ARMOR_VALUE = 0x0000_0080 => "BodyArmorValue",
         /// Applies to every key of the queried family, not one key.
         MULTIPLE_STAT = 0x0000_2000 => "MultipleStat",
         /// Multiplies the stat by its value.
