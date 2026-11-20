@@ -164,9 +164,40 @@ pub struct FellowshipPage {
     player: u32,
 }
 
-/// "level/share%": no sharing shows 0; an even split takes the member
-/// count's share; otherwise each member's share is the experience their
-/// next level costs over everyone's.
+/// A member's share of the experience, 0 to 1: no sharing is 0; an even
+/// split takes the member count's share; otherwise each member's share is
+/// the experience their next level costs over everyone's.
+#[must_use]
+pub fn experience_share(
+    member: &FellowView,
+    fellowship: &FellowshipView,
+    experience_to_raise: Option<&dyn Fn(u32) -> i64>,
+) -> f64 {
+    if !fellowship.share_xp {
+        return 0.0;
+    }
+    if fellowship.even_xp_split {
+        return even_split_share(fellowship.members.len());
+    }
+    let Some(to_raise) = experience_to_raise else {
+        return 0.0;
+    };
+    #[allow(clippy::cast_precision_loss)]
+    let sum: f64 = fellowship
+        .members
+        .iter()
+        .map(|f| to_raise(f.level) as f64)
+        .sum();
+    if sum > 0.0 {
+        #[allow(clippy::cast_precision_loss)]
+        let own = to_raise(member.level) as f64;
+        own / sum
+    } else {
+        0.0
+    }
+}
+
+/// "level/share%", the share as [`experience_share`] has it.
 #[must_use]
 pub fn stats_text(
     member: &FellowView,
@@ -174,24 +205,7 @@ pub fn stats_text(
     experience_to_raise: Option<&dyn Fn(u32) -> i64>,
     strings: Option<&dyn PanelStrings>,
 ) -> String {
-    let mut share = 0.0_f64;
-    if fellowship.share_xp {
-        if fellowship.even_xp_split {
-            share = even_split_share(fellowship.members.len());
-        } else if let Some(to_raise) = experience_to_raise {
-            #[allow(clippy::cast_precision_loss)]
-            let sum: f64 = fellowship
-                .members
-                .iter()
-                .map(|f| to_raise(f.level) as f64)
-                .sum();
-            if sum > 0.0 {
-                #[allow(clippy::cast_precision_loss)]
-                let own = to_raise(member.level) as f64;
-                share = own / sum;
-            }
-        }
-    }
+    let share = experience_share(member, fellowship, experience_to_raise);
     // Truncated, as the game prints it.
     #[allow(clippy::cast_possible_truncation)]
     let percent = (share * 100.0) as i32;
