@@ -347,6 +347,51 @@ options (M6 brings the modern ones); "Specialize" from the window (retail
 has none either); Housing and Society cards on Information (the client
 has no house facts outside the house panel yet). Not live-tested yet.
 
+**M6 built 2026-11-20** on `feat/modern-ui-m6` (off `feat/modern-ui-m5`).
+Retail windows it replaces: `options` and `keyboard-config`. Neutral
+moves first:
+
+- One place for an options window's change (a character option to the
+  session, a settings section onto the settings in force, the chat
+  following) and for the character-select question (91564d19).
+- The options pages' string table public (2ef8535f).
+- Configure Keyboard: each row's class; conflict, assign, erase, keep
+  and key names reachable without the screen's buttons; retail's
+  capture and overwrite question use the same calls (59474bcd).
+
+Screens (`options/*.rs`), checked offscreen (`the_modern_options`):
+
+1. Options (9c10e951): the eight sections, search across every setting
+   and key (with where each lives), Character select and Exit game under
+   the list. Rows are the window's own words over the game's option
+   pages: what a row is, its range, choices and default come from
+   `panels/options/spec.rs`, and a test checks every row of those pages
+   is listed or left out with a reason (side-by-side vitals, the retail
+   chat font and shading, the retail chat windows' filters). Groups of
+   character options say "Saved on your character"; OpenAC's own carry
+   OPENAC. Switches (the game's "Disable ..." shown the positive way),
+   sliders, segments or a menu for choices, volumes as a switch and
+   slider, buttons (Edit layout opens the bars' edit mode; the game's
+   mouse turning settings). Changes are live through the same path as
+   retail's window; Apply saves the character's options, Revert puts
+   back, Defaults the section; closing without Apply reverts. The chat
+   grid edits the modern chat's tabs (saved at once). The Effects
+   window's settings button opens it on Interface.
+2. Keys in Controls (def4f7a0): every action of the game's key map by
+   class, three slots each, keys named the modern way ("Alt+D"). A click
+   catches the next key in place ("Press a key"), a right click empties
+   a slot; a key something else holds shows on the row ("S is used by
+   Stop Moving") with Use it here or Keep, a key the game keeps is
+   refused there. Key changes count with the others for Apply, Revert
+   and closing. Key profiles: Load and Save as (still retail's dialogs
+   until M7). The Configure Keyboard key opens Options on Controls.
+
+Not done in M6: the Options pages plugins draw (needs a plugin API for
+them; to decide with the plugin hooks); the item details' Docked /
+Pop-up / Auto choice (the pop-up card is not built: it has to float
+outside the inventory frame); Trim (Bronze / Neutral: every modern
+window draws Bronze). Not live-tested yet.
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
