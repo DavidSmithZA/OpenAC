@@ -517,6 +517,51 @@ with the user); the map's drawer and the windows' small-screen layouts
 (the side column only folds); officers cannot be told from members (the
 client is not told), so Manage stays monarch-only. Not live-tested yet.
 
+**M9 built 2026-11-21** on `feat/modern-ui-m9` (off `feat/modern-ui-m8`).
+Retail windows it replaces: `mini-game` (the Game Center) and `barber`.
+Neutral moves first, one commit each:
+
+- Barber: what a barber window decides (each part's slots, how many
+  styles and colours, the marked colour, the style a pick or a step asks
+  for) in `ac_ui::panels::barber_rules`; the retail window uses it
+  (7eae3214).
+- Chess: the squares a picked piece can move to and a move's usual
+  written form (`ChessBoard::targets`, `ChessBoard::notation`,
+  5e15ca3d); the moves made reach the interface (`ChessView::moves`,
+  8e0ed64b; stream shape re-pinned 60bacf5e217f5cb1, format stays 3).
+
+Screens, each checked offscreen (`the_modern_chess`, `the_modern_barber`):
+
+1. Chess (`chess/*`, 15df31ba): a used board opens it, the chess chip
+   brings it back, closing it leaves the game going. The board from the
+   player's side (Black's view when watching) in the game's own piece
+   images, the last move marked; the two sides with whose move it is; a
+   status line (joining, waiting for a seat, your move, check, the piece
+   picked up, move sent, game over); Offer or Take back stalemate;
+   Resign asked first on a card. OPENAC: a picked piece shows dots where
+   it can go and rings what it can take (a click on another own piece
+   picks that one, right click lets go); the moves made, two to a line,
+   the last in gold.
+2. Barber (`barber/*`, 8cbc629d): shown while the barber is open. The
+   figure (the barber's own preview slot) with turn buttons and Hold for
+   before (OPENAC: the look as it opened while held); part tabs (Hair,
+   Eyes, Nose, Mouth, Skin, or a Gearknight's or Olthoi's three, in the
+   game's own words); a style stepper and numbered picks that fit the
+   room (Aluvian women have 50 hair styles, not the 12 the board drew:
+   up to twelve to a row, paged round the picked one if still too
+   many); colour swatches for hair and eyes; a shade slider whose track
+   runs through the palette set's own colours; the heritage's one option
+   as a switch; "Changed: ..." since it opened; Cancel (and the close
+   button) and Accept.
+
+Credits moved to M10: they are reached only from character selection,
+which the modern layer does not cover until then, so they are built with
+the Stage.
+
+Not done in M9: the opponent's name (the game does not send it; the side
+says "Your opponent"); dragging a piece (click, then click); turning the
+barber figure by dragging it. Not live-tested yet.
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
@@ -671,14 +716,15 @@ window; house sale window.
 
 Replaces: social, journal, contracts, book, map/house, house purchase.
 
-### M9 The rest of the game ("Loot, barber, chess", "Small pieces")
+### M9 The rest of the game ("Loot, barber, chess") (built 2026-11-21)
 
-Barber, Chess, Credits.
+Barber, Chess. (Credits moved to M10, beside the character selection
+they are reached from.)
 
-### M10 Pre-game ("Login", "Character creation")
+### M10 Pre-game ("Login", "Character creation", "Small pieces")
 
 Connecting screen (portal ring) and Stage character select, with the
-per-computer character memory; Studio character creation.
+per-computer character memory; Studio character creation; Credits.
 
 After this nothing retail is mounted on Modern: pull the host-facing
 methods into a trait, check the web client, remove the hiding list.
