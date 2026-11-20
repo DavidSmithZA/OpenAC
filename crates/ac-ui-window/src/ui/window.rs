@@ -1246,6 +1246,7 @@ impl WindowUi {
         self.update_journal_pages(dirty, scene);
         self.refresh_examined_spell(dirty);
         self.keep_modern_appraisals();
+        self.feed_modern_inspect();
         self.show_appraisals();
         self.follow_confirmation();
         let link = self.status.link.unwrap_or(ac_runtime::session::LinkStatus {
@@ -1514,6 +1515,7 @@ impl WindowUi {
         self.report_window_layouts();
         self.tick_plugin_ui(now);
         self.tick_examination(dt);
+        self.tick_modern_inspect(dt);
         self.tick_keyboard_dialogs();
         self.tick_tooltips(dt, now_ms);
         self.tick_modern_effects(dt);
@@ -2029,8 +2031,11 @@ impl WindowUi {
             return;
         };
         let magic_skill = magic_skill(numbers, &spell.school);
-        let icon = ac_ui::icons::IconSource::spell_icon(&mut self.icons, spell_id);
         let components = self.spell_examine_components(&spell);
+        if self.modern_examine_spell(&spell, magic_skill, &components) {
+            return;
+        }
+        let icon = ac_ui::icons::IconSource::spell_icon(&mut self.icons, spell_id);
         let Self { host, content, .. } = self;
         let mut cells =
             ac_ui::panels::DatRowTemplates::new(&*content, content.font(DEFAULT_FONT_ID));

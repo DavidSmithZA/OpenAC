@@ -150,6 +150,8 @@ enum Line {
     },
     /// An inscription's box.
     Box { y: f32, h: f32, editable: bool },
+    /// The legend of the spell marks.
+    Legend { y: f32 },
 }
 
 /// The sheet widget.
@@ -162,6 +164,8 @@ pub struct SheetView {
     tab: String,
     /// It has a close button.
     pub closable: bool,
+    /// It is a window of its own: it draws its own ground, edge and shadow.
+    pub framed: bool,
     /// Its foot (none: no foot).
     pub foot: Option<Foot>,
     scroll: f32,
@@ -185,6 +189,7 @@ impl SheetView {
             sheet: Sheet::default(),
             tab: String::new(),
             closable: false,
+            framed: false,
             foot: None,
             scroll: 0.0,
             lines: Vec::new(),
@@ -390,13 +395,7 @@ impl SheetView {
         }
         if self.sheet.has_spell_marks() {
             y += 12.0;
-            self.lines.push(Line::Words {
-                y,
-                text: "\u{25b2} raised by a spell   \u{25bc} lowered".to_owned(),
-                color: p.muted,
-                strong: false,
-                small: true,
-            });
+            self.lines.push(Line::Legend { y });
             y += small.line_height;
         }
         self.content = y + 12.0;
@@ -566,6 +565,12 @@ impl Widget for SheetView {
         }
         self.scroll = self.scroll.clamp(0.0, self.most(h));
         let p = self.theme.palette;
+        if self.framed {
+            let round = CornerRadii::all(self.theme.metrics.window_radius);
+            rc.soft_shadow(0.0, 0.0, w, h, 6.0, 18.0, 50.0, hex(0, 0.5));
+            rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x14_100C, 0.97));
+            rc.stroke_rounded_rect(0.0, 0.0, w, h, round, hex(0xC9_A062, 0.8), 1.0);
+        }
         let f = &self.fonts;
         let head = &self.sheet.head;
         // The head.
@@ -881,6 +886,24 @@ impl Widget for SheetView {
                     };
                     if let Some(font) = font {
                         text::draw(rc, font, words, PAD, off + y, TextStyle::plain(*color));
+                    }
+                }
+                Line::Legend { y } => {
+                    if let Some(s) = &f.small {
+                        let y = off + y;
+                        let cy = y + s.line_height * 0.5;
+                        draw_mark(rc, Mark::Up, PAD, cy, p.good);
+                        text::draw(
+                            rc,
+                            s,
+                            "raised by a spell",
+                            PAD + 11.0,
+                            y,
+                            TextStyle::plain(p.muted),
+                        );
+                        let x = PAD + 11.0 + text::measure(s, "raised by a spell", 0.0) + 14.0;
+                        draw_mark(rc, Mark::Down, x, cy, p.bad_text);
+                        text::draw(rc, s, "lowered", x + 11.0, y, TextStyle::plain(p.muted));
                     }
                 }
                 Line::Box { y, h, editable } => {

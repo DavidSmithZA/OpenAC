@@ -3,12 +3,14 @@
 
 pub mod cell;
 pub mod grid;
+pub mod inspect;
 pub mod inventory;
 pub mod menu;
 pub mod model;
 pub mod run;
 pub mod sheet;
 pub mod sheet_view;
+pub mod sheets;
 
 use ac_ui::UiFont;
 use ac_ui::modern::text;

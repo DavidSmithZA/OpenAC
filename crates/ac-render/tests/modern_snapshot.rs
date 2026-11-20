@@ -1010,3 +1010,109 @@ fn the_modern_inventory() {
     );
     s.save("inventory-side-pack");
 }
+
+/// An answer about `guid` the player asked for.
+fn answer(s: &mut Shot, a: ac_proto::appraise::IdentifyObjectResponse, opens: bool) {
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Appraisal(
+            Box::new(ac_runtime::inventory::AppraisalView {
+                name: None,
+                response: a,
+                present_in_ui: true,
+                opens_window: opens,
+            }),
+        )));
+    s.step();
+    s.step();
+}
+
+fn creature(guid: u32, success: bool) -> ac_proto::appraise::IdentifyObjectResponse {
+    use ac_proto::appraise::{CreatureAttributes, CreatureProfile, IdentifyObjectResponse};
+    let mut a = IdentifyObjectResponse {
+        guid,
+        success,
+        creature_profile: Some(CreatureProfile {
+            flags: 0,
+            health: 306,
+            health_max: 450,
+            attributes: Some(CreatureAttributes {
+                strength: 170,
+                endurance: 200,
+                quickness: 150,
+                coordination: 160,
+                focus: 90,
+                self_: 90,
+                stamina: 400,
+                mana: 0,
+                stamina_max: 400,
+                mana_max: 0,
+            }),
+            attribute_highlights: Some((0b101, 0b100)),
+        }),
+        ..Default::default()
+    };
+    a.properties.ints.insert(25, 87);
+    a.properties.ints.insert(2, 3);
+    a.properties.ints.insert(307, 10);
+    a.properties.strings.insert(1, "Drudge Ravener".to_owned());
+    a
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_inspect() {
+    use ac_core::combat::CombatMode;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    // A creature the player assessed.
+    answer(&mut s, creature(0x8000_0901, true), true);
+    s.save("inspect-creature");
+    // A failed assessment.
+    answer(&mut s, creature(0x8000_0902, false), true);
+    s.save("inspect-failed");
+    // A player.
+    let mut p = creature(0x5000_0002, true);
+    p.properties.strings.insert(5, "Knight".to_owned());
+    p.properties.ints.insert(0x71, 1);
+    p.properties.ints.insert(0xBC, 3);
+    p.armor_levels = Some(ac_proto::appraise::ArmorLevels {
+        head: 812,
+        chest: 846,
+        abdomen: 846,
+        upper_arm: 790,
+        lower_arm: 790,
+        hand: 744,
+        upper_leg: 802,
+        lower_leg: 802,
+        foot: 760,
+    });
+    answer(&mut s, p, true);
+    s.save("inspect-player");
+    // The sword, with value and a description.
+    let mut a = ac_proto::appraise::IdentifyObjectResponse {
+        guid: 0x8000_0105,
+        success: true,
+        ..Default::default()
+    };
+    a.properties.ints.insert(19, 18_400);
+    a.properties.ints.insert(5, 450);
+    a.properties.ints.insert(105, 8);
+    a.properties.strings.insert(
+        16,
+        "A curved blade of mithril, cold to the touch.".to_owned(),
+    );
+    answer(&mut s, a, true);
+    s.save("inspect-item");
+    // A spell examined from a bar.
+    let spell =
+        s.ui.facts()
+            .numbers()
+            .and_then(|n| n.spellbook())
+            .and_then(|b| b.learned_spells().next())
+            .expect("a spell");
+    let _ = s.ui.handle(vec![ac_ui::root::UiOutput::Panel(
+        ac_ui::panels::PanelOutput::ExamineSpell(spell),
+    )]);
+    s.step();
+    s.save("inspect-spell");
+}

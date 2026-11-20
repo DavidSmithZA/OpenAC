@@ -76,6 +76,8 @@ pub struct ModernLayer {
     pub chat: Option<chat::run::ChatUi>,
     /// The inventory.
     pub inventory: Option<items::run::InventoryUi>,
+    /// The Inspect sheet.
+    pub inspect: Option<items::inspect::InspectUi>,
     /// Packs used anywhere since the inventory last looked.
     pub opened_packs: Vec<u32>,
 }
@@ -315,6 +317,7 @@ impl WindowUi {
         self.mount_modern_bars();
         self.mount_modern_chat();
         self.mount_modern_inventory();
+        self.mount_modern_inspect();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };

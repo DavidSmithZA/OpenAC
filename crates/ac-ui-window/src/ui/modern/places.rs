@@ -80,6 +80,26 @@ impl Place {
 /// windows are built).
 const PLACES: &[(&str, Place)] = &[
     (
+        super::items::run::INVENTORY,
+        Place {
+            anchor: Anchor::Center,
+            dx: 0.0,
+            dy: 0.0,
+            width: super::items::inventory::WIDE,
+            height: super::items::inventory::HEIGHT,
+        },
+    ),
+    (
+        super::items::inspect::INSPECT,
+        Place {
+            anchor: Anchor::TopRight,
+            dx: -16.0,
+            dy: 12.0 + super::hud::radar::HEIGHT + 8.0,
+            width: super::items::inspect::WIDTH,
+            height: super::items::inspect::HEIGHT,
+        },
+    ),
+    (
         super::hud::VITALS,
         Place {
             anchor: Anchor::Top,

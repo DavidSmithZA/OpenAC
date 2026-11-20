@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use ac_core::items::{ClientObject, EquipMask, ItemType};
+use ac_core::items::{ClientObject, EquipMask};
 use ac_proto::appraise::IdentifyObjectResponse;
 use ac_runtime::inventory::{InteractionMode, ItemCommand, ObjectRef};
 use ac_runtime::session::SessionCommand;
@@ -30,8 +30,8 @@ use super::inventory::{self as inv, FrameFonts, FrameRequest, InventoryFrame, Pa
 use super::inventory::{PackFace, PackRequest, PackShown};
 use super::menu::{MenuFonts, PopMenu, Row};
 use super::model::{self, EQUIP_SLOTS, GroupBy, PackChoice, SlotRow, SortBy, ViewOptions};
-use super::sheet::{Entry, Head, Section, Sheet, Tab};
 use super::sheet_view::{Foot, FootIcon, SheetFonts, SheetRequest, SheetView};
+use super::sheets::{item_sheet, sub_line};
 use crate::ui::modern::hud;
 use crate::ui::window::WindowUi;
 
@@ -59,10 +59,6 @@ const DO_LINK: u32 = 10;
 const DO_REVERSE: u32 = 100;
 const DO_MERGE: u32 = 200;
 
-/// The inscription and its scribe (string properties).
-const INSCRIPTION: u32 = 7;
-const SCRIBE: u32 = 8;
-
 /// The inventory's elements and what it remembers.
 #[derive(Debug)]
 pub struct InventoryUi {
@@ -89,8 +85,10 @@ pub struct InventoryUi {
     clock: u64,
     /// The answers about the player's items, by item.
     pub appraisals: HashMap<u32, IdentifyObjectResponse>,
-    /// Items asked about for the details (their answers open nothing).
+    /// Items asked about for the details.
     pub asked: HashSet<u32>,
+    /// Those whose answers have not come yet (they open nothing).
+    pub quiet: HashSet<u32>,
     /// The item being dragged from the window.
     lifted: Option<u32>,
     /// Stacks still to merge (Tidy), one request at a time.
@@ -242,6 +240,7 @@ impl WindowUi {
             clock: 0,
             appraisals: HashMap::new(),
             asked: HashSet::new(),
+            quiet: HashSet::new(),
             lifted: None,
             merges: Vec::new(),
             was_open: false,
@@ -1046,6 +1045,7 @@ impl WindowUi {
         if let Some(o) = item {
             let id = o.object_id();
             if !inv.appraisals.contains_key(&id) && inv.asked.insert(id) {
+                inv.quiet.insert(id);
                 emit(
                     ui,
                     PanelOutput::Session(SessionCommand::Item(ItemCommand::Appraise(
@@ -1186,189 +1186,4 @@ fn shortcut_keys(store: &ac_core::items::ShortcutStore) -> HashMap<u32, String> 
         }
     }
     out
-}
-
-/// What kind of thing `o` is, in a word or two.
-fn kind_words(o: &ClientObject) -> &'static str {
-    let t = o.item_type;
-    if t.intersects(ItemType::CASTER) {
-        "Caster"
-    } else if t.intersects(ItemType::MELEE_WEAPON) {
-        "Melee weapon"
-    } else if t.intersects(ItemType::MISSILE_WEAPON) {
-        "Missile weapon"
-    } else if t.intersects(ItemType::ARMOR) {
-        "Armor"
-    } else if t.intersects(ItemType::CLOTHING) {
-        "Clothing"
-    } else if t.intersects(ItemType::JEWELRY) {
-        "Jewelry"
-    } else if t.intersects(ItemType::FOOD) {
-        "Consumable"
-    } else if t.intersects(ItemType::TINKERING_MATERIAL) {
-        "Salvage"
-    } else if t.intersects(ItemType::SPELL_COMPONENTS) {
-        "Spell component"
-    } else if t.intersects(ItemType::MANA_STONE) {
-        "Mana stone"
-    } else if t.intersects(ItemType::KEY) {
-        "Key"
-    } else if t.intersects(ItemType::GEM) {
-        "Gem"
-    } else if t.intersects(ItemType::WRITABLE) {
-        "Writing"
-    } else if t.intersects(ItemType::CONTAINER) {
-        "Container"
-    } else if t.intersects(ItemType::MONEY) {
-        "Money"
-    } else {
-        "Item"
-    }
-}
-
-/// The list's second line for `o`.
-fn sub_line(o: &ClientObject) -> String {
-    let mut parts = vec![kind_words(o).to_owned()];
-    if o.value > 0 {
-        parts.push(format!(
-            "value {}",
-            ac_ui::panels::appraisal::group_thousands(i64::from(o.value))
-        ));
-    }
-    parts.push(format!(
-        "burden {}",
-        ac_ui::panels::appraisal::group_thousands(i64::from(o.burden))
-    ));
-    parts.join(" \u{b7} ")
-}
-
-/// The details' sheet for the player's item `o`, from its appraisal when
-/// one came.
-#[allow(clippy::too_many_arguments)]
-fn item_sheet(
-    o: &ClientObject,
-    appraisal: Option<&IdentifyObjectResponse>,
-    names: &dyn Fn(&ClientObject) -> String,
-    spell: &dyn Fn(u32) -> Option<ac_core::spells::SpellMetadata>,
-    tables: &ac_ui::panels::appraisal::NameTables,
-    numbers: Option<&ac_core::player::LocalPlayerState>,
-    me: &str,
-    objects: &ac_core::items::ClientObjectTable,
-    icons: &mut dyn ac_ui::icons::IconSource,
-) -> Sheet {
-    let worn = o.currently_equipped_location != EquipMask::NONE;
-    let place = if worn {
-        "worn".to_owned()
-    } else {
-        let pack = o.container_id;
-        objects
-            .get(pack)
-            .filter(|p| p.object_id() != 0 && !p.name.is_empty())
-            .map_or_else(
-                || "in your pack".to_owned(),
-                |p| {
-                    if objects.get(pack).is_some_and(|c| c.items_capacity > 0)
-                        && p.item_type.intersects(ItemType::CONTAINER)
-                    {
-                        format!("in {}", p.name)
-                    } else {
-                        "in Main pack".to_owned()
-                    }
-                },
-            )
-    };
-    let sub = if o.stack_size > 1 {
-        format!("{} \u{b7} stack of {}", kind_words(o), o.stack_size)
-    } else {
-        format!("{} \u{b7} {place}", kind_words(o))
-    };
-    let group = |v: i64| ac_ui::panels::appraisal::group_thousands(v);
-    let mut facts = vec![
-        ("Value".to_owned(), group(i64::from(o.value))),
-        ("Burden".to_owned(), group(i64::from(o.burden))),
-    ];
-    if o.workmanship > 0.0 {
-        facts.push((
-            "Workmanship".to_owned(),
-            format!("{}", o.workmanship.round() as i32),
-        ));
-    }
-    let tabs = match appraisal {
-        Some(a) => {
-            let viewer = crate::ui::window::ViewerNames {
-                tables,
-                numbers,
-                character_title: &|_| None,
-            };
-            let parts = ac_ui::panels::appraisal::item_report_in_parts(o, a, spell, &viewer);
-            let weapon = o.item_type.intersects(ItemType::WEAPON_OR_CASTER);
-            super::sheet::item_tabs(&parts, weapon, inscription(a, me))
-        }
-        None => vec![Tab {
-            label: "Overview".to_owned(),
-            sections: vec![Section {
-                title: String::new(),
-                count: String::new(),
-                entries: vec![Entry::Para {
-                    text: "Looking it over\u{2026}".to_owned(),
-                    mark: super::sheet::Mark::None,
-                }],
-            }],
-        }],
-    };
-    Sheet {
-        subject: o.object_id(),
-        head: Head {
-            icon: icons.item_icon(
-                o.item_type,
-                o.icon_id,
-                o.icon_underlay_id,
-                o.icon_overlay_id,
-                o.effects,
-            ),
-            name: names(o),
-            name_color: None,
-            sub,
-            level: None,
-            health: None,
-            failed: false,
-        },
-        facts,
-        tabs,
-    }
-}
-
-/// The inscription entry from an appraisal, when the item has one or can
-/// take one (`me` is the player's name).
-fn inscription(a: &IdentifyObjectResponse, me: &str) -> Option<Entry> {
-    let text = a
-        .properties
-        .strings
-        .get(&INSCRIPTION)
-        .cloned()
-        .unwrap_or_default();
-    let scribe = a
-        .properties
-        .strings
-        .get(&SCRIBE)
-        .cloned()
-        .unwrap_or_default();
-    let inscribable = a.properties.bools.get(&0x0E).copied().unwrap_or(false)
-        || a.hook_profile.as_ref().is_some_and(|h| h.flags & 1 != 0);
-    if text.trim().is_empty() && !inscribable {
-        return None;
-    }
-    let mine = scribe.is_empty() || scribe == me;
-    let note = if scribe.is_empty() {
-        "Yours to write on: nobody has signed it.".to_owned()
-    } else if mine {
-        "Signed by you.".to_owned()
-    } else {
-        format!("Signed by {scribe}. Only an unsigned inscription can be changed.")
-    };
-    Some(Entry::Inscription {
-        text,
-        editable: false,
-        note,
-    })
 }
