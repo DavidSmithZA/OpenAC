@@ -9,6 +9,7 @@ pub mod loot;
 pub mod menu;
 pub mod model;
 pub mod run;
+pub mod scribe;
 pub mod sheet;
 pub mod sheet_view;
 pub mod sheets;

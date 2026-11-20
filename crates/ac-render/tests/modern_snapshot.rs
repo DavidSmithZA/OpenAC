@@ -1130,6 +1130,100 @@ fn the_modern_inspect() {
     s.save("inspect-spell");
 }
 
+/// The screen rectangle of element `id`.
+fn rect_of(s: &Shot, id: ac_ui::tree::ElementId) -> (i32, i32, i32, i32) {
+    let root = &s.ui.host().root;
+    let (x, y) = root.screen_position(id);
+    let e = root.element(id).expect("the element");
+    (x as i32, y as i32, e.width as i32, e.height as i32)
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_inscription() {
+    use ac_core::combat::CombatMode;
+    use ac_core::items::PublicWeenieFlags;
+    use ac_ui::widgets::Field;
+    use ac_ui_window::ui::modern::items::sheet_view::SheetView;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    // The sword can be written on.
+    let sword = 0x8000_0105;
+    let mut o = s.ui.facts().objects.get(sword).cloned().expect("the sword");
+    o.public_weenie_bitfield = Some(PublicWeenieFlags::INSCRIBABLE);
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: false,
+                objects: vec![o],
+                removed: Vec::new(),
+                contents: Vec::new(),
+            },
+        )));
+    s.step();
+    let mut a = ac_proto::appraise::IdentifyObjectResponse {
+        guid: sword,
+        success: true,
+        ..Default::default()
+    };
+    a.properties.ints.insert(19, 18_400);
+    a.properties.ints.insert(5, 450);
+    answer(&mut s, a, true);
+    // Its Details tab.
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-inspect")
+            .expect("Inspect")
+            .frame;
+    let (fx, fy, fw, _) = rect_of(&s, frame);
+    let tab =
+        s.ui.host()
+            .root
+            .widget::<SheetView>(frame)
+            .and_then(|v| v.tab_rect("Details", fw as f32))
+            .expect("a Details tab");
+    s.click(
+        0,
+        fx + (tab.0 + tab.2 / 2.0) as i32,
+        fy + (tab.1 + tab.3 / 2.0) as i32,
+        Modifiers::NONE,
+    );
+    s.step();
+    // The field over the box.
+    let field =
+        s.ui.host()
+            .root
+            .children(frame)
+            .into_iter()
+            .find(|&c| s.ui.host().root.widget::<Field>(c).is_some())
+            .expect("the inscription field");
+    assert!(
+        s.ui.host().root.element(field).is_some_and(|e| e.visible),
+        "the field shows"
+    );
+    s.save("inscription-empty");
+    let (x, y, w, h) = rect_of(&s, field);
+    s.click(0, x + w / 2, y + h / 2, Modifiers::NONE);
+    let out = ui_input::typed(s.ui.host_mut(), "For Dereth", Modifiers::NONE);
+    let _ = s.ui.handle(out);
+    s.step();
+    s.save("inscription-writing");
+    assert!(!s.sent.iter().any(|c| format!("{c:?}").contains("Inscribe")));
+    // A click elsewhere on the sheet signs it.
+    s.click(0, fx + 30, fy + 30, Modifiers::NONE);
+    let sent: Vec<String> = s
+        .sent
+        .iter()
+        .map(|c| format!("{c:?}"))
+        .filter(|c| c.contains("Inscribe"))
+        .collect();
+    println!("{sent:?}");
+    assert_eq!(sent.len(), 1);
+    assert!(sent[0].contains("For Dereth"));
+    s.save("inscription-signed");
+}
+
 /// A corpse beside the player with a few things in it, open (or out of
 /// reach when `in_range` is false).
 fn open_corpse(s: &mut Shot, in_range: bool) {

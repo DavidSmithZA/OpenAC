@@ -70,6 +70,8 @@ pub struct InventoryUi {
     pub grid: ElementId,
     /// The item details.
     pub details: ElementId,
+    /// The field writing an inscription in the details.
+    pub scribe: super::scribe::Scribe,
     /// The equipment slots, in [`EQUIP_SLOTS`]' order.
     pub slots: Vec<ElementId>,
     /// The pack rail's buttons: All, Main, then the side packs.
@@ -237,6 +239,7 @@ impl WindowUi {
                 .with_visible(false),
             sheet,
         );
+        let scribe = super::scribe::Scribe::mount(ui, details, theme, body.clone());
         let menu = PopMenu::mount(ui, theme, menu_fonts);
         ui.hide_window(INVENTORY);
         let Some(modern) = self.modern.as_mut() else {
@@ -247,6 +250,7 @@ impl WindowUi {
             search,
             grid,
             details,
+            scribe,
             slots,
             packs: Vec::new(),
             menu,
@@ -357,6 +361,7 @@ impl WindowUi {
         }
         inv.was_open = open;
         if !open {
+            self.write_inscriptions();
             return;
         }
         let search = self
@@ -368,7 +373,34 @@ impl WindowUi {
         inv.options.search = search;
         self.next_tidy_merge();
         self.feed_modern_inventory(frame);
+        self.write_inscriptions();
         self.answer_pack_drags();
+    }
+
+    /// The details' inscription field: what was written goes out, and
+    /// the kept answer takes it so the details show it from now on.
+    fn write_inscriptions(&mut self) {
+        let open = self.host.root.is_window_visible(INVENTORY);
+        let me = self.status.playing.clone().unwrap_or_default();
+        let Some(inv) = self.modern.as_mut().and_then(|m| m.inventory.as_mut()) else {
+            return;
+        };
+        let ui = &mut self.host.root;
+        if !open && ui.keyboard_focus() == Some(inv.scribe.field) {
+            ui.set_keyboard_focus(None);
+        }
+        let Some(command) = inv.scribe.tick(ui, inv.details) else {
+            return;
+        };
+        if let ItemCommand::Inscribe {
+            item: ObjectRef::Guid(id),
+            text,
+        } = &command
+            && let Some(a) = inv.appraisals.get_mut(id)
+        {
+            super::sheets::note_inscription(a, text, &me);
+        }
+        self.send_item(command);
     }
 
     /// Carries out what the window's parts asked for.
@@ -1113,6 +1145,7 @@ impl WindowUi {
                 &status.names,
                 numbers,
                 &me,
+                true,
                 objects,
                 icons,
             );

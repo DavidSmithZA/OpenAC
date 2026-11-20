@@ -66,8 +66,8 @@ pub fn sub_line(o: &ClientObject) -> String {
     parts.join(" \u{b7} ")
 }
 
-/// The details' sheet for the player's item `o`, from its appraisal when
-/// one came.
+/// The details' sheet for item `o`, from its appraisal when one came;
+/// `owned`: the player carries it (its inscription may be theirs to write).
 #[allow(clippy::too_many_arguments)]
 pub fn item_sheet(
     o: &ClientObject,
@@ -77,6 +77,7 @@ pub fn item_sheet(
     tables: &ac_ui::panels::appraisal::NameTables,
     numbers: Option<&ac_core::player::LocalPlayerState>,
     me: &str,
+    owned: bool,
     objects: &ac_core::items::ClientObjectTable,
     icons: &mut dyn ac_ui::icons::IconSource,
 ) -> Sheet {
@@ -126,7 +127,11 @@ pub fn item_sheet(
             };
             let parts = ac_ui::panels::appraisal::item_report_in_parts(o, a, spell, &viewer);
             let weapon = o.item_type.intersects(ItemType::WEAPON_OR_CASTER);
-            super::sheet::item_tabs(&parts, weapon, inscription(a, me))
+            let writable = owned
+                && o.public_weenie_bitfield.map_or(0, |f| f.0)
+                    & ac_core::items::PublicWeenieFlags::INSCRIBABLE.0
+                    != 0;
+            super::sheet::item_tabs(&parts, weapon, inscription(a, me, writable))
         }
         None => vec![Tab {
             label: "Overview".to_owned(),
@@ -163,8 +168,10 @@ pub fn item_sheet(
 }
 
 /// The inscription entry from an appraisal, when the item has one or can
-/// take one (`me` is the player's name).
-pub fn inscription(a: &IdentifyObjectResponse, me: &str) -> Option<Entry> {
+/// take one (`me` is the player's name; `writable`: an inscribable item
+/// the player carries). The player writes on it while nobody else has
+/// signed it, as in retail.
+pub fn inscription(a: &IdentifyObjectResponse, me: &str, writable: bool) -> Option<Entry> {
     let text = a
         .properties
         .strings
@@ -179,22 +186,42 @@ pub fn inscription(a: &IdentifyObjectResponse, me: &str) -> Option<Entry> {
         .unwrap_or_default();
     let inscribable = a.properties.bools.get(&0x0E).copied().unwrap_or(false)
         || a.hook_profile.as_ref().is_some_and(|h| h.flags & 1 != 0);
-    if text.trim().is_empty() && !inscribable {
+    if text.trim().is_empty() && !inscribable && !writable {
         return None;
     }
-    let mine = scribe.is_empty() || scribe == me;
-    let note = if scribe.is_empty() {
-        "Yours to write on: nobody has signed it.".to_owned()
-    } else if mine {
-        "Signed by you.".to_owned()
+    let by_me = !scribe.is_empty() && scribe.to_lowercase() == me.to_lowercase();
+    let editable = writable && (scribe.is_empty() || by_me);
+    let note = if !scribe.is_empty() && !by_me {
+        format!("Signed by {scribe}. Only its writer can change it.")
+    } else if !writable {
+        if scribe.is_empty() {
+            "Unsigned. Carry it to write on it.".to_owned()
+        } else {
+            "Signed by you. Carry it to change it.".to_owned()
+        }
+    } else if scribe.is_empty() {
+        "Yours to write on: click the box, then click away to sign it.".to_owned()
     } else {
-        format!("Signed by {scribe}. Only an unsigned inscription can be changed.")
+        "Signed by you. Click the box to change it; leave it empty to clear it.".to_owned()
     };
     Some(Entry::Inscription {
         text,
-        editable: false,
+        editable,
         note,
     })
+}
+
+/// What the player just wrote on an item, kept in its answer until the
+/// next one comes: their words signed with their name, or none.
+pub fn note_inscription(a: &mut IdentifyObjectResponse, text: &str, me: &str) {
+    let strings = &mut a.properties.strings;
+    if text.is_empty() {
+        strings.remove(&INSCRIPTION);
+        strings.remove(&SCRIBE);
+    } else {
+        strings.insert(INSCRIPTION, text.to_owned());
+        strings.insert(SCRIBE, me.to_owned());
+    }
 }
 
 /// A creature's type, a character's gender and heritage (int properties).
