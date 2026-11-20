@@ -3337,3 +3337,225 @@ fn the_modern_map() {
     s.step();
     assert!(!s.ui.host().root.is_window_visible("modern-map"));
 }
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_chess() {
+    use ac_core::chess::{ChessBoard, ChessSquare, ChessTeam};
+    use ac_core::combat::CombatMode;
+    use ac_runtime::gameplay::{ChessCommand, ChessPlayed, ChessStage, ChessView, GameplayCommand};
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let sq = |name: &str| {
+        let b = name.as_bytes();
+        ChessSquare::new(i32::from(b[0] - b'a'), i32::from(b[1] - b'1'))
+    };
+    // A game a few moves in, the player White and to move.
+    let mut board = ChessBoard::standard();
+    let mut moves = Vec::new();
+    for (from, to) in [
+        ("e2", "e4"),
+        ("e7", "e5"),
+        ("g1", "f3"),
+        ("b8", "c6"),
+        ("f1", "c4"),
+        ("f8", "c5"),
+        ("b1", "c3"),
+        ("g8", "f6"),
+        ("d2", "d3"),
+        ("d7", "d6"),
+    ] {
+        let before = board.clone();
+        let result = board.make_move(sq(from), sq(to));
+        moves.push(ChessPlayed {
+            white: before.turn() == ChessTeam::White,
+            from: sq(from),
+            to: sq(to),
+            written: before.notation(sq(from), sq(to), result),
+        });
+    }
+    let view = |revision: u64, stage: ChessStage, offering: bool| ChessView {
+        revision,
+        stage,
+        board_guid: 0x8000_0C01,
+        team: Some(ChessTeam::White),
+        offering_stalemate: offering,
+        games_ended: 0,
+        board: board.clone(),
+        moves: moves.clone(),
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Chess(
+            Box::new(view(1, ChessStage::MyTurn, false)),
+        )));
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::BeginGame(
+            0x8000_0C01,
+        )));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-chess"),
+        "using a board opens it"
+    );
+    assert!(!s.ui.host().root.is_window_visible("mini-game"));
+    s.save("chess");
+    // Pick up the knight on f3 (White's view: file f is column 5, rank 3
+    // is row 5).
+    let frame = s.ui.host().root.window("modern-chess").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    let at = |col: i32, row: i32| (fx + 38 + col * 56 + 28, fy + 70 + row * 56 + 28);
+    let (x, y) = at(5, 5);
+    s.click(0, x, y, Modifiers::NONE);
+    s.step();
+    s.save("chess-picked");
+    // To g5 (column 6, row 3).
+    s.sent.clear();
+    let (x, y) = at(6, 3);
+    s.click(0, x, y, Modifiers::NONE);
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Chess(ChessCommand::Move { from, to }))
+                if *from == sq("f3") && *to == sq("g5")
+        )),
+        "{:?}",
+        s.sent
+    );
+    // Their move, and the player offering a stalemate.
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Chess(
+            Box::new(view(2, ChessStage::OpponentsTurn, true)),
+        )));
+    s.step();
+    s.step();
+    s.save("chess-their-move");
+    // Resign asks first.
+    use ac_ui_window::ui::modern::chess::window::ChessFrame;
+    let (_, resign) = ChessFrame::button_rects();
+    let mid =
+        |r: (f32, f32, f32, f32)| (fx + (r.0 + r.2 * 0.5) as i32, fy + (r.1 + r.3 * 0.5) as i32);
+    let (x, y) = mid(resign);
+    s.click(0, x, y, Modifiers::NONE);
+    s.step();
+    s.save("chess-resign");
+    let (_, _, yes) =
+        s.ui.host()
+            .root
+            .widget::<ChessFrame>(frame)
+            .expect("the frame")
+            .card_rects();
+    s.sent.clear();
+    let (x, y) = mid(yes);
+    s.click(0, x, y, Modifiers::NONE);
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Chess(ChessCommand::Resign))
+        )),
+        "{:?}",
+        s.sent
+    );
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_barber() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::gameplay::{BarberCommand, BarberView, GameplayCommand};
+    use ac_runtime::session::SessionCommand;
+    use ac_runtime::session::pregame::PreGameEvent;
+    use ac_ui_window::ui::modern::barber::window::BarberFrame;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let tables = ac_runtime::gameplay::GameTables::load(&dats()).expect("the game tables");
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Options(
+            Arc::clone(tables.chargen()),
+        )));
+    let gender = tables
+        .chargen()
+        .try_get_heritage(1)
+        .and_then(|h| {
+            h.genders_by_key
+                .iter()
+                .find(|(_, g)| g.name == "Female")
+                .map(|(k, _)| *k)
+        })
+        .expect("an Aluvian female");
+    let mut view = BarberView {
+        revision: 1,
+        openings: 1,
+        open: true,
+        heritage: 1,
+        gender: u32::try_from(gender).unwrap_or(0),
+        ..BarberView::default()
+    };
+    view.appearance.hair_style = 3;
+    view.appearance.hair_color = 1;
+    view.appearance.hair_shade = 0.55;
+    view.appearance.eyes_strip = 1;
+    view.appearance.eye_color = 2;
+    view.appearance.nose_strip = 2;
+    view.appearance.skin_shade = 0.4;
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Barber(
+            Box::new(view.clone()),
+        )));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-barber"),
+        "the barber opens it"
+    );
+    assert!(!s.ui.host().root.is_window_visible("barber"));
+    s.save("barber");
+    // A new hair colour, the look changed since it opened.
+    let frame = s.ui.host().root.window("modern-barber").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    view.revision = 2;
+    view.appearance.hair_color = 3;
+    view.appearance.hair_style = 5;
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Barber(
+            Box::new(view.clone()),
+        )));
+    s.step();
+    s.step();
+    s.save("barber-changed");
+    // The skin.
+    let tabs = 5.0_f32;
+    let tw = (384.0 - 4.0 * 4.0) / tabs;
+    s.click(
+        0,
+        fx + (356.0 + 4.0 * (tw + 4.0) + tw * 0.5) as i32,
+        fy + 72 + 27,
+        Modifiers::NONE,
+    );
+    s.step();
+    s.save("barber-skin");
+    // Accept.
+    let (_, accept) =
+        s.ui.host()
+            .root
+            .widget::<BarberFrame>(frame)
+            .expect("the frame")
+            .foot_buttons();
+    s.sent.clear();
+    s.click(
+        0,
+        fx + (accept.0 + accept.2 * 0.5) as i32,
+        fy + (accept.1 + accept.3 * 0.5) as i32,
+        Modifiers::NONE,
+    );
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Barber(BarberCommand::Finish))
+        )),
+        "{:?}",
+        s.sent
+    );
+}

@@ -415,3 +415,21 @@ fn reset_session_ends_any_game_and_clears_the_board() {
     assert_eq!(chess.board().get(sq("e4")), None);
     assert!(chess.begin(BOARD));
 }
+
+#[test]
+fn the_moves_made_are_listed_and_a_refused_one_taken_off() {
+    let mut chess = seated(ChessTeam::White);
+    assert!(chess.try_move(sq("e2"), sq("e4")).is_accepted());
+    chess.apply_move_response(&response(R::MOVED_TO_EMPTY_SQUARE));
+    chess.apply_opponent_turn(&opponent_move(ChessTeam::Black.wire(), "e7", "e5"));
+    assert!(chess.try_move(sq("g1"), sq("f3")).is_accepted());
+    let moves = chess.view().moves;
+    let written: Vec<&str> = moves.iter().map(|m| m.written.as_str()).collect();
+    assert_eq!(written, ["e4", "e5", "Nf3"]);
+    assert!(moves[0].white && !moves[1].white);
+    assert_eq!((moves[2].from, moves[2].to), (sq("g1"), sq("f3")));
+    chess.apply_move_response(&response(R::NOT_YOUR_TURN));
+    assert_eq!(chess.view().moves.len(), 2, "the server refused Nf3");
+    chess.reset_session();
+    assert!(chess.view().moves.is_empty());
+}

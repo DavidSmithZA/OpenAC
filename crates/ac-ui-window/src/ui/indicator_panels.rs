@@ -580,6 +580,7 @@ mod tests {
             offering_stalemate: false,
             games_ended,
             board: ChessBoard::standard(),
+            moves: Vec::new(),
         }
     }
 

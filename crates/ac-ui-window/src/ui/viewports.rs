@@ -414,6 +414,51 @@ impl WindowUi {
                 ));
             }
         }
+        // The modern barber's figure: the look as it was while Hold for
+        // before is held.
+        let modern = self
+            .modern
+            .as_mut()
+            .and_then(|m| m.barber.as_mut())
+            .map(|b| (b.frame, b.figure, b.before, std::mem::take(&mut b.turns)));
+        if let Some((frame, figure, before, turns)) = modern
+            && let Some(view) = self.facts.barber.clone()
+        {
+            controls.extend(turns.into_iter().map(|r| (ViewportSlot::Barber, r)));
+            let holding = self
+                .host
+                .root
+                .widget::<super::modern::barber::window::BarberFrame>(frame)
+                .is_some_and(|f| f.holding);
+            let (appearance, body) = if holding {
+                (before.appearance, before.preview_setup)
+            } else {
+                (view.appearance, view.preview_setup)
+            };
+            let preview = ChargenPreview {
+                viewport: figure,
+                summary: false,
+                heritage: view.heritage,
+                gender: view.gender,
+                appearance,
+            };
+            if view.open
+                && let Some(options) = scene.pregame().options.clone()
+                && shown(&self.host.root, figure)
+                && let Some((size, aspect)) = extent(&self.host.root, figure, pixels_per_unit)
+                && let Some(look) = self.viewports.barber_look(&options, &preview, body)
+            {
+                requests.push((
+                    figure,
+                    ViewportRequest {
+                        slot: ViewportSlot::Barber,
+                        size,
+                        aspect,
+                        subject: ViewportSubject::Chargen(Box::new(look)),
+                    },
+                ));
+            }
+        }
         let mut out = Vec::with_capacity(requests.len());
         for (element, request) in requests {
             self.viewports.elements[request.slot.index()] = Some(element);

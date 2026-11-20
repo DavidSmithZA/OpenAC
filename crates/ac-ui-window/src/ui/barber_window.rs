@@ -28,6 +28,11 @@ pub struct BarberWindow {
 }
 
 impl BarberWindow {
+    /// The creation tables the swatches are read from, once mounted.
+    pub(super) fn catalog(&self) -> Option<&DatChargenCatalog> {
+        self.swatches.as_ref().map(|(catalog, _)| catalog)
+    }
+
     /// Forget what the swatches found missing (a host whose dats arrive
     /// while it runs): the next paint reads it again.
     pub(super) fn forget_misses(&mut self) {

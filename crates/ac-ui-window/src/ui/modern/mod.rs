@@ -12,9 +12,11 @@
 //! from the retail windows'; where each one first appears is in
 //! [`places`].
 
+pub mod barber;
 pub mod bars;
 pub mod character;
 pub mod chat;
+pub mod chess;
 pub mod dealing;
 pub mod dialogs;
 pub mod fonts;
@@ -114,6 +116,10 @@ pub struct ModernLayer {
     pub house: Option<house::run::HouseUi>,
     /// The full-screen map.
     pub map: Option<world::run::MapUi>,
+    /// The Chess window.
+    pub chess: Option<chess::window::ChessUi>,
+    /// The Barber window.
+    pub barber: Option<barber::window::BarberUi>,
     /// The player as the radar last read them (the map's arrow).
     pub last_player: Option<ac_ui::panels::radar::RadarPlayer>,
     /// The player's vitals as last fed (the map's bar).
@@ -374,6 +380,8 @@ impl WindowUi {
         self.mount_modern_book();
         self.mount_modern_house();
         self.mount_modern_map();
+        self.mount_modern_chess();
+        self.mount_modern_barber();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };

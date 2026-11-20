@@ -149,7 +149,7 @@ mod tests {
     fn a_yaw_from_east_turns_into_a_compass_heading() {
         assert!((heading_of_yaw(0.0) - 90.0).abs() < 1e-6, "facing east");
         let north = heading_of_yaw(std::f32::consts::FRAC_PI_2);
-        assert!(north < 1e-3 || north > 360.0 - 1e-3, "north: {north}");
+        assert!(!(1e-3..=360.0 - 1e-3).contains(&north), "north: {north}");
     }
 
     #[test]

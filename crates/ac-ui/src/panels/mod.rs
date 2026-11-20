@@ -6,6 +6,7 @@
 
 pub mod appraisal;
 pub mod barber;
+pub mod barber_rules;
 pub mod book;
 pub mod cell_template;
 pub mod character;

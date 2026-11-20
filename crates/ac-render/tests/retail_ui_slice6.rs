@@ -1004,6 +1004,7 @@ fn a_used_board_shows_the_game_center_and_plays_through_the_session() {
         offering_stalemate: false,
         games_ended: 0,
         board: ChessBoard::standard(),
+        moves: Vec::new(),
     };
     scene.apply(PresentationEvent::Interface(InterfaceEvent::Chess(
         Box::new(view.clone()),

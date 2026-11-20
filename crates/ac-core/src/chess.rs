@@ -335,6 +335,13 @@ impl From<ChessBoardParts> for ChessBoard {
     }
 }
 
+/// A square's name from White's side: "a1" to "h8".
+#[must_use]
+pub fn square_name(square: ChessSquare) -> String {
+    let file = char::from(b'a' + u8::try_from(square.x.clamp(0, SIZE - 1)).unwrap_or(0));
+    format!("{file}{}", square.y + 1)
+}
+
 fn index(square: ChessSquare) -> usize {
     usize::try_from(square.y * SIZE + square.x).unwrap_or(0)
 }
@@ -453,6 +460,83 @@ impl ChessBoard {
             };
         }
         result
+    }
+
+    /// The squares the piece on `from` can move to for the side to move
+    /// (none when the square is empty or holds the other side's piece).
+    #[must_use]
+    pub fn targets(&self, from: ChessSquare) -> Vec<ChessSquare> {
+        (0..SIZE * SIZE)
+            .map(|i| ChessSquare::new(i % SIZE, i / SIZE))
+            .filter(|to| self.plan_move(from, *to).0.is_accepted())
+            .collect()
+    }
+
+    /// The move from `from` to `to`, made on this board with `result`, in
+    /// the usual written form: "Nf3", "exd5", "O-O", "e8=Q+", the file or
+    /// rank added when another piece of the kind could have gone there too.
+    #[must_use]
+    pub fn notation(&self, from: ChessSquare, to: ChessSquare, result: ChessMoveResult) -> String {
+        let suffix = if result.gives_checkmate() {
+            "#"
+        } else if result.gives_check() {
+            "+"
+        } else {
+            ""
+        };
+        let Some(piece) = self.get(from) else {
+            return format!("{}{suffix}", square_name(to));
+        };
+        if piece.piece_type == ChessPieceType::King && (to.x - from.x).abs() == 2 {
+            let side = if to.x > from.x { "O-O" } else { "O-O-O" };
+            return format!("{side}{suffix}");
+        }
+        let kind = result.move_kind();
+        let takes =
+            kind == ChessMoveResult::CAPTURED || kind == ChessMoveResult::CAPTURED_EN_PASSANT;
+        let file = |s: ChessSquare| char::from(b'a' + u8::try_from(s.x).unwrap_or(0));
+        let mut out = String::new();
+        if piece.piece_type == ChessPieceType::Pawn {
+            if takes {
+                out.push(file(from));
+                out.push('x');
+            }
+            out.push_str(&square_name(to));
+            if result.promotes() {
+                out.push_str("=Q");
+            }
+        } else {
+            out.push(match piece.piece_type {
+                ChessPieceType::Knight => 'N',
+                ChessPieceType::Bishop => 'B',
+                ChessPieceType::Rook => 'R',
+                ChessPieceType::Queen => 'Q',
+                _ => 'K',
+            });
+            let rivals: Vec<ChessSquare> = self
+                .pieces()
+                .filter(|(s, p)| {
+                    *s != from && p.piece_type == piece.piece_type && p.team == piece.team
+                })
+                .map(|(s, _)| s)
+                .filter(|s| self.plan_move(*s, to).0.is_accepted())
+                .collect();
+            if !rivals.is_empty() {
+                if rivals.iter().all(|s| s.x != from.x) {
+                    out.push(file(from));
+                } else if rivals.iter().all(|s| s.y != from.y) {
+                    out.push_str(&(from.y + 1).to_string());
+                } else {
+                    out.push_str(&square_name(from));
+                }
+            }
+            if takes {
+                out.push('x');
+            }
+            out.push_str(&square_name(to));
+        }
+        out.push_str(suffix);
+        out
     }
 
     fn plan_move(&self, from: ChessSquare, to: ChessSquare) -> (ChessMoveResult, PlannedMove) {

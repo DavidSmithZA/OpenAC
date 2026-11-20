@@ -9,9 +9,13 @@
 //! window up anew, on the hair. The window shows while the barber is open.
 
 use ac_core::chargen::{ChargenGenderOptions, ChargenHeritageGroup as H};
+
+pub use crate::panels::barber_rules::marked_swatch;
+use crate::panels::barber_rules::{
+    color_count, color_slot, shade_slot, style_on_pick, style_on_step,
+};
 use ac_runtime::gameplay::{BarberCommand, BarberView, GameplayCommand};
 use ac_runtime::session::SessionCommand;
-use ac_runtime::session::creation::{AppearanceSlot, ShadeSlot, UNSET};
 
 use crate::draw::Color;
 use crate::host::PanelController;
@@ -20,7 +24,7 @@ use crate::panels::PanelOutput;
 use crate::panels::items::emit;
 use crate::pregame::chargen::appearance::{
     DECREMENT_ARROW_ID, GRAD_CIRCLE_ID, INCREMENT_ARROW_ID, Part, PreviewRequest, SHADE_SCROLL_ID,
-    SWATCH_IDS, SWATCH_OVERLAY_IDS, SwatchSourcesDyn, SwatchTextures, cycle_index, swatch_colors,
+    SWATCH_IDS, SWATCH_OVERLAY_IDS, SwatchSourcesDyn, SwatchTextures, swatch_colors,
 };
 use crate::root::{ElementMessage, UiRoot};
 use crate::states;
@@ -77,53 +81,6 @@ pub type TextLookup<'a> = &'a dyn Fn(u32, &str) -> Option<String>;
 pub struct BarberUpdate {
     /// Show (true) or hide the window.
     pub visible: Option<bool>,
-}
-
-/// A part's style slot (skin has none).
-fn style_slot(part: Part) -> Option<AppearanceSlot> {
-    Some(match part {
-        Part::Hair => AppearanceSlot::HairStyle,
-        Part::Eyes => AppearanceSlot::EyesStrip,
-        Part::Nose => AppearanceSlot::NoseStrip,
-        Part::Mouth => AppearanceSlot::MouthStrip,
-        _ => return None,
-    })
-}
-
-fn style_count(part: Part, g: &ChargenGenderOptions) -> usize {
-    match part {
-        Part::Hair => g.hair_styles.len(),
-        Part::Eyes => g.eye_strips.len(),
-        Part::Nose => g.nose_strips.len(),
-        Part::Mouth => g.mouth_strips.len(),
-        _ => 0,
-    }
-}
-
-/// How many swatches the part offers: the hair and eye colours, one skin
-/// colour for the rest.
-fn color_count(part: Part, g: Option<&ChargenGenderOptions>) -> usize {
-    match (part, g) {
-        (Part::Hair, Some(g)) => g.hair_colors.len(),
-        (Part::Eyes, Some(g)) => g.eye_colors.len(),
-        (Part::Hair | Part::Eyes, None) => 0,
-        _ => 1,
-    }
-}
-
-/// The swatch the mark stands on: the hair colour (the first while none
-/// is chosen), the eye colour (none while none is chosen), the one skin
-/// colour for the rest.
-#[must_use]
-pub fn marked_swatch(part: Part, view: &BarberView) -> Option<usize> {
-    let a = &view.appearance;
-    match part {
-        Part::Hair if a.hair_color == UNSET => Some(0),
-        Part::Hair => Some(a.hair_color as usize),
-        Part::Eyes if a.eye_color == UNSET => None,
-        Part::Eyes => Some(a.eye_color as usize),
-        _ => Some(0),
-    }
 }
 
 fn tint(rgb: ac_core::chargen::ChargenSwatchRgb) -> Color {
@@ -493,19 +450,10 @@ impl BarberController {
     /// Pick `part`: a style outside the list is put back in range (past
     /// the end: the first; none: the last).
     fn select_part(&mut self, ui: &mut UiRoot, part: Part) {
-        if let (Some(slot), Some(g)) = (style_slot(part), self.gender.as_ref()) {
-            let count = style_count(part, g);
-            let current = self.view.appearance.get(slot);
-            let normalized = if current != UNSET && current as usize >= count {
-                Some(0)
-            } else if current == UNSET && count > 0 {
-                Some((count - 1) as u32)
-            } else {
-                None
-            };
-            if let Some(n) = normalized {
-                command(ui, BarberCommand::SetAppearance(slot, n));
-            }
+        if let Some(g) = self.gender.as_ref()
+            && let Some((slot, n)) = style_on_pick(part, &self.view, g)
+        {
+            command(ui, BarberCommand::SetAppearance(slot, n));
         }
         self.part = part;
     }
@@ -513,11 +461,13 @@ impl BarberController {
     /// A spin's arrow: step `part`'s style by `step` (wrapping), then pick
     /// the part.
     fn step_style(&mut self, ui: &mut UiRoot, part: Part, step: i32) {
-        let (Some(slot), Some(g)) = (style_slot(part), self.gender.as_ref()) else {
+        let Some((slot, next)) = self
+            .gender
+            .as_ref()
+            .and_then(|g| style_on_step(part, &self.view, g, step))
+        else {
             return;
         };
-        let count = i32::try_from(style_count(part, g)).unwrap_or(i32::MAX);
-        let next = cycle_index(self.view.appearance.get(slot), step, count, false);
         command(ui, BarberCommand::SetAppearance(slot, next));
         self.part = part;
     }
@@ -553,12 +503,7 @@ impl PanelController for BarberController {
             if Some(element) != self.shade {
                 return false;
             }
-            let slot = match self.part {
-                Part::Hair => Some(ShadeSlot::Hair),
-                Part::Nose | Part::Mouth | Part::Skin => Some(ShadeSlot::Skin),
-                _ => None,
-            };
-            if let Some(slot) = slot {
+            if let Some(slot) = shade_slot(self.part) {
                 command(
                     ui,
                     BarberCommand::SetShade(slot, f64::from(*scalar).clamp(0.0, 1.0)),
@@ -576,15 +521,10 @@ impl PanelController for BarberController {
         } else if let Some(&(_, part)) = self.spins.iter().find(|(b, _)| *b == element) {
             self.select_part(ui, part);
         } else if let Some(i) = self.swatches.iter().position(|s| *s == Some(element)) {
-            if i < color_count(self.part, self.gender.as_ref()) {
-                let slot = match self.part {
-                    Part::Hair => Some(AppearanceSlot::HairColor),
-                    Part::Eyes => Some(AppearanceSlot::EyeColor),
-                    _ => None,
-                };
-                if let Some(slot) = slot {
-                    command(ui, BarberCommand::SetAppearance(slot, i as u32));
-                }
+            if i < color_count(self.part, self.gender.as_ref())
+                && let Some(slot) = color_slot(self.part)
+            {
+                command(ui, BarberCommand::SetAppearance(slot, i as u32));
             }
         } else if Some(element) == self.rotate_clockwise {
             self.rotate(ui, PreviewRequest::RotateClockwise);
@@ -614,35 +554,5 @@ impl PanelController for BarberController {
         // A pick of the window's own (the part) changes what it shows.
         self.redraw = true;
         true
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_mark_stands_on_the_chosen_colour_or_the_one_skin_colour() {
-        let mut view = BarberView::default();
-        view.appearance.hair_color = 2;
-        view.appearance.eye_color = UNSET;
-        assert_eq!(marked_swatch(Part::Hair, &view), Some(2));
-        assert_eq!(marked_swatch(Part::Eyes, &view), None);
-        assert_eq!(marked_swatch(Part::Nose, &view), Some(0));
-        view.appearance.hair_color = UNSET;
-        assert_eq!(marked_swatch(Part::Hair, &view), Some(0));
-    }
-
-    #[test]
-    fn hair_and_eyes_offer_their_colours_and_the_rest_one() {
-        let g = ChargenGenderOptions {
-            hair_colors: vec![1, 2, 3],
-            eye_colors: vec![4, 5],
-            ..ChargenGenderOptions::default()
-        };
-        assert_eq!(color_count(Part::Hair, Some(&g)), 3);
-        assert_eq!(color_count(Part::Eyes, Some(&g)), 2);
-        assert_eq!(color_count(Part::Skin, Some(&g)), 1);
-        assert_eq!(color_count(Part::Mouth, None), 1);
     }
 }

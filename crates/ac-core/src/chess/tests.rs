@@ -403,3 +403,36 @@ fn restore_squares_puts_back_only_the_pieces() {
     assert_eq!(board.get(sq("e4")), None);
     assert_eq!(board.turn(), ChessTeam::Black);
 }
+
+#[test]
+fn a_picked_piece_shows_every_square_it_can_go_to() {
+    let board = ChessBoard::standard();
+    let mut knight = board.targets(sq("g1"));
+    knight.sort_by_key(|s| (s.x, s.y));
+    assert_eq!(knight, vec![sq("f3"), sq("h3")]);
+    assert_eq!(board.targets(sq("e2")), vec![sq("e3"), sq("e4")]);
+    assert!(board.targets(sq("e7")).is_empty(), "not the side to move");
+    assert!(board.targets(sq("e4")).is_empty(), "an empty square");
+}
+
+#[test]
+fn a_move_is_written_the_usual_way() {
+    let mut board = ChessBoard::standard();
+    let say = |board: &mut ChessBoard, from: &str, to: &str| {
+        let before = board.clone();
+        let result = mv(board, from, to);
+        assert!(result.is_accepted(), "{from}{to}");
+        before.notation(sq(from), sq(to), result)
+    };
+    assert_eq!(say(&mut board, "e2", "e4"), "e4");
+    assert_eq!(say(&mut board, "d7", "d5"), "d5");
+    assert_eq!(say(&mut board, "e4", "d5"), "exd5");
+    assert_eq!(say(&mut board, "g8", "f6"), "Nf6");
+    assert_eq!(say(&mut board, "f1", "b5"), "Bb5+");
+    assert_eq!(say(&mut board, "c7", "c6"), "c6");
+    assert_eq!(say(&mut board, "g1", "f3"), "Nf3");
+    assert_eq!(say(&mut board, "c6", "b5"), "cxb5");
+    assert_eq!(say(&mut board, "e1", "g1"), "O-O");
+    assert_eq!(say(&mut board, "b8", "d7"), "Nbd7");
+    assert_eq!(square_name(sq("h8")), "h8");
+}

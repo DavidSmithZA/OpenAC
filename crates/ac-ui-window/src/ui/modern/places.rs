@@ -80,6 +80,26 @@ impl Place {
 /// windows are built).
 const PLACES: &[(&str, Place)] = &[
     (
+        super::barber::window::BARBER,
+        Place {
+            anchor: Anchor::Center,
+            dx: 0.0,
+            dy: 0.0,
+            width: super::barber::window::WIDTH,
+            height: super::barber::window::HEIGHT,
+        },
+    ),
+    (
+        super::chess::window::CHESS,
+        Place {
+            anchor: Anchor::Center,
+            dx: 0.0,
+            dy: 0.0,
+            width: super::chess::window::WIDTH,
+            height: super::chess::window::HEIGHT,
+        },
+    ),
+    (
         super::house::run::HOUSE,
         Place {
             anchor: Anchor::Center,
