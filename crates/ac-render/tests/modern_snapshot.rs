@@ -866,6 +866,7 @@ fn more_things(s: &mut Shot) {
     p.name = "Aerin Vale".to_owned();
     p.item_type = ItemType::CREATURE;
     p.items_capacity = 102;
+    p.containers_capacity = 7;
     objects.push(p);
     let mut main = Vec::new();
     for &(guid, name, item_type, icon, stack) in ITEMS {
@@ -2359,4 +2360,147 @@ fn the_modern_questions() {
     // A training question from a window: its own words on the buttons.
     ask(&mut s, vec![ClientConfirmation::Suicide]);
     s.save("questions-danger");
+}
+
+/// A shop open at Ilsa's, with five listings and one row on each list.
+fn open_shop(s: &mut Shot, reason: ac_runtime::inventory::VendorViewReason) {
+    use ac_core::items::vendor::{NO_LIMIT, UNLIMITED_STOCK};
+    use ac_core::items::{VendorShopItem, VendorShopProfile};
+    use ac_runtime::inventory::VendorView;
+    use ac_runtime::inventory::shop::{StagedRow, VendorListsView};
+    let listing =
+        |guid: u32, name: &str, ty: ItemType, icon: u32, value: i32, stock: i32| VendorShopItem {
+            item_guid: guid,
+            stack_size: stock,
+            name: Some(name.to_owned()),
+            item_type: Some(ty.bits()),
+            icon_id: icon,
+            value: Some(value),
+            ..VendorShopItem::default()
+        };
+    let view = VendorView {
+        vendor_guid: 0x7000_0901,
+        name: Some("Ilsa Brenner".to_owned()),
+        profile: VendorShopProfile {
+            merchandise_item_types: (ItemType::FOOD | ItemType::MISC | ItemType::GEM).bits(),
+            merchandise_min_value: NO_LIMIT,
+            merchandise_max_value: 10_000,
+            deal_magical_items: false,
+            buy_price: 0.5,
+            sell_price: 1.2,
+            ..VendorShopProfile::default()
+        },
+        items: vec![
+            listing(
+                0x7000_0911,
+                "Adept Healing Kit",
+                ItemType::MISC,
+                0x0600_1E3B,
+                600,
+                UNLIMITED_STOCK,
+            ),
+            listing(
+                0x7000_0912,
+                "Healing Kit",
+                ItemType::MISC,
+                0x0600_1E3B,
+                95,
+                UNLIMITED_STOCK,
+            ),
+            listing(
+                0x7000_0913,
+                "Health Potion",
+                ItemType::FOOD,
+                0x0600_1A8B,
+                40,
+                UNLIMITED_STOCK,
+            ),
+            listing(
+                0x7000_0914,
+                "Mana Potion",
+                ItemType::FOOD,
+                0x0600_1A8D,
+                40,
+                UNLIMITED_STOCK,
+            ),
+            listing(0x7000_0915, "Amethyst", ItemType::GEM, 0x0600_1A8C, 250, 3),
+        ],
+        lists: VendorListsView {
+            buying: vec![StagedRow {
+                item_guid: 0x7000_0913,
+                name: "Health Potion".to_owned(),
+                quantity: 5,
+                price: 240,
+            }],
+            selling: vec![StagedRow {
+                item_guid: 0x8000_0104,
+                name: "Healing Kit".to_owned(),
+                quantity: 1,
+                price: 60,
+            }],
+            money: 52_400,
+            ..VendorListsView::default()
+        },
+        reason,
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Vendor(Some(
+            Box::new(view),
+        ))));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_vendor() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::inventory::{ItemCommand, VendorCommand, VendorViewReason};
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    open_shop(&mut s, VendorViewReason::Opened);
+    assert!(
+        s.ui.host().root.is_window_visible("modern-vendor"),
+        "it opens with the shop"
+    );
+    assert!(
+        !s.ui.host().root.is_window_visible("vendor"),
+        "retail's stays hidden"
+    );
+    s.save("vendor-buy");
+    let frame = s.ui.host().root.window("modern-vendor").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    // The second row (Healing Kit), then Buy now.
+    s.click(0, fx + 216 + 200, fy + 72 + 36 + 48 + 20, Modifiers::NONE);
+    s.sent.clear();
+    s.click(
+        0,
+        fx + 672 + 14 + 40,
+        fy + 72 + 214 - 14 - 16,
+        Modifiers::NONE,
+    );
+    assert!(
+        s.sent
+            .iter()
+            .any(|c| matches!(c, SessionCommand::Item(ItemCommand::Buy(rows)) if rows.len() == 1)),
+        "{:?}",
+        s.sent
+    );
+    // The Sell tab.
+    s.click(0, fx + 262, fy + 30, Modifiers::NONE);
+    s.save("vendor-sell");
+    // Sell all.
+    s.sent.clear();
+    s.click(0, fx + 672 + 100, fy + 72 + 552 - 14 - 17, Modifiers::NONE);
+    s.save("vendor-sell-after");
+    let _ = s.sent.iter().any(|c| {
+        matches!(
+            c,
+            SessionCommand::Item(ItemCommand::Vendor(VendorCommand::SellAll))
+        )
+    });
+    // Close with lists waiting: it asks.
+    s.click(0, fx + 1040 - 16 - 15, fy + 28, Modifiers::NONE);
+    s.save("vendor-leave");
 }

@@ -367,6 +367,7 @@ impl WindowUi {
             self.withdraw_vendor_close_question();
         }
         let shop_events = std::mem::take(&mut self.facts.shop_events);
+        self.note_modern_shop_events(&shop_events);
         let selection_moved = self.fed_social_selection != Some(selected);
         self.fed_social_selection = Some(selected);
         let in_world = self.facts.social.as_ref().map(|s| s.in_world);

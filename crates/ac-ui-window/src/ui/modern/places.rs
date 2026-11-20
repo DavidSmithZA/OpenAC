@@ -110,6 +110,16 @@ const PLACES: &[(&str, Place)] = &[
         },
     ),
     (
+        super::dealing::vendor_run::VENDOR,
+        Place {
+            anchor: Anchor::Center,
+            dx: 0.0,
+            dy: 0.0,
+            width: super::dealing::vendor_window::WIDTH,
+            height: super::dealing::vendor_window::HEIGHT,
+        },
+    ),
+    (
         super::items::loot::LOOT,
         Place {
             anchor: Anchor::TopRight,

@@ -1240,6 +1240,7 @@ impl WindowUi {
         self.update_panels(dirty);
         self.tick_item_cooldowns();
         self.update_dealings(dirty, &stale);
+        self.tick_modern_vendor();
         self.update_character_pages(dirty, &stale);
         self.update_components_page(dirty, &stale);
         self.update_external_container();
