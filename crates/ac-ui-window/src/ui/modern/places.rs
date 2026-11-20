@@ -131,6 +131,16 @@ const PLACES: &[(&str, Place)] = &[
         },
     ),
     (
+        super::chat::run::CHAT,
+        Place {
+            anchor: Anchor::BottomLeft,
+            dx: 16.0,
+            dy: -14.0,
+            width: super::chat::panel::WIDTH,
+            height: super::chat::panel::HEIGHT,
+        },
+    ),
+    (
         super::hud::PANELS,
         Place {
             anchor: Anchor::BottomRight,

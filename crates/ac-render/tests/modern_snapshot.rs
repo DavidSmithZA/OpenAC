@@ -608,3 +608,127 @@ fn the_m2_gaps() {
     assert!(saved.contains("modernPieces"), "{saved}");
     assert!(saved.contains("\"@ls\""), "{saved}");
 }
+
+/// A chat line of `class` from `sender` saying `words` (`text` as the game
+/// words the whole line).
+fn chat_line(
+    n: u64,
+    kind: ac_core::chat::ChatKind,
+    class: ac_core::chat::LogTextType,
+    sender: &str,
+    words: &str,
+    text: &str,
+) -> ac_runtime::communication::ChatLine {
+    ac_runtime::communication::ChatLine {
+        sequence: n,
+        kind,
+        log_text_type: class as u32,
+        combat_kind: None,
+        received_unix_ms: 0,
+        text: text.to_owned(),
+        channel_name: String::new(),
+        sender: sender.to_owned(),
+        sender_guid: 0x5000_0100 + n as u32,
+        words: words.to_owned(),
+        display_text: text.to_owned(),
+        channel_id: 0,
+        spans: None,
+    }
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_chat() {
+    use ac_core::chat::{ChatKind as K, LogTextType as T};
+    use ac_core::combat::CombatMode;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let lines = vec![
+        chat_line(1, K::System, T::System, "", "", "Rook is now online."),
+        chat_line(
+            2,
+            K::Tell,
+            T::Tell,
+            "Rook",
+            "portal gem ready when you are",
+            "Rook tells you, \"portal gem ready when you are\"",
+        ),
+        chat_line(
+            3,
+            K::Channel,
+            T::Fellowship,
+            "Mira",
+            "pulling the next room, stay on the ramp",
+            "",
+        ),
+        chat_line(
+            4,
+            K::Channel,
+            T::TurbineGeneral,
+            "Osk",
+            "anyone selling Major Coordination?",
+            "",
+        ),
+        chat_line(
+            5,
+            K::System,
+            T::Magic,
+            "",
+            "",
+            "You cast Incantation of Flame Bolt on Drudge Ravener.",
+        ),
+        chat_line(
+            6,
+            K::Channel,
+            T::Allegiance,
+            "Thessaly",
+            "Aerin, grats on 87! That was a long night of drudges and we all saw it.",
+            "",
+        ),
+        chat_line(
+            7,
+            K::LocalSpeech,
+            T::Speech,
+            "Bram",
+            "anyone heading to the Marketplace?",
+            "",
+        ),
+    ];
+    s.scene.apply(PresentationEvent::Chat(lines));
+    s.step();
+    s.step();
+    s.save("chat-idle");
+    // Enter: the panel comes up with the entry focused.
+    s.ui.chat_entry_key(ac_ui::input::InputAction::EnterChatMode, None);
+    s.step();
+    for c in "hello there".chars() {
+        let r: Routed<u32> = s.ui.key(
+            0,
+            Key::A,
+            true,
+            false,
+            Modifiers::NONE,
+            Some(c.to_string().as_str()),
+        );
+        let _ = s.ui.handle(r.outputs);
+    }
+    s.step();
+    s.save("chat-active");
+    // The channel button (bottom left: the panel's entry at 900 - 14 - 32).
+    s.click(0, 16 + 30, 900 - 14 - 16, Modifiers::NONE);
+    s.save("chat-channels");
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    // The Fellowship tab: its unread count clears.
+    s.save("chat-before-tab");
+    // Enter sends the typed line through the session's chat entry.
+    s.ui.chat_entry_key(ac_ui::input::InputAction::EnterChatMode, None);
+    s.step();
+    let r: Routed<u32> =
+        s.ui.key(0, Key::Enter, true, false, Modifiers::NONE, Some("\r"));
+    let mut sent = format!("{:?}", r.outputs);
+    let _ = s.ui.handle(r.outputs);
+    s.now += Duration::from_millis(50);
+    let _ = s.ui.frame(s.now, (W, H));
+    sent.push_str(&format!("{:?}", s.ui.drain()));
+    assert!(sent.contains("Submit(Some(\"hello there\"))"), "{sent}");
+}

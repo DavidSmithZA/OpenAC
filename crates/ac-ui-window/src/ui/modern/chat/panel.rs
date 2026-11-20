@@ -16,6 +16,9 @@ use ac_ui::shapes::CornerRadii;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
 
+use ac_runtime::communication::ChatChannelKind;
+
+use super::channels::{channel_color, channel_name, channel_prompt};
 use super::model::{ChatLog, ChatTab, LineKind, ShownLine};
 
 /// The panel's width.
@@ -48,6 +51,8 @@ const IDLE_OPACITY: [f32; 6] = [0.3, 0.5, 0.7, 0.9, 1.0, 1.0];
 const STAY: f64 = 4.0;
 /// The "Enter to chat" button.
 const ENTER_WORDS: &str = "Enter to chat";
+/// The entry's hint at its right end.
+const ENTER_HINT: &str = "Enter";
 /// The wheel's step, rows.
 const WHEEL_ROWS: usize = 3;
 /// The tab buttons' height and gap, and the small square buttons' side.
@@ -100,6 +105,8 @@ pub enum ChatRequest {
     Tab(usize),
     /// The speaker of the line was clicked: name, object id, where.
     Name(String, u32, (f32, f32)),
+    /// The channel button was pressed: its top left on the panel.
+    Channels((f32, f32)),
 }
 
 /// The chat panel.
@@ -140,6 +147,14 @@ pub struct ChatPanel {
     /// The "Enter to chat" button, when shown.
     enter_button: Option<Spot>,
     hovered: bool,
+    /// Where a typed line goes.
+    pub channel: ChatChannelKind,
+    /// Who it goes to on the tell channel.
+    pub tell_target: Option<String>,
+    /// The entry holds nothing (its prompt shows).
+    pub entry_empty: bool,
+    /// The channel button, when shown.
+    button: Option<Spot>,
     /// What it asked for since the window last looked.
     pub requests: Vec<ChatRequest>,
 }
@@ -168,8 +183,46 @@ impl ChatPanel {
             new_button: None,
             enter_button: None,
             hovered: false,
+            channel: ChatChannelKind::Say,
+            tell_target: None,
+            entry_empty: true,
+            button: None,
             requests: Vec::new(),
         }
+    }
+
+    /// The channel button's words.
+    #[must_use]
+    pub fn channel_words(&self) -> String {
+        match (&self.tell_target, self.channel) {
+            (Some(who), ChatChannelKind::Tell) => format!("Tell {who}"),
+            _ => channel_name(self.channel).to_owned(),
+        }
+    }
+
+    fn button_width(&self) -> f32 {
+        let label = self
+            .fonts
+            .name
+            .as_deref()
+            .map_or(60.0, |f| text::measure(f, &self.channel_words(), 0.0));
+        (8.0 + 7.0 + 6.0 + label + 6.0 + 10.0 + 8.0).min(WIDTH * 0.45)
+    }
+
+    fn hint_width(&self) -> f32 {
+        self.fonts
+            .small
+            .as_deref()
+            .map_or(40.0, |f| text::measure(f, ENTER_HINT, 0.0))
+    }
+
+    /// Where the entry's field goes on the panel: left, top, width,
+    /// height.
+    #[must_use]
+    pub fn field_rect(&self) -> (f32, f32, f32, f32) {
+        let left = 4.0 + self.button_width() + 8.0;
+        let right = WIDTH - 10.0 - self.hint_width() - 8.0;
+        (left, ENTRY_TOP + 4.0, (right - left).max(40.0), ENTRY - 8.0)
     }
 
     /// Adds a line. Reading back, the view holds still and the line waits.
@@ -423,6 +476,8 @@ impl Widget for ChatPanel {
                 if Self::inside(self.enter_button, x, y) {
                     self.wake();
                     self.requests.push(ChatRequest::Focus);
+                } else if let Some(b) = self.button.filter(|_| Self::inside(self.button, x, y)) {
+                    self.requests.push(ChatRequest::Channels((b.0, b.1)));
                 } else if Self::inside(self.new_button, x, y) {
                     self.follow();
                 } else if let Some(tab) = self.tab_at(x, y) {
@@ -470,6 +525,7 @@ impl Widget for ChatPanel {
         self.names.clear();
         self.new_button = None;
         self.enter_button = None;
+        self.button = None;
         self.tab_spots.clear();
         let box_h = if self.active { BOX } else { IDLE_BOX };
         let box_top = BOX_TOP + BOX - box_h;
@@ -552,6 +608,7 @@ impl Widget for ChatPanel {
                 self.draw_reading_back(rc, box_top, box_h);
             }
             let _ = more;
+            self.draw_entry(rc);
         } else if let Some(f) = self.fonts.small.clone() {
             // "Enter to chat" under the lines.
             let w = text::measure(&f, ENTER_WORDS, 0.0) + 16.0;
@@ -652,6 +709,78 @@ impl ChatPanel {
                 ty,
                 TextStyle::plain(words_color).shadowed(shadow),
             );
+        }
+    }
+
+    fn draw_entry(&mut self, rc: &mut RenderContext<'_>) {
+        let top = ENTRY_TOP;
+        rc.fill_rounded_rect(0.0, top, WIDTH, ENTRY, CornerRadii::all(4.0), hex(0, 0.62));
+        rc.stroke_rounded_rect(
+            0.0,
+            top,
+            WIDTH,
+            ENTRY,
+            CornerRadii::all(4.0),
+            hex(0xC9_A062, 0.8),
+            1.0,
+        );
+        let c = channel_color(self.channel);
+        let bw = self.button_width();
+        let (bx, by) = (4.0, top + 4.0);
+        rc.fill_rounded_rect(
+            bx,
+            by,
+            bw,
+            24.0,
+            CornerRadii::all(3.0),
+            Color { a: 0.12, ..c },
+        );
+        rc.stroke_rounded_rect(
+            bx,
+            by,
+            bw,
+            24.0,
+            CornerRadii::all(3.0),
+            Color { a: 0.4, ..c },
+            1.0,
+        );
+        rc.fill_ellipse(bx + 8.0, by + 12.0 - 3.5, 7.0, 7.0, c);
+        if let Some(f) = self.fonts.name.clone() {
+            let words = self.channel_words();
+            let room = bw - 8.0 - 7.0 - 6.0 - 6.0 - 10.0 - 8.0;
+            let words = crate::ui::modern::hud::target::fit(&f, &words, room);
+            let ty = (by + (24.0 - f.line_height) * 0.5).round();
+            text::draw(rc, &f, &words, bx + 21.0, ty, TextStyle::plain(c));
+        }
+        // The caret: the menu opens upwards.
+        let (cx, cy) = (bx + bw - 8.0 - 5.0, by + 12.0);
+        rc.smooth_line(cx - 4.0, cy + 2.0, cx, cy - 2.0, c, 1.8);
+        rc.smooth_line(cx, cy - 2.0, cx + 4.0, cy + 2.0, c, 1.8);
+        self.button = Some((bx, by, bw, 24.0));
+        if let Some(f) = self.fonts.small.clone() {
+            let hw = self.hint_width();
+            let ty = (top + (ENTRY - f.line_height) * 0.5).round();
+            text::draw(
+                rc,
+                &f,
+                ENTER_HINT,
+                WIDTH - 10.0 - hw,
+                ty,
+                TextStyle::plain(TIME_COLOR),
+            );
+            if self.entry_empty && !self.typing {
+                let (fl, _, fw, _) = self.field_rect();
+                let prompt = channel_prompt(self.channel, self.tell_target.as_deref());
+                let prompt = crate::ui::modern::hud::target::fit(&f, &prompt, fw - 10.0);
+                text::draw(
+                    rc,
+                    &f,
+                    &prompt,
+                    fl + 5.0,
+                    ty,
+                    TextStyle::plain(Color { a: 0.55, ..TEXT }),
+                );
+            }
         }
     }
 

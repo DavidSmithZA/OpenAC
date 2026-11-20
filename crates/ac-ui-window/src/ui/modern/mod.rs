@@ -71,6 +71,8 @@ pub struct ModernLayer {
     pub bars: Option<bars::run::BarsUi>,
     /// The HUD pieces the player hid or locked (read once).
     pub pieces: Option<ac_host::settings::HudPieces>,
+    /// The chat.
+    pub chat: Option<chat::run::ChatUi>,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -306,6 +308,7 @@ impl WindowUi {
         let combat = self.mount_modern_combat();
         let panels = self.mount_modern_panels();
         self.mount_modern_bars();
+        self.mount_modern_chat();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };

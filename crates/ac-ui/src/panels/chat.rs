@@ -1089,7 +1089,9 @@ impl ChatWindowController {
 }
 
 /// A request to the session's chat entry.
-fn entry_command(ui: &mut UiRoot, command: ChatEntryCommand) {
+/// Sends `command` to the session's chat entry (any front end's entry
+/// uses this).
+pub fn entry_command(ui: &mut UiRoot, command: ChatEntryCommand) {
     ui.emit(UiOutput::Panel(PanelOutput::Session(
         SessionCommand::ChatEntry(command),
     )));
