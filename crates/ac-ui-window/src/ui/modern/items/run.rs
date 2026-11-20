@@ -183,7 +183,7 @@ impl WindowUi {
         // The equipment slots.
         let mut slots = Vec::with_capacity(EQUIP_SLOTS.len());
         let (mut left, mut right, mut jewel, mut held) = (0, 0, 0, 0);
-        for s in &EQUIP_SLOTS {
+        for (i, s) in EQUIP_SLOTS.iter().enumerate() {
             let step = inv::SLOT + inv::SLOT_GAP;
             let (x, y) = match s.row {
                 SlotRow::Left => {
@@ -208,6 +208,7 @@ impl WindowUi {
             };
             let mut cell = ItemCell::new(theme, grid_fonts.small.clone(), strong.clone());
             cell.source = ItemDragSource::Equipment;
+            cell.glyph = Some(super::glyphs::SlotGlyph::SLOTS[i]);
             slots.push(ui.add(
                 frame,
                 Element::at(x, y, inv::SLOT, inv::SLOT).with_anchors(AnchorEdges::NONE),

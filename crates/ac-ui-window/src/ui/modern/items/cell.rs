@@ -147,6 +147,8 @@ pub struct ItemCell {
     pub index: usize,
     /// Nothing is dropped on it.
     pub no_drops: bool,
+    /// What it shows empty (an equipment slot's glyph).
+    pub glyph: Option<super::glyphs::SlotGlyph>,
     /// What it asked for since the window last looked.
     pub requests: Vec<CellRequest>,
     hovered: bool,
@@ -169,6 +171,7 @@ impl ItemCell {
             container: None,
             index: 0,
             no_drops: false,
+            glyph: None,
             requests: Vec::new(),
             hovered: false,
             pressed: false,
@@ -402,6 +405,18 @@ impl Widget for ItemCell {
             rc.fill_rounded_rect(bx, ty, bw, side, round, hex(0, 0.35));
         }
         if !filled {
+            // An empty slot shows what goes there, fainter when locked.
+            if let Some(g) = self.glyph {
+                let s = (side * 0.5).round();
+                let a = if self.no_drops { 0.14 } else { 0.35 } * fade;
+                g.draw(
+                    rc,
+                    (bx + (bw - s) * 0.5).round(),
+                    (ty + (side - s) * 0.5).round(),
+                    s,
+                    hex(0xE9_D3AE, a),
+                );
+            }
             return;
         }
         if let Some(f) = &self.small {

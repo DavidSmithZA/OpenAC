@@ -2,6 +2,7 @@
 //! details), the Inspect sheet and the Loot window.
 
 pub mod cell;
+pub mod glyphs;
 pub mod grid;
 pub mod inspect;
 pub mod inventory;
