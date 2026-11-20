@@ -145,6 +145,18 @@ Steps, one or more commits each:
 3. The entry: channel button and menu (12 channels, recent tells, greyed
    with reasons), typed lines through the retail chat submission; then
    the modern chat replaces the retail chat window.
+   How: mount window `modern-chat` (bottom left, 16 / -14, 440 x 300)
+   with the panel and a `Field` child for the entry, and attach a
+   `PanelController` to it so the field's `Submitted`, `TextChanged` and
+   `Recall` messages reach it; it sends `ChatEntryCommand`s exactly as
+   retail's `ChatWindowController` does (make its `entry_command` and
+   send helpers public). Feed it `set_entry(ChatEntryView)` (channel,
+   tell target, draft on a new shown revision, composed takes focus) and
+   the lines (`ShownLine::of(line, player name)`). Route
+   `chat_entry_key` and `run_chat_action` (status.rs) to it when it is
+   mounted. Retail's menu greys every channel but Say, General, Trade
+   and LFG (`channel_available`): check why before choosing the modern
+   menu's greying.
 4. @ suggestions, the name menu, search.
 5. New tab, pop-out windows (own filter, opacity, channel), saved; they
    replace the four floating chat windows.
