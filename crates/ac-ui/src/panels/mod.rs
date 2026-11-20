@@ -34,6 +34,7 @@ pub mod main_panels;
 pub mod map_house;
 pub mod mini_game;
 pub mod options;
+pub mod pack_drops;
 pub mod paperdoll;
 pub mod projectile_debug;
 pub mod radar;
