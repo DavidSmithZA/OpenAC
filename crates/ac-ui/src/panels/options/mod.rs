@@ -88,7 +88,8 @@ pub const CHAT_LIST_ID: u32 = 0x1000_050D;
 /// The Chat page's scrollbar (the same id as the Configuration page's).
 pub const CHAT_SCROLLBAR_ID: u32 = 0x1000_0201;
 
-const STRING_TABLE: u32 = 0x2300_0003;
+/// The string table the pages caption themselves from.
+pub const STRING_TABLE: u32 = 0x2300_0003;
 const FILTER_STRING_TABLE: u32 = 0x2300_000D;
 
 const SLIDER_LABEL_ID: u32 = 0x1000_021B;
