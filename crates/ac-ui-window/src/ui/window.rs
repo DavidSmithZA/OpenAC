@@ -1267,6 +1267,7 @@ impl WindowUi {
         });
         self.update_indicator_panels(link);
         self.update_mini_game();
+        self.tick_modern_chess();
         self.feed_modern_effects();
         self.follow_modern_vitals_settings();
         self.tick_modern_panels();

@@ -3337,3 +3337,125 @@ fn the_modern_map() {
     s.step();
     assert!(!s.ui.host().root.is_window_visible("modern-map"));
 }
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_chess() {
+    use ac_core::chess::{ChessBoard, ChessSquare, ChessTeam};
+    use ac_core::combat::CombatMode;
+    use ac_runtime::gameplay::{ChessCommand, ChessPlayed, ChessStage, ChessView, GameplayCommand};
+    use ac_runtime::session::SessionCommand;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let sq = |name: &str| {
+        let b = name.as_bytes();
+        ChessSquare::new(i32::from(b[0] - b'a'), i32::from(b[1] - b'1'))
+    };
+    // A game a few moves in, the player White and to move.
+    let mut board = ChessBoard::standard();
+    let mut moves = Vec::new();
+    for (from, to) in [
+        ("e2", "e4"),
+        ("e7", "e5"),
+        ("g1", "f3"),
+        ("b8", "c6"),
+        ("f1", "c4"),
+        ("f8", "c5"),
+        ("b1", "c3"),
+        ("g8", "f6"),
+        ("d2", "d3"),
+        ("d7", "d6"),
+    ] {
+        let before = board.clone();
+        let result = board.make_move(sq(from), sq(to));
+        moves.push(ChessPlayed {
+            white: before.turn() == ChessTeam::White,
+            from: sq(from),
+            to: sq(to),
+            written: before.notation(sq(from), sq(to), result),
+        });
+    }
+    let view = |revision: u64, stage: ChessStage, offering: bool| ChessView {
+        revision,
+        stage,
+        board_guid: 0x8000_0C01,
+        team: Some(ChessTeam::White),
+        offering_stalemate: offering,
+        games_ended: 0,
+        board: board.clone(),
+        moves: moves.clone(),
+    };
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Chess(
+            Box::new(view(1, ChessStage::MyTurn, false)),
+        )));
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::BeginGame(
+            0x8000_0C01,
+        )));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-chess"),
+        "using a board opens it"
+    );
+    assert!(!s.ui.host().root.is_window_visible("mini-game"));
+    s.save("chess");
+    // Pick up the knight on f3 (White's view: file f is column 5, rank 3
+    // is row 5).
+    let frame = s.ui.host().root.window("modern-chess").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    let at = |col: i32, row: i32| (fx + 38 + col * 56 + 28, fy + 70 + row * 56 + 28);
+    let (x, y) = at(5, 5);
+    s.click(0, x, y, Modifiers::NONE);
+    s.step();
+    s.save("chess-picked");
+    // To g5 (column 6, row 3).
+    s.sent.clear();
+    let (x, y) = at(6, 3);
+    s.click(0, x, y, Modifiers::NONE);
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Chess(ChessCommand::Move { from, to }))
+                if *from == sq("f3") && *to == sq("g5")
+        )),
+        "{:?}",
+        s.sent
+    );
+    // Their move, and the player offering a stalemate.
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Chess(
+            Box::new(view(2, ChessStage::OpponentsTurn, true)),
+        )));
+    s.step();
+    s.step();
+    s.save("chess-their-move");
+    // Resign asks first.
+    use ac_ui_window::ui::modern::chess::window::ChessFrame;
+    let (_, resign) = ChessFrame::button_rects();
+    let mid =
+        |r: (f32, f32, f32, f32)| (fx + (r.0 + r.2 * 0.5) as i32, fy + (r.1 + r.3 * 0.5) as i32);
+    let (x, y) = mid(resign);
+    s.click(0, x, y, Modifiers::NONE);
+    s.step();
+    s.save("chess-resign");
+    let (_, _, yes) =
+        s.ui.host()
+            .root
+            .widget::<ChessFrame>(frame)
+            .expect("the frame")
+            .card_rects();
+    s.sent.clear();
+    let (x, y) = mid(yes);
+    s.click(0, x, y, Modifiers::NONE);
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Chess(ChessCommand::Resign))
+        )),
+        "{:?}",
+        s.sent
+    );
+}
