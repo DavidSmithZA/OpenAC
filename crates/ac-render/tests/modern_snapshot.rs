@@ -3459,3 +3459,103 @@ fn the_modern_chess() {
         s.sent
     );
 }
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_barber() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::gameplay::{BarberCommand, BarberView, GameplayCommand};
+    use ac_runtime::session::SessionCommand;
+    use ac_runtime::session::pregame::PreGameEvent;
+    use ac_ui_window::ui::modern::barber::window::BarberFrame;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let tables = ac_runtime::gameplay::GameTables::load(&dats()).expect("the game tables");
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Options(
+            Arc::clone(tables.chargen()),
+        )));
+    let gender = tables
+        .chargen()
+        .try_get_heritage(1)
+        .and_then(|h| {
+            h.genders_by_key
+                .iter()
+                .find(|(_, g)| g.name == "Female")
+                .map(|(k, _)| *k)
+        })
+        .expect("an Aluvian female");
+    let mut view = BarberView {
+        revision: 1,
+        openings: 1,
+        open: true,
+        heritage: 1,
+        gender: u32::try_from(gender).unwrap_or(0),
+        ..BarberView::default()
+    };
+    view.appearance.hair_style = 3;
+    view.appearance.hair_color = 1;
+    view.appearance.hair_shade = 0.55;
+    view.appearance.eyes_strip = 1;
+    view.appearance.eye_color = 2;
+    view.appearance.nose_strip = 2;
+    view.appearance.skin_shade = 0.4;
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Barber(
+            Box::new(view.clone()),
+        )));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-barber"),
+        "the barber opens it"
+    );
+    assert!(!s.ui.host().root.is_window_visible("barber"));
+    s.save("barber");
+    // A new hair colour, the look changed since it opened.
+    let frame = s.ui.host().root.window("modern-barber").expect("it").frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    view.revision = 2;
+    view.appearance.hair_color = 3;
+    view.appearance.hair_style = 5;
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Barber(
+            Box::new(view.clone()),
+        )));
+    s.step();
+    s.step();
+    s.save("barber-changed");
+    // The skin.
+    let tabs = 5.0_f32;
+    let tw = (384.0 - 4.0 * 4.0) / tabs;
+    s.click(
+        0,
+        fx + (356.0 + 4.0 * (tw + 4.0) + tw * 0.5) as i32,
+        fy + 72 + 27,
+        Modifiers::NONE,
+    );
+    s.step();
+    s.save("barber-skin");
+    // Accept.
+    let (_, accept) =
+        s.ui.host()
+            .root
+            .widget::<BarberFrame>(frame)
+            .expect("the frame")
+            .foot_buttons();
+    s.sent.clear();
+    s.click(
+        0,
+        fx + (accept.0 + accept.2 * 0.5) as i32,
+        fy + (accept.1 + accept.3 * 0.5) as i32,
+        Modifiers::NONE,
+    );
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Barber(BarberCommand::Finish))
+        )),
+        "{:?}",
+        s.sent
+    );
+}
