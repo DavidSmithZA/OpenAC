@@ -199,6 +199,36 @@ cannot tell them apart from the allegiance's records yet).
 
 **M1, M2 and M3 accepted live 2026-11-20.** Next: M4 (items).
 
+**M4 started 2026-11-20** on `feat/modern-ui-m4` (off `feat/modern-ui-m3`).
+Retail windows it replaces: `inventory` (with the paperdoll),
+`external-container` (loot) and `examination` (Inspect). Steps, one or
+more commits each:
+
+1. Neutral first: the item report in named parts (retail's text,
+   unchanged, still one report for retail), so the modern tabs can sort
+   the parts into Overview, Spells, Needs and Details; the viewer's
+   appraisal names usable outside the retail window.
+2. Inventory model (`ui/modern/items/model.rs`): packs and how full they
+   are, the items in view (one pack, or all grouped by pack, by kind or
+   not at all), filter chips, search over every pack, sort keys, the 24
+   equipment slots, burden and pyreals.
+3. The item cell and a virtualised grid and list (drawn icons, stack
+   count, cooldown, selection; drag and drop with retail's payload).
+4. Item details (head, facts, the four tabs, inscription), shared with
+   Inspect.
+5. The inventory window: equipment slots, pack rail, toolbar, grid,
+   details with Equip or Use, Give, Drop, Salvage, More; footer with
+   burden and pyreals. The inventory key, the panel strip and an opened
+   pack show it.
+6. Inspect sheet for every kind; it takes the appraisals before retail's
+   examination code and follows the selection.
+7. Loot window; it closes the container itself when out of range
+   (retail's window does that only while it shows).
+8. Sort menu and Tidy, the split popover, drag to equip (slots light
+   up), the turning figure (its own viewport request), the pop-up card
+   on small screens.
+9. Plugin item hooks (a new API version), once the screens stand.
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
