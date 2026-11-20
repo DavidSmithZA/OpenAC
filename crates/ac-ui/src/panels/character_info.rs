@@ -617,33 +617,36 @@ fn summoning_mastery_name(v: i32) -> &'static str {
     }
 }
 
-/// The report.
+/// The report's six parts, each as the report writes it (possibly empty):
+/// life (birth, time played, deaths), natural resistances, the attributes
+/// the character started with, chess and fishing, masteries and
+/// augmentations, and the burden.
 #[must_use]
-pub fn build_report(source: &CharacterInfoSource, strings: &CharacterInfoStrings) -> String {
-    let mut body = String::new();
+pub fn report_parts(source: &CharacterInfoSource, strings: &CharacterInfoStrings) -> [String; 6] {
+    let mut life = String::new();
     let one = |v: String| vec![v];
     if let Some(birth) = source.birth_text.as_ref().filter(|b| !b.is_empty()) {
-        append_tokens(&mut body, &strings.birth, &one(birth.clone()), &[]);
+        append_tokens(&mut life, &strings.birth, &one(birth.clone()), &[]);
     }
     if let Some(&played) = source.ints.get(&0x7D) {
         let text = format_retail_duration(played);
         if !text.is_empty() {
-            append_tokens(&mut body, &strings.played, &one(text), &[]);
+            append_tokens(&mut life, &strings.played, &one(text), &[]);
         }
     }
     let deaths = source.int(0x2B);
     match deaths {
-        0 => body.push_str(&strings.deaths_none),
-        1 => body.push_str(&strings.deaths_one),
-        2 => body.push_str(&strings.deaths_two),
+        0 => life.push_str(&strings.deaths_none),
+        1 => life.push_str(&strings.deaths_one),
+        2 => life.push_str(&strings.deaths_two),
         _ => append_tokens(
-            &mut body,
+            &mut life,
             &strings.deaths_many,
             &one(number(deaths)),
             &[i64::from(deaths)],
         ),
     }
-    section_break(&mut body);
+    let mut resistances = String::new();
 
     // The grades read Strength and Endurance without spells.
     let [strength, endurance, ..] = source.base;
@@ -651,19 +654,19 @@ pub fn build_report(source: &CharacterInfoSource, strings: &CharacterInfoStrings
     let regeneration = resistance_grade(strength + 2 * endurance, 200, 346, 470, 580, 690);
     let r = &strings.resists;
     let part = |i: usize| r.get(i).map_or("", String::as_str);
-    body.push_str(part(0));
-    body.push_str(resist);
-    body.push_str(part(1));
-    body.push_str(resist);
-    body.push_str(part(2));
-    body.push_str(regeneration);
-    body.push_str(part(3));
-    section_break(&mut body);
+    resistances.push_str(part(0));
+    resistances.push_str(resist);
+    resistances.push_str(part(1));
+    resistances.push_str(resist);
+    resistances.push_str(part(2));
+    resistances.push_str(regeneration);
+    resistances.push_str(part(3));
+    let mut innates = String::new();
 
     let innate: Vec<String> = source.innate.iter().copied().map(number).collect();
     let counts: Vec<i64> = source.innate.iter().map(|v| i64::from(*v)).collect();
-    append_tokens(&mut body, &strings.innates, &innate, &counts);
-    section_break(&mut body);
+    append_tokens(&mut innates, &strings.innates, &innate, &counts);
+    let mut pastimes = String::new();
 
     // A character who never played chess is ranked 1400.
     let chess = source
@@ -672,19 +675,19 @@ pub fn build_report(source: &CharacterInfoSource, strings: &CharacterInfoStrings
         .copied()
         .unwrap_or(UNRANKED_CHESS_RANK);
     append_tokens(
-        &mut body,
+        &mut pastimes,
         &strings.chess,
         &one(number(chess)),
         &[i64::from(chess)],
     );
     let fishing = source.int(0xC0);
     append_tokens(
-        &mut body,
+        &mut pastimes,
         &strings.fishing,
         &one(number(fishing)),
         &[i64::from(fishing)],
     );
-    section_break(&mut body);
+    let mut masteries = String::new();
 
     for (tokens, id, name) in [
         (
@@ -697,22 +700,22 @@ pub fn build_report(source: &CharacterInfoSource, strings: &CharacterInfoStrings
     ] {
         let v = source.int(id);
         if v > 0 {
-            append_tokens(&mut body, tokens, &one(name(v).to_owned()), &[]);
+            append_tokens(&mut masteries, tokens, &one(name(v).to_owned()), &[]);
         }
     }
-    append_luminance_auras(&mut body, source, strings);
+    append_luminance_auras(&mut masteries, source, strings);
     for a in &AUGMENTATIONS {
         let v = source.int(a.property);
         let Some(tokens) = (v > 0).then(|| strings.augmentations.get(a.key)).flatten() else {
             continue;
         };
         if a.include_value {
-            append_tokens(&mut body, tokens, &one(number(v)), &[i64::from(v)]);
+            append_tokens(&mut masteries, tokens, &one(number(v)), &[i64::from(v)]);
         } else if let Some(first) = tokens.first() {
-            body.push_str(&resolve_plural(first, i64::from(v)));
+            masteries.push_str(&resolve_plural(first, i64::from(v)));
         }
     }
-    section_break(&mut body);
+    let mut burden = String::new();
 
     let augmentations = source.int(0xE6);
     // The burden reads Strength with spells.
@@ -720,12 +723,12 @@ pub fn build_report(source: &CharacterInfoSource, strings: &CharacterInfoStrings
     let current = source.int(5);
     let load = burden::load_ratio(capacity, current);
     if load < 1.0 {
-        body.push_str(&strings.load_none);
+        burden.push_str(&strings.load_none);
     } else {
         let over = current - capacity;
         let penalty = burden::load_penalty_percent(load);
         append_tokens(
-            &mut body,
+            &mut burden,
             &strings.load_burdened,
             &[number(over), number(penalty)],
             &[i64::from(over), i64::from(penalty)],
@@ -735,11 +738,25 @@ pub fn build_report(source: &CharacterInfoSource, strings: &CharacterInfoStrings
         #[allow(clippy::cast_precision_loss)]
         let percent = augmentations as f32 * 20.0;
         append_tokens(
-            &mut body,
+            &mut burden,
             &strings.load_augmentations,
             &[number(augmentations), percent.to_string()],
             &[i64::from(augmentations), percent as i64],
         );
+    }
+    [life, resistances, innates, pastimes, masteries, burden]
+}
+
+/// The report.
+#[must_use]
+pub fn build_report(source: &CharacterInfoSource, strings: &CharacterInfoStrings) -> String {
+    let parts = report_parts(source, strings);
+    let mut body = String::new();
+    for (i, part) in parts.iter().enumerate() {
+        body.push_str(part);
+        if i + 1 < parts.len() {
+            section_break(&mut body);
+        }
     }
     body.trim_end_matches(['\r', '\n']).to_owned()
 }
