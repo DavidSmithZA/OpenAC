@@ -501,15 +501,20 @@ impl WindowUi {
                     .iter()
                     .any(|(_, c)| *c == ac_runtime::gameplay::HouseLineColor::RentNotPaid)
         });
+        // The main panels follow the windows standing in for retail's.
+        let shows = |panel| self.panels.is_visible(&self.host.root, panel);
+        let character = shows(ac_ui::panels::panel_id::CHARACTER);
+        let inventory = shows(ac_ui::panels::panel_id::INVENTORY);
+        let spellbook = shows(ac_ui::panels::panel_id::MAGIC);
         let ui = &mut self.host.root;
         for id in buttons {
             let Some(panel) = ui.widget::<PanelButton>(id).map(|b| b.panel) else {
                 continue;
             };
             let open = match panel {
-                Panel::Character => ui.is_window_visible(super::window::CHARACTER_WINDOW),
-                Panel::Inventory => ui.is_window_visible(super::window::INVENTORY_WINDOW),
-                Panel::Spellbook => ui.is_window_visible(super::window::SPELLBOOK_WINDOW),
+                Panel::Character => character,
+                Panel::Inventory => inventory,
+                Panel::Spellbook => spellbook,
                 Panel::Journal => ui.is_window_visible(super::social_panels::JOURNAL_WINDOW),
                 Panel::Map => world_open && !on_house,
                 Panel::House => on_house,
