@@ -110,8 +110,10 @@ pub struct TalkFacts {
     pub has_vassals: Option<bool>,
     /// Who last sent the player a tell.
     pub last_teller: Option<String>,
-    /// The selected player, if one is selected: name and object id.
-    pub selected_player: Option<(String, u32)>,
+    /// What is selected, if anything but the player: name and object id
+    /// (a tell to it is aimed by id, so it reaches a creature or an NPC
+    /// as well as a player).
+    pub selected: Option<(String, u32)>,
 }
 
 impl TalkFacts {
@@ -246,7 +248,7 @@ impl ChannelMenu {
         if let TalkTo::Tell(who, guid) = &current {
             tell(who, *guid, "");
         }
-        if let Some((who, guid)) = &facts.selected_player {
+        if let Some((who, guid)) = &facts.selected {
             tell(who, *guid, "selected");
         }
         if !tells.is_empty() {
@@ -486,7 +488,7 @@ mod tests {
         let mut menu = ChannelMenu::new(Horizon::BRONZE, MenuFonts::default());
         let facts = TalkFacts {
             last_teller: Some("Rook".to_owned()),
-            selected_player: Some(("rook".to_owned(), 5)),
+            selected: Some(("rook".to_owned(), 5)),
             ..TalkFacts::default()
         };
         menu.fill(&facts, TalkTo::Tell("Mira".to_owned(), 0));

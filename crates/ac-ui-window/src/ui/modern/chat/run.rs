@@ -66,7 +66,8 @@ pub struct ChatUi {
     /// The popped-out tabs' windows made so far (hidden, not destroyed,
     /// when put back or deleted).
     windows: Vec<TabWindow>,
-    /// Windows closed by the player (their tabs stay popped out).
+    /// Windows hidden by the floating chat keys (their tabs stay popped
+    /// out; the close button puts a tab back instead).
     closed: std::collections::HashSet<u32>,
     /// The saved tabs have been read.
     loaded: bool,
@@ -569,7 +570,7 @@ impl WindowUi {
                 }
                 ChatRequest::EditTab(n) => self.edit_modern_chat_tab(n),
                 ChatRequest::PopOut(n) => self.set_modern_chat_window(n, true),
-                ChatRequest::PutBack | ChatRequest::Close | ChatRequest::Moved => {}
+                ChatRequest::PutBack | ChatRequest::Moved => {}
                 ChatRequest::Complete(verb) => {
                     self.start_modern_chat_line(&format!("{verb} "));
                 }
@@ -681,7 +682,14 @@ impl WindowUi {
         use ac_runtime::session::SessionCommand;
         let command = match action {
             NameAction::Tell => {
-                self.start_modern_chat_line(&format!("@tell {who}, "));
+                if guid != 0 && !ac_core::chat::is_player_object_id(guid) {
+                    // A creature or an NPC has no name the server can look
+                    // up: the entry is aimed at it by id instead.
+                    self.aim_modern_chat(TalkTo::Tell(who.to_owned(), guid));
+                    self.focus_modern_chat(None);
+                } else {
+                    self.start_modern_chat_line(&format!("@tell {who}, "));
+                }
                 return;
             }
             NameAction::Copy => {
@@ -1134,12 +1142,6 @@ impl WindowUi {
                             self.set_modern_chat_window(n, false);
                         }
                     }
-                    ChatRequest::Close => {
-                        if let Some(chat) = self.modern.as_mut().and_then(|m| m.chat.as_mut()) {
-                            chat.closed.insert(id);
-                        }
-                        self.hide_modern_chat_window(id);
-                    }
                     ChatRequest::Moved => self.save_modern_chat_tabs(),
                     ChatRequest::Name(who, guid, (x, y)) => {
                         let nearby = guid != 0 && self.facts.objects.get(guid).is_some();
@@ -1212,11 +1214,11 @@ impl WindowUi {
     fn talk_facts(&self) -> TalkFacts {
         let social = self.facts.social.as_ref().filter(|s| s.in_world);
         let allegiance = social.map(|s| s.allegiance.as_ref());
-        let selected_player = self
+        // As retail's Tell to Selected: anything selected but the player.
+        let selected = self
             .context
             .selected_target
             .clone()
-            .filter(|(_, guid)| ac_core::chat::is_player_object_id(*guid))
             .filter(|(_, guid)| *guid != self.facts.state.player);
         TalkFacts {
             in_fellowship: social.map(|s| s.fellowship.in_fellowship),
@@ -1230,7 +1232,7 @@ impl WindowUi {
                 .as_ref()
                 .and_then(|m| m.chat.as_ref())
                 .and_then(|c| c.entry.last_incoming_tell_sender.clone()),
-            selected_player,
+            selected,
         }
     }
 }

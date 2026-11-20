@@ -50,6 +50,10 @@ const IDLE_OPACITY: [f32; 6] = [0.3, 0.5, 0.7, 0.9, 1.0, 1.0];
 /// How long the panel stays up after the pointer and the keyboard leave,
 /// seconds.
 const STAY: f64 = 4.0;
+/// How long the pointer rests on the idle lines before the panel comes
+/// up, seconds (a pointer passing over on its way to the world does not
+/// wake it).
+const WAKE_DWELL: f64 = 0.2;
 /// The "Enter to chat" button.
 const ENTER_WORDS: &str = "Enter to chat";
 /// The entry's hint at its right end.
@@ -118,10 +122,8 @@ pub enum ChatRequest {
     EditTab(usize),
     /// Tab `n` pops out into its own window.
     PopOut(usize),
-    /// The window goes back to being a tab.
+    /// The window closes and goes back to being a tab.
     PutBack,
-    /// The window closes (its tab stays popped out).
-    Close,
     /// The window was let go after a move.
     Moved,
 }
@@ -145,6 +147,8 @@ pub struct ChatPanel {
     pub typing: bool,
     /// When the pointer or the keyboard last had the panel (its clock).
     touched: f64,
+    /// How long the pointer has rested on the idle panel, seconds.
+    dwell: f64,
     /// Its clock.
     clock: f64,
     /// Rows scrolled up from the newest (0: following).
@@ -171,6 +175,8 @@ pub struct ChatPanel {
     /// The "Enter to chat" button, when shown.
     enter_button: Option<Spot>,
     hovered: bool,
+    /// Where the pointer is on the panel.
+    pointer: (f32, f32),
     /// Where a typed line goes.
     pub channel: ChatChannelKind,
     /// Who it goes to on the tell channel.
@@ -214,6 +220,7 @@ impl ChatPanel {
             active: false,
             typing: false,
             touched: f64::NEG_INFINITY,
+            dwell: 0.0,
             clock: 0.0,
             scroll: 0,
             waiting: 0,
@@ -227,6 +234,7 @@ impl ChatPanel {
             new_button: None,
             enter_button: None,
             hovered: false,
+            pointer: (0.0, 0.0),
             channel: ChatChannelKind::Say,
             tell_target: None,
             entry_empty: true,
@@ -563,7 +571,10 @@ impl Widget for ChatPanel {
         if self.active {
             return element.contains_local(x, y);
         }
+        // Idle: the faded lines and the entry's row, where a resting
+        // pointer wakes the panel.
         Self::inside(self.enter_button, x, y)
+            || ((0.0..WIDTH).contains(&x) && (BOX_TOP + BOX - IDLE_BOX..HEIGHT).contains(&y))
     }
 
     fn handles_click(&self, _element: &Element) -> bool {
@@ -576,6 +587,17 @@ impl Widget for ChatPanel {
 
     fn clips_children(&self) -> bool {
         false
+    }
+
+    fn tooltip_text(&self, _element: &Element) -> Option<String> {
+        let (x, y) = self.pointer;
+        let words = match (0..5).find(|&i| Self::inside(self.row_spots[i], x, y))? {
+            0 => "New tab",
+            1 => "Pop this tab out into a window",
+            2 => "What this window shows",
+            _ => "Close: back into the chat as a tab",
+        };
+        Some(words.to_owned())
     }
 
     fn on_event(&mut self, ui: &mut UiRoot, me: ElementId, e: &UiEvent) -> bool {
@@ -593,7 +615,10 @@ impl Widget for ChatPanel {
         match e.kind {
             kind::MOUSE_MOVE | kind::HOVER_ENTER => {
                 self.hovered = true;
-                self.touched = self.clock;
+                self.pointer = (x, y);
+                if self.active {
+                    self.touched = self.clock;
+                }
                 if let Some((gx, gy)) = self.grip {
                     let (mx, my) = ui.mouse();
                     let screen = ui.size();
@@ -648,8 +673,7 @@ impl Widget for ChatPanel {
                         0 => ChatRequest::NewTab,
                         1 => ChatRequest::PopOut(self.current),
                         2 => ChatRequest::EditTab(0),
-                        3 => ChatRequest::PutBack,
-                        _ => ChatRequest::Close,
+                        _ => ChatRequest::PutBack,
                     });
                 } else if let Some(i) = (0..4).find(|&i| Self::inside(self.search_spots[i], x, y)) {
                     match i {
@@ -684,7 +708,8 @@ impl Widget for ChatPanel {
                     .cloned()
                 {
                     self.requests.push(ChatRequest::Name(who, id, (x, y)));
-                } else if self.active {
+                } else {
+                    self.wake();
                     self.requests.push(ChatRequest::Focus);
                 }
                 true
@@ -698,7 +723,15 @@ impl Widget for ChatPanel {
         if self.window {
             self.touched = self.clock;
         }
-        if self.typing || self.hovered || self.scroll > 0 {
+        if self.hovered && !self.active {
+            self.dwell += dt;
+            if self.dwell >= WAKE_DWELL {
+                self.touched = self.clock;
+            }
+        } else {
+            self.dwell = 0.0;
+        }
+        if self.typing || (self.hovered && self.active) || self.scroll > 0 {
             self.touched = self.clock;
         }
         let up = self.clock - self.touched < STAY;
@@ -1175,8 +1208,8 @@ impl ChatPanel {
             text::draw(rc, &f, &tab.name, 10.0, ty, TextStyle::plain(TEXT));
         }
         let c = hex(0xE9_D3AE, 1.0);
-        for (i, slot) in [2usize, 3, 4].into_iter().enumerate() {
-            let x = WIDTH - 4.0 - (3 - i) as f32 * TABS;
+        for (i, slot) in [2usize, 4].into_iter().enumerate() {
+            let x = WIDTH - 4.0 - (2 - i) as f32 * TABS;
             let (cx, cy) = (x + TABS * 0.5, 2.0 + TABS * 0.5);
             match slot {
                 2 => {
@@ -1185,13 +1218,6 @@ impl ChatPanel {
                         let y = cy - 4.0 + k as f32 * 4.0;
                         rc.smooth_line(cx - w * 0.5, y, cx + w * 0.5, y, c, 1.6);
                     }
-                }
-                3 => {
-                    // Put back: an arrow down into a tray.
-                    rc.smooth_line(cx, cy - 6.0, cx, cy + 2.0, c, 1.6);
-                    rc.smooth_line(cx - 3.5, cy - 1.5, cx, cy + 2.0, c, 1.6);
-                    rc.smooth_line(cx + 3.5, cy - 1.5, cx, cy + 2.0, c, 1.6);
-                    rc.smooth_line(cx - 6.0, cy + 5.0, cx + 6.0, cy + 5.0, c, 1.6);
                 }
                 _ => {
                     rc.smooth_line(cx - 4.5, cy - 4.5, cx + 4.5, cy + 4.5, c, 1.6);
@@ -1207,8 +1233,9 @@ impl ChatPanel {
             return;
         };
         // The tabs share what the + , pop-out and search buttons leave,
-        // their padding giving way first.
-        let shown: Vec<(usize, f32)> = self
+        // their padding giving way first, then the longest names (cut
+        // short with an ellipsis).
+        let shown: Vec<(f32, f32)> = self
             .tabs
             .iter()
             .enumerate()
@@ -1220,13 +1247,16 @@ impl ChatPanel {
                 } else {
                     0.0
                 };
-                (i, text::measure(&f, &t.name, 0.0) + badge_w)
+                (text::measure(&f, &t.name, 0.0), badge_w)
             })
             .collect();
         let room = WIDTH - 3.0 * (TABS + TAB_GAP) - 4.0;
-        let natural: f32 = shown.iter().map(|(_, w)| w + 18.0 + TAB_GAP).sum();
+        let natural: f32 = shown.iter().map(|(l, b)| l + b + 18.0 + TAB_GAP).sum();
         let excess = (natural - room).max(0.0);
         let pad = (9.0 - excess / (2.0 * shown.len().max(1) as f32)).max(4.0);
+        let fixed: f32 = shown.iter().map(|(_, b)| b + 2.0 * pad + TAB_GAP).sum();
+        let labels: Vec<f32> = shown.iter().map(|(l, _)| *l).collect();
+        let cap = label_cap(&labels, room - fixed);
         let mut x = 0.0;
         for (i, tab) in self.tabs.iter().enumerate() {
             if tab.window {
@@ -1234,7 +1264,13 @@ impl ChatPanel {
             }
             let on = i == self.current;
             let unread = self.log.unread(i);
-            let label_w = text::measure(&f, &tab.name, 0.0);
+            let mut label_w = text::measure(&f, &tab.name, 0.0);
+            let name = if label_w > cap {
+                label_w = cap;
+                shorten(&f, &tab.name, cap)
+            } else {
+                tab.name.clone()
+            };
             let badge_text = unread.to_string();
             let badge_w = if unread > 0 && !on {
                 (text::measure(&badge, &badge_text, 0.0) + 8.0).max(15.0) + 5.0
@@ -1251,7 +1287,7 @@ impl ChatPanel {
             text::draw(
                 rc,
                 &f,
-                &tab.name,
+                &name,
                 x + pad,
                 ty,
                 TextStyle::plain(if on { GOLD } else { TEXT }),
@@ -1374,6 +1410,45 @@ impl ChatPanel {
 }
 
 /// `line` holds `query` (lower case) in its words or its speaker's name.
+/// The widest a tab's name may be drawn so that names `widths` fit in
+/// `room` together: the longest are cut down to the same width first, and
+/// none below a few letters (the row then runs out of room).
+fn label_cap(widths: &[f32], room: f32) -> f32 {
+    const LEAST: f32 = 28.0;
+    let total: f32 = widths.iter().sum();
+    if total <= room {
+        return f32::INFINITY;
+    }
+    let mut sorted = widths.to_vec();
+    sorted.sort_by(f32::total_cmp);
+    let mut left = room;
+    for (k, w) in sorted.iter().enumerate() {
+        let rest = (sorted.len() - k) as f32;
+        let share = left / rest;
+        if *w > share {
+            return share.max(LEAST);
+        }
+        left -= w;
+    }
+    f32::INFINITY
+}
+
+/// `name` cut on a whole character with an ellipsis to fit `width`.
+fn shorten(font: &UiFont, name: &str, width: f32) -> String {
+    let dots = if font.glyph('\u{2026}').is_some() {
+        "\u{2026}"
+    } else {
+        "..."
+    };
+    for (n, _) in name.char_indices().rev().filter(|&(n, _)| n > 0) {
+        let cut = format!("{}{dots}", name[..n].trim_end());
+        if text::measure(font, &cut, 0.0) <= width {
+            return cut;
+        }
+    }
+    dots.to_owned()
+}
+
 fn line_holds(line: &ShownLine, query: &str) -> bool {
     line.words.to_lowercase().contains(query)
         || line
@@ -1493,6 +1568,39 @@ mod tests {
         panel.typing = true;
         panel.tick(&mut ui, root, 0.1);
         assert!(panel.active);
+    }
+
+    #[test]
+    fn the_longest_tab_names_give_way_first() {
+        assert_eq!(label_cap(&[40.0, 50.0], 100.0), f32::INFINITY);
+        // 30 + 40 + 80 in 120: the short two stay, the long one takes 50.
+        assert_eq!(label_cap(&[30.0, 80.0, 40.0], 120.0), 50.0);
+        // Two long ones share what the short one leaves.
+        assert_eq!(label_cap(&[30.0, 90.0, 90.0], 130.0), 50.0);
+        // Never below a few letters.
+        assert_eq!(label_cap(&[90.0, 90.0], 20.0), 28.0);
+    }
+
+    #[test]
+    fn a_pointer_resting_on_the_idle_lines_wakes_the_panel() {
+        let mut panel = ChatPanel::new(Horizon::BRONZE, ChatFonts::default());
+        let mut ui = UiRoot::new();
+        let root = ui.root();
+        panel.tick(&mut ui, root, 1.0);
+        assert!(!panel.active);
+        let element = Element::at(0.0, 0.0, WIDTH, HEIGHT);
+        // The faded lines answer the pointer; the empty space above them
+        // stays the world's.
+        assert!(panel.hit_test(&element, 20.0, ENTRY_TOP - 10.0));
+        assert!(!panel.hit_test(&element, 20.0, 10.0));
+        panel.hovered = true;
+        panel.tick(&mut ui, root, 0.1);
+        assert!(!panel.active, "a pointer passing over does not wake it");
+        panel.tick(&mut ui, root, 0.15);
+        assert!(panel.active);
+        panel.hovered = false;
+        panel.tick(&mut ui, root, STAY + 0.1);
+        assert!(!panel.active);
     }
 
     #[test]
