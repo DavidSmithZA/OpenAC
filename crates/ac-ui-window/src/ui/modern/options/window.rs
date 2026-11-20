@@ -118,6 +118,26 @@ pub enum OptionsRequest {
     },
     /// Empty the search.
     ClearSearch,
+    /// Catch the next key for slot `slot` of keyboard row `row`.
+    CaptureKey {
+        /// The keyboard row.
+        row: usize,
+        /// The slot.
+        slot: usize,
+    },
+    /// Empty slot `slot` of keyboard row `row`.
+    EraseKey {
+        /// The keyboard row.
+        row: usize,
+        /// The slot.
+        slot: usize,
+    },
+    /// Take the clashing key from what holds it.
+    TakeKey,
+    /// The keys back to the saved ones.
+    KeysRevert,
+    /// The keys to the game's defaults.
+    KeysDefaults,
 }
 
 /// A chat tab as the grid shows it.
@@ -128,6 +148,41 @@ pub struct GridTab {
     /// The message types it shows.
     pub filter: u64,
 }
+
+/// A key binding as the Controls section lists it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeyLine {
+    /// Its row in the keyboard's list.
+    pub row: usize,
+    /// The action's name.
+    pub label: String,
+    /// The heading it is listed under.
+    pub group: &'static str,
+    /// The names of its keys, in slot order.
+    pub keys: Vec<String>,
+    /// It differs from the saved keys.
+    pub changed: bool,
+    /// The client has an action for it (else its keys are only kept).
+    pub mapped: bool,
+}
+
+/// A key the player pressed that something else holds.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Clash {
+    /// The keyboard row it was pressed for.
+    pub row: usize,
+    /// The slot.
+    pub slot: usize,
+    /// What holds it, in words.
+    pub words: String,
+    /// It can be taken from there (else the game keeps it).
+    pub can_take: bool,
+}
+
+/// The keys each row has room for.
+pub const KEY_SLOTS: usize = 3;
+const KEY_ROW: f32 = 40.0;
+const CLASH_H: f32 = 44.0;
 
 /// A clickable part of the frame.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -153,6 +208,12 @@ enum Part {
     Button(usize),
     /// The grid's box of tab and group.
     Cell(usize, usize),
+    /// A key line's slot.
+    KeySlot(usize, usize),
+    /// Take the clashing key.
+    ClashTake,
+    /// Leave it.
+    ClashKeep,
 }
 
 /// One line of the scrolled content.
@@ -167,6 +228,10 @@ enum Line {
     Row(usize),
     /// Nothing matched.
     Nothing,
+    /// A heading over key lines.
+    KeyHeading(&'static str),
+    /// A key line (an index of the frame's keys).
+    Key(usize),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -193,6 +258,14 @@ pub struct OptionsFrame {
     pub tabs: Vec<GridTab>,
     /// What the frame asks of the window.
     pub requests: Vec<OptionsRequest>,
+    /// The key bindings (Controls).
+    pub keys: Vec<KeyLine>,
+    /// How many of them differ from the saved keys.
+    pub keys_changed: usize,
+    /// The keyboard row and slot waiting for a key.
+    pub capture: Option<(usize, usize)>,
+    /// A key pressed that something else holds.
+    pub clash: Option<Clash>,
     scroll: Scroll,
     hover: Option<(f32, f32)>,
     /// The row whose menu is open.
@@ -231,6 +304,10 @@ impl OptionsFrame {
             hover: None,
             menu: None,
             held: None,
+            keys: Vec::new(),
+            keys_changed: 0,
+            capture: None,
+            clash: None,
         }
     }
 
@@ -304,7 +381,8 @@ impl OptionsFrame {
                 *y += 28.0;
             };
         if let Some(found) = self.searching_rows() {
-            if found.is_empty() {
+            let key_found = self.key_matches();
+            if found.is_empty() && key_found.is_empty() {
                 out.push(Placed {
                     line: Line::Nothing,
                     y,
@@ -337,6 +415,9 @@ impl OptionsFrame {
                     y += h;
                 }
             }
+            if !key_found.is_empty() {
+                self.push_keys(&mut out, &mut y, &key_found, first);
+            }
             return (out, y + 24.0);
         }
         let mut last_group = None;
@@ -359,7 +440,99 @@ impl OptionsFrame {
             });
             y += h;
         }
+        if self.section == Section::Controls {
+            let all: Vec<usize> = (0..self.keys.len()).collect();
+            self.push_keys(&mut out, &mut y, &all, first);
+        }
         (out, y + 24.0)
+    }
+
+    /// The key lines (by index) whose action's name holds every word of
+    /// the search.
+    fn key_matches(&self) -> Vec<usize> {
+        let words: Vec<String> = self
+            .search
+            .split_whitespace()
+            .map(str::to_lowercase)
+            .collect();
+        if words.is_empty() {
+            return Vec::new();
+        }
+        self.keys
+            .iter()
+            .enumerate()
+            .filter(|(_, k)| {
+                let hay = format!("{} {} keys", k.label, k.group).to_lowercase();
+                words.iter().all(|w| hay.contains(w.as_str()))
+            })
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    fn key_height(&self, k: usize) -> f32 {
+        let clash = self
+            .clash
+            .as_ref()
+            .is_some_and(|c| self.keys.get(k).is_some_and(|l| l.row == c.row));
+        KEY_ROW + if clash { CLASH_H } else { 0.0 }
+    }
+
+    /// Key lines `which` under their headings.
+    fn push_keys(&self, out: &mut Vec<Placed>, y: &mut f32, which: &[usize], first: bool) {
+        let mut last = None;
+        let mut first = first;
+        for &k in which {
+            let Some(line) = self.keys.get(k) else {
+                continue;
+            };
+            if last != Some(line.group) {
+                last = Some(line.group);
+                if !first {
+                    *y += 18.0;
+                }
+                first = false;
+                out.push(Placed {
+                    line: Line::KeyHeading(line.group),
+                    y: *y,
+                    h: 28.0,
+                });
+                *y += 28.0;
+            }
+            let h = self.key_height(k);
+            out.push(Placed {
+                line: Line::Key(k),
+                y: *y,
+                h,
+            });
+            *y += h;
+        }
+    }
+
+    /// Key line `k`'s slots (and its clash's buttons), drawn from `top`.
+    fn key_parts(&self, k: usize, top: f32) -> Vec<(Part, Rect)> {
+        let right = Self::content_right();
+        let (w, gap) = (108.0, 6.0);
+        let y = top + (KEY_ROW - 28.0) * 0.5;
+        let mut out: Vec<(Part, Rect)> = (0..KEY_SLOTS)
+            .map(|s| {
+                let x = right - (KEY_SLOTS - s) as f32 * (w + gap) + gap;
+                (Part::KeySlot(k, s), (x, y, w, 28.0))
+            })
+            .collect();
+        if let (Some(c), Some(line)) = (&self.clash, self.keys.get(k))
+            && c.row == line.row
+        {
+            let f = self.fonts.control.as_ref();
+            let by = top + KEY_ROW + (CLASH_H - 4.0 - 26.0) * 0.5;
+            let keep_w = kit::button_width("Keep", f);
+            let keep = (right - 8.0 - keep_w, by, keep_w, 26.0);
+            out.push((Part::ClashKeep, keep));
+            if c.can_take {
+                let take_w = kit::button_width("Use it here", f);
+                out.push((Part::ClashTake, (keep.0 - 6.0 - take_w, by, take_w, 26.0)));
+            }
+        }
+        out
     }
 
     fn choice_index(row: &Row, value: Option<&OptionValue>) -> Option<usize> {
@@ -557,15 +730,16 @@ impl OptionsFrame {
             return None;
         }
         for p in &layout {
-            let Line::Row(i) = p.line else {
-                continue;
-            };
             let top = ROOM_TOP + p.y - self.scroll.at;
             if y < top || y >= top + p.h {
                 continue;
             }
-            return self
-                .row_parts(i, top, p.h)
+            let parts = match p.line {
+                Line::Row(i) => self.row_parts(i, top, p.h),
+                Line::Key(k) => self.key_parts(k, top),
+                _ => continue,
+            };
+            return parts
                 .into_iter()
                 .find(|(_, r)| inside(*r, x, y))
                 .map(|(p, _)| p);
@@ -656,11 +830,18 @@ impl OptionsFrame {
                 for s in self.model.defaults(section) {
                     self.requests.push(OptionsRequest::Changed(s, true));
                 }
+                if section == Some(Section::Controls) {
+                    self.requests.push(OptionsRequest::KeysDefaults);
+                }
             }
             Part::Revert => {
                 for s in self.model.revert() {
                     self.requests.push(OptionsRequest::Changed(s, true));
                 }
+                if self.keys_changed > 0 {
+                    self.requests.push(OptionsRequest::KeysRevert);
+                }
+                self.clash = None;
             }
             Part::Apply => {
                 self.model.applied();
@@ -691,6 +872,19 @@ impl OptionsFrame {
                     self.requests.push(OptionsRequest::Act(action));
                 }
             }
+            Part::KeySlot(k, slot) => {
+                if let Some(line) = self.keys.get(k) {
+                    let row = line.row;
+                    self.clash = None;
+                    self.capture = Some((row, slot));
+                    self.requests.push(OptionsRequest::CaptureKey { row, slot });
+                }
+            }
+            Part::ClashTake => {
+                self.clash = None;
+                self.requests.push(OptionsRequest::TakeKey);
+            }
+            Part::ClashKeep => self.clash = None,
             Part::Cell(t, g) => {
                 if let Some(tab) = self.tabs.get_mut(t) {
                     let mask = crate::ui::modern::chat::model::group_mask(g);
@@ -765,6 +959,17 @@ impl Widget for OptionsFrame {
                 self.scroll.wheel(e.data0, 3.0 * ROW_MIN, total, ROOM);
                 true
             }
+            kind::RIGHT_CLICK => {
+                if let Some(Part::KeySlot(k, slot)) = self.part_at(x, y)
+                    && let Some(line) = self.keys.get(k)
+                {
+                    self.requests.push(OptionsRequest::EraseKey {
+                        row: line.row,
+                        slot,
+                    });
+                }
+                true
+            }
             kind::CLICK => {
                 if !matches!(self.part_at(x, y), Some(Part::Track(_))) || self.menu.is_some() {
                     self.click(x, y);
@@ -827,7 +1032,7 @@ impl OptionsFrame {
                 let fg = if current { p.text } else { kit::WARM };
                 text::draw(rc, f, s.words(), r.0 + 36.0, y, TextStyle::plain(fg));
             }
-            if self.model.changed_in(*s) > 0 {
+            if self.model.changed_in(*s) > 0 || (*s == Section::Controls && self.keys_changed > 0) {
                 rc.fill_rounded_rect(
                     r.0 + r.2 - 16.0,
                     r.1 + r.3 * 0.5 - 3.0,
@@ -877,7 +1082,7 @@ impl OptionsFrame {
                 Line::Title => {
                     let (title, intro) = match &found {
                         Some(f) => (
-                            match f.len() {
+                            match f.len() + self.key_matches().len() {
                                 1 => format!("1 setting matches \"{}\"", self.search.trim()),
                                 n => format!("{n} settings match \"{}\"", self.search.trim()),
                             },
@@ -904,6 +1109,8 @@ impl OptionsFrame {
                     self.draw_heading(rc, &title, server, x0, top, right);
                 }
                 Line::Row(i) => self.draw_row(rc, i, top, placed.h, found.is_some()),
+                Line::KeyHeading(title) => self.draw_heading(rc, title, false, x0, top, right),
+                Line::Key(k) => self.draw_key(rc, k, top),
                 Line::Nothing => {
                     if let Some(f) = &self.fonts.desc {
                         text::draw(
@@ -1204,6 +1411,134 @@ impl OptionsFrame {
         }
     }
 
+    fn draw_key(&self, rc: &mut RenderContext<'_>, k: usize, top: f32) {
+        let p = self.theme.palette;
+        let Some(line) = self.keys.get(k) else {
+            return;
+        };
+        let x0 = Self::content_x();
+        let right = Self::content_right();
+        let h = self.key_height(k);
+        rc.fill(x0, top + h - 1.0, right - x0, 1.0, kit::bronze(0.1));
+        if line.changed {
+            rc.fill_rounded_rect(
+                x0 - 14.0,
+                top + KEY_ROW * 0.5 - 3.0,
+                6.0,
+                6.0,
+                CornerRadii::all(3.0),
+                kit::gold(1.0),
+            );
+        }
+        if let Some(f) = &self.fonts.name {
+            let fg = if line.mapped { p.text } else { p.muted };
+            let words = kit::fit(f, &line.label, Self::desc_width());
+            text::draw(
+                rc,
+                f,
+                &words,
+                x0,
+                top + ((KEY_ROW - f.line_height) * 0.5).round(),
+                TextStyle::plain(fg),
+            );
+        }
+        let clash = self.clash.as_ref().filter(|c| c.row == line.row);
+        for (part, r) in self.key_parts(k, top) {
+            let lit = hot(self.hover, r);
+            match part {
+                Part::KeySlot(_, slot) => {
+                    let catching = self.capture == Some((line.row, slot));
+                    let clashing = clash.is_some_and(|c| c.slot == slot);
+                    let name = line.keys.get(slot).filter(|n| !n.is_empty());
+                    let radius = CornerRadii::all(4.0);
+                    let (fill, edge, width, ink, words) = if catching {
+                        (
+                            kit::gold(0.12),
+                            kit::gold(1.0),
+                            2.0,
+                            kit::gold(1.0),
+                            "Press a key".to_owned(),
+                        )
+                    } else if clashing {
+                        (
+                            hex(0xFF_8A5B, 0.12),
+                            hex(0xFF_8A5B, 1.0),
+                            2.0,
+                            hex(0xFF_C9A8, 1.0),
+                            "In use".to_owned(),
+                        )
+                    } else if let Some(n) = name {
+                        (
+                            hex(0, if lit { 0.5 } else { 0.35 }),
+                            kit::bronze(if lit { 0.9 } else { 0.5 }),
+                            1.0,
+                            p.text,
+                            n.clone(),
+                        )
+                    } else {
+                        (
+                            hex(0, if lit { 0.35 } else { 0.18 }),
+                            kit::bronze(if lit { 0.7 } else { 0.3 }),
+                            1.0,
+                            kit::SOFT,
+                            "Add key".to_owned(),
+                        )
+                    };
+                    rc.fill_rounded_rect(r.0, r.1, r.2, r.3, radius, fill);
+                    rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, radius, edge, width);
+                    if let Some(f) = &self.fonts.control {
+                        let words = kit::fit(f, &words, r.2 - 12.0);
+                        let w = text::measure(f, &words, 0.0);
+                        text::draw(
+                            rc,
+                            f,
+                            &words,
+                            (r.0 + (r.2 - w) * 0.5).round(),
+                            r.1 + ((r.3 - f.line_height) * 0.5).round(),
+                            TextStyle::plain(ink),
+                        );
+                    }
+                }
+                Part::ClashTake | Part::ClashKeep => {
+                    let (words, look) = if part == Part::ClashTake {
+                        ("Use it here", ButtonLook::Primary)
+                    } else {
+                        ("Keep", ButtonLook::Plain)
+                    };
+                    kit::button(
+                        rc,
+                        &self.theme,
+                        r,
+                        words,
+                        self.fonts.control.as_ref(),
+                        look,
+                        lit,
+                        true,
+                    );
+                }
+                _ => {}
+            }
+        }
+        if let Some(c) = clash {
+            let b = (x0, top + KEY_ROW, right - x0, CLASH_H - 4.0);
+            let radius = CornerRadii::all(4.0);
+            rc.fill_rounded_rect(b.0, b.1, b.2, b.3, radius, hex(0xFF_8A5B, 0.1));
+            rc.stroke_rounded_rect(b.0, b.1, b.2, b.3, radius, hex(0xFF_8A5B, 0.6), 1.0);
+            if let Some(f) = &self.fonts.desc {
+                let room = b.2 - 24.0 - if c.can_take { 210.0 } else { 80.0 };
+                let words = kit::fit(f, &c.words, room);
+                text::draw(
+                    rc,
+                    f,
+                    &words,
+                    b.0 + 10.0,
+                    b.1 + ((b.3 - f.line_height) * 0.5).round(),
+                    TextStyle::plain(hex(0xFF_C9A8, 1.0)),
+                );
+            }
+        }
+    }
+
     fn draw_grid(&self, rc: &mut RenderContext<'_>, i: usize, top: f32) {
         use crate::ui::modern::chat::model::{GROUPS, group_mask};
         let p = self.theme.palette;
@@ -1289,7 +1624,7 @@ impl OptionsFrame {
     fn draw_foot(&self, rc: &mut RenderContext<'_>) {
         let p = self.theme.palette;
         rc.fill(NAV_W, HEIGHT - FOOT, WIDTH - NAV_W, 1.0, kit::bronze(0.35));
-        let changes = self.model.changed().len();
+        let changes = self.model.changed().len() + self.keys_changed;
         let words = match changes {
             0 => "Changes show live. Apply keeps them.".to_owned(),
             1 => "1 change, shown live. Apply keeps it, Revert undoes it.".to_owned(),

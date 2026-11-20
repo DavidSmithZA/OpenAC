@@ -236,8 +236,13 @@ impl WindowUi {
     }
 
     /// The Configure Keyboard key, or the options window's button: the
-    /// screen opens or closes.
+    /// screen opens or closes. On Modern the Options window opens on
+    /// Controls, which lists every key in its place.
     pub fn toggle_keyboard_config(&mut self) -> bool {
+        if self.modern.as_ref().is_some_and(|m| m.options.is_some()) {
+            self.modern_options_on(super::modern::options::spec::Section::Controls);
+            return true;
+        }
         if !self.host.has_controller(KEYBOARD_WINDOW) {
             return false;
         }
@@ -262,6 +267,9 @@ impl WindowUi {
     /// A key capture ended (`None`: Escape); true when the dispatcher must
     /// capture again (the key cannot be bound).
     pub fn keyboard_captured(&mut self, chord: Option<KeyChord>) -> bool {
+        if let Some(still) = self.modern_key_captured(chord) {
+            return still;
+        }
         let reply = self
             .host
             .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, ui| {
@@ -331,6 +339,11 @@ impl WindowUi {
     /// OpenAC's `OpenCaptureInstructions`: the authored instruction text
     /// in a wait dialog, then the capture; no text, no capture (no
     /// invented English).
+    /// Report the next key as a capture (the modern Options window's).
+    pub(in crate::ui) fn request_key_capture(&mut self) {
+        self.keyboard.requests.push(KeyboardRequest::BeginCapture);
+    }
+
     fn begin_capture(&mut self, action: &str) {
         let mut variables = HashMap::new();
         variables.insert(compute_hash("ACTION"), action.to_owned());

@@ -239,8 +239,10 @@ pub enum Action {
     EditBars,
     /// The game's mouse turning settings, all at once.
     MouseTurning,
-    /// The keyboard: every key binding.
-    Keyboard,
+    /// Load a key profile.
+    LoadKeys,
+    /// Save the keys as a profile.
+    SaveKeysAs,
 }
 
 /// One entry of a group.
@@ -653,15 +655,22 @@ pub const GROUPS: &[Group] = &[
     },
     Group {
         section: Section::Controls,
-        title: "KEYBOARD",
-        items: &[Item::Button(
-            Action::Keyboard,
-            w(
-                "Key bindings",
-                "Every action's keys, with what a key is already used for.",
+        title: "KEY PROFILES",
+        items: &[
+            Item::Button(
+                Action::LoadKeys,
+                w(
+                    "Load a key profile",
+                    "Every key from a profile you saved before.",
+                ),
+                "Load",
             ),
-            "Change keys",
-        )],
+            Item::Button(
+                Action::SaveKeysAs,
+                w("Save these keys", "As a profile of their own."),
+                "Save as",
+            ),
+        ],
     },
     // Graphics.
     Group {

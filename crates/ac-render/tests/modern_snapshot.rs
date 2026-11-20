@@ -2156,6 +2156,7 @@ fn the_modern_options() {
     use ac_render::ui::window::Hotkey;
     use ac_runtime::session::SessionCommand;
     let mut s = Shot::new(CombatMode::NON_COMBAT);
+    s.ui.attach_key_bindings(&ac_ui::input::KeyBindings::retail_defaults());
     assert!(s.ui.run_hotkey(Hotkey::Options));
     s.step();
     s.step();
@@ -2207,6 +2208,37 @@ fn the_modern_options() {
         .with::<ac_ui::widgets::Field, _>(field, |f, _| f.set_text("run"));
     s.step();
     s.save("options-search");
+    // Keys: the movement keys, a new key caught in place, then one the
+    // game uses for something else.
+    s.ui.host_mut()
+        .root
+        .with::<ac_ui::widgets::Field, _>(field, |f, _| f.set_text("movement keys"));
+    s.step();
+    let _ = s.ui.take_keyboard_requests();
+    s.click(0, fx + 690, fy + 52 + 114 + 20, Modifiers::NONE);
+    assert_eq!(
+        s.ui.take_keyboard_requests(),
+        [ac_render::ui::keyboard_window::KeyboardRequest::BeginCapture]
+    );
+    s.save("options-key-catch");
+    let f13 = ac_ui::input::KeyChord::key(Key::F13, Modifiers::NONE);
+    assert!(!s.ui.keyboard_captured(Some(f13)));
+    s.step();
+    s.step();
+    let changed = |s: &Shot| {
+        s.ui.host()
+            .root
+            .widget::<ac_ui_window::ui::modern::options::window::OptionsFrame>(frame)
+            .map(|f| (f.keys_changed, f.clash.is_some()))
+    };
+    assert_eq!(changed(&s), Some((1, false)));
+    s.click(0, fx + 690 + 114, fy + 52 + 114 + 20, Modifiers::NONE);
+    let _ = s.ui.take_keyboard_requests();
+    let w = ac_ui::input::KeyChord::key(Key::S, Modifiers::NONE);
+    assert!(!s.ui.keyboard_captured(Some(w)));
+    s.step();
+    assert_eq!(changed(&s), Some((1, true)), "S is in use: it asks");
+    s.save("options-key-clash");
     // Closing without Apply puts the change back.
     s.sent.clear();
     s.click(0, fx + 1000 - 12 - 15, fy + 26, Modifiers::NONE);
@@ -2221,4 +2253,5 @@ fn the_modern_options() {
         })
         .collect();
     assert_eq!(back, vec![!set[0]], "{:?}", s.sent);
+    assert_eq!(changed(&s), Some((0, false)), "the keys are put back too");
 }

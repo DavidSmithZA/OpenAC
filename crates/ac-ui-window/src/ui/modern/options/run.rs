@@ -6,8 +6,13 @@
 
 use ac_runtime::session::SessionCommand;
 use ac_ui::bundled_font::Weight;
+use ac_ui::input::KeyChord;
+use ac_ui::input::action_map::RetailActionClass;
 use ac_ui::modern::Horizon;
 use ac_ui::panels::items::emit;
+use ac_ui::panels::keyboard_config::{
+    self, KeyConflict, KeyboardConfigController, KeyboardConfigOutput,
+};
 use ac_ui::panels::options::keys::LiveValues;
 use ac_ui::panels::{PanelOutput, panel_id};
 use ac_ui::strings::compute_hash;
@@ -16,7 +21,10 @@ use ac_ui::widgets::Field;
 
 use super::model::{OptionsModel, Sources, rows};
 use super::spec::Action;
-use super::window::{GridTab, HEIGHT, OptionsFonts, OptionsFrame, OptionsRequest, WIDTH};
+use super::window::{
+    Clash, GridTab, HEIGHT, KeyLine, OptionsFonts, OptionsFrame, OptionsRequest, WIDTH,
+};
+use crate::ui::keyboard_window::KEYBOARD_WINDOW;
 use crate::ui::modern::{hud, kit};
 use crate::ui::window::WindowUi;
 
@@ -32,6 +40,33 @@ pub struct OptionsUi {
     pub search: ElementId,
     /// It was showing last frame.
     was_open: bool,
+    /// A key pressed that others hold, waiting for the player: the
+    /// keyboard row and slot, the key, and the rows it would come from.
+    pending: Option<(usize, usize, KeyChord, Vec<usize>)>,
+}
+
+/// A key as the modern windows name it ("Alt+D", "Shift"), the game's
+/// name for one they do not (a mouse button).
+fn key_words(c: &KeyboardConfigController, chord: KeyChord) -> String {
+    let words = crate::ui::modern::bars::keys::words(chord);
+    if words.is_empty() {
+        c.describe(chord)
+    } else {
+        words
+    }
+}
+
+/// The heading of a keyboard class.
+fn class_words(class: RetailActionClass) -> &'static str {
+    match class {
+        RetailActionClass::Movement => "MOVEMENT KEYS",
+        RetailActionClass::Camera => "CAMERA KEYS",
+        RetailActionClass::Combat => "COMBAT KEYS",
+        RetailActionClass::Ui => "WINDOW KEYS",
+        RetailActionClass::CharacterSettings => "CHARACTER KEYS",
+        RetailActionClass::Emote => "EMOTE KEYS",
+        RetailActionClass::None | RetailActionClass::Other(_) => "OTHER KEYS",
+    }
 }
 
 impl WindowUi {
@@ -105,8 +140,10 @@ impl WindowUi {
             frame,
             search,
             was_open: false,
+            pending: None,
         });
         modern.replace(crate::ui::options::OPTIONS_WINDOW);
+        modern.replace(KEYBOARD_WINDOW);
         self.panels.stand_in(panel_id::OPTIONS, OPTIONS);
     }
 
@@ -188,6 +225,7 @@ impl WindowUi {
             .into_iter()
             .map(|(name, filter)| GridTab { name, filter })
             .collect();
+        let (keys, keys_changed) = self.modern_key_lines();
         let asks = {
             let ui = &mut self.host.root;
             let typed = kit::field_text(ui, search);
@@ -197,6 +235,8 @@ impl WindowUi {
                     f.search = typed;
                     f.searching = focused;
                     f.tabs = tabs;
+                    f.keys = keys;
+                    f.keys_changed = keys_changed;
                     std::mem::take(&mut f.requests)
                 })
                 .unwrap_or_default()
@@ -227,6 +267,12 @@ impl WindowUi {
             }
             OptionsRequest::Applied => {
                 self.send_session(vec![SessionCommand::SaveCharacterOptions]);
+                self.host.with_controller::<KeyboardConfigController, _>(
+                    KEYBOARD_WINDOW,
+                    |c, ui| {
+                        c.keep(ui);
+                    },
+                );
             }
             OptionsRequest::CharacterSelect => self.ask_end_character_session(),
             OptionsRequest::ExitGame => self.send_session(vec![SessionCommand::Shutdown]),
@@ -241,8 +287,51 @@ impl WindowUi {
                 self.send_session(commands);
                 self.follow_modern_option_values();
             }
-            OptionsRequest::Act(Action::Keyboard) => {
-                self.toggle_keyboard_config();
+            OptionsRequest::Act(Action::LoadKeys) => {
+                self.keyboard_output(KeyboardConfigOutput::OpenLoad);
+            }
+            OptionsRequest::Act(Action::SaveKeysAs) => {
+                self.keyboard_output(KeyboardConfigOutput::OpenSaveAs);
+            }
+            OptionsRequest::CaptureKey { .. } => self.request_key_capture(),
+            OptionsRequest::EraseKey { row, slot } => {
+                self.host.with_controller::<KeyboardConfigController, _>(
+                    KEYBOARD_WINDOW,
+                    |c, ui| {
+                        c.erase(ui, row, slot);
+                    },
+                );
+            }
+            OptionsRequest::TakeKey => {
+                let pending = self
+                    .modern
+                    .as_mut()
+                    .and_then(|m| m.options.as_mut())
+                    .and_then(|o| o.pending.take());
+                if let Some((row, slot, chord, takes)) = pending {
+                    self.host.with_controller::<KeyboardConfigController, _>(
+                        KEYBOARD_WINDOW,
+                        |c, ui| {
+                            c.assign(ui, row, slot, chord, &takes);
+                        },
+                    );
+                }
+            }
+            OptionsRequest::KeysRevert => {
+                self.host.with_controller::<KeyboardConfigController, _>(
+                    KEYBOARD_WINDOW,
+                    |c, ui| {
+                        c.revert(ui);
+                    },
+                );
+            }
+            OptionsRequest::KeysDefaults => {
+                self.host.with_controller::<KeyboardConfigController, _>(
+                    KEYBOARD_WINDOW,
+                    |c, ui| {
+                        c.defaults(ui);
+                    },
+                );
             }
             OptionsRequest::TabShows { tab, group, on } => {
                 let mask = crate::ui::modern::chat::model::group_mask(group);
@@ -277,6 +366,128 @@ impl WindowUi {
             self.option_changed(&live, section, true, &mut commands);
         }
         self.send_session(commands);
+        if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+            f.capture = None;
+            f.clash = None;
+        }
+        if let Some(o) = self.modern.as_mut().and_then(|m| m.options.as_mut()) {
+            o.pending = None;
+        }
+        self.host
+            .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, ui| {
+                if c.changed() {
+                    c.revert(ui);
+                }
+            });
+        let (keys, keys_changed) = self.modern_key_lines();
+        if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+            f.keys = keys;
+            f.keys_changed = keys_changed;
+        }
+    }
+
+    /// Every key binding as the Controls section lists it, and how many
+    /// differ from the saved keys.
+    fn modern_key_lines(&mut self) -> (Vec<KeyLine>, usize) {
+        self.host
+            .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, _| {
+                let lines: Vec<KeyLine> = c
+                    .rows()
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(row, r)| {
+                        Some(KeyLine {
+                            row,
+                            label: r.label.clone()?,
+                            group: class_words(r.class),
+                            keys: r.current.iter().map(|k| key_words(c, *k)).collect(),
+                            changed: r.changed(),
+                            mapped: r.mapped.is_some(),
+                        })
+                    })
+                    .collect();
+                let changed = c.rows().iter().filter(|r| r.changed()).count();
+                (lines, changed)
+            })
+            .unwrap_or_default()
+    }
+
+    /// The key caught for the Options window, when it asked for one:
+    /// whether to keep catching (`None`: it did not ask). Escape gives
+    /// up; a key something else holds waits on the row for the player's
+    /// word.
+    pub(in crate::ui) fn modern_key_captured(&mut self, chord: Option<KeyChord>) -> Option<bool> {
+        let frame = self.modern.as_ref()?.options.as_ref()?.frame;
+        let (row, slot) = self.host.root.widget::<OptionsFrame>(frame)?.capture?;
+        if let Some(c) = chord
+            && keyboard_config::is_unsupported_capture(c)
+        {
+            return Some(true);
+        }
+        if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+            f.capture = None;
+        }
+        let Some(chord) = chord else {
+            return Some(false);
+        };
+        let found =
+            self.host
+                .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, _| {
+                    let held = c
+                        .rows()
+                        .get(row)
+                        .is_some_and(|r| r.current.contains(&chord));
+                    let name = key_words(c, chord);
+                    let labels = |rows: &[usize]| {
+                        rows.iter()
+                            .filter_map(|r| c.rows().get(*r).and_then(|r| r.label.clone()))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    };
+                    let conflict = c.conflict(chord, row);
+                    let words = match &conflict {
+                        KeyConflict::Reserved => {
+                            format!("{name} is kept by the game for its own use.")
+                        }
+                        KeyConflict::Rows(rows) => format!("{name} is used by {}.", labels(rows)),
+                        KeyConflict::None => String::new(),
+                    };
+                    (held, conflict, words)
+                });
+        let Some((held, conflict, words)) = found else {
+            return Some(false);
+        };
+        if held {
+            return Some(false);
+        }
+        match conflict {
+            KeyConflict::None => {
+                self.host.with_controller::<KeyboardConfigController, _>(
+                    KEYBOARD_WINDOW,
+                    |c, ui| {
+                        c.assign(ui, row, slot, chord, &[]);
+                    },
+                );
+            }
+            KeyConflict::Reserved | KeyConflict::Rows(_) => {
+                let takes = match conflict {
+                    KeyConflict::Rows(rows) => Some(rows),
+                    _ => None,
+                };
+                if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+                    f.clash = Some(Clash {
+                        row,
+                        slot,
+                        words,
+                        can_take: takes.is_some(),
+                    });
+                }
+                if let Some(o) = self.modern.as_mut().and_then(|m| m.options.as_mut()) {
+                    o.pending = takes.map(|t| (row, slot, chord, t));
+                }
+            }
+        }
+        Some(false)
     }
 
     fn send_session(&mut self, commands: Vec<SessionCommand>) {
