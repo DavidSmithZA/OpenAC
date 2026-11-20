@@ -84,6 +84,8 @@ pub struct ModernLayer {
     pub loot: Option<items::loot::LootUi>,
     /// The Effects window.
     pub effects_window: Option<magic::effects_run::EffectsUi>,
+    /// The Spellbook.
+    pub spellbook: Option<magic::spellbook_run::BookUi>,
     /// Packs used anywhere since the inventory last looked.
     pub opened_packs: Vec<u32>,
 }
@@ -326,6 +328,7 @@ impl WindowUi {
         self.mount_modern_inspect();
         self.mount_modern_loot();
         self.mount_modern_effects_window();
+        self.mount_modern_spellbook();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };

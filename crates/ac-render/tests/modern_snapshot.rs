@@ -1776,3 +1776,174 @@ fn the_modern_effects() {
     }
     s.save("effects-harmful");
 }
+
+/// The player carries packs of the first six components the dats name
+/// (by their weenie classes), a few of each.
+fn carry_components(s: &mut Shot) {
+    let dats = dats();
+    let table: ac_dat::objects::SpellComponentTable = dats
+        .get(ac_dat::objects::SPELL_COMPONENT_TABLE_ID)
+        .expect("read")
+        .expect("the component table");
+    let map: ac_dat::objects::EnumIdMap = dats.get(0x2700_0002).expect("read").expect("the map");
+    let mut objects = Vec::new();
+    let mut guids = Vec::new();
+    for (i, (id, base)) in table.components.iter().take(6).enumerate() {
+        let Some(class) = map.client_id(*id) else {
+            continue;
+        };
+        let guid = 0x8000_0C00 + i as u32;
+        let mut o = ClientObject::new(guid);
+        o.name = base.name.clone();
+        o.weenie_class_id = class;
+        o.item_type = ItemType::SPELL_COMPONENTS;
+        o.icon_id = base.icon;
+        o.stack_size = [48, 4, 0, 22, 9, 120][i];
+        o.container_id = PLAYER;
+        if o.stack_size > 0 {
+            objects.push(o);
+            guids.push(guid);
+        }
+    }
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Items(
+            ItemsUpdate {
+                reset: false,
+                objects,
+                removed: Vec::new(),
+                contents: Vec::new(),
+            },
+        )));
+    s.step();
+    s.step();
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_spellbook() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_runtime::gameplay::GameplayCommand;
+    use ac_runtime::session::SessionCommand;
+    use ac_ui::panels::magic::SpellbookPage;
+    use ac_ui_window::ui::modern::magic::spellbook_window::{BookFrame, ComponentTable, SpellList};
+    let mut s = Shot::new(CombatMode::MAGIC);
+    carry_components(&mut s);
+    assert!(s.ui.run_hotkey(Hotkey::Spellbook(SpellbookPage::Spells)));
+    s.step();
+    s.step();
+    assert!(
+        s.ui.host().root.is_window_visible("modern-spellbook"),
+        "the book opens from its key"
+    );
+    s.save("spellbook");
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-spellbook")
+            .expect("book")
+            .frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    let list = shown_in::<SpellList>(&s, frame).expect("the list");
+    let (lx, ly, _, _) = rect_of(&s, list);
+    {
+        let l = s.ui.host().root.widget::<SpellList>(list).expect("it");
+        assert!(!l.groups.is_empty(), "spells listed");
+    }
+    // The first spell chosen: its details.
+    s.click(0, lx + 100, ly + 30 + 19, Modifiers::NONE);
+    s.step();
+    s.step();
+    s.save("spellbook-chosen");
+    let chosen = {
+        let f = s.ui.host().root.widget::<BookFrame>(frame).expect("it");
+        f.details.as_ref().map(|d| d.id).expect("details")
+    };
+    // Cast (in Magic) goes out.
+    s.sent.clear();
+    s.click(0, fx + 612 + 40, fy + 68 + 556 - 56 + 28, Modifiers::NONE);
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::Cast { spell, .. }) if *spell == chosen.to_string()
+        )),
+        "{:?}",
+        s.sent
+    );
+    // Forget asks first.
+    s.sent.clear();
+    s.click(
+        0,
+        fx + 612 + 304 - 14 - 16,
+        fy + 68 + 556 - 56 + 28,
+        Modifiers::NONE,
+    );
+    s.save("spellbook-forget");
+    assert!(s.sent.is_empty());
+    s.click(
+        0,
+        fx + 612 + 304 - 14 - 52,
+        fy + 68 + 556 - 56 - 140 + 136 - 14 - 15,
+        Modifiers::NONE,
+    );
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::ForgetSpell(spell)) if *spell == chosen.to_string()
+        )),
+        "{:?}",
+        s.sent
+    );
+    // One school: the filter goes to the server.
+    s.sent.clear();
+    s.click(0, fx + 24 + 60, fy + 68 + 18 + 32 + 15, Modifiers::NONE);
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::SetSpellbookFilter(_))
+        )),
+        "{:?}",
+        s.sent
+    );
+    s.save("spellbook-school");
+    // The components page.
+    assert!(s.ui.run_hotkey(Hotkey::Spellbook(SpellbookPage::Components)));
+    s.step();
+    s.step();
+    s.save("spellbook-components");
+    let table = shown_in::<ComponentTable>(&s, frame).expect("the table shows");
+    let (tx, ty, _, _) = rect_of(&s, table);
+    // The first row's restock box: type 30 and Enter.
+    let (bx, by, bw, bh) = ComponentTable::restock_rect(0.0);
+    s.click(
+        0,
+        tx + (bx + bw / 2.0) as i32,
+        ty + (by + bh / 2.0) as i32,
+        Modifiers::NONE,
+    );
+    s.sent.clear();
+    for c in "30".chars() {
+        let r: Routed<u32> = s.ui.key(
+            0,
+            Key::Number3,
+            true,
+            false,
+            Modifiers::NONE,
+            Some(c.to_string().as_str()),
+        );
+        let _ = s.ui.handle(r.outputs);
+        s.step();
+    }
+    s.save("spellbook-restock");
+    s.key(Key::Enter, Modifiers::NONE, true);
+    s.key(Key::Enter, Modifiers::NONE, false);
+    s.step();
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Gameplay(GameplayCommand::SetDesiredComponent { amount: 30, .. })
+        )),
+        "{:?}",
+        s.sent
+    );
+}

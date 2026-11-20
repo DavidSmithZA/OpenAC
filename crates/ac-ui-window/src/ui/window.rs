@@ -1518,6 +1518,7 @@ impl WindowUi {
         self.tick_examination(dt);
         self.tick_modern_inspect(dt);
         self.tick_modern_effects_window();
+        self.tick_modern_spellbook(dt);
         self.tick_keyboard_dialogs();
         self.tick_tooltips(dt, now_ms);
         self.tick_modern_effects(dt);
@@ -1693,6 +1694,9 @@ impl WindowUi {
     /// OpenAC `RetailUiRuntime.OpenSpellbook`: shown on that page, it
     /// closes; else it opens there.
     fn open_spellbook(&mut self, page: SpellbookPage) -> bool {
+        if let Some(done) = self.modern_open_spellbook(page) {
+            return done;
+        }
         let visible = self.host.root.is_window_visible(SPELLBOOK_WINDOW);
         let Some(on_page) = self
             .host
