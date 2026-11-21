@@ -904,6 +904,16 @@ pub const QUICK_MOVE_KEY_CHOICES: &[ExplicitChoice] = &[
     choice("cmd", "Windows key"),
 ];
 
+/// The modern map's picture: the game's, or a detailed map tier (drawn
+/// once downloaded, in the modern Options).
+pub const MAP_DETAIL_CHOICES: &[ExplicitChoice] = &[
+    choice("game", "The game's map"),
+    choice("standard", "Standard"),
+    choice("hd", "HD"),
+    choice("ultra", "Ultra"),
+    choice("extreme", "Extreme"),
+];
+
 /// OpenAC's modern interface: how its vitals and effects behave (Retail
 /// ignores these rows).
 fn modern_interface_rows() -> Vec<ConfigRow> {
@@ -951,6 +961,12 @@ fn modern_interface_rows() -> Vec<ConfigRow> {
             choices: QUICK_MOVE_KEY_CHOICES,
             default: def.quick_move_key.name(),
             target: display(DisplayField::ModernQuickMoveKey),
+        },
+        ConfigRow::ExplicitMenu {
+            label: "Map detail",
+            choices: MAP_DETAIL_CHOICES,
+            default: def.map_detail.name(),
+            target: display(DisplayField::ModernMapDetail),
         },
         ConfigRow::Separator,
     ]
@@ -1321,9 +1337,9 @@ mod tests {
             .expect("the modern interface section");
         assert_eq!(option_rows(&all[enhancements..modern]), 21);
         assert_eq!(modern - enhancements, 23);
-        // A header, six rows, a separator.
-        assert_eq!(option_rows(&all[modern..]), 6);
-        assert_eq!(all.len() - modern, 8);
+        // A header, seven rows, a separator.
+        assert_eq!(option_rows(&all[modern..]), 7);
+        assert_eq!(all.len() - modern, 9);
     }
 
     #[test]

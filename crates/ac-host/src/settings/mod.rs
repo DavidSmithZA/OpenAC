@@ -181,6 +181,54 @@ pub struct ModernHudSettings {
     pub effect_warning_minutes: i32,
     /// The key held to move the modern pieces anywhere (quick move).
     pub quick_move_key: QuickMoveKey,
+    /// The modern map's picture: the game's, or a detailed map tier
+    /// (drawn once downloaded).
+    pub map_detail: MapDetail,
+}
+
+/// The modern map's picture.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MapDetail {
+    /// The game's own map.
+    Game,
+    /// The detailed map, Standard tier.
+    #[default]
+    Standard,
+    /// HD tier.
+    Hd,
+    /// Ultra tier.
+    Ultra,
+    /// Extreme tier.
+    Extreme,
+}
+
+impl MapDetail {
+    /// Every choice, in the order offered.
+    pub const ALL: [Self; 5] = [
+        Self::Game,
+        Self::Standard,
+        Self::Hd,
+        Self::Ultra,
+        Self::Extreme,
+    ];
+
+    /// The name saved in the settings (a tier's own name).
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Game => "game",
+            Self::Standard => "standard",
+            Self::Hd => "hd",
+            Self::Ultra => "ultra",
+            Self::Extreme => "extreme",
+        }
+    }
+
+    /// The choice saved as `name`.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|k| k.name() == name)
+    }
 }
 
 /// The key held for quick move.
@@ -225,6 +273,7 @@ impl Default for ModernHudSettings {
             low_health_edge_glow: true,
             effect_warning_minutes: 5,
             quick_move_key: QuickMoveKey::Ctrl,
+            map_detail: MapDetail::Standard,
         }
     }
 }
@@ -763,6 +812,12 @@ fn read_display(d: &[Member], version: i32) -> Result<DisplaySettings, Unreadabl
                     m.quick_move_key.name(),
                 ))
                 .unwrap_or(m.quick_move_key),
+                map_detail: MapDetail::from_name(&read_string(
+                    d,
+                    "modernMapDetail",
+                    m.map_detail.name(),
+                ))
+                .unwrap_or(m.map_detail),
             }
         },
     })
@@ -824,7 +879,7 @@ fn display_object(d: &DisplaySettings) -> String {
             out
         },
     );
-    let fields: [(&str, String); 31] = [
+    let fields: [(&str, String); 32] = [
         ("automaticDegrades", boolean(d.automatic_degrades)),
         (
             "buildingDetailTextures",
@@ -866,6 +921,7 @@ fn display_object(d: &DisplaySettings) -> String {
             "modernQuickMoveKey",
             string(d.modern_hud.quick_move_key.name()),
         ),
+        ("modernMapDetail", string(d.modern_hud.map_detail.name())),
         (
             "modernLowHealthEdgeGlow",
             boolean(d.modern_hud.low_health_edge_glow),
@@ -1037,6 +1093,7 @@ mod tests {
                 low_health_edge_glow: false,
                 effect_warning_minutes: 2,
                 quick_move_key: QuickMoveKey::Alt,
+                map_detail: MapDetail::Extreme,
             },
         };
         t.store().save_display(&original).unwrap();

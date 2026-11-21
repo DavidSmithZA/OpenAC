@@ -82,6 +82,9 @@ pub enum DisplayField {
     ModernEffectWarning,
     /// The modern interface: the key held for quick move.
     ModernQuickMoveKey,
+    /// The modern interface: the map's picture (the game's or a detailed
+    /// tier).
+    ModernMapDetail,
 }
 
 /// A chat setting.
@@ -295,6 +298,9 @@ impl LiveValues {
                     DisplayField::ModernQuickMoveKey => {
                         Text(d.modern_hud.quick_move_key.name().to_owned())
                     }
+                    DisplayField::ModernMapDetail => {
+                        Text(d.modern_hud.map_detail.name().to_owned())
+                    }
                 }
             }
             OptionKey::Chat(f) => {
@@ -429,6 +435,9 @@ impl LiveValues {
                     (DisplayField::ModernQuickMoveKey, Text(x)) => {
                         d.modern_hud.quick_move_key =
                             ac_host::settings::QuickMoveKey::from_name(x)?;
+                    }
+                    (DisplayField::ModernMapDetail, Text(x)) => {
+                        d.modern_hud.map_detail = ac_host::settings::MapDetail::from_name(x)?;
                     }
                     _ => return None,
                 }
