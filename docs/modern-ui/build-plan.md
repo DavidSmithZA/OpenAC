@@ -929,6 +929,11 @@ Built 2026-11-21, each on its own branch stacked on
   Style, and the retail options' modern section), the Stage's Theme
   button and list. Offscreen: `the_modern_themes`, end of
   `the_modern_stage`.
+- Backdrops at 4K (`feat/modern-ui-backdrops-4k`): all 15 drawn again at
+  5120x2880 and shipped at 3840x2160 (9.8 MB of WebP), four framed again,
+  a focus point each (`FOCUS`, `cover`); accepted by the user. Masters and
+  tools in `~/OpenAC-dev/modern-ui-backdrops` (`masters-2x/`,
+  `manifest-v2.json`, `tools/render2.sh`, `finish4k.sh`).
 - Known: `the_m2_gaps` fails on these branches and their base (the bars
   are not found in the saved settings file); not looked into yet.
 
