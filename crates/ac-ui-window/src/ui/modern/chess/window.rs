@@ -732,7 +732,6 @@ impl WindowUi {
         };
         let (frame, mut picked, shown) = (c.frame, c.picked, c.shown);
         let open = self.host.root.is_window_visible(CHESS);
-        let view = self.facts.chess.clone().unwrap_or_default();
         let asks = self
             .host
             .root
@@ -748,6 +747,7 @@ impl WindowUi {
             }
             return;
         }
+        let view = self.facts.chess.clone().unwrap_or_default();
         let squares: Vec<_> = self
             .host
             .root
