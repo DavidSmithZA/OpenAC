@@ -758,6 +758,7 @@ impl WindowUi {
                     emit(&mut self.host.root, PanelOutput::SelectObject(id));
                 }
                 CellRequest::Use(id) | CellRequest::Loot(id) => self.loot_into(id, player),
+                CellRequest::Empty => {}
                 CellRequest::Inspect(id) => {
                     self.send_loot(ItemCommand::Appraise(ObjectRef::Guid(id)));
                 }

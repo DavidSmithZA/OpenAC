@@ -97,6 +97,9 @@ pub struct ItemGrid {
     requests: Vec<CellRequest>,
     /// The thumb is held: the pointer's offset into it.
     holding: Option<f32>,
+    /// A click landed on empty space (not a cell, heading or scrollbar)
+    /// since the window last looked.
+    pub clicked_away: bool,
 }
 
 impl ItemGrid {
@@ -121,6 +124,7 @@ impl ItemGrid {
             dirty: true,
             requests: Vec::new(),
             holding: None,
+            clicked_away: false,
         }
     }
 
@@ -394,6 +398,8 @@ impl Widget for ItemGrid {
                         self.closed.insert(key);
                     }
                     self.place(ui, me);
+                } else if (e.data1 as f32) < self.laid.0 - BAR_ROOM {
+                    self.clicked_away = true;
                 }
                 true
             }

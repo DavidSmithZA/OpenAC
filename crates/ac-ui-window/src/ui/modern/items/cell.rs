@@ -115,6 +115,8 @@ pub enum CellRequest {
     Inspect(u32),
     /// A row's Loot button.
     Loot(u32),
+    /// A click on an empty slot.
+    Empty,
 }
 
 /// A list row's Inspect and Loot buttons in a row `w` by `h`.
@@ -263,6 +265,7 @@ impl Widget for ItemCell {
             }
             kind::CLICK => {
                 if self.view.id == 0 {
+                    self.requests.push(CellRequest::Empty);
                     return true;
                 }
                 if self.look == CellLook::List

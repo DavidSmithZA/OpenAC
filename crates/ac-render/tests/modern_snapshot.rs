@@ -2681,6 +2681,98 @@ fn the_modern_small_screen() {
     s.save("small-map");
 }
 
+/// The inventory on a screen too small for the wide window: an item's
+/// details are a card over the equipment column, put away by its close
+/// button, Escape or a click on empty space, and back when an item is
+/// picked again.
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_small_inventory() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_ui_window::ui::modern::items::inventory as inv;
+    use ac_ui_window::ui::modern::items::sheet_view::SheetView;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    s.size = (1024, 700);
+    s.step();
+    more_things(&mut s);
+    assert!(s.ui.run_hotkey(Hotkey::Inventory));
+    s.step();
+    s.step();
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-inventory")
+            .expect("it")
+            .frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    let select = |s: &mut Shot| {
+        let first = (fx + inv::GRID_X as i32 + 20, fy + 158 + 20);
+        s.click(0, first.0, first.1, Modifiers::NONE);
+        s.scene.apply(PresentationEvent::Player(PlayerView {
+            selected: Some(0x8000_0101),
+            ..PlayerView::default()
+        }));
+        s.step();
+        s.step();
+    };
+    let card = |s: &Shot| {
+        let root = &s.ui.host().root;
+        let shown = root
+            .widget::<inv::InventoryFrame>(frame)
+            .is_some_and(|f| f.view.card);
+        let sheet = root.children(frame).into_iter().find(|&c| {
+            root.widget::<SheetView>(c).is_some() && root.element(c).is_some_and(|e| e.visible)
+        });
+        (shown, sheet.is_some())
+    };
+    select(&mut s);
+    let (_, _, fw, _) = rect_of(&s, frame);
+    assert_eq!(fw, inv::NARROW as i32, "the window stays narrow");
+    assert_eq!(card(&s), (true, true), "the details are a card");
+    s.save("small-inventory-card");
+    // Its close button.
+    s.click(
+        0,
+        fx + (inv::CARD_X + inv::CARD_W) as i32 - 6 - 13,
+        fy + inv::CARD_Y as i32 + 3 + 13,
+        Modifiers::NONE,
+    );
+    assert_eq!(card(&s), (false, false), "the close button puts it away");
+    s.save("small-inventory-closed");
+    // The same item again: back.
+    select(&mut s);
+    assert_eq!(card(&s), (true, true), "picking the item brings it back");
+    // Escape.
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    assert_eq!(card(&s), (false, false), "Escape puts it away");
+    assert!(
+        s.ui.host().root.is_window_visible("modern-inventory"),
+        "and leaves the window open"
+    );
+    // A click on the grid's empty space.
+    select(&mut s);
+    assert!(card(&s).0);
+    s.click(
+        0,
+        fx + inv::GRID_X as i32 + 150,
+        fy + inv::GRID_Y as i32 + inv::GRID_H as i32 - 30,
+        Modifiers::NONE,
+    );
+    assert_eq!(
+        card(&s),
+        (false, false),
+        "a click on empty space puts it away"
+    );
+    // On a screen with room, the details dock again.
+    s.size = (1440, 900);
+    select(&mut s);
+    let (_, _, fw, _) = rect_of(&s, frame);
+    assert_eq!(fw, inv::WIDE as i32, "the window widens");
+    assert!(!card(&s).0, "and the details dock");
+}
+
 /// An Ust and four things to salvage in the main pack.
 fn salvage_things(s: &mut Shot) -> u32 {
     const UST: u32 = 0x8000_0501;

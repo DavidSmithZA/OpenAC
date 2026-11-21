@@ -1650,6 +1650,17 @@ impl WindowUi {
                 outputs: self.host.take_outputs(),
             };
         }
+        // Then it puts the inventory's details card away (a small screen).
+        if pressed
+            && key == Key::Escape
+            && !self.pregame_active()
+            && self.modern_inventory_card_escape()
+        {
+            return Routed {
+                world: None,
+                outputs: self.host.take_outputs(),
+            };
+        }
         let mut routed = ui_input::key(
             &mut self.host,
             physical,

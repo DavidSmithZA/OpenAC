@@ -60,6 +60,25 @@ pub const DETAILS_W: f32 = 264.0;
 pub const DETAILS_H: f32 = HEIGHT - FOOT - 8.0 - EQUIP_Y;
 /// The search box.
 pub const SEARCH_W: f32 = 240.0;
+/// The details as a card over the equipment column, when the wide window
+/// does not fit the screen.
+pub const CARD_X: f32 = 16.0;
+pub const CARD_Y: f32 = EQUIP_Y - 4.0;
+pub const CARD_W: f32 = RAIL_X - 8.0 - CARD_X;
+pub const CARD_H: f32 = HEIGHT - FOOT - 8.0 - CARD_Y;
+/// The card's title strip, over the sheet.
+const CARD_TITLE: f32 = 32.0;
+
+/// Where the sheet sits in the card.
+#[must_use]
+pub fn card_sheet_rect() -> (f32, f32, f32, f32) {
+    (
+        CARD_X + 6.0,
+        CARD_Y + CARD_TITLE,
+        CARD_W - 12.0,
+        CARD_H - CARD_TITLE - 6.0,
+    )
+}
 
 /// The search box's left edge in a window `w` wide.
 #[must_use]
@@ -91,6 +110,9 @@ pub struct FrameView {
     pub name: String,
     /// The details are docked (the window is wide).
     pub details: bool,
+    /// The details are a card over the equipment column (a small
+    /// screen); the equipment is hidden under it.
+    pub card: bool,
     /// The grid's title and count.
     pub title: String,
     pub count: String,
@@ -121,6 +143,8 @@ pub enum FrameRequest {
     Look(CellLook),
     /// One kind shown (none: all).
     Kind(Option<Kind>),
+    /// Put the details card away.
+    CloseCard,
 }
 
 /// The inventory's frame.
@@ -161,6 +185,14 @@ impl InventoryFrame {
 
     fn close_rect(&self) -> Rect {
         (self.width() - 16.0 - 30.0, 11.0, 30.0, 30.0)
+    }
+
+    fn card_rect() -> Rect {
+        (CARD_X, CARD_Y, CARD_W, CARD_H)
+    }
+
+    fn card_close_rect() -> Rect {
+        (CARD_X + CARD_W - 6.0 - 26.0, CARD_Y + 3.0, 26.0, 26.0)
     }
 
     fn button_width(&self, label: &str, value: &str) -> f32 {
@@ -296,6 +328,10 @@ impl Widget for InventoryFrame {
                 let (sx, sy) = ui.screen_position(me);
                 if inside(self.close_rect(), x, y) {
                     self.requests.push(FrameRequest::Close);
+                } else if self.view.card && inside(Self::card_close_rect(), x, y) {
+                    self.requests.push(FrameRequest::CloseCard);
+                } else if self.view.card && inside(Self::card_rect(), x, y) {
+                    // The card's own title strip: nothing.
                 } else if let Some(r) = self.group_rect().filter(|r| inside(*r, x, y)) {
                     self.requests
                         .push(FrameRequest::GroupMenu((sx + r.0, sy + r.1 + r.3 + 4.0)));
@@ -317,6 +353,9 @@ impl Widget for InventoryFrame {
                     .find(|(_, r)| inside(*r, x, y))
                 {
                     self.requests.push(FrameRequest::Kind(k));
+                } else if self.view.card {
+                    // A click on empty space puts the card away.
+                    self.requests.push(FrameRequest::CloseCard);
                 }
                 true
             }
@@ -335,6 +374,9 @@ impl Widget for InventoryFrame {
         }
         if inside(self.close_rect(), x, y) {
             return Some("Close".to_owned());
+        }
+        if self.view.card && inside(Self::card_close_rect(), x, y) {
+            return Some("Close the details".to_owned());
         }
         None
     }
@@ -419,21 +461,44 @@ impl Widget for InventoryFrame {
             if self.hot(close) { p.accent } else { p.icon },
             1.8,
         );
-        // The equipment's labels and the figure's place.
-        if let Some(l) = &f.label {
-            let tracked = TextStyle::plain(p.text_soft).tracked(1.2);
-            text::draw(rc, l, "EQUIPPED", EQUIP_X, EQUIP_Y + 6.0, tracked);
-            text::draw(rc, l, "JEWELRY", EQUIP_X, JEWELRY_TITLE, tracked);
-            text::draw(rc, l, "HELD \u{b7} AETHERIA", EQUIP_X, HELD_TITLE, tracked);
+        if self.view.card {
+            // The details' card, over the equipment column.
+            let (cx, cy, cw, ch) = Self::card_rect();
+            let round = CornerRadii::all(self.theme.metrics.window_radius);
+            rc.soft_shadow(cx, cy, cw, ch, 6.0, 8.0, 24.0, hex(0, 0.5));
+            rc.fill_rounded_rect(cx, cy, cw, ch, round, hex(0x14_100C, 1.0));
+            rc.stroke_rounded_rect(cx, cy, cw, ch, round, hex(0xC9_A062, 0.45), 1.0);
+            if let Some(l) = &f.label {
+                let tracked = TextStyle::plain(p.text_soft).tracked(1.2);
+                text::draw(rc, l, "ITEM DETAILS", cx + 12.0, cy + 12.0, tracked);
+            }
+            let close = Self::card_close_rect();
+            stroke(
+                rc,
+                close.0 + 5.0,
+                close.1 + 5.0,
+                16.0,
+                &[&[(6.0, 6.0), (18.0, 18.0)], &[(18.0, 6.0), (6.0, 18.0)]],
+                if self.hot(close) { p.accent } else { p.icon },
+                1.6,
+            );
+        } else {
+            // The equipment's labels and the figure's place.
+            if let Some(l) = &f.label {
+                let tracked = TextStyle::plain(p.text_soft).tracked(1.2);
+                text::draw(rc, l, "EQUIPPED", EQUIP_X, EQUIP_Y + 6.0, tracked);
+                text::draw(rc, l, "JEWELRY", EQUIP_X, JEWELRY_TITLE, tracked);
+                text::draw(rc, l, "HELD \u{b7} AETHERIA", EQUIP_X, HELD_TITLE, tracked);
+            }
+            rc.fill_rounded_rect(
+                FIGURE_X,
+                FIGURE_Y,
+                FIGURE_W,
+                FIGURE_H,
+                r,
+                hex(0xE0_B068, 0.05),
+            );
         }
-        rc.fill_rounded_rect(
-            FIGURE_X,
-            FIGURE_Y,
-            FIGURE_W,
-            FIGURE_H,
-            r,
-            hex(0xE0_B068, 0.05),
-        );
         // The rail's and the grid's dividing room.
         if let (Some(s), Some(b)) = (&f.strong, &f.body) {
             text::draw(
@@ -658,15 +723,23 @@ impl Widget for InventoryFrame {
             } else {
                 self.view.hint.as_str()
             };
-            let hw = text::measure(s, hint, 0.0);
-            text::draw(
-                rc,
-                s,
-                hint,
-                w - 24.0 - hw,
-                cy - s.line_height * 0.5,
-                TextStyle::plain(p.text_soft),
-            );
+            // Right of the pyreals, on two lines where one does not fit
+            // (the narrow window).
+            let room =
+                w - 24.0 - (px + 16.0 + cw + 6.0 + text::measure(body, "pyreals", 0.0) + 16.0);
+            let lines = ac_ui::modern::kit::wrap(s, hint, room.max(40.0));
+            let top = cy - s.line_height * lines.len() as f32 * 0.5;
+            for (i, line) in lines.iter().take(2).enumerate() {
+                let lw = text::measure(s, line, 0.0);
+                text::draw(
+                    rc,
+                    s,
+                    line,
+                    w - 24.0 - lw,
+                    top + s.line_height * i as f32,
+                    TextStyle::plain(p.text_soft),
+                );
+            }
         }
         rc.stroke_rounded_rect(0.0, 0.0, w, h, round, hex(0xC9_A062, 0.8), 1.0);
     }
