@@ -85,9 +85,69 @@ const PICTURES: &[(&str, &[u8])] = &[
     ),
 ];
 
+/// Where each picture's subject is, as shares of its width and height:
+/// a screen of another shape keeps the part around it (the centre for a
+/// picture not listed).
+const FOCUS: &[(&str, (f32, f32))] = &[
+    ("aluvian_holtburg_river_day", (0.55, 0.55)),
+    ("dusk_holtburg_river", (0.55, 0.55)),
+    ("aluvian_arwic_walls_day", (0.52, 0.58)),
+    ("unknown_mountain_range", (0.50, 0.40)),
+    ("unknown_mountain_range_night", (0.50, 0.40)),
+    ("studio_sky_day", (0.50, 0.45)),
+    ("desert_yaraq_day", (0.52, 0.45)),
+    ("desert_yaraq_dusk", (0.50, 0.45)),
+    ("desert_zaikhal_mesas", (0.42, 0.45)),
+    ("sho_shoushi_day", (0.45, 0.55)),
+    ("sho_hebianto_mountains", (0.42, 0.50)),
+    ("sho_nanto_pagodas", (0.62, 0.55)),
+    ("sho_lin_peak_dusk", (0.48, 0.45)),
+    ("coast_mayoi", (0.55, 0.50)),
+    ("coast_kryst_isle", (0.55, 0.45)),
+];
+
+/// Where the picture `name`'s subject is (shares of its width and height).
+#[must_use]
+pub fn focus(name: &str) -> (f32, f32) {
+    FOCUS
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map_or((0.5, 0.5), |(_, f)| *f)
+}
+
+/// The part of a `picture`-sized picture a `screen`-sized one shows,
+/// pushed in by `zoom`: the screen's shape, as large as fits, around
+/// `focus` and inside the picture (u0, v0, u1, v1).
+#[must_use]
+pub fn cover(
+    picture: (f32, f32),
+    screen: (f32, f32),
+    zoom: f32,
+    focus: (f32, f32),
+) -> (f32, f32, f32, f32) {
+    let ((pw, ph), (w, h)) = (picture, screen);
+    let (mut uw, mut vh) = if pw / ph > w / h {
+        ((w / h) * ph / pw, 1.0)
+    } else {
+        (1.0, (h / w) * pw / ph)
+    };
+    uw /= zoom.max(1.0);
+    vh /= zoom.max(1.0);
+    let u0 = (focus.0 - uw * 0.5).clamp(0.0, 1.0 - uw);
+    let v0 = (focus.1 - vh * 0.5).clamp(0.0, 1.0 - vh);
+    (u0, v0, u0 + uw, v0 + vh)
+}
+
 /// The page carries no pictures (they would make it megabytes larger).
 #[cfg(target_arch = "wasm32")]
 const PICTURES: &[(&str, &[u8])] = &[];
+
+/// Where the bundled picture at `index` has its subject.
+fn focus_of(index: usize) -> (f32, f32) {
+    PICTURES
+        .get(index)
+        .map_or((0.5, 0.5), |(name, _)| focus(name))
+}
 
 /// The bundled pictures' names, in their bundled order.
 #[must_use]
@@ -114,6 +174,8 @@ pub struct Layer {
     pub size: (f32, f32),
     /// How far it has pushed in (1.0: not at all).
     pub zoom: f32,
+    /// Where its subject is (see [`focus`]).
+    pub focus: (f32, f32),
     /// Its opacity.
     pub alpha: f32,
 }
@@ -139,22 +201,15 @@ impl Backdrop {
                 continue;
             }
             // Cover: the share of the picture that fits the screen's shape,
-            // made smaller by the push in.
-            let (mut uw, mut vh) = if pw / ph > w / h {
-                ((w / h) * ph / pw, 1.0)
-            } else {
-                (1.0, (h / w) * pw / ph)
-            };
-            uw /= l.zoom.max(1.0);
-            vh /= l.zoom.max(1.0);
-            let (u0, v0) = ((1.0 - uw) * 0.5, (1.0 - vh) * 0.5);
+            // made smaller by the push in, around the subject.
+            let uv = cover((pw, ph), (w, h), l.zoom, l.focus);
             rc.sprite(
                 l.texture,
                 0.0,
                 0.0,
                 w,
                 h,
-                (u0, v0, u0 + uw, v0 + vh),
+                uv,
                 Color {
                     a: l.alpha.clamp(0.0, 1.0),
                     ..Color::WHITE
@@ -237,6 +292,7 @@ impl Slideshow {
                 texture: old.texture,
                 size: old.size,
                 zoom: zoom(old),
+                focus: focus_of(old.index),
                 alpha: 1.0,
             });
         }
@@ -250,6 +306,7 @@ impl Slideshow {
                 texture: s.texture,
                 size: s.size,
                 zoom: zoom(s),
+                focus: focus_of(s.index),
                 alpha: fade_in * fade_in * (3.0 - 2.0 * fade_in),
             });
         }
@@ -321,12 +378,37 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_screen_of_another_shape_keeps_the_part_around_the_subject() {
+        let picture = (3840.0, 2160.0);
+        // 16:9 on 16:9: all of it, whatever the focus.
+        assert_eq!(
+            cover(picture, (1920.0, 1080.0), 1.0, (0.62, 0.55)),
+            (0.0, 0.0, 1.0, 1.0)
+        );
+        // 4:3 keeps three quarters of the width, around the subject.
+        let (u0, v0, u1, v1) = cover(picture, (1024.0, 768.0), 1.0, (0.62, 0.55));
+        assert!((u1 - u0 - 0.75).abs() < 1e-4 && v0 == 0.0 && v1 == 1.0);
+        assert!((u0 - 0.245).abs() < 1e-4, "{u0}");
+        // A subject near the edge: the cut stops at the picture's edge.
+        let (u0, _, u1, _) = cover(picture, (1024.0, 768.0), 1.0, (0.95, 0.5));
+        assert!((u1 - 1.0).abs() < 1e-4 && (u0 - 0.25).abs() < 1e-4);
+        // 21:9 keeps the width and part of the height, around the subject.
+        let (u0, v0, u1, v1) = cover(picture, (2560.0, 1080.0), 1.0, (0.5, 0.40));
+        assert!(u0 == 0.0 && u1 == 1.0);
+        assert!(((v0 + v1) * 0.5 - 0.40).abs() < 1e-4 && v1 - v0 < 1.0);
+        // Every bundled picture has its subject listed.
+        for name in names() {
+            assert!(FOCUS.iter().any(|(n, _)| *n == name), "{name}");
+        }
+    }
+
+    #[test]
     #[cfg(not(target_arch = "wasm32"))]
     fn every_bundled_picture_decodes_at_its_size() {
         for (name, bytes) in PICTURES {
             let (w, h, rgba) = decode(bytes).unwrap_or_else(|| panic!("{name} decodes"));
-            assert_eq!((w, h), (2560, 1440), "{name}");
-            assert_eq!(rgba.len(), 2560 * 1440 * 4, "{name}");
+            assert_eq!((w, h), (3840, 2160), "{name}");
+            assert_eq!(rgba.len(), 3840 * 2160 * 4, "{name}");
         }
     }
 
