@@ -21,6 +21,7 @@ ac-motion.workspace = true
 ac-physics.workspace = true
 ac-plugin-abi.workspace = true
 ac-plugin-ui.workspace = true
+image-webp.workspace = true
 ac-proto.workspace = true
 # The view and command types, without the session runner.
 ac-runtime.workspace = true

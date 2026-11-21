@@ -291,6 +291,16 @@ pub fn draw(rc: &mut RenderContext<'_>, w: f32, h: f32, sky: Sky, left_shade: bo
     }
     hills(rc, w, h, FAR_HILLS, hex(p.far, 1.0));
     hills(rc, w, h, NEAR_HILLS, hex(p.near, 1.0));
+    shade(rc, w, h, left_shade, 0.0);
+}
+
+/// What keeps the words readable over a sky or a picture: an even dimming
+/// (`dim`, 0 for none), a darker foot and, with `left_shade`, a shade
+/// behind the roster on the left.
+pub fn shade(rc: &mut RenderContext<'_>, w: f32, h: f32, left_shade: bool, dim: f32) {
+    if dim > 0.0 {
+        rc.fill(0.0, 0.0, w, h, hex(0, dim));
+    }
     let foot = 320.0_f32.min(h * 0.4);
     rc.fill_vertical_gradient(
         0.0,

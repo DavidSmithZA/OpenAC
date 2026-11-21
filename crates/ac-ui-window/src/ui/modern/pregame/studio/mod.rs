@@ -636,6 +636,12 @@ impl WindowUi {
         let still_open = s.open;
         let face = screen.step == Step::Appearance && screen.group == Group::Face;
         s.figure_look = None;
+        let backdrop = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.pregame.as_ref())
+            .map(|p| p.backdrop.clone())
+            .unwrap_or_default();
         let ui = &mut self.host.root;
         for c in commands {
             create(ui, c);
@@ -648,6 +654,7 @@ impl WindowUi {
                 v.size = size;
                 v.clock = clock;
                 v.screen = screen.clone();
+                v.backdrop = backdrop;
                 v.card = show_card.clone();
                 v.swatches = swatches;
                 v.shade_stops = stops;

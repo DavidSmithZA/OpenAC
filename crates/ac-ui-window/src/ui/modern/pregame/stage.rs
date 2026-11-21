@@ -282,6 +282,8 @@ pub struct StageView {
     fonts: StageFonts,
     /// What it shows.
     pub screen: StageScreen,
+    /// The pictures behind it (none: the drawn sky).
+    pub backdrop: super::backdrops::Backdrop,
     /// The screen's size.
     pub size: (f32, f32),
     /// What it asked for since the window last looked.
@@ -298,6 +300,16 @@ pub struct StageView {
 }
 
 impl StageView {
+    /// The pictures behind the screen, dimmed and shaded so the words read;
+    /// the drawn `sky` when there are none.
+    fn draw_sky(&self, rc: &mut RenderContext<'_>, w: f32, h: f32, sky: Sky, left: bool) {
+        if self.backdrop.draw(rc, w, h) {
+            scenery::shade(rc, w, h, left, 0.18);
+        } else {
+            scenery::draw(rc, w, h, sky, left);
+        }
+    }
+
     /// A screen in `theme`.
     #[must_use]
     pub fn new(theme: Horizon, fonts: StageFonts) -> Self {
@@ -305,6 +317,7 @@ impl StageView {
             theme,
             fonts,
             screen: StageScreen::default(),
+            backdrop: super::backdrops::Backdrop::default(),
             size: (1440.0, 900.0),
             asks: Vec::new(),
             scroll: kit::Scroll::default(),
@@ -1476,11 +1489,11 @@ impl Widget for StageView {
         match self.screen.mode.clone() {
             StageMode::Hidden => {}
             StageMode::Connecting(c) => {
-                scenery::draw(rc, w, hh, Sky::Portal, false);
+                self.draw_sky(rc, w, hh, Sky::Portal, false);
                 self.draw_connecting(rc, &c, &mut h);
             }
             StageMode::Empty => {
-                scenery::draw(rc, w, hh, Sky::Dusk, false);
+                self.draw_sky(rc, w, hh, Sky::Dusk, false);
                 self.draw_top(rc);
                 self.draw_empty(rc, &mut h);
                 self.draw_corner(rc, &mut h);
@@ -1493,7 +1506,7 @@ impl Widget for StageView {
                     .as_ref()
                     .and_then(|p| p.sky)
                     .unwrap_or(Sky::Dusk);
-                scenery::draw(rc, w, hh, sky, true);
+                self.draw_sky(rc, w, hh, sky, true);
                 scenery::glow(rc, self.stage_centre(), hh * 0.55, 300.0, 210.0, sky.glow());
                 self.draw_top(rc);
                 self.draw_roster(rc, &mut h);

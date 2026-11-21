@@ -246,6 +246,8 @@ pub struct StudioView {
     fonts: StudioFonts,
     /// What it shows.
     pub screen: StudioScreen,
+    /// The pictures behind it (none: the drawn sky).
+    pub backdrop: crate::ui::modern::pregame::backdrops::Backdrop,
     /// The card over the stage.
     pub card: StudioCard,
     /// The screen's size.
@@ -276,6 +278,7 @@ impl StudioView {
             theme,
             fonts,
             screen: StudioScreen::default(),
+            backdrop: crate::ui::modern::pregame::backdrops::Backdrop::default(),
             card: StudioCard::None,
             size: (1440.0, 900.0),
             swatches: Vec::new(),
@@ -2531,7 +2534,13 @@ impl Widget for StudioView {
         } else {
             Sky::Studio
         };
-        scenery::draw(rc, w, hh, sky, false);
+        // The pictures, dimmed more than the Stage's: panels stand on
+        // both sides here.
+        if self.backdrop.draw(rc, w, hh) {
+            scenery::shade(rc, w, hh, false, 0.3);
+        } else {
+            scenery::draw(rc, w, hh, sky, false);
+        }
         scenery::glow(
             rc,
             self.stage_centre(),

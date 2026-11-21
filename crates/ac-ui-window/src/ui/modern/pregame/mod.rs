@@ -9,6 +9,7 @@
 //! heritage, look, last place, when last played) is remembered on this
 //! computer while the character plays ([`WindowUi::remember_modern_character`]).
 
+pub mod backdrops;
 pub mod credits;
 pub mod scenery;
 pub mod stage;
@@ -76,6 +77,10 @@ pub struct PreGameUi {
     /// When what the Stage shows of the character playing was last looked
     /// at (at most once a second).
     remembered_at: Option<Instant>,
+    /// The pictures behind the Stage and the Studio.
+    pub backdrops: backdrops::Slideshow,
+    /// What they draw this frame.
+    pub backdrop: backdrops::Backdrop,
     delete_word: String,
     exit_words: String,
     epoch: Instant,
@@ -400,6 +405,8 @@ impl WindowUi {
             remembered: None,
             pending_seen: HashMap::new(),
             remembered_at: None,
+            backdrops: backdrops::Slideshow::new(),
+            backdrop: backdrops::Backdrop::default(),
             delete_word,
             exit_words,
             epoch: Instant::now(),
@@ -558,6 +565,15 @@ impl WindowUi {
         let stage_shows = (connecting_shows || choosing) && !p.credits_open && !studio_open;
         let credits_shows = choosing && p.credits_open && !studio_open;
         let credits_resources = p.credits_resources.clone();
+        // The pictures run while the Stage or the Studio shows, and are let
+        // go otherwise.
+        if stage_shows || studio_open {
+            p.backdrop = p.backdrops.tick(&self.images, now);
+        } else if !p.backdrop.layers.is_empty() {
+            p.backdrops.release(&self.images);
+            p.backdrop = backdrops::Backdrop::default();
+        }
+        let backdrop = p.backdrop.clone();
         let ui = &mut self.host.root;
         let size = ui.size();
         for (id, shows) in [(stage, stage_shows), (credits, credits_shows)] {
@@ -584,6 +600,7 @@ impl WindowUi {
                 v.typed.clone_from(&typed);
                 let known = screen.picked.as_ref().is_some_and(|p| p.known);
                 v.screen = screen.clone();
+                v.backdrop = backdrop;
                 (
                     v.delete_field_rect(),
                     v.figure_rect(),

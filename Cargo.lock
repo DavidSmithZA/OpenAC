@@ -365,6 +365,7 @@ dependencies = [
  "ac-ui",
  "bytemuck",
  "glam",
+ "image-webp",
 ]
 
 [[package]]
