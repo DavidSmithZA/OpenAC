@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use crate::json::{self, Member, Node, Value};
 
 mod bars;
+mod characters;
 mod chat;
 mod layout;
 mod markup_controls;
@@ -20,6 +21,7 @@ pub mod render_pack;
 mod sections;
 
 pub use bars::{BarData, BarLayoutData, CharacterBars, SavedBars, SlotData};
+pub use characters::{RememberedCharacter, RememberedCharacters, RememberedLook};
 pub use chat::ChatTabData;
 pub use layout::{UiWindowLayout, UiWindowPlacement, UiWindowPosition};
 pub use markup_controls::MarkupControlKey;
