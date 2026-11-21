@@ -911,6 +911,27 @@ the plugin API is shared, so retail could show the same answers later.
   4. Snapshot tests: every window in two or three themes, Parchment
      among them.
 
+Built 2026-11-21, each on its own branch stacked on
+`feat/modern-ui-small-screens`:
+
+- Quick move key: Command on a Mac at first, Control elsewhere
+  (`feat/modern-ui-mac-quick-move`, 3ceba2b9).
+- Item details card on small screens (`feat/modern-ui-details-card`,
+  83049aff): `inventory::CARD_*`, put away by its close button, Escape
+  (after the map's), a click on empty space or an empty slot
+  (`CellRequest::Empty`); the narrow foot's hint wraps beside the
+  pyreals. Offscreen: `the_modern_small_inventory`.
+- Theme (`feat/modern-ui-theme`, c2b347f6, ea54db5d): `Horizon::current`
+  (thread-local, set each frame by `follow_modern_theme` from
+  `plugin_ui.theme`), `Horizon::themed`, `modern::tone`; about 280
+  colours written into windows now come from the look, and 33 widgets no
+  longer keep a copy of it. `OptionKey::Theme` (Options › Interface ›
+  Style, and the retail options' modern section), the Stage's Theme
+  button and list. Offscreen: `the_modern_themes`, end of
+  `the_modern_stage`.
+- Known: `the_m2_gaps` fails on these branches and their base (the bars
+  are not found in the saved settings file); not looked into yet.
+
 ### Upstream (on hold, user 2026-11-21)
 
 How the modern interface goes to Erik (the PR's shape, and whether the
