@@ -20,7 +20,7 @@ use ac_ui::geometry::AnchorEdges;
 use ac_ui::icons::IconSource;
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
-use ac_ui::modern::theme::hex;
+use ac_ui::modern::theme::{fill_glass, hex};
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::items::emit;
 use ac_ui::panels::pack_drops::{self, DropSpot};
@@ -301,7 +301,7 @@ impl Widget for LootFrame {
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         let r = CornerRadii::all(4.0);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 18.0, 50.0, hex(0, 0.55));
-        rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x14_100C, 0.97));
+        fill_glass(rc, (0.0, 0.0, w, h), round, hex(0x14_100C, 0.97));
         rc.fill_vertical_gradient(
             1.0,
             1.0,

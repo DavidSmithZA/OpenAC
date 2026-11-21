@@ -9,7 +9,7 @@ use ac_ui::draw::{Color, ColorVertex, RenderContext};
 use ac_ui::event::{UiEvent, kind};
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
-use ac_ui::modern::theme::hex;
+use ac_ui::modern::theme::{fill_glass, hex};
 use ac_ui::shapes::CornerRadii;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
@@ -635,7 +635,7 @@ impl Widget for SheetView {
         if self.framed {
             let round = CornerRadii::all(self.theme.metrics.window_radius);
             rc.soft_shadow(0.0, 0.0, w, h, 6.0, 18.0, 50.0, hex(0, 0.5));
-            rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x14_100C, 0.97));
+            fill_glass(rc, (0.0, 0.0, w, h), round, hex(0x14_100C, 0.97));
             rc.stroke_rounded_rect(0.0, 0.0, w, h, round, hex(0xC9_A062, 0.8), 1.0);
         }
         let f = &self.fonts;

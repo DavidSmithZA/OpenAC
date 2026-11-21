@@ -38,7 +38,7 @@ impl Widget for HoverFrame {
         let p = self.theme.palette;
         let radius = self.theme.metrics.window_radius;
         rc.soft_shadow(0.0, 0.0, w, h, radius, 12.0, 30.0, p.shadow);
-        rc.fill_rounded_rect(0.0, 0.0, w, h, CornerRadii::all(radius), p.popup);
+        super::theme::fill_glass(rc, (0.0, 0.0, w, h), CornerRadii::all(radius), p.popup);
         rc.stroke_rounded_rect(
             0.0,
             0.0,

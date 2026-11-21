@@ -701,6 +701,13 @@ pub const GROUPS: &[Group] = &[
                 ),
             ),
             disp(DisplayField::ScreenBrightness, w("Brightness", "")),
+            disp(
+                DisplayField::ModernGlassBlur,
+                w(
+                    "Frosted glass",
+                    "Windows and pop-ups blur the world behind them. Off: a plain see-through fill, a little lighter on the graphics card.",
+                ),
+            ),
         ],
     },
     Group {

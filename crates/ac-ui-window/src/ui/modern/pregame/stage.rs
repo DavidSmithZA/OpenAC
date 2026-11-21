@@ -18,7 +18,7 @@ use ac_ui::draw::{Color, RenderContext};
 use ac_ui::event::{UiEvent, kind};
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
-use ac_ui::modern::theme::hex;
+use ac_ui::modern::theme::{fill_glass, hex};
 use ac_ui::shapes::CornerRadii;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
@@ -505,14 +505,7 @@ impl StageView {
         let p = self.theme.palette;
         let (inner, rows, outer) = self.row_rects();
         let round = CornerRadii::all(6.0);
-        rc.fill_rounded_rect(
-            outer.0,
-            outer.1,
-            outer.2,
-            outer.3,
-            round,
-            hex(0x14_100C, 0.78),
-        );
+        fill_glass(rc, outer, round, hex(0x14_100C, 0.78));
         rc.stroke_rounded_rect(outer.0, outer.1, outer.2, outer.3, round, bronze(0.35), 1.0);
         h.add(outer, Hit::Swallow);
         kit::spaced(

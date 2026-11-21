@@ -11,7 +11,7 @@ use ac_ui::draw::{Color, RenderContext};
 use ac_ui::event::{UiEvent, kind};
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
-use ac_ui::modern::theme::hex;
+use ac_ui::modern::theme::{fill_glass, hex};
 use ac_ui::shapes::CornerRadii;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
@@ -771,7 +771,7 @@ impl Widget for ChatPanel {
             }
             // The transcript's glass.
             let round = CornerRadii::all(self.theme.metrics.window_radius);
-            rc.fill_rounded_rect(0.0, box_top, WIDTH, box_h, round, hex(0, 0.45));
+            fill_glass(rc, (0.0, box_top, WIDTH, box_h), round, hex(0, 0.45));
             rc.stroke_rounded_rect(0.0, box_top, WIDTH, box_h, round, hex(0xC9_A062, 0.3), 1.0);
         }
         let room = if self.active {
@@ -1070,7 +1070,7 @@ impl ChatPanel {
             34.0,
             self.theme.palette.shadow,
         );
-        rc.fill_rounded_rect(0.0, top, WIDTH, h, round, hex(0x18_130E, 0.97));
+        fill_glass(rc, (0.0, top, WIDTH, h), round, hex(0x18_130E, 0.97));
         rc.stroke_rounded_rect(0.0, top, WIDTH, h, round, hex(0xC9_A062, 0.8), 1.0);
         for (i, cmd) in self.suggestions.clone().iter().enumerate() {
             let y = top + 6.0 + i as f32 * ROW_H;
@@ -1193,7 +1193,7 @@ impl ChatPanel {
         let opacity = self.tabs.first().map_or(0.62, |t| t.opacity);
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, WIDTH, h, 6.0, 10.0, 30.0, hex(0, 0.45));
-        rc.fill_rounded_rect(0.0, 0.0, WIDTH, h, round, hex(0x14_100C, opacity));
+        fill_glass(rc, (0.0, 0.0, WIDTH, h), round, hex(0x14_100C, opacity));
         rc.stroke_rounded_rect(0.0, 0.0, WIDTH, h, round, hex(0xC9_A062, 0.8), 1.0);
         rc.fill_rounded_rect(
             0.0,

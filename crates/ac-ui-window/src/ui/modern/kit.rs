@@ -9,7 +9,7 @@ use ac_ui::draw::{Color, RenderContext};
 use ac_ui::geometry::AnchorEdges;
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
-use ac_ui::modern::theme::hex;
+use ac_ui::modern::theme::{fill_glass, hex};
 use ac_ui::shapes::CornerRadii;
 use ac_ui::tree::{Element, ElementId};
 use ac_ui::widgets::Field;
@@ -72,7 +72,7 @@ pub fn window_back(
 ) {
     let round = CornerRadii::all(theme.metrics.window_radius);
     rc.soft_shadow(0.0, 0.0, w, h, 6.0, 18.0, 50.0, hex(0, 0.55));
-    rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x14_100C, 0.95));
+    fill_glass(rc, (0.0, 0.0, w, h), round, hex(0x14_100C, 0.95));
     rc.stroke_rounded_rect(0.0, 0.0, w, h, round, bronze(0.8), 1.0);
     rc.fill_vertical_gradient(
         1.0,

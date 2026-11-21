@@ -12,7 +12,7 @@ use ac_ui::draw::{Color, ColorVertex, RenderContext};
 use ac_ui::event::{UiEvent, kind};
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
-use ac_ui::modern::theme::hex;
+use ac_ui::modern::theme::{fill_glass, hex};
 use ac_ui::pregame::chargen::appearance::{Part, PreviewRequest};
 use ac_ui::pregame::chargen::skills::Bucket;
 use ac_ui::shapes::CornerRadii;
@@ -1801,7 +1801,7 @@ impl StudioView {
         let r = (col.0, col.1, col.2, height.min(col.3));
         let round = CornerRadii::all(6.0);
         rc.soft_shadow(r.0, r.1, r.2, r.3, 6.0, 18.0, 50.0, hex(0, 0.45));
-        rc.fill_rounded_rect(r.0, r.1, r.2, r.3, round, hex(0x14_100C, 0.82));
+        fill_glass(rc, r, round, hex(0x14_100C, 0.82));
         rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, bronze(0.5), 1.0);
         h.add(r, Hit::Swallow);
         rc.push_clip(r.0, r.1, r.2, r.3);
@@ -2555,7 +2555,7 @@ impl Widget for StudioView {
         let p = self.panel_rect();
         let round = CornerRadii::all(6.0);
         rc.soft_shadow(p.0, p.1, p.2, p.3, 6.0, 18.0, 50.0, hex(0, 0.5));
-        rc.fill_rounded_rect(p.0, p.1, p.2, p.3, round, hex(0x14_100C, 0.9));
+        fill_glass(rc, p, round, hex(0x14_100C, 0.9));
         rc.stroke_rounded_rect(p.0, p.1, p.2, p.3, round, bronze(0.8), 1.0);
         h.add(p, Hit::Swallow);
         rc.push_clip(p.0, p.1, p.2, p.3);
