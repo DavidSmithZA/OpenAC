@@ -1854,9 +1854,6 @@ impl WindowUi {
     }
 
     fn panel_output(&mut self, output: PanelOutput, commands: &mut Vec<SessionCommand>) {
-        if let PanelOutput::SelectObject(target) = &output {
-            self.note_modern_craft_target(*target);
-        }
         if let Some(command) = session_command(&output) {
             commands.push(command);
             return;

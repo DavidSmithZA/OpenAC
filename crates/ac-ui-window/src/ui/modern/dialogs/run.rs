@@ -10,7 +10,6 @@ use ac_core::chat::LogTextType;
 use ac_proto::social::confirmation_type;
 use ac_runtime::character::CharacterCommand;
 use ac_runtime::communication::ClientConfirmation;
-use ac_runtime::inventory::InteractionMode;
 use ac_runtime::session::SessionCommand;
 use ac_ui::bundled_font::Weight;
 use ac_ui::modern::Horizon;
@@ -74,10 +73,6 @@ pub struct QuestionsUi {
     invitations: Vec<Invitation>,
     /// The last number given.
     last: u32,
-    /// The tool waiting to be used, and what it was last used on (the
-    /// crafting question shows both).
-    armed: Option<u32>,
-    combined: Option<(u32, u32)>,
 }
 
 impl QuestionsUi {
@@ -171,8 +166,6 @@ impl WindowUi {
             shown: 0,
             invitations: Vec::new(),
             last: 0,
-            armed: None,
-            combined: None,
         });
     }
 
@@ -298,28 +291,13 @@ impl WindowUi {
         before != q.queue.len()
     }
 
-    /// A tool is waiting to be used, or was just used on `target` (the
-    /// crafting question shows both).
-    pub(in crate::ui) fn note_modern_craft_target(&mut self, target: u32) {
-        let mode = self.facts.state.mode;
-        if let Some(q) = self.questions_mut()
-            && let InteractionMode::UseItemOnTarget(tool) = mode
-        {
-            q.combined = Some((tool, target));
-        }
-    }
-
     /// The session's open questions: new ones asked (invitations under the
     /// target, the rest on the card), ones it closed taken back.
     pub(in crate::ui) fn follow_modern_confirmations(&mut self) {
         let open = self.facts.state.confirmations.clone();
-        let mode = self.facts.state.mode;
         let Some(q) = self.questions_mut() else {
             return;
         };
-        if let InteractionMode::UseItemOnTarget(tool) = mode {
-            q.armed = Some(tool);
-        }
         q.queue.retain(
             |a| !matches!(&a.then, Then::Window(DialogAction::Session(c)) if !open.contains(c)),
         );
@@ -370,8 +348,8 @@ impl WindowUi {
         }
     }
 
-    /// What a crafting question combines, tool first, when the window saw
-    /// the tool used.
+    /// What a crafting question combines, tool first: the use with a
+    /// target the question answers.
     fn craft_parts(&mut self, question: &ClientConfirmation) -> Vec<Part> {
         let ClientConfirmation::Server {
             confirmation_type: confirmation_type::CRAFT_INTERACTION,
@@ -380,12 +358,7 @@ impl WindowUi {
         else {
             return Vec::new();
         };
-        let Some((tool, target)) = self
-            .modern
-            .as_ref()
-            .and_then(|m| m.questions.as_ref())
-            .and_then(|q| q.combined)
-        else {
+        let Some((tool, target)) = self.facts.state.targeted_use else {
             return Vec::new();
         };
         let names = crate::ui::facts::composed_names(&self.status.names);
