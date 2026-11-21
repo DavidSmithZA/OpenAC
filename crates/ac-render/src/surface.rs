@@ -103,6 +103,9 @@ pub struct GraphicsOptions {
     /// Where the screenshot key saves (`screenshots` beside the settings
     /// file; `None`: the key does nothing).
     pub screenshots_directory: Option<PathBuf>,
+    /// Where the detailed world map's tiers are kept (`None`: no detailed
+    /// map, nothing downloaded).
+    pub world_map_directory: Option<PathBuf>,
     /// Decode block-compressed textures to RGBA even when the GPU samples
     /// them (`OPENAC_NO_BLOCK_COMPRESSION`), to compare.
     pub no_block_compression: bool,
@@ -539,6 +542,15 @@ impl AttachedWindow {
                 Ok(mut ui) => {
                     ui.set_clipboard(Box::new(crate::ui::clipboard::SystemClipboard::new()));
                     ui.set_os_key_names(crate::platform::key_name_provider);
+                    if let Some(dir) = &options.world_map_directory {
+                        match ac_world_map::service::MapService::start(
+                            dir.clone(),
+                            ac_world_map::DEFAULT_SOURCE,
+                        ) {
+                            Ok(maps) => ui.set_world_maps(Box::new(maps)),
+                            Err(e) => notices.push(format!("ui: no detailed map: {e}")),
+                        }
+                    }
                     // The interface the launcher asked for, read once.
                     let interface = ac_host::Interface::requested(|name| std::env::var(name).ok());
                     ui.set_interface(interface);

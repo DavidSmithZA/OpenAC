@@ -64,6 +64,9 @@ pub enum Control {
     Button(Action, &'static str),
     /// The chat tabs against the message types.
     ChatGrid,
+    /// The detailed map's download (its words and buttons follow the
+    /// download, see the frame's `set_map`).
+    MapDownload,
 }
 
 /// One row of the window.
@@ -417,6 +420,20 @@ fn push_item(
             Control::ChatGrid,
             None,
         )),
+        Item::MapDownload => {
+            let mut r = base(
+                None,
+                Words {
+                    label: "Detailed map",
+                    desc: "",
+                    invert: false,
+                },
+                Control::MapDownload,
+                None,
+            );
+            r.openac = true;
+            out.push(r);
+        }
         Item::Button(action, words, verb) => {
             let mut r = base(None, words, Control::Button(action, verb), None);
             r.openac = action == Action::EditBars;

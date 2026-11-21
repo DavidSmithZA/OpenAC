@@ -514,6 +514,9 @@ pub struct WindowUi {
     pub(super) clipboard: Box<dyn Clipboard>,
     /// The operating system's names of keys the dats do not name.
     pub(super) os_key_names: OsKeyNames,
+    /// The detailed world map: what is downloaded, and its tiles (none
+    /// until the host hands it in).
+    pub(super) world_maps: Box<dyn ac_world_map::WorldMaps>,
     pub(super) notices: Vec<String>,
     /// Plugins asked the window to minimize (`true`) or restore.
     pub(super) minimize_requests: Vec<bool>,
@@ -656,6 +659,7 @@ impl WindowUi {
             player_view: None,
             clipboard: Box::new(NoClipboard),
             os_key_names: no_os_key_names,
+            world_maps: Box::new(ac_world_map::NoMaps),
             minimize_requests: Vec::new(),
             notices: Vec::new(),
             mounted: Vec::new(),
@@ -809,6 +813,12 @@ impl WindowUi {
     /// keys when it is built.
     pub fn set_os_key_names(&mut self, names: OsKeyNames) {
         self.os_key_names = names;
+    }
+
+    /// The detailed world map's service: its downloads and tiles, from now
+    /// on (the window has none until one is handed in).
+    pub fn set_world_maps(&mut self, maps: Box<dyn ac_world_map::WorldMaps>) {
+        self.world_maps = maps;
     }
 
     /// The sections changed since the last call, each with whether to save
