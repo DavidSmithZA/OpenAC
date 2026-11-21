@@ -15,7 +15,7 @@ use ac_ui::modern::Horizon;
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::items::emit;
 use ac_ui::panels::vendor::SPELL_COMPONENTS_MASK;
-use ac_ui::panels::vendor_rules::{PendingSplit, SplitOutcome, sell_check};
+use ac_ui::panels::vendor_rules::{GuardedSplit, SplitOutcome, sell_check};
 use ac_ui::tree::{Element, ElementId};
 use ac_ui::widgets::Field;
 
@@ -53,7 +53,7 @@ pub struct VendorUi {
     shown: Option<Box<VendorView>>,
     /// A split asked for to sell part of a stack, and whether it is sold
     /// at once (else put on the list).
-    split: Option<(PendingSplit, bool)>,
+    split: Option<(GuardedSplit, bool)>,
     /// When the refusal showed.
     refused_at: Option<ac_clock::Instant>,
     /// The shop opened (or the vendor was used again) since the last
@@ -310,9 +310,10 @@ impl WindowUi {
             }
         }
         // A split for a sale: stage or sell the new stack once it is in.
-        let split = self.vendor_mut().and_then(|v| v.split);
+        let split = self.vendor_mut().and_then(|v| v.split.take());
         if let Some((mut pending, now)) = split {
-            let outcome = self.with_vendor_items(|items| pending.follow(items));
+            let clock = self.status.clock.elapsed().as_secs_f64();
+            let outcome = self.with_vendor_items(|items| pending.follow(items, clock));
             let keep = match outcome {
                 SplitOutcome::Arrived(g) => {
                     if now {
@@ -559,8 +560,8 @@ impl WindowUi {
         let stack = o.stack_size.max(1);
         let has_contents = !self.facts.objects.get_contents(id).is_empty();
         if quantity < stack && !has_contents {
-            let can = self.facts.state.can_make_request;
-            match PendingSplit::start(&o, quantity, can) {
+            let clock = self.status.clock.elapsed().as_secs_f64();
+            match self.with_vendor_items(|items| GuardedSplit::start(&o, quantity, items, clock)) {
                 Ok((pending, command, words)) => {
                     if let Some(v) = self.vendor_mut() {
                         v.split = Some((pending, now));

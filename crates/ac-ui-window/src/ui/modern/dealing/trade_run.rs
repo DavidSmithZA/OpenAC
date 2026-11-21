@@ -13,7 +13,7 @@ use ac_ui::icons::IconSource;
 use ac_ui::modern::Horizon;
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::items::emit;
-use ac_ui::panels::vendor_rules::{PendingSplit, SplitOutcome};
+use ac_ui::panels::vendor_rules::{GuardedSplit, SplitOutcome};
 use ac_ui::tree::{Element, ElementId};
 use ac_ui::widgets::Field;
 
@@ -53,7 +53,7 @@ pub struct TradeUi {
     /// went through, so an old refusal is out of date).
     offered: usize,
     /// A split asked for to offer part of a stack.
-    pending: Option<PendingSplit>,
+    pending: Option<GuardedSplit>,
 }
 
 impl WindowUi {
@@ -214,14 +214,9 @@ impl WindowUi {
             self.offer(item, i32::try_from(amount).unwrap_or(i32::MAX));
         }
         // A split for an offer: offer the new stack once it is in.
-        if let Some(mut pending) = self.trade_mut().and_then(|t| t.pending) {
-            let outcome = {
-                let selected = self.player_view.and_then(|v| v.selected);
-                let in_flight: Vec<u32> = self.facts.state.pending_item.into_iter().collect();
-                let resolve = crate::ui::facts::composed_names(&self.status.names);
-                let view = self.facts.items_view(selected, &in_flight, None, &resolve);
-                pending.follow(&view)
-            };
+        if let Some(mut pending) = self.trade_mut().and_then(|t| t.pending.take()) {
+            let clock = self.status.clock.elapsed().as_secs_f64();
+            let outcome = self.with_trade_items(|items| pending.follow(items, clock));
             let keep = match outcome {
                 SplitOutcome::Arrived(g) => {
                     self.trade_send(ItemCommand::AddToTrade(ObjectRef::Guid(g)));
@@ -348,7 +343,8 @@ impl WindowUi {
             self.trade_send(ItemCommand::AddToTrade(ObjectRef::Guid(id)));
             return;
         }
-        match PendingSplit::start(&o, amount, self.facts.state.can_make_request) {
+        let clock = self.status.clock.elapsed().as_secs_f64();
+        match self.with_trade_items(|items| GuardedSplit::start(&o, amount, items, clock)) {
             Ok((pending, command, _)) => {
                 if let Some(t) = self.trade_mut() {
                     t.pending = Some(pending);
@@ -360,6 +356,14 @@ impl WindowUi {
                 PanelOutput::Notice("Cannot split the stack to offer it".to_owned()),
             ),
         }
+    }
+
+    fn with_trade_items<R>(&self, f: impl FnOnce(&ac_ui::panels::items::ItemsView<'_>) -> R) -> R {
+        let selected = self.player_view.and_then(|v| v.selected);
+        let in_flight: Vec<u32> = self.facts.state.pending_item.into_iter().collect();
+        let resolve = crate::ui::facts::composed_names(&self.status.names);
+        let view = self.facts.items_view(selected, &in_flight, None, &resolve);
+        f(&view)
     }
 
     fn trade_drop(&mut self, p: &ItemDragPayload) {
