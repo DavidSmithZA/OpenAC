@@ -678,10 +678,11 @@ entry. Hook points:
 - A mark beside items in the loot window, inventory, trade and the
   vendor's sell list (Keep, Salvage, Sell), and a summary line.
 - Entries in item menus, under the plugin's name.
-- A page per plugin in Options › Plugins, from the plugin's own markup,
-  drawn in the Options style with Apply, Revert and Defaults.
 - Buttons in a window's foot (for example "Loot 4 kept"), and buttons
   on the panel strip and dock.
+
+Cut (user, 2026-11-21): a page per plugin in Options › Plugins. Plugin
+settings stay in the plugin's own dock windows.
 
 ## Mac keys (user, 2026-11-19)
 

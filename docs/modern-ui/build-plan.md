@@ -386,8 +386,7 @@ Screens (`options/*.rs`), checked offscreen (`the_modern_options`):
    and closing. Key profiles: Load and Save as (still retail's dialogs
    until M7). The Configure Keyboard key opens Options on Controls.
 
-Not done in M6: the Options pages plugins draw (needs a plugin API for
-them; to decide with the plugin hooks); the item details' Docked /
+Not done in M6: the item details' Docked /
 Pop-up / Auto choice (the pop-up card is not built: it has to float
 outside the inventory frame); Trim (Bronze / Neutral: every modern
 window draws Bronze). Not live-tested yet.
@@ -889,8 +888,9 @@ methods into a trait, check the web client, remove the hiding list.
 A new plugin API version: the client asks plugins about an item (when
 it is inspected, shown in a loot window, inventory, trade or sell list)
 and draws what they return (a verdict, a few lines, menu entries, foot
-buttons); Options › Plugins hosts each plugin's markup page. The item
-hooks land with M4, the Options pages with M6. Retail never calls them;
+buttons). The item hooks land with M4. (Options pages drawn by plugins
+were cut, user 2026-11-21: plugin settings stay in the plugin's own dock
+windows.) Retail never calls them;
 the plugin API is shared, so retail could show the same answers later.
 
 ### Later, not blocking
