@@ -676,6 +676,47 @@ For upstream: these are renders of the game's own art, so whether they
 may ship in the repository is Erik's call (they could instead be made on
 the player's computer from the dats).
 
+Detailed world map (2026-11-21, branch `feat/modern-ui-map-tiles` off
+`feat/modern-ui-retail-off`: d32e9733, 681112e3, b5a4911f; not pushed,
+not live-tested; to be discussed). The user's choices: use Aethrix's
+existing WebP map rather than baking one in the client; offer all four
+tiers and let the player pick; manage the download in game, in the
+Options window only (not the launcher).
+
+- Source: the public release `atlas-map-v1` on
+  `DavidSmithZA/OpenAC-Aethrix`, a manifest and parts of at most 16 MB per
+  tier: Standard 11.4 MB (4 px a 24 m cell, towns 8 and 16), HD 35.5 MB
+  (8; towns 16 and 32), Ultra 125 MB (16; towns 32), Extreme 885 MB (32,
+  no separate town tiles). 256 px WebP tiles, pixel (0, 0) the world's
+  north-west corner, map coordinates `x * 240 + 24468` metres.
+- Crate `ac-world-map`: manifest, index and part reading for every build;
+  with its `net` feature the download (the launcher's HTTPS and redirect
+  checks), the store and two threads that read and decode tiles. Parts are
+  kept as downloaded and tiles read at their offset (Extreme: 56 files,
+  not 86,870); each part is checked for size, SHA-256 and table before it
+  takes its name; `manifest.json` is written last as the marker; a stopped
+  download keeps the parts it has. Folder: `world-map/<tier>/` in the
+  data folder.
+- Setting `modernMapDetail` (game, standard, hd, ultra, extreme; Standard
+  by default). The map draws the chosen tier when downloaded, else the
+  most detailed one that is, else the game's map.
+- Options › Graphics › World map: Map detail, and a Detailed map row
+  saying what is here and under way, with Download, Update, Cancel and
+  Remove and a progress bar.
+- The map: the world level as fine as the screen, up to three coarser
+  ones under it so nothing shows empty while loading, the towns' finer
+  tiles over it past the finest world level; tiles asked nearest the
+  middle first, at most 24 uploaded a frame, 288 kept, all let go when
+  the map closes; each tile sampled half a pixel in (the first render
+  showed seams). The zoom goes on to twice the tier's finest detail (up
+  to 192x; 8x on the game's map alone).
+- Checked: unit tests; every real tier read and decoded
+  (`AC_WORLD_MAP_PACKS`); a real Standard download from GitHub (4.6 s,
+  `AC_WORLD_MAP_LIVE=1`); offscreen pictures with the Extreme and HD
+  packs (`the_modern_map_detailed`, `AC_WORLD_MAP_PACK`): tiles line up
+  with the coordinates and Holtburg's buildings sit around the player at
+  42.1N 33.9E. `check.sh` not run.
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
@@ -877,3 +918,10 @@ PR says what retail does).
   it ("Infinity!"), as retail does; no "Max level" text.
 - Officers and bans in Manage allegiance: the client is not told who the
   officers are, so Manage stays monarch-only.
+- Detailed world map, to discuss: whether it goes upstream at all (the
+  client would download renders of the game's art, so Erik's call, as
+  with the backdrops); where the tiers are hosted (now a fixed address on
+  the Aethrix release; a setting would need a non-Copy settings field);
+  the default (Standard, or the game's map until the player picks); the
+  Map detail row also showing in the retail options' modern section; a
+  live test of a download and of zooming into towns.
