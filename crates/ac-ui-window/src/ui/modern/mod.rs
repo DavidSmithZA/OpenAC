@@ -265,8 +265,16 @@ const ITEM_MAX_MANA: u32 = 108;
 /// have enough Mana to cast this spell.").
 pub const NOT_ENOUGH_MANA: u32 = 0x401;
 
-/// The key that, held, lets modern pieces be moved whatever the lock says.
-pub const QUICK_MOVE_KEY: Modifiers = Modifiers::CTRL;
+/// The key that, held, lets modern pieces be moved whatever the lock says
+/// (Options › Controls picks it).
+#[must_use]
+pub fn quick_move_modifier(key: ac_host::settings::QuickMoveKey) -> Modifiers {
+    match key {
+        ac_host::settings::QuickMoveKey::Ctrl => Modifiers::CTRL,
+        ac_host::settings::QuickMoveKey::Alt => Modifiers::ALT,
+        ac_host::settings::QuickMoveKey::Cmd => Modifiers::WIN,
+    }
+}
 
 /// The hover labels' words, pixels to the em.
 const TIP_SIZE: f32 = 12.0;
@@ -1303,6 +1311,13 @@ impl WindowUi {
         };
         let (bars, glow) = (modern.vitals, modern.edge_glow);
         let s = self.settings().display.modern_hud;
+        // The quick-move key follows Options at once.
+        if modern.outlines.is_some() {
+            let key = quick_move_modifier(s.quick_move_key);
+            if self.host.root.quick_move_key() != Some(key) {
+                self.host.root.set_quick_move_key(Some(key));
+            }
+        }
         let threshold = if s.vital_numbers_percent > 0 {
             s.vital_numbers_percent as f32 / 100.0
         } else {
@@ -1402,7 +1417,8 @@ impl WindowUi {
     /// Quick move on: its key, and the layer that outlines and names every
     /// modern piece while the key is held; and the pieces' hover labels.
     pub(super) fn mount_quick_move(&mut self) {
-        self.host.root.set_quick_move_key(Some(QUICK_MOVE_KEY));
+        let key = quick_move_modifier(self.settings().display.modern_hud.quick_move_key);
+        self.host.root.set_quick_move_key(Some(key));
         let font = self.modern_font(Weight::SemiBold, QUICK_MOVE_NAME_SIZE);
         let outlines = QuickMoveOutlines::mount(&mut self.host.root, Horizon::BRONZE, font);
         // The modern pieces' hover labels (the retail tooltip needs a dat

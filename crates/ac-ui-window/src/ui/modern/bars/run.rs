@@ -1652,7 +1652,7 @@ impl WindowUi {
                 rows.push(MenuRow::entry(
                     MenuAction::Lock(true),
                     "Lock in place",
-                    Some("Ctrl will not move it; Edit layout unlocks it"),
+                    Some("Quick move will not move it; Edit layout unlocks it"),
                 ));
                 rows.push(MenuRow::entry(
                     MenuAction::Hide(true),
@@ -1715,7 +1715,7 @@ impl WindowUi {
             MenuRow::entry(
                 MenuAction::Lock(true),
                 "Lock in place",
-                Some("Ctrl will not move it; its slots stay"),
+                Some("Quick move will not move it; its slots stay"),
             )
         });
         rows.push(if this.hidden {
@@ -1786,7 +1786,7 @@ impl WindowUi {
                 MenuRow::entry(
                     MenuAction::OpenEdit,
                     "Nothing is hidden or locked",
-                    Some("Ctrl + right-click a piece to hide or lock it"),
+                    Some("Hold the quick move key and right-click a piece to hide or lock it"),
                 )
                 .disabled(),
             );

@@ -655,6 +655,17 @@ pub const GROUPS: &[Group] = &[
     },
     Group {
         section: Section::Controls,
+        title: "QUICK MOVE",
+        items: &[disp(
+            DisplayField::ModernQuickMoveKey,
+            w(
+                "Quick move key",
+                "Hold it and drag any piece of the interface anywhere; with a right-click, the piece's menu. On a Mac, Control with a click is often a right-click, so Option or Command may suit you better.",
+            ),
+        )],
+    },
+    Group {
+        section: Section::Controls,
         title: "KEY PROFILES",
         items: &[
             Item::Button(
