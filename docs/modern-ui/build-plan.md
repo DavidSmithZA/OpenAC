@@ -511,8 +511,8 @@ Screens, each checked offscreen (`the_modern_social`, `the_modern_journal`,
    a place, the layers). Underground dims and keeps the last outside place.
    The Journal's and House's Map buttons open it on their place.
 
-Not done in M8: the map's plugin markers (needs a plugin API, to decide
-with the user); the map's drawer and the windows' small-screen layouts
+Not done in M8 (the map's plugin markers were cut, user 2026-11-21): the
+map's drawer and the windows' small-screen layouts
 (the side column only folds); officers cannot be told from members (the
 client is not told), so Manage stays monarch-only. Not live-tested yet.
 

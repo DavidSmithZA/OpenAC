@@ -313,12 +313,11 @@ recall, quick move and plugin hook boards.
 - Side column: where you are (coordinates, the nearest town and its
   direction, facing), the Dereth date and time; Find a place (OPENAC):
   the nearest towns, or what you search for, pins included; and
-  switches for town names, your house, your pins, plugin markers and
-  houses for sale.
+  switches for town names, your house, your pins and houses for sale.
 - OPENAC additions: pins (right-click the map, name the spot; saved per
-  character on your own computer), plugin markers, and houses for sale
-  (asks the server for free cottages, as `@hslist` does, and marks
-  them).
+  character on your own computer) and houses for sale (asks the server
+  for free cottages, as `@hslist` does, and marks them). Plugin markers
+  on the map were cut (user, 2026-11-21); the canvas still draws them.
 - Underground: the map dims, a hollow arrow marks where you were last
   outside, and a note says the dungeon has no place on the world map.
 - Smaller screens: the side column becomes a drawer from the top bar,
@@ -681,8 +680,9 @@ entry. Hook points:
 - Buttons in a window's foot (for example "Loot 4 kept"), and buttons
   on the panel strip and dock.
 
-Cut (user, 2026-11-21): a page per plugin in Options › Plugins. Plugin
-settings stay in the plugin's own dock windows.
+Cut (user, 2026-11-21): a page per plugin in Options › Plugins (plugin
+settings stay in the plugin's own dock windows), and plugin markers on
+the full-screen map.
 
 ## Mac keys (user, 2026-11-19)
 
