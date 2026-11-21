@@ -207,6 +207,8 @@ struct Shot {
     textures: HashMap<(u32, u32), Held>,
     /// What the window sent the session.
     sent: Vec<ac_runtime::session::SessionCommand>,
+    /// The screen, units.
+    size: (u32, u32),
 }
 
 impl Shot {
@@ -228,6 +230,7 @@ impl Shot {
             now: Instant::now(),
             textures: HashMap::new(),
             sent: Vec::new(),
+            size: (W, H),
         };
         // Long enough for the fonts, the layout and the first bars.
         for _ in 0..10 {
@@ -239,7 +242,7 @@ impl Shot {
     fn step(&mut self) {
         self.ui.feed(&mut self.scene);
         self.now += Duration::from_millis(50);
-        let _ = self.ui.frame(self.now, (W, H));
+        let _ = self.ui.frame(self.now, self.size);
         let sent = self.ui.drain();
         self.sent.extend(sent);
     }
@@ -318,7 +321,7 @@ impl Shot {
 
     fn save(&mut self, name: &str) {
         self.now += Duration::from_millis(50);
-        let list = self.ui.frame(self.now, (W, H));
+        let list = self.ui.frame(self.now, self.size);
         let batch = UiBatch::build(&list);
         let mut surfaces = self.ui.surfaces();
         for run in &batch.runs {
@@ -381,11 +384,12 @@ impl Shot {
                 [kind, id, filter, r.first, r.count]
             })
             .collect();
-        let rgba = raster::render(W, H, &corners, &runs, &self.textures);
+        let (w, h) = self.size;
+        let rgba = raster::render(w, h, &corners, &runs, &self.textures);
         let dir = out_dir();
         std::fs::create_dir_all(&dir).expect("the snapshot folder");
         let path = dir.join(format!("{name}.png"));
-        std::fs::write(&path, ac_bits::png::encode_rgba(W, H, &rgba)).expect("the PNG");
+        std::fs::write(&path, ac_bits::png::encode_rgba(w, h, &rgba)).expect("the PNG");
         println!(
             "saved {} ({} runs, {} vertices)",
             path.display(),
@@ -2589,6 +2593,92 @@ fn the_modern_trade() {
     s.click(0, fx + 500, fy + 300, Modifiers::NONE);
     s.click(0, fx + 462 + 200, fy + 120 + 48 + 8 + 20, Modifiers::NONE);
     s.save("trade-card");
+}
+
+/// On small screens the Vendor and Trade windows narrow: on a 1024-wide
+/// screen the vendor's categories drop down from the list's title (what
+/// the vendor buys with them on Sell); on a 900-wide one Trade keeps its
+/// two columns and drops the hint lines.
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_small_screen() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::inventory::VendorViewReason;
+    use ac_ui_window::ui::modern::dealing::{trade_window, vendor_window};
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    s.size = (1024, 700);
+    s.step();
+    more_things(&mut s);
+    open_shop(&mut s, VendorViewReason::Opened);
+    s.step();
+    let frame = s.ui.host().root.window("modern-vendor").expect("it").frame;
+    let (fx, fy, fw, _) = rect_of(&s, frame);
+    assert_eq!(fw, vendor_window::NARROW_WIDTH as i32, "the vendor narrows");
+    s.save("small-vendor");
+    // The list's title opens the categories.
+    s.click(0, fx + 20 + 30, fy + 72 + 14, Modifiers::NONE);
+    let open = |s: &Shot| {
+        s.ui.host()
+            .root
+            .widget::<vendor_window::VendorFrame>(frame)
+            .is_some_and(|f| f.rail_open)
+    };
+    assert!(open(&s), "the drop-down opens");
+    s.save("small-vendor-categories");
+    // The second category: chosen, and the drop-down closes.
+    s.sent.clear();
+    s.click(
+        0,
+        fx + 20 + 60,
+        fy + 72 + 40 + 20 + 32 + 15,
+        Modifiers::NONE,
+    );
+    assert!(!open(&s), "it closes on a pick");
+    s.save("small-vendor-picked");
+    // Sell: the packs and what the vendor buys drop down together.
+    s.click(0, fx + 262, fy + 30, Modifiers::NONE);
+    s.click(0, fx + 20 + 30, fy + 72 + 14, Modifiers::NONE);
+    assert!(open(&s));
+    s.save("small-vendor-sell");
+    // Leave the shop. On a screen narrower still (900), Trade narrows
+    // too (900 wide, it fits 1024 with room to spare).
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Vendor(None)));
+    s.size = (900, 640);
+    s.step();
+    trade_with_osk(&mut s, false, false, true);
+    let trade = s.ui.host().root.window("modern-trade").expect("it").frame;
+    let (_, _, tw, _) = rect_of(&s, trade);
+    let fw =
+        s.ui.host()
+            .root
+            .widget::<trade_window::TradeFrame>(trade)
+            .map(|f| f.width);
+    assert_eq!(
+        tw,
+        trade_window::NARROW_WIDTH as i32,
+        "the trade narrows ({fw:?}, screen {:?})",
+        s.ui.host().root.size()
+    );
+    s.save("small-trade");
+    // The map: its side column a drawer, shut; where you are on the map.
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Trade(
+            Box::default(),
+        )));
+    s.size = (680, 600);
+    s.step();
+    assert!(s.ui.handle_input_action(ac_ui::input::InputAction::ToggleMapPage));
+    s.step();
+    s.step();
+    let map = s.ui.host().root.window("modern-map").expect("it").frame;
+    let side =
+        s.ui.host()
+            .root
+            .widget::<ac_ui_window::ui::modern::world::map::MapView>(map)
+            .map(|v| (v.compact(), v.side));
+    assert_eq!(side, Some((true, false)), "the drawer starts shut");
+    s.save("small-map");
 }
 
 /// An Ust and four things to salvage in the main pack.
