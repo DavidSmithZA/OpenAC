@@ -309,7 +309,7 @@ pub const ATTRIBUTES: [(ChargenAttribute, &str); 6] = [
 pub const SPECIALIZED_LIMIT: i32 = 70;
 
 /// The longest name.
-pub const NAME_LIMIT: usize = 32;
+pub const NAME_LIMIT: usize = ac_ui::pregame::chargen::summary::MAX_NAME_LENGTH;
 
 /// How each heritage looks, in OpenAC's words (the game says nothing of
 /// it at creation).
@@ -448,7 +448,7 @@ fn part_word(part: Part, captions: Option<&[String; 3]>) -> String {
 
 /// A heritage without nose and mouth (and whose eyes have no styles).
 fn three_parts(heritage: u32) -> bool {
-    matches!(H(heritage), H::GEARKNIGHT | H::OLTHOI | H::OLTHOI_ACID)
+    ac_ui::pregame::chargen::appearance::clothes_hidden(heritage)
 }
 
 /// The parts of `group` for `heritage`.

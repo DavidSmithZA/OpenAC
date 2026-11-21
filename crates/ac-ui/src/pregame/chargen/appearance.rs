@@ -311,6 +311,26 @@ pub fn clothes_hidden(heritage: u32) -> bool {
     heritage == H::GEARKNIGHT.0 || heritage == H::OLTHOI.0 || heritage == H::OLTHOI_ACID.0
 }
 
+/// The string keys of the hair, eyes and skin captions of a heritage
+/// whose clothes are hidden (a Gearknight's or an Olthoi's own words);
+/// `None` for the others.
+#[must_use]
+pub fn three_part_caption_keys(heritage: u32) -> Option<[&'static str; 3]> {
+    match H(heritage) {
+        H::GEARKNIGHT => Some([
+            "ID_CharGen_GearText_HairButton",
+            "ID_CharGen_GearText_EyesButton",
+            "ID_CharGen_GearText_SkinButton",
+        ]),
+        H::OLTHOI | H::OLTHOI_ACID => Some([
+            "ID_CharGen_OlthoiText_HairButton",
+            "ID_CharGen_OlthoiText_EyesButton",
+            "ID_CharGen_OlthoiText_SkinButton",
+        ]),
+        _ => None,
+    }
+}
+
 /// The snapshot's gender options.
 #[must_use]
 pub fn gender<'a>(ctx: &'a PageContext<'_>) -> Option<&'a ChargenGenderOptions> {

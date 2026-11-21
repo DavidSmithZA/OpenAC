@@ -851,24 +851,11 @@ impl WindowUi {
     ) -> BarberFacts<'a> {
         let strings = self.content.strings();
         let text = |table: u32, key: &str| strings.resolve(table, compute_hash(key), 0);
-        let captions = if super::model::three_parts(view.heritage) {
-            let keys = match ac_core::chargen::ChargenHeritageGroup(view.heritage) {
-                ac_core::chargen::ChargenHeritageGroup::GEARKNIGHT => [
-                    "ID_CharGen_GearText_HairButton",
-                    "ID_CharGen_GearText_EyesButton",
-                    "ID_CharGen_GearText_SkinButton",
-                ],
-                _ => [
-                    "ID_CharGen_OlthoiText_HairButton",
-                    "ID_CharGen_OlthoiText_EyesButton",
-                    "ID_CharGen_OlthoiText_SkinButton",
-                ],
-            };
-            let words = keys.map(|k| text(CAPTION_TABLE, k).unwrap_or_default());
-            words.iter().all(|w| !w.is_empty()).then_some(words)
-        } else {
-            None
-        };
+        let captions = ac_ui::pregame::chargen::appearance::three_part_caption_keys(view.heritage)
+            .and_then(|keys| {
+                let words = keys.map(|k| text(CAPTION_TABLE, k).unwrap_or_default());
+                words.iter().all(|w| !w.is_empty()).then_some(words)
+            });
         let toggle_words = view.toggle.and_then(|t| text(TOGGLE_TABLE, t.string_key()));
         let catalog = Some(self.viewports.catalog());
         let colors = match (gender, catalog) {
@@ -881,7 +868,7 @@ impl WindowUi {
             _ => [None; 9],
         };
         let shade_stops: Vec<ChargenSwatchRgb> = match (gender, catalog) {
-            (Some(g), Some(c)) => shade_source(part, view, g)
+            (Some(g), Some(c)) => shade_source(part, &view.appearance, g)
                 .and_then(|(set, sample)| {
                     let palettes = c.pal_set(set)?.palette_ids.clone();
                     Some(

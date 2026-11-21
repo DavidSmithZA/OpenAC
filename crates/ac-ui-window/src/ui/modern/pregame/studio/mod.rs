@@ -200,21 +200,7 @@ impl WindowUi {
             .into_iter()
             .map(|c| c.map_or(Color::rgba(0.5, 0.5, 0.5, 1.0), rgb))
             .collect();
-        use ac_core::chargen::{HAIR_SAMPLE_INDEX, SKIN_FAMILY_SAMPLE_INDEX};
-        let source = match part {
-            Part::Hair => {
-                let i = if s.appearance.hair_color == UNSET {
-                    0
-                } else {
-                    s.appearance.hair_color as usize
-                };
-                g.hair_colors.get(i).map(|id| (*id, HAIR_SAMPLE_INDEX))
-            }
-            Part::Nose | Part::Mouth | Part::Skin => {
-                Some((g.skin_pal_set_id, SKIN_FAMILY_SAMPLE_INDEX))
-            }
-            _ => None,
-        };
+        let source = crate::ui::modern::barber::model::shade_source(part, &s.appearance, g);
         let stops = source
             .and_then(|(set, sample)| {
                 let palettes = c.pal_set(set)?.palette_ids.clone();
@@ -232,20 +218,7 @@ impl WindowUi {
 
     /// The part words of a heritage without nose and mouth.
     fn studio_captions(&self, heritage: u32) -> Option<[String; 3]> {
-        use ac_core::chargen::ChargenHeritageGroup as H;
-        let keys = match H(heritage) {
-            H::GEARKNIGHT => [
-                "ID_CharGen_GearText_HairButton",
-                "ID_CharGen_GearText_EyesButton",
-                "ID_CharGen_GearText_SkinButton",
-            ],
-            H::OLTHOI | H::OLTHOI_ACID => [
-                "ID_CharGen_OlthoiText_HairButton",
-                "ID_CharGen_OlthoiText_EyesButton",
-                "ID_CharGen_OlthoiText_SkinButton",
-            ],
-            _ => return None,
-        };
+        let keys = ac_ui::pregame::chargen::appearance::three_part_caption_keys(heritage)?;
         let strings = self.content.strings();
         let words = keys.map(|k| {
             strings

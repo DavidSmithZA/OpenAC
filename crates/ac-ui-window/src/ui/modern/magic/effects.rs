@@ -482,11 +482,8 @@ impl EffectsList {
         for list in [&mut helpful, &mut harmful] {
             sort(list, Sort::TimeLeft);
         }
-        let vitae = book
-            .active_enchantments()
-            .iter()
-            .filter(|r| r.bucket == BUCKET_VITAE)
-            .find_map(|r| r.stat_mod_value.filter(|v| *v < 1.0));
+        // Read as the Character window reads it (the last vitae record).
+        let vitae = Some(ac_ui::panels::indicators::current_vitae(Some(book))).filter(|v| *v < 1.0);
         Self {
             helpful,
             harmful,
