@@ -45,6 +45,22 @@ pub struct JournalUi {
     focused: Option<Slot>,
     /// It showed last frame.
     was_open: bool,
+    /// What the lists were last built from (rebuilt only when it changes).
+    built: Option<ScreensKey>,
+}
+
+/// What the Journal's lists are built from: the contracts' and the
+/// journal's revisions, the pick, the searches, the quests shown, and the
+/// second (the countdowns).
+#[derive(Debug, Clone, PartialEq)]
+struct ScreensKey {
+    contracts: Option<u64>,
+    journal: Option<u64>,
+    picked: u32,
+    quest_search: String,
+    note_search: String,
+    shown: Vec<u32>,
+    second: i64,
 }
 
 fn journal(command: JournalCommand) -> PanelOutput {
@@ -129,6 +145,7 @@ impl WindowUi {
             rendered: None,
             focused: None,
             was_open: false,
+            built: None,
         });
         modern.replace(JOURNAL_WINDOW);
         self.panels.stand_in(panel_id::JOURNAL, JOURNAL);
@@ -273,6 +290,20 @@ impl WindowUi {
             .map_or(0, |f| f.picked);
         let quest_search = self.journal_text(fields, Slot::QuestSearch);
         let note_search = self.journal_text(fields, Slot::NoteSearch);
+        let key = ScreensKey {
+            contracts: self.facts.contracts.as_ref().map(|c| c.revision),
+            journal: self.facts.journal.as_ref().map(|v| v.revision),
+            picked,
+            quest_search: quest_search.clone(),
+            note_search: note_search.clone(),
+            shown: shown.to_vec(),
+            second: now.div_euclid(1000),
+        };
+        match self.modern.as_mut().and_then(|m| m.journal.as_mut()) {
+            Some(j) if j.built.as_ref() == Some(&key) => return,
+            Some(j) => j.built = Some(key),
+            None => return,
+        }
         let quests = self.facts.contracts.as_ref().map(|c| {
             model::quests(&QuestsInput {
                 contracts: &c.contracts,
@@ -611,10 +642,12 @@ impl WindowUi {
             .modern_pieces()
             .is_some_and(|p| p.is_hidden(hud::QUESTS));
         let in_world = self.player_view.is_some();
+        // Worked out only when it could show.
         let list = self
             .facts
             .contracts
             .as_ref()
+            .filter(|_| !hidden && in_world && !shown.is_empty())
             .map(|c| {
                 model::shown_quests(&QuestsInput {
                     contracts: &c.contracts,

@@ -49,8 +49,8 @@ pub struct VendorUi {
     pub band: ElementId,
     /// What the player picked.
     pub choices: VendorChoices,
-    /// The shop as last shown (none: closed).
-    shown: Option<Box<VendorView>>,
+    /// The shop is showing (false: it closed).
+    shown: bool,
     /// A split asked for to sell part of a stack, and whether it is sold
     /// at once (else put on the list).
     split: Option<(GuardedSplit, bool)>,
@@ -151,7 +151,7 @@ impl WindowUi {
             quantity,
             band,
             choices: VendorChoices::default(),
-            shown: None,
+            shown: false,
             split: None,
             refused_at: None,
             opened: false,
@@ -196,19 +196,24 @@ impl WindowUi {
             return;
         };
         let (frame, list, search, quantity, band) = (v.frame, v.list, v.search, v.quantity, v.band);
-        let shop = self.facts.shop.clone();
         // The shop opened (or the vendor was used again), or closed.
-        let opened = v.opened || (shop.is_some() && v.shown.is_none());
+        let open = self.facts.shop.is_some();
+        let opened = v.opened || (open && !v.shown);
         let filled = v.filled;
-        if shop.is_none() && v.shown.is_some() {
+        if !open && v.shown {
             self.host.root.hide_window(VENDOR);
             if let Some(v) = self.vendor_mut() {
-                v.shown = None;
+                v.shown = false;
                 v.split = None;
             }
             return;
         }
-        let Some(shop) = shop else {
+        // Put away by the player while the shop stays open (it closes when
+        // the player walks off): nothing to show until it is used again.
+        if !opened && !self.host.root.is_window_visible(VENDOR) {
+            return;
+        }
+        let Some(shop) = self.facts.shop.clone() else {
             return;
         };
         // While the leave card shows, only the card takes the pointer.
@@ -249,7 +254,7 @@ impl WindowUi {
             v.choices.category = SPELL_COMPONENTS_MASK;
         }
         let expired = self.vendor_mut().is_some_and(|v| {
-            v.shown = Some(shop.clone());
+            v.shown = true;
             v.opened = false;
             v.filled = false;
             let done = v

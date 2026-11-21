@@ -70,6 +70,8 @@ pub struct FellowsHud {
     hover: Option<(f32, f32)>,
     /// The fellow clicked since the window last looked.
     pub picked: Option<u32>,
+    /// The fellowship revision, player and selection last fed from.
+    pub fed_from: Option<(u64, u32, Option<u32>)>,
 }
 
 fn share((now, most): (u32, u32)) -> f32 {
@@ -93,6 +95,7 @@ impl FellowsHud {
             selected: None,
             hover: None,
             picked: None,
+            fed_from: None,
         }
     }
 

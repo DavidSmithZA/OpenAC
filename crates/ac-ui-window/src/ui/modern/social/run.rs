@@ -566,19 +566,15 @@ impl WindowUi {
             .modern_pieces()
             .is_some_and(|p| p.is_hidden(hud::FELLOWS));
         let player = self.facts.state.player;
-        let fellowship = self
-            .facts
-            .social
-            .as_ref()
-            .map(|s| s.fellowship.clone())
-            .unwrap_or_default();
+        let selected = self.player_view.and_then(|v| v.selected);
+        let none = ac_runtime::gameplay::FellowshipView::default();
+        let fellowship = self.facts.social.as_ref().map_or(&none, |s| &s.fellowship);
         let others = fellowship
             .members
             .iter()
             .filter(|m| m.guid != player)
             .count();
         let show = !hidden && fellowship.in_fellowship && others > 0;
-        let selected = self.player_view.and_then(|v| v.selected);
         let ui = &mut self.host.root;
         let visible = ui.is_window_visible(hud::FELLOWS);
         if show != visible {
@@ -591,8 +587,13 @@ impl WindowUi {
         if !show {
             return;
         }
+        // Fed again only when the fellowship or the selection moved.
+        let from = (fellowship.revision, player, selected);
         let picked = ui.widget_mut::<FellowsHud>(id).and_then(|f| {
-            f.feed(&fellowship, player, selected);
+            if f.fed_from != Some(from) {
+                f.fed_from = Some(from);
+                f.feed(fellowship, player, selected);
+            }
             f.picked.take()
         });
         let height = ui.widget::<FellowsHud>(id).map_or(60.0, FellowsHud::height);

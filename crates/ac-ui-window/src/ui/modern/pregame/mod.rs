@@ -444,10 +444,26 @@ impl WindowUi {
         }
         let state = scene.pregame_mut();
         let refused = !std::mem::take(&mut state.refusals).is_empty();
+        // Nothing of the pre-game shows (in the world): only the playing
+        // character is remembered, nothing is copied or built.
+        let direct = state.connection.as_ref().is_some_and(|c| c.direct_launch);
+        let Some(p) = self.modern.as_mut().and_then(|m| m.pregame.as_mut()) else {
+            return;
+        };
+        let connecting_shows = p.presence.shows(state.connection.as_ref(), now);
+        let idle = !p.active
+            && !connecting_shows
+            && !selection_shows(state.selection.as_ref(), direct)
+            && !state.creation.as_ref().is_some_and(|c| c.is_active)
+            && p.backdrop.layers.is_empty();
+        if idle {
+            self.remember_modern_character(scene);
+            return;
+        }
+        let state = scene.pregame_mut();
         let connection = state.connection.clone();
         let selection = state.selection.clone();
         let options = state.options.clone();
-        let direct = connection.as_ref().is_some_and(|c| c.direct_launch);
         let world_name = selection
             .as_ref()
             .map(|s| s.world_name.trim().to_owned())
@@ -461,7 +477,6 @@ impl WindowUi {
             p.enter_sent = None;
             p.restore_sent = None;
         }
-        let connecting_shows = p.presence.shows(connection.as_ref(), now);
         let choosing = !connecting_shows && selection_shows(selection.as_ref(), direct);
         if !choosing {
             p.credits_open = false;
