@@ -549,6 +549,7 @@ fn interface_state() -> InterfaceState {
         }),
         external_container: 0x8000_0010,
         external_container_in_range: true,
+        targeted_use: Some((0x8000_0001, 0x8000_0002)),
         account: "someone".into(),
     }
 }
@@ -2929,7 +2930,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "621753b813b5af1e", "{:#x}", shape());
+    assert_eq!(shape_hex(), "a10a6f28b1c64796", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full

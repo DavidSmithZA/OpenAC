@@ -280,6 +280,7 @@ record! {
         selected_mana: Option<SelectedMana>,
         external_container: u32,
         external_container_in_range: bool,
+        targeted_use: Option<(u32, u32)>,
         account: String,
     }
     PropertyTables {

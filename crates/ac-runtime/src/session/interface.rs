@@ -353,6 +353,9 @@ pub struct InterfaceState {
     pub external_container: u32,
     /// The player is within use range of it (its window closes when not).
     pub external_container_in_range: bool,
+    /// The tool and target of the use with a target that went out last,
+    /// while its answer is awaited (a crafting question names both).
+    pub targeted_use: Option<(u32, u32)>,
     /// The account name spell formulas are personalised for (the
     /// examination window shows a spell's components by it).
     pub account: String,

@@ -4789,6 +4789,12 @@ mod tests {
             bodies(&mut outbox),
             [ac_proto::inventory::build_use_with_target(1, STONE, RARE)]
         );
+        // The interface is told what was used on what while the answer is
+        // awaited (a crafting question names both).
+        assert_eq!(
+            crate::session::interface::InterfaceState::of(&state, true).targeted_use,
+            Some((STONE, RARE))
+        );
     }
 
     #[test]
