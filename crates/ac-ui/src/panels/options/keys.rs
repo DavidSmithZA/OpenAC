@@ -82,6 +82,8 @@ pub enum DisplayField {
     ModernEffectWarning,
     /// The modern interface: the key held for quick move.
     ModernQuickMoveKey,
+    /// The modern interface: the world behind windows shows blurred.
+    ModernGlassBlur,
 }
 
 /// A chat setting.
@@ -295,6 +297,7 @@ impl LiveValues {
                     DisplayField::ModernQuickMoveKey => {
                         Text(d.modern_hud.quick_move_key.name().to_owned())
                     }
+                    DisplayField::ModernGlassBlur => Bool(d.modern_hud.glass_blur),
                 }
             }
             OptionKey::Chat(f) => {
@@ -429,6 +432,9 @@ impl LiveValues {
                     (DisplayField::ModernQuickMoveKey, Text(x)) => {
                         d.modern_hud.quick_move_key =
                             ac_host::settings::QuickMoveKey::from_name(x)?;
+                    }
+                    (DisplayField::ModernGlassBlur, Bool(x)) => {
+                        d.modern_hud.glass_blur = *x;
                     }
                     _ => return None,
                 }

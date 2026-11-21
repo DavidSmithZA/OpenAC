@@ -952,6 +952,12 @@ fn modern_interface_rows() -> Vec<ConfigRow> {
             default: def.quick_move_key.name(),
             target: display(DisplayField::ModernQuickMoveKey),
         },
+        explicit_toggle(
+            "Blur the world behind windows",
+            def.glass_blur,
+            display(DisplayField::ModernGlassBlur),
+            "Windows and pop-ups show what is behind them softly blurred, like frosted glass. Off, they are a plain see-through fill, a little lighter on the graphics card. Modern interface only.",
+        ),
         ConfigRow::Separator,
     ]
 }
@@ -1321,9 +1327,9 @@ mod tests {
             .expect("the modern interface section");
         assert_eq!(option_rows(&all[enhancements..modern]), 21);
         assert_eq!(modern - enhancements, 23);
-        // A header, six rows, a separator.
-        assert_eq!(option_rows(&all[modern..]), 6);
-        assert_eq!(all.len() - modern, 8);
+        // A header, seven rows, a separator.
+        assert_eq!(option_rows(&all[modern..]), 7);
+        assert_eq!(all.len() - modern, 9);
     }
 
     #[test]

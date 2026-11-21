@@ -181,6 +181,9 @@ pub struct ModernHudSettings {
     pub effect_warning_minutes: i32,
     /// The key held to move the modern pieces anywhere (quick move).
     pub quick_move_key: QuickMoveKey,
+    /// Windows and pop-ups show the world behind them blurred, as frosted
+    /// glass (off: a plain see-through fill).
+    pub glass_blur: bool,
 }
 
 /// The key held for quick move.
@@ -225,6 +228,7 @@ impl Default for ModernHudSettings {
             low_health_edge_glow: true,
             effect_warning_minutes: 5,
             quick_move_key: QuickMoveKey::Ctrl,
+            glass_blur: true,
         }
     }
 }
@@ -763,6 +767,7 @@ fn read_display(d: &[Member], version: i32) -> Result<DisplaySettings, Unreadabl
                     m.quick_move_key.name(),
                 ))
                 .unwrap_or(m.quick_move_key),
+                glass_blur: read_bool(d, "modernGlassBlur", m.glass_blur),
             }
         },
     })
@@ -824,7 +829,7 @@ fn display_object(d: &DisplaySettings) -> String {
             out
         },
     );
-    let fields: [(&str, String); 31] = [
+    let fields: [(&str, String); 32] = [
         ("automaticDegrades", boolean(d.automatic_degrades)),
         (
             "buildingDetailTextures",
@@ -866,6 +871,7 @@ fn display_object(d: &DisplaySettings) -> String {
             "modernQuickMoveKey",
             string(d.modern_hud.quick_move_key.name()),
         ),
+        ("modernGlassBlur", boolean(d.modern_hud.glass_blur)),
         (
             "modernLowHealthEdgeGlow",
             boolean(d.modern_hud.low_health_edge_glow),
@@ -1037,6 +1043,7 @@ mod tests {
                 low_health_edge_glow: false,
                 effect_warning_minutes: 2,
                 quick_move_key: QuickMoveKey::Alt,
+                glass_blur: false,
             },
         };
         t.store().save_display(&original).unwrap();
