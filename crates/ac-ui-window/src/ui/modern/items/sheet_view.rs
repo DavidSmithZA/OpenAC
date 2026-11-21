@@ -3,6 +3,7 @@
 //! scrolling body, the spell legend, and a foot of buttons when the sheet
 //! has any (the inventory's item details: Equip or Use, then small ones).
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, ColorVertex, RenderContext};
@@ -324,7 +325,7 @@ impl SheetView {
         else {
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let inner = width - PAD * 2.0 - BAR;
         let mut y = 4.0;
         let Some(tab) = self.sheet.tabs.get(self.tab_index()) else {
@@ -631,12 +632,12 @@ impl Widget for SheetView {
             self.lay_out(w);
         }
         self.scroll = self.scroll.clamp(0.0, self.most(h));
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         if self.framed {
             let round = CornerRadii::all(self.theme.metrics.window_radius);
             rc.soft_shadow(0.0, 0.0, w, h, 6.0, 18.0, 50.0, hex(0, 0.5));
-            fill_glass(rc, (0.0, 0.0, w, h), round, hex(0x14_100C, 0.97));
-            rc.stroke_rounded_rect(0.0, 0.0, w, h, round, hex(0xC9_A062, 0.8), 1.0);
+            fill_glass(rc, (0.0, 0.0, w, h), round, tone::ground(0.97));
+            rc.stroke_rounded_rect(0.0, 0.0, w, h, round, tone::bronze(0.8), 1.0);
         }
         let f = &self.fonts;
         let head = &self.sheet.head;
@@ -646,7 +647,7 @@ impl Widget for SheetView {
         if let Some(icon) = head.icon {
             let r = CornerRadii::all(4.0);
             rc.fill_rounded_rect(x, top, 52.0, 52.0, r, hex(0, 0.45));
-            rc.stroke_rounded_rect(x, top, 52.0, 52.0, r, hex(0xC9_A062, 0.6), 1.0);
+            rc.stroke_rounded_rect(x, top, 52.0, 52.0, r, tone::bronze(0.6), 1.0);
             rc.sprite(
                 icon,
                 x + 10.0,
@@ -788,7 +789,7 @@ impl Widget for SheetView {
             }
         }
         let head_bottom = self.head_height();
-        rc.fill(0.0, head_bottom - 1.0, w, 1.0, hex(0xC9_A062, 0.2));
+        rc.fill(0.0, head_bottom - 1.0, w, 1.0, tone::bronze(0.2));
         // The tabs.
         let n = self.sheet.tabs.len();
         if n > 1
@@ -811,7 +812,7 @@ impl Widget for SheetView {
                     rc.fill(tx, head_bottom + TABS - 2.0, tab_w, 2.0, p.accent);
                 }
             }
-            rc.fill(0.0, head_bottom + TABS - 1.0, w, 1.0, hex(0xC9_A062, 0.25));
+            rc.fill(0.0, head_bottom + TABS - 1.0, w, 1.0, tone::bronze(0.25));
         }
         // The body.
         let body_top = self.body_top();
@@ -862,7 +863,7 @@ impl Widget for SheetView {
                                 (y + label.line_height * 0.5).round(),
                                 x1 - x0,
                                 1.0,
-                                hex(0xC9_A062, 0.22),
+                                tone::bronze(0.22),
                             );
                         }
                     }
@@ -1038,12 +1039,12 @@ impl Widget for SheetView {
                 BAR,
                 th,
                 CornerRadii::all(2.5),
-                hex(0xC9_A062, 0.7),
+                tone::bronze(0.7),
             );
         }
         // The foot.
         if let (Some(foot), Some(strong)) = (&self.foot, &f.strong) {
-            rc.fill(0.0, h - FOOT, w, 1.0, hex(0xC9_A062, 0.2));
+            rc.fill(0.0, h - FOOT, w, 1.0, tone::bronze(0.2));
             let rects = self.foot_rects(w, h);
             let r = CornerRadii::all(4.0);
             let hot = |rect: (f32, f32, f32, f32)| {
@@ -1052,9 +1053,9 @@ impl Widget for SheetView {
             let (mx, my, mw, mh) = rects[0];
             let a = if foot.primary_on { 1.0 } else { 0.4 };
             let fill = if foot.primary_on && hot(rects[0]) {
-                hex(0xE0_B068, 1.0)
+                tone::gold(1.0)
             } else {
-                hex(0xE0_B068, 0.85 * a)
+                tone::gold(0.85 * a)
             };
             rc.fill_rounded_rect(mx, my, mw, mh, r, fill);
             text::draw_centred(
@@ -1072,10 +1073,10 @@ impl Widget for SheetView {
                 let edge = if *on && hot(rect) {
                     p.accent
                 } else {
-                    hex(0xC9_A062, 0.45)
+                    tone::bronze(0.45)
                 };
                 rc.stroke_rounded_rect(bx, by, bw, bh, r, edge, 1.0);
-                let ink = if *on { p.icon } else { hex(0xE9_D3AE, 0.35) };
+                let ink = if *on { p.icon } else { tone::warm(0.35) };
                 stroke(rc, bx + 8.5, by + 8.5, 15.0, icon.lines(), ink, 1.6);
             }
         }

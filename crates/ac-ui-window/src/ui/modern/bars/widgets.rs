@@ -5,6 +5,7 @@
 //!
 //! The widgets only note what was asked; the window carries it out.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, ColorVertex, RenderContext, TextureRef};
@@ -322,7 +323,7 @@ impl Widget for SlotCell {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let v = &self.view;
         let round = CornerRadii::all(self.theme.metrics.slot_radius);
         let s = SLOT;
@@ -348,7 +349,7 @@ impl Widget for SlotCell {
             own_icon_sized(rc, name, at, at, RECALL_ICON, p.accent);
         } else if v.filled {
             // Nothing to show for it: a faint mark.
-            let c = hex(0xC9_A062, 0.45);
+            let c = tone::bronze(0.45);
             stroke(
                 rc,
                 10.0,
@@ -380,14 +381,14 @@ impl Widget for SlotCell {
         } else if self.hovered && v.filled && !self.edit {
             (p.accent, 1.0)
         } else if self.edit && !v.filled {
-            (hex(0xC9_A062, 0.45), 1.0)
+            (tone::bronze(0.45), 1.0)
         } else if v.filled && !v.off {
-            (hex(0xC9_A062, 0.4), 1.0)
+            (tone::bronze(0.4), 1.0)
         } else {
-            (hex(0xC9_A062, 0.16), 1.0)
+            (tone::bronze(0.16), 1.0)
         };
         if self.over == Some(true) || self.chosen {
-            rc.soft_shadow(0.0, 0.0, s, s, 4.0, 0.0, 12.0, hex(0xE0_B068, 0.5));
+            rc.soft_shadow(0.0, 0.0, s, s, 4.0, 0.0, 12.0, tone::gold(0.5));
         }
         rc.stroke_rounded_rect(0.0, 0.0, s, s, round, edge, width);
         if self.pressed && self.hovered && !self.edit {
@@ -420,11 +421,7 @@ impl Widget for SlotCell {
                 TextStyle::plain(p.text).shadowed(p.text_shadow),
             );
         } else if v.spell {
-            let dot = if v.off {
-                hex(0xC9_A062, 0.35)
-            } else {
-                SPELL_DOT
-            };
+            let dot = if v.off { tone::bronze(0.35) } else { SPELL_DOT };
             rc.fill_ellipse(s - 7.0, s - 7.0, 5.0, 5.0, dot);
         }
     }
@@ -519,7 +516,7 @@ impl Widget for BarFrame {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let Some((w, h)) = ui.element(me).map(|e| (e.width, e.height)) else {
             return;
         };
@@ -534,7 +531,7 @@ impl Widget for BarFrame {
                 w + 4.0,
                 h + 4.0,
                 CornerRadii::all(8.0),
-                hex(0xE0_B068, 0.15),
+                tone::gold(0.15),
                 3.0,
             );
         }
@@ -542,7 +539,7 @@ impl Widget for BarFrame {
         let edge = if self.edit {
             p.accent
         } else {
-            hex(0xC9_A062, 0.55)
+            tone::bronze(0.55)
         };
         rc.stroke_rounded_rect(0.0, 0.0, w, h, round, edge, 1.0);
     }
@@ -588,7 +585,6 @@ pub enum TabRequest {
 /// The tab Edit layout hangs on a bar.
 #[derive(Debug)]
 pub struct BarTab {
-    theme: Horizon,
     fonts: BarFonts,
     /// The bar it belongs to.
     pub bar: usize,
@@ -612,9 +608,8 @@ pub struct BarTab {
 impl BarTab {
     /// The tab of bar `bar`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: BarFonts, bar: usize) -> Self {
+    pub fn new(fonts: BarFonts, bar: usize) -> Self {
         Self {
-            theme,
             fonts,
             bar,
             name: String::new(),
@@ -742,12 +737,12 @@ impl Widget for BarTab {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let Some((w, h)) = ui.element(me).map(|e| (e.width, e.height)) else {
             return;
         };
         let round = CornerRadii::all(4.0);
-        rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x18_130E, 0.96));
+        rc.fill_rounded_rect(0.0, 0.0, w, h, round, tone::raised(0.96));
         rc.stroke_rounded_rect(0.0, 0.0, w, h, round, p.accent, 1.0);
         // The grip's six dots.
         let dots = p.text_soft;
@@ -789,7 +784,7 @@ impl Widget for BarTab {
                     bw,
                     TAB_BUTTON,
                     CornerRadii::all(3.0),
-                    hex(0x2A_2116, 0.9),
+                    tone::field(0.9),
                 );
             }
             let c = p.icon;
@@ -825,7 +820,7 @@ mod tests {
     #[test]
     fn a_slot_takes_items_spells_and_other_slots_but_not_itself() {
         let at = SlotRef::new(0, 1);
-        let cell = SlotCell::new(Horizon::BRONZE, None, at);
+        let cell = SlotCell::new(Horizon::current(), None, at);
         let item = DragPayload::new(ItemDragPayload::new(7, ItemDragSource::Inventory, 0));
         assert_eq!(cell.takes(Some(&item)), Some(Dropped::Item(7)));
         let spell = DragPayload::new(SpellbookShortcutPayload { spell_id: 27 });
@@ -864,14 +859,14 @@ mod tests {
                 icon: "flag".to_owned(),
             }))
         );
-        let mut locked = SlotCell::new(Horizon::BRONZE, None, at);
+        let mut locked = SlotCell::new(Horizon::current(), None, at);
         locked.locked = true;
         assert_eq!(locked.takes(Some(&item)), None);
     }
 
     #[test]
     fn the_tab_finds_its_buttons() {
-        let mut tab = BarTab::new(Horizon::BRONZE, BarFonts::default(), 0);
+        let mut tab = BarTab::new(BarFonts::default(), 0);
         tab.name = "Main".to_owned();
         let w = tab.width();
         assert_eq!(tab.part_at(w, 2.0), Some(TabPart::Grip));

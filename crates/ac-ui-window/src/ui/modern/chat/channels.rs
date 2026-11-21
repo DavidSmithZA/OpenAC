@@ -4,6 +4,7 @@
 //! Vassals; General, Trade, LFG, Roleplay, Society, Olthoi) and recent
 //! tells. Channels the player cannot use now are greyed with the reason.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_runtime::communication::ChatChannelKind;
@@ -377,14 +378,14 @@ impl Widget for ChannelMenu {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let h = ui.element(me).map_or(self.height(), |e| e.height);
         // Over every window (the chat it opens from among them).
         rc.begin_overlay();
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, WIDTH, h, 6.0, 14.0, 34.0, p.shadow);
-        rc.fill_rounded_rect(0.0, 0.0, WIDTH, h, round, hex(0x18_130E, 0.97));
-        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, h, round, hex(0xC9_A062, 0.8), 1.0);
+        rc.fill_rounded_rect(0.0, 0.0, WIDTH, h, round, tone::raised(0.97));
+        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, h, round, tone::bronze(0.8), 1.0);
         let w = Self::column_width();
         for (c, rows) in self.columns.iter().enumerate() {
             let x = PAD + c as f32 * (w + COLUMN_GAP);
@@ -400,7 +401,7 @@ impl Widget for ChannelMenu {
                                 words,
                                 x + 6.0,
                                 ty,
-                                TextStyle::plain(hex(0xC8_B89C, 1.0)).tracked(1.1),
+                                TextStyle::plain(tone::soft(1.0)).tracked(1.1),
                             );
                         }
                         top += HEADING;
@@ -420,7 +421,7 @@ impl Widget for ChannelMenu {
                                 w,
                                 ITEM,
                                 CornerRadii::all(3.0),
-                                hex(0xE0_B068, 0.16),
+                                tone::gold(0.16),
                             );
                         } else if self.hovered == Some((c, i)) {
                             rc.fill_rounded_rect(
@@ -441,7 +442,7 @@ impl Widget for ChannelMenu {
                             .as_ref()
                             .map_or(0.0, |f| text::measure(f, note, 0.0));
                         if let Some(f) = &self.fonts.label {
-                            let fg = if *off { hex(0xC8_B89C, 1.0) } else { p.text };
+                            let fg = if *off { tone::soft(1.0) } else { p.text };
                             let ty = (mid - f.line_height * 0.5).round();
                             // A long name gives way to the note after it.
                             let room = w - 21.0 - 6.0 - if nw > 0.0 { nw + 10.0 } else { 0.0 };
@@ -460,7 +461,7 @@ impl Widget for ChannelMenu {
                                 note,
                                 x + w - 6.0 - nw,
                                 ty,
-                                TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                                TextStyle::plain(tone::muted(1.0)),
                             );
                         }
                         rc.pop_alpha();
@@ -496,7 +497,7 @@ mod tests {
 
     #[test]
     fn recent_tells_follow_the_channels_once_each() {
-        let mut menu = ChannelMenu::new(Horizon::BRONZE, MenuFonts::default());
+        let mut menu = ChannelMenu::new(Horizon::current(), MenuFonts::default());
         let facts = TalkFacts {
             last_teller: Some("Rook".to_owned()),
             selected: Some(("rook".to_owned(), 5)),

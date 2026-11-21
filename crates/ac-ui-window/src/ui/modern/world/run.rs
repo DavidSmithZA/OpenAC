@@ -53,7 +53,7 @@ impl WindowUi {
     /// The map, hidden, in place of retail's map and house panel (the house
     /// has its own window).
     pub(in crate::ui) fn mount_modern_map(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = MapFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             big: self.modern_font(Weight::SemiBold, 20.0),
@@ -71,7 +71,7 @@ impl WindowUi {
         .and_then(|info| map_house::map_art(&info));
         let ui = &mut self.host.root;
         let (w, h) = ui.size();
-        let mut view = MapView::new(theme, fonts);
+        let mut view = MapView::new(fonts);
         view.set_size(w, h);
         if let Some(a) = art {
             view.set_art(a);

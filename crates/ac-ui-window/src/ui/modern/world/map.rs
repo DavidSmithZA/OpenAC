@@ -6,6 +6,7 @@
 //! column: where the player is and the Dereth date, Find a place, and what
 //! the map shows. Underground the map dims and says so.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext, TextureRef};
@@ -21,7 +22,7 @@ use ac_ui::{UiFont, UiRoot};
 use super::model::{self, Town, away_short, away_words, coordinates_text};
 use crate::ui::modern::hud::lines::stroke;
 use crate::ui::modern::kit::{
-    self, ButtonLook, Hits, MUTED, Rect, bronze, gold, inside, put, put_mid, put_right, spaced,
+    self, ButtonLook, Hits, Rect, bronze, gold, inside, put, put_mid, put_right, spaced,
 };
 
 /// The top bar's height.
@@ -203,7 +204,6 @@ enum Hit {
 /// The full-screen map.
 #[derive(Debug)]
 pub struct MapView {
-    theme: Horizon,
     fonts: MapFonts,
     /// The game's map art (none: the dats lack it).
     pub art: Option<MapArt>,
@@ -246,9 +246,8 @@ impl MapView {
 
     /// The map in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: MapFonts) -> Self {
+    pub fn new(fonts: MapFonts) -> Self {
         Self {
-            theme,
             fonts,
             art: None,
             towns: Vec::new(),
@@ -499,10 +498,10 @@ impl MapView {
 
     #[allow(clippy::too_many_lines)]
     fn draw_bar(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let (w, _) = self.size;
-        rc.fill(0.0, 0.0, w, BAR, hex(0x14_100C, 0.98));
+        rc.fill(0.0, 0.0, w, BAR, tone::ground(0.98));
         rc.fill(0.0, BAR - 1.0, w, 1.0, bronze(0.45));
         stroke(
             rc,
@@ -518,7 +517,15 @@ impl MapView {
             .title
             .as_ref()
             .map_or(30.0, |t| text::measure(t, "Map", 0.0));
-        put_mid(rc, f.small.as_ref(), "M", 64.0 + tw, 0.0, BAR, MUTED);
+        put_mid(
+            rc,
+            f.small.as_ref(),
+            "M",
+            64.0 + tw,
+            0.0,
+            BAR,
+            tone::muted(1.0),
+        );
         // The vitals.
         let vw = (w * 0.14).clamp(110.0, 180.0);
         let total = vw * 3.0 + 16.0;
@@ -574,7 +581,7 @@ impl MapView {
             esc.0 + 10.0,
             esc.1,
             esc.3,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         stroke(
             rc,
@@ -582,7 +589,7 @@ impl MapView {
             esc.1 + 8.0,
             16.0,
             CROSS,
-            kit::WARM,
+            tone::warm(1.0),
             1.8,
         );
         let sb = (esc.0 - 8.0 - 32.0, esc.1, 32.0, 32.0);
@@ -606,14 +613,18 @@ impl MapView {
             sb.1 + 7.0,
             18.0,
             SIDE,
-            if self.side { gold(1.0) } else { kit::WARM },
+            if self.side {
+                gold(1.0)
+            } else {
+                tone::warm(1.0)
+            },
             1.6,
         );
     }
 
     #[allow(clippy::too_many_lines)]
     fn draw_map(&mut self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         let sq = self.square();
         rc.fill(sq.0, sq.1, sq.2, sq.3, hex(0x1B_262C, 1.0));
@@ -673,7 +684,7 @@ impl MapView {
                 sy - d * 0.5,
                 d,
                 d,
-                if lit { gold(1.0) } else { hex(0xF4_EBDC, 0.95) },
+                if lit { gold(1.0) } else { tone::words(0.95) },
             );
             rc.stroke_ellipse(sx - d * 0.5, sy - d * 0.5, d, d, hex(0, 0.8), 1.0);
             if self.layers.names
@@ -681,7 +692,7 @@ impl MapView {
                 && let Some(s) = &f.small
             {
                 let style =
-                    TextStyle::plain(if t.big { p.text } else { kit::WARM }).shadowed(shadow);
+                    TextStyle::plain(if t.big { p.text } else { tone::warm(1.0) }).shadowed(shadow);
                 text::draw(
                     rc,
                     s,
@@ -715,7 +726,7 @@ impl MapView {
                         name,
                         sx + 8.0,
                         sy - 16.0,
-                        TextStyle::plain(hex(0xF2_D29A, 1.0)).shadowed(shadow),
+                        TextStyle::plain(tone::gold_light(1.0)).shadowed(shadow),
                     );
                 }
             }
@@ -726,14 +737,7 @@ impl MapView {
             && let Some((sx, sy)) = self.to_screen(x, y)
         {
             let r = (sx - 9.0, sy - 9.0, 18.0, 18.0);
-            rc.fill_rounded_rect(
-                r.0,
-                r.1,
-                r.2,
-                r.3,
-                CornerRadii::all(4.0),
-                hex(0x1A_140D, 1.0),
-            );
+            rc.fill_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(4.0), tone::ink(1.0));
             rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(4.0), gold(1.0), 1.5);
             stroke(rc, r.0 + 3.0, r.1 + 3.0, 12.0, HOUSE, gold(1.0), 1.5);
         }
@@ -774,7 +778,7 @@ impl MapView {
                 r.2,
                 r.3,
                 CornerRadii::all(4.0),
-                hex(0x14_100C, 0.85),
+                tone::ground(0.85),
             );
             rc.stroke_rounded_rect(
                 r.0,
@@ -785,22 +789,15 @@ impl MapView {
                 if lit { gold(1.0) } else { bronze(0.6) },
                 1.0,
             );
-            stroke(rc, r.0 + 7.0, r.1 + 7.0, 16.0, glyph, kit::WARM, 1.8);
+            stroke(rc, r.0 + 7.0, r.1 + 7.0, 16.0, glyph, tone::warm(1.0), 1.8);
         }
         // The coordinates under the pointer.
         if let (Some((x, y)), Some(s)) = (self.cursor, &f.small) {
             let words = coordinates_text(x, y);
             let w = text::measure(s, &words, 0.0) + 16.0;
             let r = (sq.0 + 10.0, sq.1 + sq.3 - 8.0 - 22.0, w, 22.0);
-            rc.fill_rounded_rect(
-                r.0,
-                r.1,
-                r.2,
-                r.3,
-                CornerRadii::all(3.0),
-                hex(0x14_100C, 0.8),
-            );
-            put_mid(rc, Some(s), &words, r.0 + 8.0, r.1, r.3, kit::SOFT);
+            rc.fill_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(3.0), tone::ground(0.8));
+            put_mid(rc, Some(s), &words, r.0 + 8.0, r.1, r.3, tone::soft(1.0));
         }
         if self.screen.underground {
             self.draw_underground(rc, h, sq);
@@ -819,7 +816,7 @@ impl MapView {
                 sq.0 + 20.0,
                 sq.1,
                 40.0,
-                MUTED,
+                tone::muted(1.0),
             );
         }
     }
@@ -836,7 +833,7 @@ impl MapView {
             "You are underground",
             r.0 + 14.0,
             r.1 + 12.0,
-            self.theme.palette.text,
+            Horizon::current().palette.text,
         );
         if let Some(s) = &f.small {
             let lines = kit::wrap(
@@ -851,13 +848,13 @@ impl MapView {
                 r.0 + 14.0,
                 r.1 + 32.0,
                 s.line_height + 3.0,
-                kit::SOFT,
+                tone::soft(1.0),
             );
         }
     }
 
     fn draw_pick(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>, pick: &Pick) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let c = self.pick_card(pick);
         rc.soft_shadow(c.0, c.1, c.2, c.3, 6.0, 16.0, 40.0, hex(0, 0.6));
@@ -867,7 +864,7 @@ impl MapView {
             c.2,
             c.3,
             CornerRadii::all(6.0),
-            hex(0x18_130E, 0.97),
+            tone::raised(0.97),
         );
         rc.stroke_rounded_rect(c.0, c.1, c.2, c.3, CornerRadii::all(6.0), bronze(0.8), 1.0);
         h.add(c, Hit::Swallow);
@@ -879,7 +876,7 @@ impl MapView {
             close.1 + 2.0,
             16.0,
             CROSS,
-            if lit { p.accent } else { kit::SOFT },
+            if lit { p.accent } else { tone::soft(1.0) },
             1.6,
         );
         if let Some(st) = &f.strong {
@@ -901,7 +898,7 @@ impl MapView {
                 &away_words((me.x, me.y), (pick.x, pick.y)),
                 c.0 + 12.0,
                 c.1 + 50.0,
-                kit::SOFT,
+                tone::soft(1.0),
             );
         }
         let by = c.1 + c.3 - 10.0 - 26.0;
@@ -909,7 +906,7 @@ impl MapView {
         let lit = h.add(b1, Hit::Ask(MapAsk::Copy(coords.clone())));
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             b1,
             "Copy",
             f.strong.as_ref(),
@@ -929,7 +926,7 @@ impl MapView {
         let lit = h.add(b2, Hit::Ask(second.1));
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             b2,
             second.0,
             f.strong.as_ref(),
@@ -940,7 +937,7 @@ impl MapView {
     }
 
     fn draw_new_pin(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>, x: f64, y: f64) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let c = self.pin_card(x, y);
         rc.soft_shadow(c.0, c.1, c.2, c.3, 6.0, 16.0, 40.0, hex(0, 0.6));
@@ -950,7 +947,7 @@ impl MapView {
             c.2,
             c.3,
             CornerRadii::all(6.0),
-            hex(0x18_130E, 0.97),
+            tone::raised(0.97),
         );
         rc.stroke_rounded_rect(c.0, c.1, c.2, c.3, CornerRadii::all(6.0), bronze(0.8), 1.0);
         h.add(c, Hit::Swallow);
@@ -969,12 +966,12 @@ impl MapView {
             &coordinates_text(x, y),
             c.0 + 12.0,
             c.1 + 32.0,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         if let Some(r) = self.pin_field_rect() {
             kit::field_box(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 r,
                 "Name the spot",
                 self.pin_empty,
@@ -987,7 +984,7 @@ impl MapView {
         let lit = !self.pin_empty && h.add(save, Hit::Ask(MapAsk::SavePin(x, y)));
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             save,
             "Save pin",
             f.strong.as_ref(),
@@ -999,7 +996,7 @@ impl MapView {
         let lit = h.add(cancel, Hit::CancelPin);
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             cancel,
             "Cancel",
             f.strong.as_ref(),
@@ -1012,7 +1009,7 @@ impl MapView {
     /// With the side column shut: where the player is and the date, on
     /// the map's top corner.
     fn draw_where(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let coords = self.screen.me.map_or_else(
             || "Not known yet".to_owned(),
@@ -1027,7 +1024,7 @@ impl MapView {
         let date_h = if dated { 4.0 + sm.line_height } else { 0.0 };
         let r = (16.0, BAR + 16.0, w, 12.0 + st.line_height + date_h + 12.0);
         let round = CornerRadii::all(6.0);
-        ac_ui::modern::theme::fill_glass(rc, r, round, hex(0x14_100C, 0.9));
+        ac_ui::modern::theme::fill_glass(rc, r, round, tone::ground(0.9));
         rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, bronze(0.5), 1.0);
         put(rc, Some(st), &coords, r.0 + 14.0, r.1 + 12.0, p.text);
         if dated {
@@ -1037,14 +1034,14 @@ impl MapView {
                 &self.screen.date,
                 r.0 + 14.0,
                 r.1 + 12.0 + st.line_height + 4.0,
-                kit::SOFT,
+                tone::soft(1.0),
             );
         }
     }
 
     #[allow(clippy::too_many_lines)]
     fn draw_side(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let s = self.side_rect();
         rc.soft_shadow(s.0, s.1, s.2, s.3, 6.0, 18.0, 40.0, hex(0, 0.5));
@@ -1054,7 +1051,7 @@ impl MapView {
             s.2,
             s.3,
             CornerRadii::all(6.0),
-            hex(0x14_100C, 0.95),
+            tone::ground(0.95),
         );
         rc.stroke_rounded_rect(s.0, s.1, s.2, s.3, CornerRadii::all(6.0), bronze(0.6), 1.0);
         h.add(s, Hit::Swallow);
@@ -1099,7 +1096,7 @@ impl MapView {
                 &kit::fit(sm, &near, r.2 - 28.0),
                 r.0 + 14.0,
                 r.1 + 54.0,
-                kit::WARM,
+                tone::warm(1.0),
             );
         }
         rc.fill(r.0 + 14.0, r.1 + 74.0, r.2 - 28.0, 1.0, bronze(0.2));
@@ -1110,7 +1107,7 @@ impl MapView {
             r.0 + 14.0,
             r.1 + 76.0,
             24.0,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         put_right(
             rc,
@@ -1135,7 +1132,7 @@ impl MapView {
         if let Some(sr) = self.search_rect() {
             kit::search_box(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 sr,
                 "Find a town or pin",
                 self.search.is_empty(),
@@ -1197,7 +1194,7 @@ impl MapView {
                 rr.0 + rr.2 - 8.0,
                 rr.1,
                 rr.3,
-                kit::SOFT,
+                tone::soft(1.0),
             );
             y += 30.0;
         }
@@ -1209,7 +1206,7 @@ impl MapView {
                 x,
                 y,
                 30.0,
-                MUTED,
+                tone::muted(1.0),
             );
             y += 30.0;
         }
@@ -1230,7 +1227,15 @@ impl MapView {
             let rr = (x, y, w, 28.0);
             let lit = h.add(rr, Hit::Layer(i as u8));
             kit::switch(rc, (x, y + 5.0, 34.0, 18.0), on, lit);
-            put_mid(rc, f.body.as_ref(), words, x + 44.0, y, 28.0, kit::WARM);
+            put_mid(
+                rc,
+                f.body.as_ref(),
+                words,
+                x + 44.0,
+                y,
+                28.0,
+                tone::warm(1.0),
+            );
             if openac {
                 kit::openac_tag(rc, f.label.as_ref(), x + w - 58.0, y + 14.0);
             }
@@ -1239,7 +1244,15 @@ impl MapView {
         if let Some(sm) = &f.small {
             let note = "Right-click the map to pin a spot. Houses for sale asks the server which cottages are free.";
             let lines = kit::wrap(sm, note, w);
-            kit::lines(rc, sm, &lines, x, y + 6.0, sm.line_height + 3.0, MUTED);
+            kit::lines(
+                rc,
+                sm,
+                &lines,
+                x,
+                y + 6.0,
+                sm.line_height + 3.0,
+                tone::muted(1.0),
+            );
         }
     }
 

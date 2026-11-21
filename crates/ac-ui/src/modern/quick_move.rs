@@ -24,14 +24,13 @@ pub const DASH_GAP: f32 = 4.0;
 /// draws above everything while the quick-move key is held.
 #[derive(Debug)]
 pub struct QuickMoveOutlines {
-    theme: Horizon,
     font: Option<Arc<UiFont>>,
     names: HashMap<ElementId, String>,
 }
 
 impl QuickMoveOutlines {
     /// The layer, made a child of the root; its names are drawn in `font`.
-    pub fn mount(ui: &mut UiRoot, theme: Horizon, font: Option<Arc<UiFont>>) -> ElementId {
+    pub fn mount(ui: &mut UiRoot, font: Option<Arc<UiFont>>) -> ElementId {
         let (w, h) = ui.size();
         let mut element = Element::at(0.0, 0.0, w, h);
         element.click_through = true;
@@ -41,7 +40,6 @@ impl QuickMoveOutlines {
             root,
             element,
             Self {
-                theme,
                 font,
                 names: HashMap::new(),
             },
@@ -70,7 +68,7 @@ impl Widget for QuickMoveOutlines {
             return;
         }
         let root = ui.root();
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         for piece in ui.children(root) {
             let Some(e) = ui.element(piece).filter(|e| e.quick_move && e.drawn()) else {
                 continue;
@@ -154,7 +152,7 @@ mod tests {
             Element::at(300.0, 300.0, 50.0, 50.0),
             Panel::default(),
         );
-        QuickMoveOutlines::mount(&mut ui, Horizon::BRONZE, None);
+        QuickMoveOutlines::mount(&mut ui, None);
         assert_eq!(overlay_fills(&mut ui), 0);
         ui.set_modifiers(Modifiers::CTRL);
         // 100 across: 10 dashes top and bottom; 40 down: 4 each side.

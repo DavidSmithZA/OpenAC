@@ -9,7 +9,6 @@ use ac_runtime::session::SessionCommand;
 use ac_ui::bundled_font::Weight;
 use ac_ui::event::ItemDragPayload;
 use ac_ui::icons::IconSource;
-use ac_ui::modern::Horizon;
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::items::{ItemsView, emit};
 use ac_ui::panels::salvage_list::SalvageList;
@@ -42,7 +41,6 @@ pub struct SalvageUi {
 impl WindowUi {
     /// The Salvage window, hidden, in place of retail's salvage window.
     pub(in crate::ui) fn mount_modern_salvage(&mut self) {
-        let theme = Horizon::BRONZE;
         let fonts = SalvageFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             strong: self.modern_font(Weight::SemiBold, 12.5),
@@ -54,7 +52,7 @@ impl WindowUi {
             &mut self.host.root,
             SALVAGE,
             (super::salvage_window::WIDTH, super::salvage_window::HEIGHT),
-            SalvageFrame::new(theme, fonts),
+            SalvageFrame::new(fonts),
         ) {
             Ok(id) => id,
             Err(e) => {

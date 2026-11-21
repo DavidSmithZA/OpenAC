@@ -110,28 +110,32 @@ fn form_of(data: &DialogData) -> (Form, usize) {
 
 /// How a key-profile question looks.
 fn keyboard_look(tag: &KeyboardDialog) -> Look {
-    use look::{BLUE, GOLD, Glyph, RED};
+    use look::{BLUE, Glyph, RED};
     match tag {
         KeyboardDialog::Instructions => Look::new("Press a key", Glyph::Info, BLUE, "", ""),
         KeyboardDialog::Message => Look::message(),
         KeyboardDialog::Overwrite => Look::new(
             "Key already used",
             Glyph::Question,
-            GOLD,
+            ac_ui::modern::tone::gold(1.0),
             "Use it here",
             "Keep",
         ),
         KeyboardDialog::Load(_) => Look::new(
             "Load a key profile",
             Glyph::Question,
-            GOLD,
+            ac_ui::modern::tone::gold(1.0),
             "Load",
             "Cancel",
         ),
-        KeyboardDialog::SaveAs => {
-            Look::new("Save key profile", Glyph::Question, GOLD, "Save", "Cancel")
-                .typed("Profile name")
-        }
+        KeyboardDialog::SaveAs => Look::new(
+            "Save key profile",
+            Glyph::Question,
+            ac_ui::modern::tone::gold(1.0),
+            "Save",
+            "Cancel",
+        )
+        .typed("Profile name"),
         KeyboardDialog::ProfileOverwrite(_) => {
             Look::new("Replace a profile", Glyph::Warn, RED, "Replace", "Cancel").dangerous()
         }
@@ -141,7 +145,7 @@ fn keyboard_look(tag: &KeyboardDialog) -> Look {
 impl WindowUi {
     /// The question card and the invitation cards, hidden.
     pub(in crate::ui) fn mount_modern_questions(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = CardFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             body: self.modern_font(Weight::Regular, 13.0),

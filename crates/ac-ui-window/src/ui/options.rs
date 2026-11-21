@@ -394,6 +394,9 @@ impl WindowUi {
         if section == Section::Chat {
             self.apply_chat_settings();
         }
+        if section == Section::PluginUi {
+            self.follow_plugin_theme_setting();
+        }
     }
 
     /// OpenAC `ApplyMouseTurningSettingsMacro`: the camera to the mouse

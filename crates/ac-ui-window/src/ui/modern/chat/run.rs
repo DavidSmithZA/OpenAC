@@ -3,6 +3,7 @@
 //! field wired to the session's chat entry exactly as retail's is (lines
 //! sent, drafts kept, sent lines walked back with Up and Down).
 
+use ac_ui::modern::tone;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -14,7 +15,6 @@ use ac_ui::draw::Color;
 use ac_ui::geometry::AnchorEdges;
 use ac_ui::host::PanelController;
 use ac_ui::modern::Horizon;
-use ac_ui::modern::theme::hex;
 use ac_ui::panels::chat::entry_command;
 use ac_ui::root::{ElementMessage, RecallRequest};
 use ac_ui::tree::{Element, ElementId};
@@ -209,7 +209,7 @@ impl WindowUi {
             &mut self.host.root,
             CHAT,
             (super::panel::WIDTH, super::panel::HEIGHT),
-            ChatPanel::new(Horizon::BRONZE, fonts),
+            ChatPanel::new(Horizon::current(), fonts),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -228,9 +228,9 @@ impl WindowUi {
         f.one_line = true;
         f.selectable = true;
         f.padding = 5.0;
-        f.text_color = Horizon::BRONZE.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
-        f.selection_color = hex(0xE0_B068, 0.35);
+        f.selection_color = tone::gold(0.35);
         // The session's chat entry sends the line, remembers it and keeps
         // the draft; the field keeps the caret and the drawing.
         f.record_history = false;
@@ -253,9 +253,9 @@ impl WindowUi {
         f.record_history = false;
         f.clear_on_submit = false;
         f.stay_focused_after_submit = true;
-        f.text_color = Horizon::BRONZE.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
-        f.selection_color = hex(0xE0_B068, 0.35);
+        f.selection_color = tone::gold(0.35);
         f.set_editable_detached(&mut e, true);
         let search = ui.add(panel, e, f);
         let root = ui.root();
@@ -264,16 +264,16 @@ impl WindowUi {
             Element::at(0.0, 0.0, super::channels::WIDTH, 100.0)
                 .with_visible(false)
                 .with_anchors(AnchorEdges::NONE),
-            ChannelMenu::new(Horizon::BRONZE, menu_fonts),
+            ChannelMenu::new(Horizon::current(), menu_fonts),
         );
         let names = ui.add(
             root,
             Element::at(0.0, 0.0, super::names::WIDTH, 100.0)
                 .with_visible(false)
                 .with_anchors(AnchorEdges::NONE),
-            NameMenu::new(Horizon::BRONZE, name_fonts),
+            NameMenu::new(Horizon::current(), name_fonts),
         );
-        let dialog = TabDialog::mount(ui, Horizon::BRONZE, dialog_fonts);
+        let dialog = TabDialog::mount(ui, Horizon::current(), dialog_fonts);
         if let Err(e) = self
             .host
             .attach_controller(CHAT, Box::new(EntryController { field }))
@@ -990,7 +990,8 @@ impl WindowUi {
             Some(found) => found,
             None => {
                 let name = format!("modern-chat-tab-{}", tab.id);
-                let mut window = ChatPanel::for_window(Horizon::BRONZE, fonts.clone(), tab.clone());
+                let mut window =
+                    ChatPanel::for_window(Horizon::current(), fonts.clone(), tab.clone());
                 for line in lines {
                     window.push(line);
                 }
@@ -1066,9 +1067,9 @@ impl WindowUi {
         f.selectable = true;
         f.padding = 5.0;
         f.record_history = false;
-        f.text_color = Horizon::BRONZE.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
-        f.selection_color = hex(0xE0_B068, 0.35);
+        f.selection_color = tone::gold(0.35);
         f.set_editable_detached(&mut e, true);
         ui.add(panel, e, f)
     }

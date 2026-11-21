@@ -17,7 +17,7 @@ use ac_ui::tree::ElementId;
 use super::model::{self, SaleInput};
 use super::sale::{SaleAsk, SaleFonts, SaleFrame};
 use super::window::{HouseAsk, HouseFonts, HouseFrame};
-use crate::ui::modern::dialogs::look::{GOLD, Glyph, Look, RED};
+use crate::ui::modern::dialogs::look::{Glyph, Look, RED};
 use crate::ui::modern::{hud, kit};
 use crate::ui::social_panels::HOUSE_PURCHASE_WINDOW;
 use crate::ui::window::{DialogAction, WindowUi};
@@ -59,7 +59,7 @@ impl WindowUi {
     /// The House window and the house sale window, hidden; the sale window
     /// in place of retail's slumlord window.
     pub(in crate::ui) fn mount_modern_house(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = HouseFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             heading: self.modern_font(Weight::SemiBold, 16.0),
@@ -81,7 +81,7 @@ impl WindowUi {
             ui,
             HOUSE,
             (super::window::WIDTH, super::window::HEIGHT),
-            HouseFrame::new(theme, fonts),
+            HouseFrame::new(fonts),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -93,7 +93,7 @@ impl WindowUi {
             ui,
             SALE,
             (super::sale::WIDTH, super::sale::HEIGHT),
-            SaleFrame::new(theme, sale_fonts),
+            SaleFrame::new(sale_fonts),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -432,7 +432,13 @@ impl WindowUi {
                                 "Pay"
                             };
                             self.modern_ask_as(
-                                Look::new(title, Glyph::Question, GOLD, yes, "Not now"),
+                                Look::new(
+                                    title,
+                                    Glyph::Question,
+                                    ac_ui::modern::tone::gold(1.0),
+                                    yes,
+                                    "Not now",
+                                ),
                                 question.to_owned(),
                                 DialogAction::Either(send, purchase(HousePurchaseCommand::Close)),
                             );

@@ -4,6 +4,7 @@
 //! characters", or the end of the text returns. The text, the pictures
 //! and the pace are the game's own, as retail shows them.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext, TextureRef};
@@ -18,7 +19,7 @@ use ac_ui::{UiFont, UiRoot};
 
 use super::scenery::{self, Sky};
 use crate::ui::modern::hud::lines::stroke;
-use crate::ui::modern::kit::{self, Rect, SOFT, bronze, gold, put_mid};
+use crate::ui::modern::kit::{self, Rect, bronze, gold, put_mid};
 
 /// The fonts the credits draw with.
 #[derive(Debug, Clone, Default)]
@@ -60,7 +61,6 @@ const TEXT_START: f32 = 0.62;
 /// The full-screen credits.
 #[derive(Debug)]
 pub struct CreditsView {
-    theme: Horizon,
     fonts: CreditsFonts,
     /// What they show.
     pub resources: Option<CreditsResources>,
@@ -80,9 +80,8 @@ pub struct CreditsView {
 impl CreditsView {
     /// Credits in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: CreditsFonts) -> Self {
+    pub fn new(fonts: CreditsFonts) -> Self {
         Self {
-            theme,
             fonts,
             resources: None,
             size: (1440.0, 900.0),
@@ -226,11 +225,7 @@ impl CreditsView {
             // The roles are in gold; the names (in capitals) in the text's
             // colour.
             let names = !line.chars().any(char::is_lowercase);
-            let ink = if names {
-                hex(0xF4_EBDC, 0.9)
-            } else {
-                gold(1.0)
-            };
+            let ink = if names { tone::words(0.9) } else { gold(1.0) };
             text::draw(
                 rc,
                 font,
@@ -306,7 +301,7 @@ impl Widget for CreditsView {
             self.leave = true;
         }
         let f = &self.fonts;
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         stroke(rc, 32.0, 29.0, 22.0, DIAMOND, gold(1.0), 1.8);
         put_mid(rc, f.title.as_ref(), "Credits", 64.0, 22.0, 36.0, p.text);
         let back = self.back_rect();
@@ -318,7 +313,7 @@ impl Widget for CreditsView {
             back.2,
             back.3,
             round,
-            hex(0x14_100C, if lit { 0.8 } else { 0.6 }),
+            tone::ground(if lit { 0.8 } else { 0.6 }),
         );
         rc.stroke_rounded_rect(
             back.0,
@@ -329,7 +324,15 @@ impl Widget for CreditsView {
             bronze(if lit { 0.8 } else { 0.5 }),
             1.0,
         );
-        stroke(rc, back.0 + 12.0, back.1 + 10.0, 14.0, BACK, kit::WARM, 2.2);
+        stroke(
+            rc,
+            back.0 + 12.0,
+            back.1 + 10.0,
+            14.0,
+            BACK,
+            tone::warm(1.0),
+            2.2,
+        );
         put_mid(
             rc,
             f.small.as_ref(),
@@ -348,7 +351,7 @@ impl Widget for CreditsView {
                 note,
                 ((w - nw) * 0.5).round(),
                 h - 26.0 - sm.line_height,
-                TextStyle::plain(SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
     }

@@ -4,6 +4,7 @@
 //! chosen effect's details with Cast again, Show item, or a word on how a
 //! harmful one ends.
 
+use ac_ui::modern::tone;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -123,7 +124,6 @@ pub enum EffectsRequest {
 /// The Effects window's frame.
 #[derive(Debug)]
 pub struct EffectsWindow {
-    theme: Horizon,
     fonts: EffectsFonts,
     /// The effects.
     pub list: EffectsList,
@@ -151,9 +151,8 @@ pub struct EffectsWindow {
 impl EffectsWindow {
     /// An empty window in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: EffectsFonts) -> Self {
+    pub fn new(fonts: EffectsFonts) -> Self {
         Self {
-            theme,
             fonts,
             list: EffectsList::default(),
             extras: EffectsExtras::default(),
@@ -357,11 +356,11 @@ impl EffectsWindow {
                 kit::HARM
             }
         } else if e.left.is_none() {
-            self.theme.palette.muted
+            Horizon::current().palette.muted
         } else if Group::of_helpful(e, self.extras.soon) == Group::EndingSoon {
             kit::SOON
         } else {
-            self.theme.palette.text
+            Horizon::current().palette.text
         }
     }
 
@@ -503,7 +502,7 @@ impl EffectsWindow {
     }
 
     fn draw_frame(&self, rc: &mut RenderContext<'_>) {
-        let theme = &self.theme;
+        let theme = &Horizon::current();
         kit::window_back(rc, theme, WIDTH, HEIGHT, HEADER, false);
         kit::title(
             rc,
@@ -559,11 +558,18 @@ impl EffectsWindow {
                 "Sort",
                 r.0 + 10.0,
                 y,
-                TextStyle::plain(theme.palette.muted),
+                TextStyle::plain(Horizon::current().palette.muted),
             );
             let x = r.0 + 10.0 + text::measure(f, "Sort", 0.0) + 6.0;
             let words = kit::fit(f, self.sort.words(), r.0 + r.2 - 26.0 - x);
-            text::draw(rc, f, &words, x, y, TextStyle::plain(theme.palette.text));
+            text::draw(
+                rc,
+                f,
+                &words,
+                x,
+                y,
+                TextStyle::plain(Horizon::current().palette.text),
+            );
         }
         stroke(
             rc,
@@ -571,7 +577,7 @@ impl EffectsWindow {
             r.1 + 9.0,
             14.0,
             CHEVRON,
-            theme.palette.icon,
+            Horizon::current().palette.icon,
             1.6,
         );
         for (k, count, r) in self.chip_rects() {
@@ -592,7 +598,7 @@ impl EffectsWindow {
 
     #[allow(clippy::too_many_lines)]
     fn draw_list(&mut self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let top = self.list_top();
         let room = self.list_room();
         let (rows, total) = self.row_tops();
@@ -634,11 +640,11 @@ impl EffectsWindow {
                 let color = match group {
                     Group::EndingSoon => kit::SOON,
                     Group::EndingFirst => kit::HARM,
-                    _ => kit::SOFT,
+                    _ => tone::soft(1.0),
                 };
                 kit::group_heading(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     self.fonts.label.as_ref(),
                     LIST_X,
                     y,
@@ -666,7 +672,7 @@ impl EffectsWindow {
         let Some(kept) = self.list.vitae else {
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (x, w) = (LIST_X, right - LIST_X);
         let radius = CornerRadii::all(4.0);
         rc.fill_rounded_rect(x, y, w, VITAE_H, radius, hex(0x3C_0E10, 0.45));
@@ -722,7 +728,11 @@ impl EffectsWindow {
             let step = 16.0;
             let mut ty = y + ((VITAE_H - lines.len() as f32 * step) * 0.5).round();
             for (i, line) in lines.iter().enumerate() {
-                let color = if i < first { kit::WARM } else { kit::SOFT };
+                let color = if i < first {
+                    tone::warm(1.0)
+                } else {
+                    tone::soft(1.0)
+                };
                 text::draw(rc, f, line, tx, ty, TextStyle::plain(color));
                 ty += step;
             }
@@ -730,7 +740,7 @@ impl EffectsWindow {
     }
 
     fn draw_tile(&self, rc: &mut RenderContext<'_>, e: &Effect, x: f32, y: f32, side: f32) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let radius = CornerRadii::all(4.0);
         rc.fill_rounded_rect(x, y, side, side, radius, p.well);
         if let Some(Some(icon)) = self.extras.icons.get(&e.spell_id) {
@@ -753,7 +763,7 @@ impl EffectsWindow {
     }
 
     fn draw_row(&self, rc: &mut RenderContext<'_>, e: &Effect, y: f32, right: f32, on: bool) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (x, w) = (LIST_X, right - LIST_X);
         let radius = CornerRadii::all(4.0);
         let lit = hot(self.hover, (x, y, w, ROW_H));
@@ -841,7 +851,7 @@ impl EffectsWindow {
                     line,
                     x + 20.0,
                     y + 24.0 + i as f32 * 18.0,
-                    TextStyle::plain(self.theme.palette.muted),
+                    TextStyle::plain(Horizon::current().palette.muted),
                 );
             }
         }
@@ -849,7 +859,7 @@ impl EffectsWindow {
 
     #[allow(clippy::too_many_lines)]
     fn draw_details(&mut self, rc: &mut RenderContext<'_>, e: &Effect) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (x, y, w, h) = Self::detail_rect();
         let radius = CornerRadii::all(4.0);
         rc.fill_rounded_rect(x, y, w, h, radius, hex(0, 0.28));
@@ -873,7 +883,7 @@ impl EffectsWindow {
                 &kit::fit(f, &e.school, room),
                 tx,
                 ty + 2.0,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
         rc.fill(x, y + DETAIL_HEAD - 1.0, w, 1.0, kit::bronze(0.2));
@@ -952,7 +962,7 @@ impl EffectsWindow {
         }
         by += 12.0;
         if let Some(f) = &self.fonts.detail {
-            by = kit::lines(rc, f, &desc, left, by, 18.0, kit::WARM);
+            by = kit::lines(rc, f, &desc, left, by, 18.0, tone::warm(1.0));
         }
         if !under.is_empty()
             && let Some(f) = &self.fonts.small
@@ -961,7 +971,7 @@ impl EffectsWindow {
             let bh = 16.0 + under.len() as f32 * 16.0;
             let bw = x + w - 14.0 - 8.0 - left;
             dashed(rc, (left, by, bw, bh), kit::bronze(0.45));
-            kit::lines(rc, f, &under, left + 10.0, by + 8.0, 16.0, kit::SOFT);
+            kit::lines(rc, f, &under, left + 10.0, by + 8.0, 16.0, tone::soft(1.0));
         }
         rc.pop_clip();
         kit::scrollbar(
@@ -984,7 +994,7 @@ impl EffectsWindow {
             };
             kit::button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 r,
                 &words,
                 self.fonts.body.as_ref(),
@@ -1016,12 +1026,12 @@ impl EffectsWindow {
             let lines = kit::wrap(f, words, w - 28.0);
             let step = 15.0;
             let ny = foot + ((DETAIL_FOOT - lines.len() as f32 * step) * 0.5).round();
-            kit::lines(rc, f, &lines, x + 14.0, ny, step, kit::SOFT);
+            kit::lines(rc, f, &lines, x + 14.0, ny, step, tone::soft(1.0));
         }
     }
 
     fn draw_foot(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let top = HEIGHT - FOOT;
         rc.fill(0.0, top, WIDTH, 1.0, kit::bronze(0.3));
         let mut x = 20.0;
@@ -1058,7 +1068,16 @@ impl EffectsWindow {
         }
         let r = Self::settings_rect();
         let lit = hot(self.hover, r);
-        kit::button(rc, &self.theme, r, "", None, ButtonLook::Plain, lit, true);
+        kit::button(
+            rc,
+            &Horizon::current(),
+            r,
+            "",
+            None,
+            ButtonLook::Plain,
+            lit,
+            true,
+        );
         stroke(rc, r.0 + 12.0, r.1 + 8.0, 14.0, SLIDERS, p.icon, 1.5);
         if let Some(f) = &self.fonts.body {
             let y = r.1 + ((r.3 - f.line_height) * 0.5).round();
@@ -1112,7 +1131,7 @@ mod tests {
     }
 
     fn window() -> EffectsWindow {
-        let mut w = EffectsWindow::new(Horizon::BRONZE, EffectsFonts::default());
+        let mut w = EffectsWindow::new(EffectsFonts::default());
         w.list = EffectsList {
             helpful: vec![
                 effect(1, Some(100.0), false),

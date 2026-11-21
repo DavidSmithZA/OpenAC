@@ -80,7 +80,7 @@ impl WindowUi {
             &mut self.host.root,
             SPELLBOOK,
             (WIDTH, HEIGHT),
-            BookFrame::new(Horizon::BRONZE, fonts.clone()),
+            BookFrame::new(fonts.clone()),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -97,19 +97,19 @@ impl WindowUi {
             frame,
             BookFrame::search_rect(),
             field_font.clone(),
-            &Horizon::BRONZE,
+            &Horizon::current(),
         );
         let list = ui.add(
             frame,
             Element::at(LIST_X, LIST_TOP, LIST_W, LIST_H).with_anchors(AnchorEdges::NONE),
-            SpellList::new(Horizon::BRONZE, fonts.clone()),
+            SpellList::new(fonts.clone()),
         );
         let table = ui.add(
             frame,
             Element::at(TABLE_X, TABLE_TOP, TABLE_W, TABLE_H)
                 .with_anchors(AnchorEdges::NONE)
                 .with_visible(false),
-            ComponentTable::new(Horizon::BRONZE, fonts),
+            ComponentTable::new(fonts),
         );
         let mut e = Element::at(0.0, 0.0, 60.0, 22.0)
             .with_anchors(AnchorEdges::NONE)
@@ -126,7 +126,7 @@ impl WindowUi {
         f.select_all_on_focus = true;
         f.max_characters = 4;
         f.character_filter = Some(Box::new(|c: char| c.is_ascii_digit()));
-        f.text_color = Horizon::BRONZE.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
         f.selection_color = kit::gold(0.35);
         f.set_editable_detached(&mut e, true);

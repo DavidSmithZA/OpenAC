@@ -119,6 +119,9 @@ pub enum OptionKey {
     Chat(ChatField),
     /// The renderer's atmospheric rendering.
     RenderPack(RenderPackField),
+    /// The theme: plugin windows' and the modern interface's colours (its
+    /// saved name).
+    Theme,
 }
 
 /// An atmospheric-rendering row: the quality (with "off"), or the setting
@@ -311,6 +314,11 @@ impl LiveValues {
                 }
             }
             OptionKey::RenderPack(f) => read_render_pack(&s.display, f)?,
+            OptionKey::Theme => Text(
+                ac_plugin_ui::ThemeKind::from_saved(&s.plugin_ui.theme)
+                    .saved_name()
+                    .to_owned(),
+            ),
         })
     }
 
@@ -458,6 +466,13 @@ impl LiveValues {
             (OptionKey::RenderPack(f), v) => {
                 write_render_pack(&mut s.display, f, v)?;
                 Some(Section::Display)
+            }
+            (OptionKey::Theme, Text(x)) => {
+                let kind = ac_plugin_ui::ThemeKind::ALL
+                    .into_iter()
+                    .find(|k| k.saved_name() == x)?;
+                kind.saved_name().clone_into(&mut s.plugin_ui.theme);
+                Some(Section::PluginUi)
             }
             _ => None,
         }

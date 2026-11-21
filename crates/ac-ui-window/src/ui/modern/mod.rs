@@ -304,7 +304,7 @@ impl WindowUi {
             &mut self.host.root,
             hud::VITALS,
             (hud::vitals::WIDTH, hud::vitals::BAR_HEIGHT),
-            hud::vitals::VitalsHud::new(Horizon::BRONZE, label, number),
+            hud::vitals::VitalsHud::new(Horizon::current(), label, number),
         );
         let fonts = (
             self.modern_font(Weight::SemiBold, TARGET_NAME_SIZE),
@@ -315,7 +315,7 @@ impl WindowUi {
             &mut self.host.root,
             hud::TARGET,
             (hud::target::WIDTH, hud::target::HEIGHT),
-            hud::target::TargetLine::new(Horizon::BRONZE, fonts.0, fonts.1, fonts.2.clone()),
+            hud::target::TargetLine::new(Horizon::current(), fonts.0, fonts.1, fonts.2.clone()),
         );
         if let Ok(id) = &target {
             hud::target::TargetLine::mount_split_field(&mut self.host.root, *id, fonts.2.clone());
@@ -335,7 +335,7 @@ impl WindowUi {
             &mut self.host.root,
             hud::RADAR,
             (hud::radar::WIDTH, hud::radar::HEIGHT),
-            hud::radar::RadarRing::new(Horizon::BRONZE, radar_fonts),
+            hud::radar::RadarRing::new(radar_fonts),
         );
         let recall_fonts = hud::recall::RecallFonts {
             name: self.modern_font(Weight::SemiBold, RECALL_NAME_SIZE),
@@ -356,7 +356,7 @@ impl WindowUi {
             let list = ui.add(
                 *radar,
                 element,
-                hud::recall::RecallList::new(Horizon::BRONZE, recall_fonts),
+                hud::recall::RecallList::new(Horizon::current(), recall_fonts),
             );
             if let Some(r) = ui.widget_mut::<hud::radar::RadarRing>(*radar) {
                 r.recall_list = Some(list);
@@ -364,7 +364,7 @@ impl WindowUi {
             recall_dialog = Some(hud::recall_dialog::RecallDialog::mount(
                 ui,
                 *radar,
-                Horizon::BRONZE,
+                Horizon::current(),
                 dialog_fonts,
             ));
         }
@@ -382,7 +382,7 @@ impl WindowUi {
             Some(ui.add(
                 root,
                 element,
-                hud::connection::ConnectionCard::new(Horizon::BRONZE, card_fonts),
+                hud::connection::ConnectionCard::new(Horizon::current(), card_fonts),
             ))
         };
         let combat = self.mount_modern_combat();
@@ -458,7 +458,7 @@ impl WindowUi {
             ui,
             hud::PANELS,
             (hud::panels::WIDTH, hud::panels::HEIGHT),
-            PanelStrip::new(Horizon::BRONZE),
+            PanelStrip::new(),
         )?;
         let top = (hud::panels::HEIGHT - BUTTON) * 0.5;
         let mut index = 0;
@@ -469,7 +469,7 @@ impl WindowUi {
             ui.add(
                 strip,
                 element,
-                PanelButton::new(Horizon::BRONZE, font.clone(), panel),
+                PanelButton::new(Horizon::current(), font.clone(), panel),
             )
         });
         Ok((strip, buttons))
@@ -613,7 +613,7 @@ impl WindowUi {
             &mut self.host.root,
             hud::COMBAT,
             (hud::combat::WIDTH, hud::combat::HEIGHT),
-            hud::combat::CombatStrip::new(Horizon::BRONZE, fonts),
+            hud::combat::CombatStrip::new(fonts),
         )
     }
 
@@ -951,7 +951,7 @@ impl WindowUi {
             ui,
             hud::EFFECTS,
             (CHIP_HEIGHT, CHIP_HEIGHT),
-            ChipRow::new(Horizon::BRONZE, chip_fonts.small.clone()),
+            ChipRow::new(chip_fonts.small.clone()),
         )?;
         let chips = ChipKind::ALL.map(|kind| {
             let element = Element::at(0.0, 0.0, 0.0, CHIP_HEIGHT)
@@ -960,14 +960,14 @@ impl WindowUi {
             ui.add(
                 row,
                 element,
-                Chip::new(Horizon::BRONZE, chip_fonts.clone(), kind),
+                Chip::new(Horizon::current(), chip_fonts.clone(), kind),
             )
         });
-        let hover = HoverPane::mount(ui, Horizon::BRONZE, PANE_WIDTH, 100.0);
+        let hover = HoverPane::mount(ui, Horizon::current(), PANE_WIDTH, 100.0);
         let list = ui.add(
             hover.element(),
             Element::at(0.0, 0.0, PANE_WIDTH, 100.0).with_anchors(AnchorEdges::NONE),
-            EffectsPane::new(Horizon::BRONZE, pane_fonts),
+            EffectsPane::new(pane_fonts),
         );
         Ok(EffectsHud {
             row,
@@ -1420,11 +1420,11 @@ impl WindowUi {
         let key = quick_move_modifier(self.settings().display.modern_hud.quick_move_key);
         self.host.root.set_quick_move_key(Some(key));
         let font = self.modern_font(Weight::SemiBold, QUICK_MOVE_NAME_SIZE);
-        let outlines = QuickMoveOutlines::mount(&mut self.host.root, Horizon::BRONZE, font);
+        let outlines = QuickMoveOutlines::mount(&mut self.host.root, font);
         // The modern pieces' hover labels (the retail tooltip needs a dat
         // layout the pieces do not name).
         let tip_font = self.modern_font(Weight::Medium, TIP_SIZE);
-        ac_ui::modern::tip::TipLayer::mount(&mut self.host.root, Horizon::BRONZE, tip_font);
+        ac_ui::modern::tip::TipLayer::mount(&mut self.host.root, Horizon::current(), tip_font);
         if let Some(modern) = self.modern.as_mut() {
             modern.outlines = Some(outlines);
         }
@@ -1451,6 +1451,45 @@ impl WindowUi {
             self.want_sharp_fonts_again();
         }
         font
+    }
+}
+
+/// The modern look for the saved plugin theme `saved`: Bronze under
+/// Classic, otherwise Bronze recoloured by the theme's seven colours.
+#[must_use]
+pub fn look_for_theme(saved: &str) -> Horizon {
+    let Some(t) = ac_plugin_ui::ThemeKind::from_saved(saved).palette() else {
+        return Horizon::BRONZE;
+    };
+    let c = |c: ac_plugin_ui::Color8| {
+        let c = c.to_rgba();
+        ac_ui::draw::Color::rgba(c.r, c.g, c.b, c.a)
+    };
+    Horizon::themed(&ac_ui::modern::theme::ThemeColours {
+        background: c(t.background),
+        field: c(t.field),
+        border: c(t.border),
+        text: c(t.text),
+        muted: c(t.muted),
+        accent: c(t.accent),
+        selected: c(t.selected),
+    })
+}
+
+impl WindowUi {
+    /// The modern look follows the saved theme (the plugin dock's): made
+    /// again when the setting changes, and set for this frame's drawing.
+    pub(in crate::ui) fn follow_modern_theme(&mut self) {
+        let saved = &self.settings().plugin_ui.theme;
+        let look = match &self.modern_theme {
+            Some((name, look)) if name == saved => *look,
+            _ => {
+                let look = look_for_theme(saved);
+                self.modern_theme = Some((saved.clone(), look));
+                look
+            }
+        };
+        Horizon::set_current(look);
     }
 }
 

@@ -4,6 +4,7 @@
 //! arrows step it, Enter splits, Escape closes; so do Split and Cancel,
 //! and a click elsewhere closes it.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, ColorVertex, RenderContext};
@@ -65,7 +66,6 @@ enum Part {
 /// The split pop-up.
 #[derive(Debug)]
 pub struct SplitPopover {
-    theme: Horizon,
     fonts: SplitFonts,
     /// The stack.
     pub item: u32,
@@ -88,7 +88,7 @@ pub struct SplitPopover {
 
 impl SplitPopover {
     /// The pop-up, hidden.
-    pub fn mount(ui: &mut UiRoot, theme: Horizon, fonts: SplitFonts) -> ElementId {
+    pub fn mount(ui: &mut UiRoot, fonts: SplitFonts) -> ElementId {
         let root = ui.root();
         let mut e = Element::at(0.0, 0.0, WIDTH, HEIGHT)
             .with_visible(false)
@@ -103,7 +103,6 @@ impl SplitPopover {
             root,
             e,
             Self {
-                theme,
                 fonts,
                 item: 0,
                 name: String::new(),
@@ -373,10 +372,10 @@ impl Widget for SplitPopover {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (w, h) = (WIDTH, HEIGHT);
-        let fill = hex(0x18_130E, 0.98);
-        let edge = hex(0xC9_A062, 0.8);
+        let fill = tone::raised(0.98);
+        let edge = tone::bronze(0.8);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 12.0, 30.0, p.shadow);
         // The pointer up to the stack.
         let v = |x: f32, y: f32, color: Color| ColorVertex { x, y, color };
@@ -459,7 +458,7 @@ impl Widget for SplitPopover {
             mid - held - 1.0,
             (held + 1.0) * 2.0,
             (held + 1.0) * 2.0,
-            hex(0x1A_140D, 0.9),
+            tone::ink(0.9),
         );
         rc.fill_ellipse(knob - held, mid - held, held * 2.0, held * 2.0, p.accent);
         // The count row.
@@ -470,7 +469,7 @@ impl Widget for SplitPopover {
         let box_edge = if self.focused {
             p.accent
         } else {
-            hex(0xC9_A062, 0.6)
+            tone::bronze(0.6)
         };
         let r4 = CornerRadii::all(4.0);
         rc.fill_rounded_rect(COUNT_LEFT, ROW_TOP, COUNT_W, ROW_H, r4, hex(0, 0.4));
@@ -491,7 +490,7 @@ impl Widget for SplitPopover {
                     tw + 4.0,
                     f.line_height + 2.0,
                     CornerRadii::all(2.0),
-                    hex(0xE0_B068, 0.35),
+                    tone::gold(0.35),
                 );
             }
             text::draw(rc, f, &words, tx, ty, TextStyle::plain(p.text));
@@ -503,7 +502,7 @@ impl Widget for SplitPopover {
         for (part, left, bw, words, look) in self.buttons() {
             button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 body,
                 (left, ROW_TOP, bw, ROW_H),
                 words,

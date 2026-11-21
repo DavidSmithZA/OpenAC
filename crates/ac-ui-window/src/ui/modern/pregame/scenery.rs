@@ -6,6 +6,7 @@
 
 use ac_ui::draw::{Color, ColorVertex, RenderContext};
 use ac_ui::modern::theme::hex;
+use ac_ui::modern::tone;
 use ac_ui::shapes::CornerRadii;
 
 /// A sky.
@@ -340,8 +341,8 @@ pub fn glow(rc: &mut RenderContext<'_>, cx: f32, cy: f32, rx: f32, ry: f32, colo
 
 /// The lit plinth a figure stands on, centred on (`cx`, `cy`).
 pub fn plinth(rc: &mut RenderContext<'_>, cx: f32, cy: f32, w: f32, h: f32) {
-    glow(rc, cx, cy, w * 0.5, h * 0.5, hex(0xE0_B068, 0.32));
-    rc.stroke_ellipse(cx - w * 0.5, cy - h * 0.5, w, h, hex(0xC9_A062, 0.4), 1.0);
+    glow(rc, cx, cy, w * 0.5, h * 0.5, tone::gold(0.32));
+    rc.stroke_ellipse(cx - w * 0.5, cy - h * 0.5, w, h, tone::bronze(0.4), 1.0);
 }
 
 #[cfg(test)]

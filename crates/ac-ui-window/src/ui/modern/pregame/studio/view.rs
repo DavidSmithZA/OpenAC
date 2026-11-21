@@ -5,6 +5,7 @@
 //! right; Randomize all and Exit (both ask) top right; and the questions
 //! as cards over the stage.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_runtime::session::creation::{ChargenAttribute, UNSET};
@@ -21,9 +22,7 @@ use ac_ui::{UiFont, UiRoot};
 
 use super::model::{Group, SkillRow, Step, StudioScreen};
 use crate::ui::modern::hud::lines::stroke;
-use crate::ui::modern::kit::{
-    self, GOOD, HARM, Hits, MUTED, Rect, SOFT, WARM, bronze, gold, put, put_mid, put_right,
-};
+use crate::ui::modern::kit::{self, GOOD, HARM, Hits, Rect, bronze, gold, put, put_mid, put_right};
 use crate::ui::modern::pregame::scenery::{self, Sky};
 use crate::ui::modern::pregame::stage::spinner;
 
@@ -242,7 +241,6 @@ const TURN_RIGHT: &[&[(f32, f32)]] = &[
 /// The Studio.
 #[derive(Debug)]
 pub struct StudioView {
-    theme: Horizon,
     fonts: StudioFonts,
     /// What it shows.
     pub screen: StudioScreen,
@@ -275,9 +273,8 @@ pub struct StudioView {
 impl StudioView {
     /// A Studio in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: StudioFonts) -> Self {
+    pub fn new(fonts: StudioFonts) -> Self {
         Self {
-            theme,
             fonts,
             screen: StudioScreen::default(),
             backdrop: crate::ui::modern::pregame::backdrops::Backdrop::default(),
@@ -386,15 +383,15 @@ impl StudioView {
 
     fn draw_top(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
         let f = &self.fonts;
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         rc.fill_vertical_gradient(
             0.0,
             0.0,
             self.size.0,
             64.0,
             CornerRadii::all(0.0),
-            hex(0x0A_0806, 0.75),
-            hex(0x0A_0806, 0.0),
+            tone::deep(0.75),
+            tone::deep(0.0),
         );
         put(rc, f.title.as_ref(), "New character", EDGE, 13.0, p.text);
         put(
@@ -403,7 +400,7 @@ impl StudioView {
             &self.screen.subtitle,
             EDGE,
             38.0,
-            MUTED,
+            tone::muted(1.0),
         );
         let (rand, exit) = self.top_buttons();
         for (r, words, glyph, ask) in [
@@ -412,7 +409,15 @@ impl StudioView {
         ] {
             let lit = h.add(r, Hit::Ask(ask));
             quiet_button(rc, r, lit);
-            stroke(rc, r.0 + 11.0, r.1 + 10.0, 15.0, glyph, WARM, 2.0);
+            stroke(
+                rc,
+                r.0 + 11.0,
+                r.1 + 10.0,
+                15.0,
+                glyph,
+                tone::warm(1.0),
+                2.0,
+            );
             put_mid(rc, f.strong.as_ref(), words, r.0 + 33.0, r.1, r.3, p.text);
         }
         // The rail.
@@ -455,7 +460,7 @@ impl StudioView {
             let bg = if current {
                 gold(0.16)
             } else {
-                hex(0x0A_0806, 0.55)
+                tone::deep(0.55)
             };
             let edge = if current {
                 gold(1.0)
@@ -480,7 +485,7 @@ impl StudioView {
             } else if current {
                 p.text
             } else {
-                WARM
+                tone::warm(1.0)
             };
             if done {
                 stroke(
@@ -489,13 +494,13 @@ impl StudioView {
                     dot.1 + 5.0,
                     12.0,
                     TICK,
-                    hex(0x1A_140D, 1.0),
+                    tone::ink(1.0),
                     2.6,
                 );
             } else if let Some(sm) = &f.small {
                 let n = (i + 1).to_string();
                 let nw = text::measure(sm, &n, 0.0);
-                let ink = if current { hex(0x1A_140D, 1.0) } else { fg };
+                let ink = if current { tone::ink(1.0) } else { fg };
                 text::draw(
                     rc,
                     sm,
@@ -520,7 +525,7 @@ impl StudioView {
 
     fn draw_stage(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
         let f = &self.fonts;
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let cx = self.stage_centre();
         scenery::plinth(rc, cx, self.size.1 - 134.0, 440.0, 76.0);
         let glyphs: [(Glyph, PreviewRequest); 4] = [
@@ -532,7 +537,15 @@ impl StudioView {
         for (r, (glyph, ask)) in self.controls().into_iter().zip(glyphs) {
             let lit = h.add(r, Hit::Ask(StudioAsk::Preview(ask)));
             quiet_button(rc, r, lit);
-            stroke(rc, r.0 + 10.0, r.1 + 10.0, 14.0, glyph, WARM, 2.2);
+            stroke(
+                rc,
+                r.0 + 10.0,
+                r.1 + 10.0,
+                14.0,
+                glyph,
+                tone::warm(1.0),
+                2.2,
+            );
         }
         let (back, next) = self.foot_buttons();
         let first = self.screen.steps.first() == Some(&self.screen.step);
@@ -544,7 +557,11 @@ impl StudioView {
             back.1 + 13.0,
             14.0,
             LEFT,
-            if first { MUTED } else { WARM },
+            if first {
+                tone::muted(1.0)
+            } else {
+                tone::warm(1.0)
+            },
             2.4,
         );
         put_mid(
@@ -554,7 +571,7 @@ impl StudioView {
             back.0 + 40.0,
             back.1,
             back.3,
-            if first { MUTED } else { p.text },
+            if first { tone::muted(1.0) } else { p.text },
         );
         let at = self
             .screen
@@ -572,7 +589,7 @@ impl StudioView {
                 (cx - w * 0.5).round(),
                 back.1,
                 back.3,
-                SOFT,
+                tone::soft(1.0),
             );
         }
         let last = self.screen.step == Step::Name;
@@ -592,7 +609,7 @@ impl StudioView {
             round,
             gold(if lit { 1.0 } else { 0.92 }),
         );
-        let ink = hex(0x1A_140D, 1.0);
+        let ink = tone::ink(1.0);
         if let Some(ft) = &f.strong {
             let w = text::measure(ft, words, 0.0) + 22.0;
             let x = (next.0 + (next.2 - w) * 0.5).round();
@@ -603,7 +620,7 @@ impl StudioView {
 
     fn panel_head(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>, p: Rect) -> f32 {
         let f = &self.fonts;
-        let pal = self.theme.palette;
+        let pal = Horizon::current().palette;
         let (kicker, title, sub) = match self.screen.step {
             Step::Heritage => (
                 "",
@@ -659,7 +676,7 @@ impl StudioView {
         let mut y = p.1 + 60.0;
         if let Some(sm) = &f.small {
             for l in kit::wrap(sm, sub, p.2 - 36.0 - 96.0) {
-                put(rc, Some(sm), &l, p.0 + 18.0, y, MUTED);
+                put(rc, Some(sm), &l, p.0 + 18.0, y, tone::muted(1.0));
                 y += 16.0;
             }
         }
@@ -668,7 +685,7 @@ impl StudioView {
             let r = (p.0 + p.2 - 16.0 - 86.0, p.1 + 16.0, 86.0, 28.0);
             let lit = h.add(r, Hit::Ask(StudioAsk::RandomStep));
             quiet_button(rc, r, lit);
-            stroke(rc, r.0 + 9.0, r.1 + 7.5, 13.0, DICE, WARM, 2.0);
+            stroke(rc, r.0 + 9.0, r.1 + 7.5, 13.0, DICE, tone::warm(1.0), 2.0);
             put_mid(
                 rc,
                 f.small.as_ref(),
@@ -694,7 +711,7 @@ impl StudioView {
     ) {
         let f = &self.fonts;
         let s = &self.screen;
-        let pal = self.theme.palette;
+        let pal = Horizon::current().palette;
         // The gender, beside the heritages.
         let seg = (x, y, w, 34.0);
         rc.fill_rounded_rect(
@@ -745,7 +762,7 @@ impl StudioView {
                     (r.0 + (r.2 - tw) * 0.5).round(),
                     r.1,
                     r.3,
-                    if on { hex(0x1A_140D, 1.0) } else { WARM },
+                    if on { tone::ink(1.0) } else { tone::warm(1.0) },
                 );
             }
         }
@@ -779,7 +796,7 @@ impl StudioView {
                     &kit::fit(sm, &tile.sub, r.2 - 20.0),
                     r.0 + 10.0,
                     r.1 + 24.0,
-                    if tile.pk { HARM } else { MUTED },
+                    if tile.pk { HARM } else { tone::muted(1.0) },
                 );
             }
         }
@@ -813,9 +830,9 @@ impl StudioView {
             let mut lines: Vec<(String, Color)> = Vec::new();
             for para in &s.heritage_text {
                 for l in kit::wrap(b, para, card.2 - 24.0) {
-                    lines.push((l, WARM));
+                    lines.push((l, tone::warm(1.0)));
                 }
-                lines.push((String::new(), WARM));
+                lines.push((String::new(), tone::warm(1.0)));
             }
             if !s.starting_skills.is_empty() && !s.olthoi {
                 for l in kit::wrap(
@@ -823,9 +840,9 @@ impl StudioView {
                     &format!("Trained from the start: {}", s.starting_skills),
                     card.2 - 24.0,
                 ) {
-                    lines.push((l, SOFT));
+                    lines.push((l, tone::soft(1.0)));
                 }
-                lines.push((String::new(), WARM));
+                lines.push((String::new(), tone::warm(1.0)));
             }
             if let Some(note) = s.heritage_note {
                 for l in kit::wrap(b, note, card.2 - 24.0) {
@@ -854,7 +871,7 @@ impl StudioView {
     ) {
         let f = &self.fonts;
         let s = &self.screen;
-        let pal = self.theme.palette;
+        let pal = Horizon::current().palette;
         let col = (w - 8.0) * 0.5;
         for (i, (index, name)) in s.templates.iter().enumerate() {
             let r = (
@@ -876,13 +893,13 @@ impl StudioView {
                 r.0 + 12.0,
                 r.1,
                 r.3,
-                if on { pal.text } else { WARM },
+                if on { pal.text } else { tone::warm(1.0) },
             );
         }
         y += s.templates.len().div_ceil(2) as f32 * 40.0 + 4.0;
         if let Some(b) = &f.small {
             for l in kit::wrap(b, &s.template_text, w).iter().take(3) {
-                put(rc, Some(b), l, x, y, SOFT);
+                put(rc, Some(b), l, x, y, tone::soft(1.0));
                 y += 15.5;
             }
         }
@@ -901,7 +918,11 @@ impl StudioView {
             x + w,
             y,
             16.0,
-            if left == 0 { MUTED } else { gold(1.0) },
+            if left == 0 {
+                tone::muted(1.0)
+            } else {
+                gold(1.0)
+            },
         );
         y += 20.0;
         let spent = total as f32 - left as f32;
@@ -939,7 +960,11 @@ impl StudioView {
                 lock.1 + 5.0,
                 12.0,
                 if row.locked { LOCK } else { OPEN },
-                if row.locked { gold(1.0) } else { MUTED },
+                if row.locked {
+                    gold(1.0)
+                } else {
+                    tone::muted(1.0)
+                },
                 2.0,
             );
             put_mid(
@@ -975,7 +1000,11 @@ impl StudioView {
                 knob.1,
                 knob.2,
                 knob.3,
-                if row.locked { SOFT } else { gold(1.0) },
+                if row.locked {
+                    tone::soft(1.0)
+                } else {
+                    gold(1.0)
+                },
             );
             if !row.locked {
                 h.add(
@@ -1004,7 +1033,11 @@ impl StudioView {
                     b.1 + 5.0,
                     12.0,
                     glyph,
-                    if row.locked { MUTED } else { WARM },
+                    if row.locked {
+                        tone::muted(1.0)
+                    } else {
+                        tone::warm(1.0)
+                    },
                     2.2,
                 );
             }
@@ -1029,7 +1062,7 @@ impl StudioView {
                 "Moving one attribute takes from the others. Lock the ones you want to keep.",
                 w,
             ) {
-                put(rc, Some(sm), &l, x, y + 2.0, MUTED);
+                put(rc, Some(sm), &l, x, y + 2.0, tone::muted(1.0));
                 y += 15.0;
             }
         }
@@ -1047,7 +1080,7 @@ impl StudioView {
         w: f32,
     ) {
         let f = self.fonts.clone();
-        let pal = self.theme.palette;
+        let pal = Horizon::current().palette;
         let (left, total) = self.screen.credits;
         kit::spaced(rc, f.label.as_ref(), "SKILL CREDITS", x, y + 4.0);
         put_right(
@@ -1081,7 +1114,7 @@ impl StudioView {
             ),
             x,
             y,
-            MUTED,
+            tone::muted(1.0),
         );
         y += 22.0;
         let info_h = 150.0;
@@ -1107,8 +1140,8 @@ impl StudioView {
                     if ry + 26.0 > room.1 && ry < room.1 + room.3 {
                         let c = match *words {
                             "SPECIALIZED" => gold(1.0),
-                            "TRAINED" => WARM,
-                            "USABLE UNTRAINED" => SOFT,
+                            "TRAINED" => tone::warm(1.0),
+                            "USABLE UNTRAINED" => tone::soft(1.0),
                             _ => hex(0x8E_8577, 1.0),
                         };
                         if let Some(lf) = &f.label {
@@ -1128,7 +1161,7 @@ impl StudioView {
                             x + w - 6.0,
                             ry + 4.0,
                             18.0,
-                            MUTED,
+                            tone::muted(1.0),
                         );
                     }
                     ry += 26.0;
@@ -1181,7 +1214,7 @@ impl StudioView {
                             r.0 + 10.0,
                             r.1,
                             r.3,
-                            if unusable { MUTED } else { pal.text },
+                            if unusable { tone::muted(1.0) } else { pal.text },
                         );
                         let score = line.score.map_or_else(|| "—".to_owned(), |v| v.to_string());
                         put_right(
@@ -1207,7 +1240,7 @@ impl StudioView {
                                 lower,
                                 DOWN,
                                 &format!("+{refund}"),
-                                WARM,
+                                tone::warm(1.0),
                                 lit,
                                 true,
                             );
@@ -1258,7 +1291,14 @@ impl StudioView {
         );
         if let Some(ft) = &f.strong {
             let nx = info.0 + 12.0 + text::measure(ft, &si.name, 0.0) + 10.0;
-            put(rc, f.small.as_ref(), si.state, nx, info.1 + 12.0, MUTED);
+            put(
+                rc,
+                f.small.as_ref(),
+                si.state,
+                nx,
+                info.1 + 12.0,
+                tone::muted(1.0),
+            );
         }
         put_right(
             rc,
@@ -1272,7 +1312,7 @@ impl StudioView {
         let mut iy = info.1 + 32.0;
         if let Some(sm) = &f.small {
             for l in kit::wrap(sm, &si.text, info.2 - 24.0).iter().take(3) {
-                put(rc, Some(sm), l, info.0 + 12.0, iy, WARM);
+                put(rc, Some(sm), l, info.0 + 12.0, iy, tone::warm(1.0));
                 iy += 15.0;
             }
             iy += 4.0;
@@ -1284,8 +1324,8 @@ impl StudioView {
                 if iy + 15.0 > info.1 + info.3 {
                     break;
                 }
-                put(rc, Some(sm), label, info.0 + 12.0, iy, MUTED);
-                put(rc, Some(sm), value, info.0 + 112.0, iy, SOFT);
+                put(rc, Some(sm), label, info.0 + 12.0, iy, tone::muted(1.0));
+                put(rc, Some(sm), value, info.0 + 112.0, iy, tone::soft(1.0));
                 iy += 16.0;
             }
         }
@@ -1302,7 +1342,7 @@ impl StudioView {
     ) {
         let f = &self.fonts;
         let s = &self.screen;
-        let pal = self.theme.palette;
+        let pal = Horizon::current().palette;
         if s.has_clothes {
             let seg = (x, y, w, 34.0);
             rc.fill_rounded_rect(
@@ -1355,7 +1395,7 @@ impl StudioView {
                         (r.0 + (r.2 - tw) * 0.5).round(),
                         r.1,
                         r.3,
-                        if on { hex(0x1A_140D, 1.0) } else { WARM },
+                        if on { tone::ink(1.0) } else { tone::warm(1.0) },
                     );
                 }
             }
@@ -1403,7 +1443,7 @@ impl StudioView {
                     &sub,
                     (r.0 + (r.2 - sw) * 0.5).round(),
                     r.1 + 28.0,
-                    MUTED,
+                    tone::muted(1.0),
                 );
             }
         }
@@ -1416,7 +1456,7 @@ impl StudioView {
             for (b, glyph, step) in [(prev, LEFT, -1), (next, RIGHT, 1)] {
                 let lit = h.add(b, Hit::Ask(StudioAsk::StepStyle(step)));
                 quiet_button(rc, b, lit);
-                stroke(rc, b.0 + 7.0, b.1 + 7.0, 14.0, glyph, WARM, 2.4);
+                stroke(rc, b.0 + 7.0, b.1 + 7.0, 14.0, glyph, tone::warm(1.0), 2.4);
             }
             let words = if now == 0 {
                 "None".to_owned()
@@ -1482,7 +1522,7 @@ impl StudioView {
                         (r.0 + (r.2 - ww) * 0.5).round(),
                         r.1,
                         r.3,
-                        if on { pal.text } else { WARM },
+                        if on { pal.text } else { tone::warm(1.0) },
                     );
                 }
             }
@@ -1528,13 +1568,13 @@ impl StudioView {
                 x + w,
                 y,
                 16.0,
-                SOFT,
+                tone::soft(1.0),
             );
             y += 22.0;
             let track = (x + 7.0, y, w - 14.0, 12.0);
             shade_track(rc, track, &self.shade_stops);
             let kx = track.0 + track.2 * value;
-            rc.fill_ellipse(kx - 8.0, track.1 - 2.0, 16.0, 16.0, hex(0xF4_EBDC, 1.0));
+            rc.fill_ellipse(kx - 8.0, track.1 - 2.0, 16.0, 16.0, tone::words(1.0));
             rc.stroke_ellipse(kx - 8.0, track.1 - 2.0, 16.0, 16.0, hex(0, 0.5), 1.0);
             h.add(
                 (track.0 - 8.0, track.1 - 8.0, track.2 + 16.0, track.3 + 16.0),
@@ -1544,7 +1584,7 @@ impl StudioView {
         }
         if let (Some(note), Some(sm)) = (c.note, f.small.as_ref()) {
             for l in kit::wrap(sm, note, w) {
-                put(rc, Some(sm), &l, x, y, MUTED);
+                put(rc, Some(sm), &l, x, y, tone::muted(1.0));
                 y += 15.0;
             }
         }
@@ -1553,7 +1593,7 @@ impl StudioView {
     fn draw_town(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>, x: f32, mut y: f32, w: f32) {
         let f = &self.fonts;
         let s = &self.screen;
-        let pal = self.theme.palette;
+        let pal = Horizon::current().palette;
         let bottom = self.panel_rect().1 + self.panel_rect().3 - 60.0;
         let card_h = ((bottom - y - 3.0 * 10.0) / 4.0).clamp(96.0, 140.0);
         for town in &s.towns {
@@ -1595,7 +1635,7 @@ impl StudioView {
                     r.1 + 15.0,
                     12.0,
                     TICK,
-                    hex(0x1A_140D, 1.0),
+                    tone::ink(1.0),
                     2.6,
                 );
             }
@@ -1603,7 +1643,14 @@ impl StudioView {
             put(rc, f.strong.as_ref(), &town.name, r.0 + 12.0, ty, pal.text);
             if let Some(ft) = &f.strong {
                 let nx = r.0 + 12.0 + text::measure(ft, &town.name, 0.0) + 8.0;
-                put(rc, f.small.as_ref(), town.home, nx, ty + 2.0, MUTED);
+                put(
+                    rc,
+                    f.small.as_ref(),
+                    town.home,
+                    nx,
+                    ty + 2.0,
+                    tone::muted(1.0),
+                );
             }
             if let Some(sm) = &f.small {
                 let room = ((r.1 + r.3 - (ty + 20.0)) / 15.0).floor().max(0.0) as usize;
@@ -1618,7 +1665,7 @@ impl StudioView {
                         l,
                         r.0 + 12.0,
                         ty + 20.0 + i as f32 * 15.0,
-                        SOFT,
+                        tone::soft(1.0),
                     );
                 }
             }
@@ -1630,7 +1677,7 @@ impl StudioView {
                 "Any heritage may start in any town. The towns are joined by portals, so the others are a short trip away.",
                 w,
             ) {
-                put(rc, Some(sm), &l, x, y + 2.0, MUTED);
+                put(rc, Some(sm), &l, x, y + 2.0, tone::muted(1.0));
                 y += 15.0;
             }
         }
@@ -1646,7 +1693,7 @@ impl StudioView {
     ) {
         let f = &self.fonts;
         let s = &self.screen;
-        let pal = self.theme.palette;
+        let pal = Horizon::current().palette;
         let nr = self.name_rect();
         let mut y = nr.1 - 20.0;
         kit::spaced(rc, f.label.as_ref(), "NAME", x, y + 4.0);
@@ -1657,11 +1704,11 @@ impl StudioView {
             x + w,
             y,
             16.0,
-            MUTED,
+            tone::muted(1.0),
         );
         kit::field_box(
             rc,
-            &self.theme,
+            &Horizon::current(),
             nr,
             "Type a name",
             field_empty,
@@ -1675,7 +1722,7 @@ impl StudioView {
                 "Letters, spaces, apostrophes and hyphens, up to 32. The server says whether it is free when you finish.",
                 w,
             ) {
-                put(rc, Some(sm), &l, x, y, MUTED);
+                put(rc, Some(sm), &l, x, y, tone::muted(1.0));
                 y += 15.0;
             }
         }
@@ -1739,7 +1786,7 @@ impl StudioView {
                 if check.ok {
                     hex(0x7F_D08A, 0.9)
                 } else {
-                    hex(0xF2_C48A, 0.2)
+                    tone::gold_light(0.2)
                 },
             );
             if check.ok {
@@ -1753,8 +1800,8 @@ impl StudioView {
                     2.6,
                 );
             } else {
-                rc.fill(dot.0 + 9.3, dot.1 + 5.0, 1.6, 7.0, hex(0xF2_C48A, 1.0));
-                rc.fill(dot.0 + 9.3, dot.1 + 14.0, 1.6, 1.6, hex(0xF2_C48A, 1.0));
+                rc.fill(dot.0 + 9.3, dot.1 + 5.0, 1.6, 7.0, tone::gold_light(1.0));
+                rc.fill(dot.0 + 9.3, dot.1 + 14.0, 1.6, 1.6, tone::gold_light(1.0));
             }
             put_mid(
                 rc,
@@ -1766,7 +1813,7 @@ impl StudioView {
                 if check.ok {
                     pal.text
                 } else {
-                    hex(0xF2_C48A, 1.0)
+                    tone::gold_light(1.0)
                 },
             );
             if !check.ok
@@ -1786,7 +1833,7 @@ impl StudioView {
     fn draw_so_far(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
         let f = &self.fonts;
         let s = &self.screen;
-        let pal = self.theme.palette;
+        let pal = Horizon::current().palette;
         let col = self.card_column();
         let name_step = s.step == Step::Name;
         let mut height = 16.0 + 30.0 + s.facts.len() as f32 * 34.0 + 14.0;
@@ -1804,7 +1851,7 @@ impl StudioView {
         let r = (col.0, col.1, col.2, height.min(col.3));
         let round = CornerRadii::all(6.0);
         rc.soft_shadow(r.0, r.1, r.2, r.3, 6.0, 18.0, 50.0, hex(0, 0.45));
-        fill_glass(rc, r, round, hex(0x14_100C, 0.82));
+        fill_glass(rc, r, round, tone::ground(0.82));
         rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, bronze(0.5), 1.0);
         h.add(r, Hit::Swallow);
         rc.push_clip(r.0, r.1, r.2, r.3);
@@ -1825,7 +1872,7 @@ impl StudioView {
             x + w,
             y,
             16.0,
-            MUTED,
+            tone::muted(1.0),
         );
         y += 28.0;
         for fact in &s.facts {
@@ -1842,7 +1889,15 @@ impl StudioView {
                     hex(0xFF_FFFF, 0.05),
                 );
             }
-            put_mid(rc, f.small.as_ref(), fact.label, x, y, 30.0, MUTED);
+            put_mid(
+                rc,
+                f.small.as_ref(),
+                fact.label,
+                x,
+                y,
+                30.0,
+                tone::muted(1.0),
+            );
             let dim =
                 fact.go.is_none() || fact.value.starts_with("Not ") || fact.value.ends_with(" yet");
             if let Some(ft) = &f.strong {
@@ -1854,7 +1909,7 @@ impl StudioView {
                     x + w,
                     y,
                     30.0,
-                    if dim { MUTED } else { pal.text },
+                    if dim { tone::muted(1.0) } else { pal.text },
                 );
             }
             rc.fill(x, y + 32.0, w, 1.0, bronze(0.12));
@@ -1865,7 +1920,7 @@ impl StudioView {
             kit::spaced(rc, f.label.as_ref(), "ATTRIBUTES", x, y + 4.0);
             y += 22.0;
             for a in &s.attributes {
-                put_mid(rc, f.small.as_ref(), a.name, x, y, 18.0, SOFT);
+                put_mid(rc, f.small.as_ref(), a.name, x, y, 18.0, tone::soft(1.0));
                 let bar = (x + 92.0, y + 7.0, w - 92.0 - 36.0, 4.0);
                 rc.fill_rounded_rect(
                     bar.0,
@@ -1902,7 +1957,13 @@ impl StudioView {
             kit::spaced(rc, f.label.as_ref(), "SKILLS", x, y + 4.0);
             y += 22.0;
             for (name, spec, score) in &s.chosen_skills {
-                rc.fill_ellipse(x, y + 6.0, 6.0, 6.0, if *spec { gold(1.0) } else { WARM });
+                rc.fill_ellipse(
+                    x,
+                    y + 6.0,
+                    6.0,
+                    6.0,
+                    if *spec { gold(1.0) } else { tone::warm(1.0) },
+                );
                 put_mid(rc, f.small.as_ref(), name, x + 14.0, y, 18.0, pal.text);
                 put_right(
                     rc,
@@ -1920,7 +1981,7 @@ impl StudioView {
                     x + w - 40.0,
                     y,
                     18.0,
-                    MUTED,
+                    tone::muted(1.0),
                 );
                 y += 20.0;
             }
@@ -1933,12 +1994,20 @@ impl StudioView {
                     "Olthoi have no profession, skills or starting town to pick. The server sets them.",
                     w,
                 ) {
-                    put(rc, Some(sm), &l, x, y, MUTED);
+                    put(rc, Some(sm), &l, x, y, tone::muted(1.0));
                     y += 15.0;
                 }
             }
         } else {
-            put_mid(rc, f.small.as_ref(), "Skill credits left", x, y, 24.0, SOFT);
+            put_mid(
+                rc,
+                f.small.as_ref(),
+                "Skill credits left",
+                x,
+                y,
+                24.0,
+                tone::soft(1.0),
+            );
             put_right(
                 rc,
                 f.strong.as_ref(),
@@ -1954,7 +2023,7 @@ impl StudioView {
 
     fn draw_card(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
         let f = &self.fonts;
-        let pal = self.theme.palette;
+        let pal = Horizon::current().palette;
         let (title, words, yes, no, danger): CardParts<'_> = match &self.card {
             StudioCard::None => return,
             StudioCard::Exit => (
@@ -2023,7 +2092,7 @@ impl StudioView {
         let c = self.card_rect(height);
         let round = CornerRadii::all(6.0);
         rc.soft_shadow(c.0, c.1, c.2, c.3, 6.0, 24.0, 70.0, hex(0, 0.6));
-        rc.fill_rounded_rect(c.0, c.1, c.2, c.3, round, hex(0x18_130E, 0.97));
+        rc.fill_rounded_rect(c.0, c.1, c.2, c.3, round, tone::raised(0.97));
         rc.stroke_rounded_rect(
             c.0,
             c.1,
@@ -2070,7 +2139,7 @@ impl StudioView {
         );
         let mut y = c.1 + 60.0;
         for l in &text_lines {
-            put(rc, f.body.as_ref(), l, c.0 + 18.0, y, WARM);
+            put(rc, f.body.as_ref(), l, c.0 + 18.0, y, tone::warm(1.0));
             y += 20.0;
         }
         if let Some(names) = near {
@@ -2123,7 +2192,7 @@ impl StudioView {
                 "Picking one tries it with the server at once.",
                 c.0 + 18.0,
                 y,
-                MUTED,
+                tone::muted(1.0),
             );
         }
         if matches!(self.card, StudioCard::Creating(_)) {
@@ -2135,7 +2204,7 @@ impl StudioView {
                 c.0 + 48.0,
                 c.1 + c.3 - 40.0,
                 24.0,
-                SOFT,
+                tone::soft(1.0),
             );
             return;
         }
@@ -2144,7 +2213,7 @@ impl StudioView {
             let lit = h.add(left, Hit::Ask(ask));
             kit::button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 left,
                 words,
                 f.strong.as_ref(),
@@ -2162,7 +2231,7 @@ impl StudioView {
             };
             kit::button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 right,
                 words,
                 f.strong.as_ref(),
@@ -2183,7 +2252,7 @@ fn quiet_button(rc: &mut RenderContext<'_>, r: Rect, lit: bool) {
         r.2,
         r.3,
         round,
-        hex(0x14_100C, if lit { 0.85 } else { 0.6 }),
+        tone::ground(if lit { 0.85 } else { 0.6 }),
     );
     rc.stroke_rounded_rect(
         r.0,
@@ -2245,7 +2314,14 @@ fn vitals(rc: &mut RenderContext<'_>, f: &StudioFonts, r: Rect, v: [i32; 3], olt
     {
         let b = (r.0 + i as f32 * (w + 8.0), r.1, w, r.3);
         kit::panel(rc, b, 0.25);
-        put(rc, f.small.as_ref(), name, b.0 + 10.0, b.1 + 6.0, SOFT);
+        put(
+            rc,
+            f.small.as_ref(),
+            name,
+            b.0 + 10.0,
+            b.1 + 6.0,
+            tone::soft(1.0),
+        );
         let value = if olthoi {
             "—".to_owned()
         } else {
@@ -2273,7 +2349,7 @@ fn shade_track(rc: &mut RenderContext<'_>, r: Rect, stops: &[Color]) {
             r.3,
             round,
             hex(0x2A_1A10, 1.0),
-            hex(0xE9_D3AE, 1.0),
+            tone::warm(1.0),
         ),
         1 => rc.fill_rounded_rect(r.0, r.1, r.2, r.3, round, stops[0]),
         n => {
@@ -2574,7 +2650,7 @@ impl Widget for StudioView {
         let p = self.panel_rect();
         let round = CornerRadii::all(6.0);
         rc.soft_shadow(p.0, p.1, p.2, p.3, 6.0, 18.0, 50.0, hex(0, 0.5));
-        fill_glass(rc, p, round, hex(0x14_100C, 0.9));
+        fill_glass(rc, p, round, tone::ground(0.9));
         rc.stroke_rounded_rect(p.0, p.1, p.2, p.3, round, bronze(0.8), 1.0);
         h.add(p, Hit::Swallow);
         rc.push_clip(p.0, p.1, p.2, p.3);

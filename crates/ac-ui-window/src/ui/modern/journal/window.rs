@@ -3,6 +3,7 @@
 //! Notes the pages (searchable, New) and the page read with its place and
 //! countdown. What can be clicked is noted as it is drawn.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext};
@@ -17,8 +18,7 @@ use ac_ui::{UiFont, UiRoot};
 use super::model::{JournalTab, NotesScreen, QuestDetail, QuestState, QuestsScreen};
 use crate::ui::modern::hud::lines::{circle, stroke};
 use crate::ui::modern::kit::{
-    self, ButtonLook, Hits, MUTED, Rect, Scroll, bronze, gold, inside, put, put_mid, put_right,
-    spaced,
+    self, ButtonLook, Hits, Rect, Scroll, bronze, gold, inside, put, put_mid, put_right, spaced,
 };
 
 /// The window's size.
@@ -212,7 +212,6 @@ enum Hit {
 /// The Journal's frame.
 #[derive(Debug)]
 pub struct JournalFrame {
-    theme: Horizon,
     fonts: JournalFonts,
     /// The page shown.
     pub tab: JournalTab,
@@ -237,9 +236,8 @@ pub struct JournalFrame {
 impl JournalFrame {
     /// A frame in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: JournalFonts) -> Self {
+    pub fn new(fonts: JournalFonts) -> Self {
         Self {
-            theme,
             fonts,
             tab: JournalTab::Quests,
             quests: QuestsScreen::default(),
@@ -355,7 +353,7 @@ impl JournalFrame {
         let lit = h.add(r, if on { hit } else { Hit::Swallow });
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             r,
             words,
             self.fonts.strong.as_ref(),
@@ -366,7 +364,7 @@ impl JournalFrame {
     }
 
     fn draw_frame(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
-        let theme = &self.theme;
+        let theme = &Horizon::current();
         let f = &self.fonts;
         kit::window_back(rc, theme, WIDTH, HEIGHT, HEADER, false);
         let right = kit::title(rc, theme, f.title.as_ref(), BOOK, "Journal", HEADER);
@@ -377,7 +375,7 @@ impl JournalFrame {
             right + 10.0,
             0.0,
             HEADER,
-            theme.palette.muted,
+            Horizon::current().palette.muted,
         );
         let close = kit::close_rect(WIDTH, HEADER);
         let lit = h.add(close, Hit::Ask(JournalAsk::Close));
@@ -404,13 +402,13 @@ impl JournalFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_quests(&mut self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         // The search.
         let b = Self::quest_search_box();
         kit::search_box(
             rc,
-            &self.theme,
+            &Horizon::current(),
             (b.0, b.1, b.2, b.3),
             "Find a quest",
             self.is_empty(Slot::QuestSearch),
@@ -443,7 +441,7 @@ impl JournalFrame {
                     room.0,
                     room.1 + 8.0,
                     18.0,
-                    MUTED,
+                    tone::muted(1.0),
                 );
             }
         }
@@ -452,7 +450,7 @@ impl JournalFrame {
         for (state, rows) in &self.quests.groups {
             kit::group_heading(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 f.label.as_ref(),
                 room.0,
                 y,
@@ -460,7 +458,7 @@ impl JournalFrame {
                 room.0 + room.2 - 8.0,
                 state.heading(),
                 None,
-                kit::SOFT,
+                tone::soft(1.0),
             );
             y += 26.0;
             for row in rows {
@@ -470,7 +468,7 @@ impl JournalFrame {
                 let right = r.0 + r.2 - if row.shown { 30.0 } else { 10.0 };
                 if let Some(st) = &f.strong {
                     let ink = if *state == QuestState::Done {
-                        kit::SOFT
+                        tone::soft(1.0)
                     } else {
                         p.text
                     };
@@ -484,7 +482,11 @@ impl JournalFrame {
                     );
                 }
                 if let Some(sm) = &f.small {
-                    let ink = if row.timed { gold(1.0) } else { MUTED };
+                    let ink = if row.timed {
+                        gold(1.0)
+                    } else {
+                        tone::muted(1.0)
+                    };
                     put(
                         rc,
                         Some(sm),
@@ -525,7 +527,7 @@ impl JournalFrame {
         d: &QuestDetail,
         b: Rect,
     ) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         let x = b.0 + 16.0;
         let w = b.2 - 32.0;
@@ -562,7 +564,7 @@ impl JournalFrame {
             x + 44.0,
             cy - 10.0,
             20.0,
-            kit::WARM,
+            tone::warm(1.0),
         );
         kit::openac_tag(rc, f.label.as_ref(), x + 54.0 + end, cy);
         rc.fill(b.0 + 1.0, b.1 + 76.0, b.2 - 2.0, 1.0, bronze(0.2));
@@ -574,13 +576,13 @@ impl JournalFrame {
         let top = y;
         if let Some(bf) = &f.body {
             let lines = kit::wrap(bf, &d.description, w);
-            y = kit::lines(rc, bf, &lines, x, y, bf.line_height + 6.0, kit::WARM);
+            y = kit::lines(rc, bf, &lines, x, y, bf.line_height + 6.0, tone::warm(1.0));
         }
         if let Some(progress) = &d.progress {
             y += 10.0;
             kit::group_heading(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 f.label.as_ref(),
                 x,
                 y,
@@ -588,7 +590,7 @@ impl JournalFrame {
                 x + w,
                 "PROGRESS",
                 None,
-                kit::SOFT,
+                tone::soft(1.0),
             );
             y += 24.0;
             put(rc, f.strong.as_ref(), progress, x, y, p.text);
@@ -598,7 +600,7 @@ impl JournalFrame {
             y += 10.0;
             kit::group_heading(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 f.label.as_ref(),
                 x,
                 y,
@@ -606,18 +608,18 @@ impl JournalFrame {
                 x + w,
                 "TIME",
                 None,
-                kit::SOFT,
+                tone::soft(1.0),
             );
             y += 22.0;
-            put_mid(rc, f.body.as_ref(), label, x, y, 26.0, kit::WARM);
-            let ink = if *soon { gold(1.0) } else { kit::SOFT };
+            put_mid(rc, f.body.as_ref(), label, x, y, 26.0, tone::warm(1.0));
+            let ink = if *soon { gold(1.0) } else { tone::soft(1.0) };
             put_right(rc, f.strong.as_ref(), time, x + w, y, 26.0, ink);
             y += 30.0;
         }
         y += 10.0;
         kit::group_heading(
             rc,
-            &self.theme,
+            &Horizon::current(),
             f.label.as_ref(),
             x,
             y,
@@ -625,11 +627,18 @@ impl JournalFrame {
             x + w,
             "WHO AND WHERE",
             None,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         y += 26.0;
         for place in &d.places {
-            put(rc, f.small.as_ref(), place.role, x, y + 3.0, kit::SOFT);
+            put(
+                rc,
+                f.small.as_ref(),
+                place.role,
+                x,
+                y + 3.0,
+                tone::soft(1.0),
+            );
             put(rc, f.strong.as_ref(), &place.who, x + 96.0, y, p.text);
             put(
                 rc,
@@ -637,13 +646,22 @@ impl JournalFrame {
                 &place.place,
                 x + 96.0,
                 y + 18.0,
-                MUTED,
+                tone::muted(1.0),
             );
             if let Some(cell) = place.cell {
                 let r = (x + w - 70.0, y + 3.0, 70.0, 26.0);
                 let lit = h.add(r, Hit::Ask(JournalAsk::Map(cell))) && kit::hot(h.hover, room);
-                kit::button(rc, &self.theme, r, "", None, ButtonLook::Plain, lit, true);
-                stroke(rc, r.0 + 10.0, r.1 + 6.0, 14.0, PIN, kit::WARM, 1.5);
+                kit::button(
+                    rc,
+                    &Horizon::current(),
+                    r,
+                    "",
+                    None,
+                    ButtonLook::Plain,
+                    lit,
+                    true,
+                );
+                stroke(rc, r.0 + 10.0, r.1 + 6.0, 14.0, PIN, tone::warm(1.0), 1.5);
                 put_mid(rc, f.strong.as_ref(), "Map", r.0 + 30.0, r.1, r.3, p.text);
             }
             y += 42.0;
@@ -676,20 +694,20 @@ impl JournalFrame {
         );
         if let Some(sm) = &f.small {
             let note = kit::fit(sm, d.foot, r.0 - x - 10.0);
-            put_mid(rc, Some(sm), &note, x, fy, foot_h, MUTED);
+            put_mid(rc, Some(sm), &note, x, fy, foot_h, tone::muted(1.0));
         }
     }
 
     #[allow(clippy::too_many_lines)]
     fn draw_notes(&mut self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         let n = self.notes.clone();
         // The search and New.
         let b = Self::note_search_box();
         kit::search_box(
             rc,
-            &self.theme,
+            &Horizon::current(),
             b,
             "Search your pages",
             self.is_empty(Slot::NoteSearch),
@@ -698,7 +716,16 @@ impl JournalFrame {
         );
         let r = (b.0 + b.2 + 6.0, b.1, 74.0, 32.0);
         let lit = h.add(r, Hit::Ask(JournalAsk::NewPage));
-        kit::button(rc, &self.theme, r, "", None, ButtonLook::Plain, lit, true);
+        kit::button(
+            rc,
+            &Horizon::current(),
+            r,
+            "",
+            None,
+            ButtonLook::Plain,
+            lit,
+            true,
+        );
         stroke(rc, r.0 + 10.0, r.1 + 9.0, 14.0, PLUS, p.text, 1.6);
         put_mid(rc, f.strong.as_ref(), "New", r.0 + 30.0, r.1, r.3, p.text);
         // The pages.
@@ -713,7 +740,7 @@ impl JournalFrame {
                 "No pages yet. New adds one.",
                 room.0,
                 room.1 + 8.0,
-                MUTED,
+                tone::muted(1.0),
             );
         }
         rc.push_clip(room.0, room.1, room.2, room.3);
@@ -729,7 +756,7 @@ impl JournalFrame {
                 r.0 + 10.0,
                 y,
                 PAGE_ROW,
-                MUTED,
+                tone::muted(1.0),
             );
             if let Some(st) = &f.strong {
                 put(
@@ -756,7 +783,15 @@ impl JournalFrame {
                     bronze(0.35),
                     1.0,
                 );
-                put_mid(rc, Some(t), &row.label, c.0 + 6.0, c.1, c.3, kit::SOFT);
+                put_mid(
+                    rc,
+                    Some(t),
+                    &row.label,
+                    c.0 + 6.0,
+                    c.1,
+                    c.3,
+                    tone::soft(1.0),
+                );
                 tx += w + 6.0;
             }
             if let Some(left) = &row.left {
@@ -785,7 +820,7 @@ impl JournalFrame {
             "Kept on this computer, one journal per character.",
             PAD,
             BOTTOM - 14.0,
-            MUTED,
+            tone::muted(1.0),
         );
         // The page.
         let pb = Self::page_box();
@@ -798,7 +833,7 @@ impl JournalFrame {
                 pb.0 + 16.0,
                 pb.1,
                 60.0,
-                MUTED,
+                tone::muted(1.0),
             );
             return;
         }
@@ -838,7 +873,11 @@ impl JournalFrame {
                 r.1 + 5.0,
                 16.0,
                 glyph,
-                if on { kit::WARM } else { hex(0xA8_9A82, 0.4) },
+                if on {
+                    tone::warm(1.0)
+                } else {
+                    tone::muted(0.4)
+                },
                 1.8,
             );
         };
@@ -854,7 +893,7 @@ impl JournalFrame {
         );
         bx += 32.0;
         let words = format!("Page {} of {last}", n.current);
-        put_mid(rc, f.body.as_ref(), &words, bx, y, 26.0, kit::SOFT);
+        put_mid(rc, f.body.as_ref(), &words, bx, y, 26.0, tone::soft(1.0));
         bx += f
             .body
             .as_ref()
@@ -876,13 +915,28 @@ impl JournalFrame {
         );
         // Label, title, notes.
         let counter = |rc: &mut RenderContext<'_>, slot: Slot, words: &str, r: Rect| {
-            put(rc, f.small.as_ref(), words, r.0, r.1 - 16.0, kit::SOFT);
+            put(
+                rc,
+                f.small.as_ref(),
+                words,
+                r.0,
+                r.1 - 16.0,
+                tone::soft(1.0),
+            );
             let c = format!(
                 "{} / {}",
                 self.count(slot),
                 ac_ui::modern::numbers::group_thousands(slot.most() as i64)
             );
-            put_right(rc, f.small.as_ref(), &c, r.0 + r.2, r.1 - 18.0, 16.0, MUTED);
+            put_right(
+                rc,
+                f.small.as_ref(),
+                &c,
+                r.0 + r.2,
+                r.1 - 18.0,
+                16.0,
+                tone::muted(1.0),
+            );
         };
         for (slot, words, hint) in [
             (Slot::Label, "Label", "A short label"),
@@ -893,7 +947,7 @@ impl JournalFrame {
             counter(rc, slot, words, r);
             kit::field_box(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 r,
                 hint,
                 self.is_empty(slot),
@@ -915,8 +969,8 @@ impl JournalFrame {
             place.1 + 10.0,
         );
         let (words, ink) = match &n.place {
-            Some(p) => (p.as_str(), self.theme.palette.text),
-            None => ("Nowhere recorded", MUTED),
+            Some(p) => (p.as_str(), Horizon::current().palette.text),
+            None => ("Nowhere recorded", tone::muted(1.0)),
         };
         put(
             rc,
@@ -996,14 +1050,14 @@ impl JournalFrame {
                 timer.0 + 92.0,
                 timer.1 + 60.0,
                 28.0,
-                MUTED,
+                tone::muted(1.0),
             );
         } else {
             for (slot, unit) in [(Slot::Days, "d"), (Slot::Hours, "h"), (Slot::Minutes, "m")] {
                 let r = Self::input_box(slot);
                 kit::field_box(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     r,
                     "",
                     true,
@@ -1017,7 +1071,7 @@ impl JournalFrame {
                     r.0 + r.2 + 5.0,
                     r.1,
                     r.3,
-                    kit::SOFT,
+                    tone::soft(1.0),
                 );
             }
             let set = !(self.is_empty(Slot::Days)
@@ -1045,7 +1099,7 @@ impl JournalFrame {
                     &kit::fit(sm, note, timer.2 - 24.0),
                     timer.0 + 12.0,
                     timer.1 + 70.0,
-                    MUTED,
+                    tone::muted(1.0),
                 );
             }
         }
@@ -1058,7 +1112,7 @@ fn state_colors(state: QuestState) -> (Color, Color) {
         QuestState::Active => (gold(1.0), gold(0.6)),
         QuestState::Waiting => (hex(0x8F_B8FF, 1.0), hex(0x8F_B8FF, 0.5)),
         QuestState::Available => (kit::GOOD, hex(0x7F_D08A, 0.5)),
-        QuestState::Done => (kit::SOFT, bronze(0.35)),
+        QuestState::Done => (tone::soft(1.0), bronze(0.35)),
     }
 }
 

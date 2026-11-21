@@ -6,6 +6,7 @@
 //! buttons; the cells, the grid, the pack buttons, the search field and the
 //! details are elements of their own inside it.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext, TextureRef};
@@ -383,13 +384,13 @@ impl Widget for InventoryFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let w = self.width();
         let h = HEIGHT;
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 18.0, 50.0, hex(0, 0.55));
-        fill_glass(rc, (0.0, 0.0, w, h), round, hex(0x14_100C, 0.97));
+        fill_glass(rc, (0.0, 0.0, w, h), round, tone::ground(0.97));
         // The header.
         rc.fill_vertical_gradient(
             1.0,
@@ -397,10 +398,10 @@ impl Widget for InventoryFrame {
             w - 2.0,
             HEADER - 1.0,
             CornerRadii::new(5.0, 5.0, 0.0, 0.0),
-            hex(0xC9_A062, 0.10),
-            hex(0xC9_A062, 0.0),
+            tone::bronze(0.10),
+            tone::bronze(0.0),
         );
-        rc.fill(0.0, HEADER - 1.0, w, 1.0, hex(0xC9_A062, 0.35));
+        rc.fill(0.0, HEADER - 1.0, w, 1.0, tone::bronze(0.35));
         stroke(rc, 20.0, 17.0, 18.0, BAG, p.accent, 1.8);
         let mut x = 48.0;
         if let Some(t) = &f.title {
@@ -428,7 +429,7 @@ impl Widget for InventoryFrame {
         let sx = search_x(w);
         let r = CornerRadii::all(4.0);
         rc.fill_rounded_rect(sx, 11.0, SEARCH_W, 30.0, r, hex(0, 0.35));
-        rc.stroke_rounded_rect(sx, 11.0, SEARCH_W, 30.0, r, hex(0xC9_A062, 0.45), 1.0);
+        rc.stroke_rounded_rect(sx, 11.0, SEARCH_W, 30.0, r, tone::bronze(0.45), 1.0);
         stroke(
             rc,
             sx + 9.0,
@@ -466,8 +467,8 @@ impl Widget for InventoryFrame {
             let (cx, cy, cw, ch) = Self::card_rect();
             let round = CornerRadii::all(self.theme.metrics.window_radius);
             rc.soft_shadow(cx, cy, cw, ch, 6.0, 8.0, 24.0, hex(0, 0.5));
-            rc.fill_rounded_rect(cx, cy, cw, ch, round, hex(0x14_100C, 1.0));
-            rc.stroke_rounded_rect(cx, cy, cw, ch, round, hex(0xC9_A062, 0.45), 1.0);
+            rc.fill_rounded_rect(cx, cy, cw, ch, round, tone::ground(1.0));
+            rc.stroke_rounded_rect(cx, cy, cw, ch, round, tone::bronze(0.45), 1.0);
             if let Some(l) = &f.label {
                 let tracked = TextStyle::plain(p.text_soft).tracked(1.2);
                 text::draw(rc, l, "ITEM DETAILS", cx + 12.0, cy + 12.0, tracked);
@@ -490,14 +491,7 @@ impl Widget for InventoryFrame {
                 text::draw(rc, l, "JEWELRY", EQUIP_X, JEWELRY_TITLE, tracked);
                 text::draw(rc, l, "HELD \u{b7} AETHERIA", EQUIP_X, HELD_TITLE, tracked);
             }
-            rc.fill_rounded_rect(
-                FIGURE_X,
-                FIGURE_Y,
-                FIGURE_W,
-                FIGURE_H,
-                r,
-                hex(0xE0_B068, 0.05),
-            );
+            rc.fill_rounded_rect(FIGURE_X, FIGURE_Y, FIGURE_W, FIGURE_H, r, tone::gold(0.05));
         }
         // The rail's and the grid's dividing room.
         if let (Some(s), Some(b)) = (&f.strong, &f.body) {
@@ -534,13 +528,9 @@ impl Widget for InventoryFrame {
             let edge = if on || self.hot((bx, by, bw, bh)) {
                 p.accent
             } else {
-                hex(0xC9_A062, 0.45)
+                tone::bronze(0.45)
             };
-            let fill = if on {
-                hex(0xE0_B068, 0.18)
-            } else {
-                hex(0, 0.35)
-            };
+            let fill = if on { tone::gold(0.18) } else { hex(0, 0.35) };
             rc.fill_rounded_rect(bx, by, bw, bh, r, fill);
             rc.stroke_rounded_rect(bx, by, bw, bh, r, edge, 1.0);
             if let (Some(b), Some(s)) = (&f.body, &f.strong) {
@@ -560,12 +550,12 @@ impl Widget for InventoryFrame {
             );
             let (bx, by, bw, bh) = *rect;
             if on {
-                rc.fill_rounded_rect(bx, by, bw, bh, r, hex(0xE0_B068, 0.18));
+                rc.fill_rounded_rect(bx, by, bw, bh, r, tone::gold(0.18));
             }
             let edge = if on || self.hot(*rect) {
                 p.accent
             } else {
-                hex(0xC9_A062, 0.3)
+                tone::bronze(0.3)
             };
             rc.stroke_rounded_rect(bx, by, bw, bh, r, edge, 1.0);
             if i == 0 {
@@ -594,12 +584,12 @@ impl Widget for InventoryFrame {
                 let on = k == self.view.kind;
                 let pill = CornerRadii::all(ch * 0.5);
                 if on {
-                    rc.fill_rounded_rect(cx, cy, cw, ch, pill, hex(0xE0_B068, 0.18));
+                    rc.fill_rounded_rect(cx, cy, cw, ch, pill, tone::gold(0.18));
                 }
                 let edge = if on || self.hot((cx, cy, cw, ch)) {
                     p.accent
                 } else {
-                    hex(0xC9_A062, 0.3)
+                    tone::bronze(0.3)
                 };
                 rc.stroke_rounded_rect(cx, cy, cw, ch, pill, edge, 1.0);
                 text::draw_centred(
@@ -621,13 +611,13 @@ impl Widget for InventoryFrame {
                 DETAILS_W,
                 DETAILS_H,
                 r,
-                hex(0xC9_A062, 0.35),
+                tone::bronze(0.35),
                 1.0,
             );
         }
         // The foot: burden and pyreals.
         let fy = h - FOOT;
-        rc.fill(0.0, fy, w, 1.0, hex(0xC9_A062, 0.35));
+        rc.fill(0.0, fy, w, 1.0, tone::bronze(0.35));
         let b = self.view.burden;
         let slowed = b.slowed();
         let color = if slowed {
@@ -674,7 +664,7 @@ impl Widget for InventoryFrame {
             rc.fill_rounded_rect(24.0, by, 420.0, 6.0, pill, hex(0xFF_FFFF, 0.1));
             let share = (b.percent as f32 / 300.0).clamp(0.0, 1.0);
             rc.fill_rounded_rect(24.0, by, 420.0 * share, 6.0, pill, color);
-            rc.fill(24.0 + 140.0 - 1.0, by - 3.0, 2.0, 12.0, hex(0xF4_EBDC, 0.6));
+            rc.fill(24.0 + 140.0 - 1.0, by - 3.0, 2.0, 12.0, tone::words(0.6));
             let marks = by + 9.0;
             text::draw(rc, s, "0%", 24.0, marks, TextStyle::plain(p.text_soft));
             text::draw(
@@ -741,7 +731,7 @@ impl Widget for InventoryFrame {
                 );
             }
         }
-        rc.stroke_rounded_rect(0.0, 0.0, w, h, round, hex(0xC9_A062, 0.8), 1.0);
+        rc.stroke_rounded_rect(0.0, 0.0, w, h, round, tone::bronze(0.8), 1.0);
     }
 }
 
@@ -785,7 +775,6 @@ pub enum PackRequest {
 /// A button on the pack rail; it takes item drops.
 #[derive(Debug)]
 pub struct PackButton {
-    theme: Horizon,
     font: Option<Arc<UiFont>>,
     /// What it stands for.
     pub face: PackFace,
@@ -803,9 +792,8 @@ pub struct PackButton {
 impl PackButton {
     /// A button for `face`.
     #[must_use]
-    pub fn new(theme: Horizon, font: Option<Arc<UiFont>>, face: PackFace) -> Self {
+    pub fn new(font: Option<Arc<UiFont>>, face: PackFace) -> Self {
         Self {
-            theme,
             font,
             face,
             shown: PackShown::default(),
@@ -899,12 +887,12 @@ impl Widget for PackButton {
         let Some((w, h)) = ui.element(me).map(|e| (e.width, e.height)) else {
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let s = &self.shown;
         let r = CornerRadii::all(4.0);
         let lit = self.over && self.takes != Some(false);
         let fill = if s.chosen || lit {
-            hex(0xE0_B068, 0.16)
+            tone::gold(0.16)
         } else {
             hex(0, 0.3)
         };
@@ -912,7 +900,7 @@ impl Widget for PackButton {
         let edge = if s.chosen || lit || self.hovered {
             p.accent
         } else {
-            hex(0xC9_A062, 0.3)
+            tone::bronze(0.3)
         };
         rc.stroke_rounded_rect(0.0, 0.0, w, h, r, edge, if lit { 2.0 } else { 1.0 });
         if self.over && self.takes == Some(false) {
@@ -956,7 +944,7 @@ impl Widget for PackButton {
                 &s.fill_words,
                 w * 0.5,
                 y,
-                TextStyle::plain(hex(0xE9_D3AE, 1.0)),
+                TextStyle::plain(tone::warm(1.0)),
             );
             y += f.line_height + 2.0;
         }
@@ -1056,7 +1044,7 @@ impl Widget for FigureTurn {
             return;
         };
         let r = CornerRadii::all(4.0);
-        rc.fill_rounded_rect(0.0, 0.0, w, h, r, hex(0xE0_B068, 0.08));
-        rc.stroke_rounded_rect(0.0, 0.0, w, h, r, hex(0xE0_B068, 0.8), 1.5);
+        rc.fill_rounded_rect(0.0, 0.0, w, h, r, tone::gold(0.08));
+        rc.stroke_rounded_rect(0.0, 0.0, w, h, r, tone::gold(0.8), 1.5);
     }
 }

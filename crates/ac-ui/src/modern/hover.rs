@@ -35,7 +35,7 @@ impl Widget for HoverFrame {
         let Some((w, h)) = ui.element(me).map(|e| (e.width, e.height)) else {
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let radius = self.theme.metrics.window_radius;
         rc.soft_shadow(0.0, 0.0, w, h, radius, 12.0, 30.0, p.shadow);
         super::theme::fill_glass(rc, (0.0, 0.0, w, h), CornerRadii::all(radius), p.popup);
@@ -223,7 +223,7 @@ mod tests {
         let root = ui.root();
         let a = ui.add(root, Element::at(16.0, 14.0, 60.0, 28.0), Panel::default());
         let b = ui.add(root, Element::at(82.0, 14.0, 60.0, 28.0), Panel::default());
-        let pane = HoverPane::mount(&mut ui, Horizon::BRONZE, 320.0, 200.0);
+        let pane = HoverPane::mount(&mut ui, Horizon::current(), 320.0, 200.0);
         (ui, pane, a, b)
     }
 

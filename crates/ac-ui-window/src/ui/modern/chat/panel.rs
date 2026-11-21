@@ -4,6 +4,7 @@
 //! back holds the transcript still; new lines wait behind a "N new
 //! messages" button.
 
+use ac_ui::modern::tone;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -62,12 +63,6 @@ const ENTER_HINT: &str = "Enter";
 const WHEEL_ROWS: usize = 3;
 /// The tab buttons' height and gap, and the small square buttons' side.
 const TAB_GAP: f32 = 2.0;
-
-const TEXT: Color = hex(0xF4_EBDC, 1.0);
-const MUTED: Color = hex(0xC8_B89C, 1.0);
-const TIME_COLOR: Color = hex(0xA8_9A82, 1.0);
-const GOLD: Color = hex(0xE0_B068, 1.0);
-const INK: Color = hex(0x1A_140D, 1.0);
 
 /// The fonts the panel uses.
 #[derive(Debug, Clone, Default)]
@@ -749,7 +744,7 @@ impl Widget for ChatPanel {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let shadow = p.text_shadow;
         self.names.clear();
         self.new_button = None;
@@ -772,7 +767,7 @@ impl Widget for ChatPanel {
             // The transcript's glass.
             let round = CornerRadii::all(self.theme.metrics.window_radius);
             fill_glass(rc, (0.0, box_top, WIDTH, box_h), round, hex(0, 0.45));
-            rc.stroke_rounded_rect(0.0, box_top, WIDTH, box_h, round, hex(0xC9_A062, 0.3), 1.0);
+            rc.stroke_rounded_rect(0.0, box_top, WIDTH, box_h, round, tone::bronze(0.3), 1.0);
         }
         let room = if self.active {
             self.room()
@@ -844,7 +839,7 @@ impl Widget for ChatPanel {
                     3.0,
                     thumb,
                     CornerRadii::all(1.5),
-                    hex(0xC9_A062, 0.7),
+                    tone::bronze(0.7),
                 );
             }
             if self.scroll > 0 {
@@ -869,7 +864,11 @@ impl Widget for ChatPanel {
                 ENTER_WORDS,
                 bx + 8.0,
                 ty,
-                TextStyle::plain(Color { a: 0.7, ..TEXT }).shadowed(shadow),
+                TextStyle::plain(Color {
+                    a: 0.7,
+                    ..tone::words(1.0)
+                })
+                .shadowed(shadow),
             );
             self.enter_button = Some((bx, by, w, 22.0));
         }
@@ -887,7 +886,7 @@ impl ChatPanel {
     }
 
     fn draw_row(&mut self, rc: &mut RenderContext<'_>, line: &ShownLine, row: &Row, y: f32) {
-        let shadow = self.theme.palette.text_shadow;
+        let shadow = Horizon::current().palette.text_shadow;
         let color = line.kind.color();
         let mut x = PAD.3;
         if line.mention {
@@ -897,7 +896,7 @@ impl ChatPanel {
                 WIDTH - PAD.1 - PAD.3 + 12.0,
                 ROW,
                 CornerRadii::all(3.0),
-                hex(0xE0_B068, 0.16),
+                tone::gold(0.16),
             );
         }
         if self.times {
@@ -911,7 +910,7 @@ impl ChatPanel {
                     t,
                     x,
                     ty,
-                    TextStyle::plain(TIME_COLOR).shadowed(shadow),
+                    TextStyle::plain(tone::muted(1.0)).shadowed(shadow),
                 );
             }
             x += TIME;
@@ -944,7 +943,7 @@ impl ChatPanel {
         }
         if let Some(f) = &self.fonts.body {
             let words_color = if line.kind == LineKind::Say {
-                TEXT
+                tone::words(1.0)
             } else {
                 color
             };
@@ -962,7 +961,10 @@ impl ChatPanel {
                             w + 2.0,
                             ROW - 2.0,
                             CornerRadii::all(2.0),
-                            Color { a: 0.55, ..GOLD },
+                            Color {
+                                a: 0.55,
+                                ..tone::gold(1.0)
+                            },
                         );
                     }
                 }
@@ -987,7 +989,7 @@ impl ChatPanel {
             WIDTH,
             ENTRY,
             CornerRadii::all(4.0),
-            hex(0xC9_A062, 0.8),
+            tone::bronze(0.8),
             1.0,
         );
         let c = channel_color(self.channel);
@@ -1032,7 +1034,7 @@ impl ChatPanel {
                 ENTER_HINT,
                 WIDTH - 10.0 - hw,
                 ty,
-                TextStyle::plain(TIME_COLOR),
+                TextStyle::plain(tone::muted(1.0)),
             );
             if self.entry_empty && !self.typing {
                 let (fl, _, fw, _) = self.field_rect();
@@ -1044,7 +1046,10 @@ impl ChatPanel {
                     &prompt,
                     fl + 5.0,
                     ty,
-                    TextStyle::plain(Color { a: 0.55, ..TEXT }),
+                    TextStyle::plain(Color {
+                        a: 0.55,
+                        ..tone::words(1.0)
+                    }),
                 );
             }
         }
@@ -1068,10 +1073,10 @@ impl ChatPanel {
             6.0,
             14.0,
             34.0,
-            self.theme.palette.shadow,
+            Horizon::current().palette.shadow,
         );
-        fill_glass(rc, (0.0, top, WIDTH, h), round, hex(0x18_130E, 0.97));
-        rc.stroke_rounded_rect(0.0, top, WIDTH, h, round, hex(0xC9_A062, 0.8), 1.0);
+        fill_glass(rc, (0.0, top, WIDTH, h), round, tone::raised(0.97));
+        rc.stroke_rounded_rect(0.0, top, WIDTH, h, round, tone::bronze(0.8), 1.0);
         for (i, cmd) in self.suggestions.clone().iter().enumerate() {
             let y = top + 6.0 + i as f32 * ROW_H;
             if i == 0 {
@@ -1081,16 +1086,30 @@ impl ChatPanel {
                     WIDTH - 12.0,
                     ROW_H,
                     CornerRadii::all(3.0),
-                    hex(0xE0_B068, 0.16),
+                    tone::gold(0.16),
                 );
             }
             let ty = (y + (ROW_H - bold.line_height) * 0.5).round();
-            text::draw(rc, &bold, cmd.verb, 14.0, ty, TextStyle::plain(GOLD));
+            text::draw(
+                rc,
+                &bold,
+                cmd.verb,
+                14.0,
+                ty,
+                TextStyle::plain(tone::gold(1.0)),
+            );
             let mut x = 14.0 + text::measure(&bold, cmd.verb, 0.0) + 8.0;
             let sty = (y + (ROW_H - small.line_height) * 0.5).round();
             if !cmd.alias.is_empty() {
                 let also = format!("also {}", cmd.alias);
-                text::draw(rc, &small, &also, x, sty, TextStyle::plain(TIME_COLOR));
+                text::draw(
+                    rc,
+                    &small,
+                    &also,
+                    x,
+                    sty,
+                    TextStyle::plain(tone::muted(1.0)),
+                );
                 x += text::measure(&small, &also, 0.0) + 12.0;
             }
             let target = cmd
@@ -1111,7 +1130,14 @@ impl ChatPanel {
             }
             let room = WIDTH - 14.0 - tw - 12.0 - x;
             let about = crate::ui::modern::hud::target::fit(&small, cmd.about, room.max(0.0));
-            text::draw(rc, &small, &about, x, sty, TextStyle::plain(MUTED));
+            text::draw(
+                rc,
+                &small,
+                &about,
+                x,
+                sty,
+                TextStyle::plain(tone::soft(1.0)),
+            );
             self.suggestion_spots.push((6.0, y, WIDTH - 12.0, ROW_H));
         }
         let fy = top + h - FOOT + ((FOOT - small.line_height) * 0.5).round() - 3.0;
@@ -1121,7 +1147,7 @@ impl ChatPanel {
             "Tab completes \u{b7} click to pick \u{b7} @help lists every command",
             14.0,
             fy,
-            TextStyle::plain(TIME_COLOR),
+            TextStyle::plain(tone::muted(1.0)),
         );
         rc.end_overlay();
     }
@@ -1155,30 +1181,51 @@ impl ChatPanel {
     fn draw_search_row(&mut self, rc: &mut RenderContext<'_>) {
         let round = CornerRadii::all(4.0);
         rc.fill_rounded_rect(0.0, 0.0, WIDTH, TABS, round, hex(0, 0.6));
-        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, TABS, round, hex(0xC9_A062, 0.8), 1.0);
-        magnifier(rc, 8.0, (TABS - 12.0) * 0.5, GOLD);
+        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, TABS, round, tone::bronze(0.8), 1.0);
+        magnifier(rc, 8.0, (TABS - 12.0) * 0.5, tone::gold(1.0));
         let mut x = WIDTH - 4.0 - 3.0 * 22.0;
         if let Some(f) = self.fonts.small.clone() {
             let words = self.count_words();
             let w = text::measure(&f, &words, 0.0);
             let ty = ((TABS - f.line_height) * 0.5).round();
-            text::draw(rc, &f, &words, x - 8.0 - w, ty, TextStyle::plain(MUTED));
+            text::draw(
+                rc,
+                &f,
+                &words,
+                x - 8.0 - w,
+                ty,
+                TextStyle::plain(tone::soft(1.0)),
+            );
         }
         let mid = TABS * 0.5;
         for i in 0..3 {
             let cx = x + 11.0;
             match i {
                 0 => {
-                    rc.smooth_line(cx - 4.0, mid + 2.0, cx, mid - 2.0, TEXT, 1.6);
-                    rc.smooth_line(cx, mid - 2.0, cx + 4.0, mid + 2.0, TEXT, 1.6);
+                    rc.smooth_line(cx - 4.0, mid + 2.0, cx, mid - 2.0, tone::words(1.0), 1.6);
+                    rc.smooth_line(cx, mid - 2.0, cx + 4.0, mid + 2.0, tone::words(1.0), 1.6);
                 }
                 1 => {
-                    rc.smooth_line(cx - 4.0, mid - 2.0, cx, mid + 2.0, TEXT, 1.6);
-                    rc.smooth_line(cx, mid + 2.0, cx + 4.0, mid - 2.0, TEXT, 1.6);
+                    rc.smooth_line(cx - 4.0, mid - 2.0, cx, mid + 2.0, tone::words(1.0), 1.6);
+                    rc.smooth_line(cx, mid + 2.0, cx + 4.0, mid - 2.0, tone::words(1.0), 1.6);
                 }
                 _ => {
-                    rc.smooth_line(cx - 4.0, mid - 4.0, cx + 4.0, mid + 4.0, TEXT, 1.6);
-                    rc.smooth_line(cx + 4.0, mid - 4.0, cx - 4.0, mid + 4.0, TEXT, 1.6);
+                    rc.smooth_line(
+                        cx - 4.0,
+                        mid - 4.0,
+                        cx + 4.0,
+                        mid + 4.0,
+                        tone::words(1.0),
+                        1.6,
+                    );
+                    rc.smooth_line(
+                        cx + 4.0,
+                        mid - 4.0,
+                        cx - 4.0,
+                        mid + 4.0,
+                        tone::words(1.0),
+                        1.6,
+                    );
                 }
             }
             self.search_spots[i] = Some((x, 1.0, 22.0, TABS - 2.0));
@@ -1193,21 +1240,28 @@ impl ChatPanel {
         let opacity = self.tabs.first().map_or(0.62, |t| t.opacity);
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, WIDTH, h, 6.0, 10.0, 30.0, hex(0, 0.45));
-        fill_glass(rc, (0.0, 0.0, WIDTH, h), round, hex(0x14_100C, opacity));
-        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, h, round, hex(0xC9_A062, 0.8), 1.0);
+        fill_glass(rc, (0.0, 0.0, WIDTH, h), round, tone::ground(opacity));
+        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, h, round, tone::bronze(0.8), 1.0);
         rc.fill_rounded_rect(
             0.0,
             TABS + 2.0,
             WIDTH,
             1.0,
             CornerRadii::all(0.0),
-            hex(0xC9_A062, 0.3),
+            tone::bronze(0.3),
         );
         if let (Some(f), Some(tab)) = (self.fonts.tab.clone(), self.tabs.first()) {
             let ty = ((TABS - f.line_height) * 0.5).round() + 2.0;
-            text::draw(rc, &f, &tab.name, 10.0, ty, TextStyle::plain(TEXT));
+            text::draw(
+                rc,
+                &f,
+                &tab.name,
+                10.0,
+                ty,
+                TextStyle::plain(tone::words(1.0)),
+            );
         }
-        let c = hex(0xE9_D3AE, 1.0);
+        let c = tone::warm(1.0);
         for (i, slot) in [2usize, 4].into_iter().enumerate() {
             let x = WIDTH - 4.0 - (2 - i) as f32 * TABS;
             let (cx, cy) = (x + TABS * 0.5, 2.0 + TABS * 0.5);
@@ -1281,7 +1335,7 @@ impl ChatPanel {
             let round = CornerRadii::all(3.0);
             rc.fill_rounded_rect(x, 0.0, w, TABS, round, hex(0, if on { 0.62 } else { 0.3 }));
             if on {
-                rc.stroke_rounded_rect(x, 0.0, w, TABS, round, hex(0xC9_A062, 0.8), 1.0);
+                rc.stroke_rounded_rect(x, 0.0, w, TABS, round, tone::bronze(0.8), 1.0);
             }
             let ty = ((TABS - f.line_height) * 0.5).round();
             text::draw(
@@ -1290,7 +1344,11 @@ impl ChatPanel {
                 &name,
                 x + pad,
                 ty,
-                TextStyle::plain(if on { GOLD } else { TEXT }),
+                TextStyle::plain(if on {
+                    tone::gold(1.0)
+                } else {
+                    tone::words(1.0)
+                }),
             );
             if badge_w > 0.0 {
                 let bw = badge_w - 5.0;
@@ -1302,7 +1360,7 @@ impl ChatPanel {
                     Some(ac_runtime::communication::ChatChannelKind::Tell) => {
                         LineKind::Tell.color()
                     }
-                    _ => GOLD,
+                    _ => tone::gold(1.0),
                 };
                 rc.fill_rounded_rect(
                     bx,
@@ -1319,7 +1377,7 @@ impl ChatPanel {
                     &badge_text,
                     bx + bw * 0.5,
                     by,
-                    TextStyle::plain(INK),
+                    TextStyle::plain(tone::ink(1.0)),
                 );
             }
             self.tab_spots.push((i, x, w));
@@ -1343,7 +1401,7 @@ impl ChatPanel {
             rc,
             sx + (TABS - 12.0) * 0.5,
             (TABS - 12.0) * 0.5,
-            hex(0xE9_D3AE, 1.0),
+            tone::warm(1.0),
         );
         self.search_spots[3] = Some((sx, 0.0, TABS, TABS));
     }
@@ -1369,7 +1427,7 @@ impl ChatPanel {
             words,
             x + 8.0,
             (box_top + 6.0 + (18.0 - f.line_height) * 0.5).round(),
-            TextStyle::plain(MUTED),
+            TextStyle::plain(tone::soft(1.0)),
         );
         let label = match self.waiting {
             0 => "Back to the newest".to_owned(),
@@ -1383,28 +1441,21 @@ impl ChatPanel {
         let bx = (WIDTH - bw) * 0.5;
         let by = box_top + box_h - 8.0 - 26.0;
         rc.soft_shadow(bx, by, bw, 26.0, 13.0, 4.0, 12.0, hex(0, 0.45));
-        rc.fill_rounded_rect(
-            bx,
-            by,
-            bw,
-            26.0,
-            CornerRadii::all(13.0),
-            hex(0xE0_B068, 0.92),
-        );
+        rc.fill_rounded_rect(bx, by, bw, 26.0, CornerRadii::all(13.0), tone::gold(0.92));
         text::draw(
             rc,
             &bold,
             &label,
             bx + 12.0,
             (by + (26.0 - bold.line_height) * 0.5).round(),
-            TextStyle::plain(INK),
+            TextStyle::plain(tone::ink(1.0)),
         );
         // A small arrow down.
         let ax = bx + bw - 12.0 - 6.0;
         let ay = by + 13.0;
-        rc.smooth_line(ax, ay - 5.0, ax, ay + 5.0, INK, 2.0);
-        rc.smooth_line(ax - 4.0, ay + 1.0, ax, ay + 5.0, INK, 2.0);
-        rc.smooth_line(ax + 4.0, ay + 1.0, ax, ay + 5.0, INK, 2.0);
+        rc.smooth_line(ax, ay - 5.0, ax, ay + 5.0, tone::ink(1.0), 2.0);
+        rc.smooth_line(ax - 4.0, ay + 1.0, ax, ay + 5.0, tone::ink(1.0), 2.0);
+        rc.smooth_line(ax + 4.0, ay + 1.0, ax, ay + 5.0, tone::ink(1.0), 2.0);
         self.new_button = Some((bx, by, bw, 26.0));
     }
 }
@@ -1456,7 +1507,7 @@ enum PlusOrPop {
 /// A small square button on the tab row at `x`.
 fn square_button(rc: &mut RenderContext<'_>, x: f32, what: PlusOrPop) {
     rc.fill_rounded_rect(x, 0.0, TABS, TABS, CornerRadii::all(3.0), hex(0, 0.3));
-    let c = hex(0xE9_D3AE, 1.0);
+    let c = tone::warm(1.0);
     let (cx, cy) = (x + TABS * 0.5, TABS * 0.5);
     match what {
         PlusOrPop::Plus => {
@@ -1526,7 +1577,7 @@ mod tests {
 
     #[test]
     fn reading_back_holds_still_and_counts_what_waits() {
-        let mut panel = ChatPanel::new(Horizon::BRONZE, ChatFonts::default());
+        let mut panel = ChatPanel::new(Horizon::current(), ChatFonts::default());
         panel.wake();
         for n in 0..40 {
             panel.push(line(n, LogTextType::Speech, "Osk", "hello"));
@@ -1546,7 +1597,7 @@ mod tests {
 
     #[test]
     fn the_panel_rests_after_a_while_alone() {
-        let mut panel = ChatPanel::new(Horizon::BRONZE, ChatFonts::default());
+        let mut panel = ChatPanel::new(Horizon::current(), ChatFonts::default());
         let mut ui = UiRoot::new();
         let root = ui.root();
         panel.wake();
@@ -1572,7 +1623,7 @@ mod tests {
 
     #[test]
     fn a_pointer_resting_on_the_idle_lines_wakes_the_panel() {
-        let mut panel = ChatPanel::new(Horizon::BRONZE, ChatFonts::default());
+        let mut panel = ChatPanel::new(Horizon::current(), ChatFonts::default());
         let mut ui = UiRoot::new();
         let root = ui.root();
         panel.tick(&mut ui, root, 1.0);
@@ -1594,7 +1645,7 @@ mod tests {
 
     #[test]
     fn unseen_lines_count_on_other_tabs_only() {
-        let mut panel = ChatPanel::new(Horizon::BRONZE, ChatFonts::default());
+        let mut panel = ChatPanel::new(Horizon::current(), ChatFonts::default());
         panel.wake();
         panel.push(line(1, LogTextType::Fellowship, "Mira", "pull"));
         assert_eq!(panel.log.unread(0), 0);

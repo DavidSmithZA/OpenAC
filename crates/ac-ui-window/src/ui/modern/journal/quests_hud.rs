@@ -2,6 +2,7 @@
 //! a small panel moved anywhere in Edit layout; a click opens the quest in
 //! the journal.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::RenderContext;
@@ -36,7 +37,6 @@ pub struct QuestsHudFonts {
 /// The quests on screen.
 #[derive(Debug)]
 pub struct QuestsHud {
-    theme: Horizon,
     fonts: QuestsHudFonts,
     /// What it shows.
     pub quests: Vec<ShownQuest>,
@@ -48,9 +48,8 @@ pub struct QuestsHud {
 impl QuestsHud {
     /// The piece in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: QuestsHudFonts) -> Self {
+    pub fn new(fonts: QuestsHudFonts) -> Self {
         Self {
-            theme,
             fonts,
             quests: Vec::new(),
             hover: None,
@@ -111,7 +110,7 @@ impl Widget for QuestsHud {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let shadow = hex(0, 0.9);
         if let Some(l) = &f.label {
@@ -121,7 +120,7 @@ impl Widget for QuestsHud {
                 "QUESTS",
                 2.0,
                 4.0,
-                TextStyle::plain(kit::WARM)
+                TextStyle::plain(tone::warm(1.0))
                     .tracked(kit::LABEL_TRACKING)
                     .shadowed(shadow),
             );
@@ -160,7 +159,7 @@ impl Widget for QuestsHud {
             }
             if let Some(s) = &f.small {
                 let line = kit::fit(s, &q.line, r.2 - 16.0);
-                let ink = if q.timed { gold(1.0) } else { kit::WARM };
+                let ink = if q.timed { gold(1.0) } else { tone::warm(1.0) };
                 text::draw(
                     rc,
                     s,

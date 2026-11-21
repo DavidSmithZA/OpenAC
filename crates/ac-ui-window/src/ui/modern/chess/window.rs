@@ -5,6 +5,7 @@
 //! picked up shows where it can go (dots) and what it can take (a ring),
 //! and the moves made are listed.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_core::chess::{ChessPiece, ChessPieceType, ChessTeam};
@@ -27,7 +28,7 @@ use ac_ui::{UiFont, UiRoot};
 use super::model::{ChessScreen, SquareView, can_pick, chess_screen};
 use crate::ui::indicator_panels::MINI_GAME_WINDOW;
 use crate::ui::modern::hud;
-use crate::ui::modern::kit::{self, Hits, MUTED, Rect, SOFT, bronze, gold, put, put_mid};
+use crate::ui::modern::kit::{self, Hits, Rect, bronze, gold, put, put_mid};
 use crate::ui::window::WindowUi;
 
 /// The window's name.
@@ -254,7 +255,7 @@ impl ChessFrame {
                 let disc = if white {
                     hex(0xFB_F6EC, 1.0)
                 } else {
-                    hex(0x1A_140D, 1.0)
+                    tone::ink(1.0)
                 };
                 rc.fill_ellipse(r.0 + 10.0, r.1 + 10.0, r.2 - 20.0, r.3 - 20.0, disc);
                 let letter = match p.piece_type {
@@ -268,7 +269,7 @@ impl ChessFrame {
                 if let Some(f) = &self.fonts.title {
                     let w = text::measure(f, letter, 0.0);
                     let ink = if white {
-                        hex(0x1A_140D, 1.0)
+                        tone::ink(1.0)
                     } else {
                         hex(0xFB_F6EC, 1.0)
                     };
@@ -290,14 +291,14 @@ impl ChessFrame {
                 r.1 + (r.3 - d) * 0.5,
                 d,
                 d,
-                hex(0x1A_140D, 0.45),
+                tone::ink(0.45),
             );
         }
     }
 
     #[allow(clippy::too_many_lines)]
     fn draw_side(&mut self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         let s = &self.screen;
         let mut y = BOARD_Y;
@@ -314,7 +315,7 @@ impl ChessFrame {
             let disc = if side.white {
                 hex(0xFB_F6EC, 1.0)
             } else {
-                hex(0x1A_140D, 1.0)
+                tone::ink(1.0)
             };
             let cy = r.1 + r.3 * 0.5;
             rc.fill_ellipse(r.0 + 12.0, cy - 7.0, 14.0, 14.0, disc);
@@ -329,7 +330,11 @@ impl ChessFrame {
                 p.text,
             );
             if !side.turn.is_empty() {
-                let ink = if side.moving { gold(1.0) } else { MUTED };
+                let ink = if side.moving {
+                    gold(1.0)
+                } else {
+                    tone::muted(1.0)
+                };
                 kit::put_right(
                     rc,
                     f.label.as_ref(),
@@ -371,7 +376,7 @@ impl ChessFrame {
                 "MOVES",
                 x,
                 y,
-                TextStyle::plain(SOFT).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
             x += text::measure(l, "MOVES", kit::LABEL_TRACKING) + 8.0;
         }
@@ -396,7 +401,14 @@ impl ChessFrame {
         self.scroll.hold(total, room);
         rc.push_clip(SIDE_X, y, SIDE_W, room);
         if s.moves.is_empty() {
-            put(rc, f.moves.as_ref(), "No moves yet.", SIDE_X, y, MUTED);
+            put(
+                rc,
+                f.moves.as_ref(),
+                "No moves yet.",
+                SIDE_X,
+                y,
+                tone::muted(1.0),
+            );
         }
         let col = (SIDE_W - 24.0) * 0.5;
         for (i, m) in s.moves.iter().enumerate() {
@@ -407,7 +419,7 @@ impl ChessFrame {
                 &format!("{}.", m.number),
                 SIDE_X,
                 ty,
-                MUTED,
+                tone::muted(1.0),
             );
             let ink = |on: bool| if on { gold(1.0) } else { p.text };
             let (wf, bf) = (
@@ -444,7 +456,7 @@ impl ChessFrame {
         let lit = s.playing && h.add(stalemate, Hit::Ask(ChessAsk::Stalemate));
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             stalemate,
             words,
             f.strong.as_ref(),
@@ -455,7 +467,7 @@ impl ChessFrame {
         let lit = s.playing && h.add(resign, Hit::AskResign);
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             resign,
             "Resign\u{2026}",
             f.strong.as_ref(),
@@ -473,14 +485,14 @@ impl ChessFrame {
             WIDTH,
             HEIGHT,
             CornerRadii::all(self.theme.metrics.window_radius),
-            hex(0x0A_0806, 0.6),
+            tone::deep(0.6),
         );
         let (card, keep, resign) = self.card_rects();
         h.add((0.0, 0.0, WIDTH, HEIGHT), Hit::Card);
         h.add(card, Hit::Card);
         let round = CornerRadii::all(6.0);
         rc.soft_shadow(card.0, card.1, card.2, card.3, 6.0, 16.0, 40.0, hex(0, 0.6));
-        rc.fill_rounded_rect(card.0, card.1, card.2, card.3, round, hex(0x18_130E, 0.99));
+        rc.fill_rounded_rect(card.0, card.1, card.2, card.3, round, tone::raised(0.99));
         rc.stroke_rounded_rect(card.0, card.1, card.2, card.3, round, bronze(0.8), 1.0);
         put(
             rc,
@@ -488,7 +500,7 @@ impl ChessFrame {
             "Resign the game?",
             card.0 + 18.0,
             card.1 + 18.0,
-            self.theme.palette.text,
+            Horizon::current().palette.text,
         );
         for (i, line) in self.card_lines().iter().enumerate() {
             put(
@@ -497,13 +509,13 @@ impl ChessFrame {
                 line,
                 card.0 + 18.0,
                 card.1 + 50.0 + i as f32 * 19.0,
-                kit::WARM,
+                tone::warm(1.0),
             );
         }
         let lit = h.add(keep, Hit::KeepPlaying);
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             keep,
             "Keep playing",
             f.strong.as_ref(),
@@ -596,8 +608,15 @@ impl Widget for ChessFrame {
         } else {
             self.hits.hover
         });
-        kit::window_back(rc, &self.theme, WIDTH, HEIGHT, HEADER, true);
-        let end = kit::title(rc, &self.theme, f.title.as_ref(), GLYPH, "Chess", HEADER);
+        kit::window_back(rc, &Horizon::current(), WIDTH, HEIGHT, HEADER, true);
+        let end = kit::title(
+            rc,
+            &Horizon::current(),
+            f.title.as_ref(),
+            GLYPH,
+            "Chess",
+            HEADER,
+        );
         put_mid(
             rc,
             f.small.as_ref(),
@@ -605,11 +624,11 @@ impl Widget for ChessFrame {
             end + 12.0,
             0.0,
             HEADER,
-            MUTED,
+            tone::muted(1.0),
         );
         let close = kit::close_rect(WIDTH, HEADER);
         let lit = h.add(close, Hit::Ask(ChessAsk::Close));
-        kit::close(rc, &self.theme, close, lit);
+        kit::close(rc, &Horizon::current(), close, lit);
         // The board.
         let side = SQUARE * 8.0;
         let squares = self.screen.squares.clone();
@@ -641,7 +660,7 @@ impl Widget for ChessFrame {
                 20.0,
                 BOARD_Y + i as f32 * SQUARE,
                 SQUARE,
-                MUTED,
+                tone::muted(1.0),
             );
             let file = self.screen.files[i].to_string();
             if let Some(sf) = &f.small {
@@ -652,7 +671,7 @@ impl Widget for ChessFrame {
                     &file,
                     (BOARD_X + i as f32 * SQUARE + (SQUARE - w) * 0.5).round(),
                     BOARD_Y + side + 4.0,
-                    TextStyle::plain(MUTED),
+                    TextStyle::plain(tone::muted(1.0)),
                 );
             }
         }
@@ -685,7 +704,7 @@ fn chess_command(ui: &mut UiRoot, command: ChessCommand) {
 impl WindowUi {
     /// The Chess window, hidden, in place of retail's Game Center.
     pub(in crate::ui) fn mount_modern_chess(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = ChessFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             strong: self.modern_font(Weight::SemiBold, 12.5),

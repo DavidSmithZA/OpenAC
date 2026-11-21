@@ -145,7 +145,7 @@ impl Widget for TipLayer {
             (my - h - 6.0).max(0.0)
         };
         let (x, y) = (x.round(), y.round());
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let round = CornerRadii::all(self.theme.metrics.radius);
         rc.soft_shadow(x, y, w, h, 3.0, 4.0, 10.0, p.shadow);
         rc.fill_rounded_rect(x, y, w, h, round, p.popup);
@@ -189,7 +189,7 @@ mod tests {
             Says("Inventory (F12)"),
         );
         ui.add(root, Element::at(400.0, 400.0, 50.0, 50.0), Says("retail"));
-        let tips = TipLayer::mount(&mut ui, Horizon::BRONZE, None);
+        let tips = TipLayer::mount(&mut ui, Horizon::current(), None);
 
         ui.on_mouse_move(110, 110);
         ui.tick(0.2, 200);

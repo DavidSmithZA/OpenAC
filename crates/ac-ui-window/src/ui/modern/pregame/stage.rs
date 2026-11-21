@@ -12,6 +12,7 @@
 //! The server sends only names; level, heritage, look, last place and
 //! when last played are what this computer remembers (OPENAC).
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext};
@@ -25,9 +26,7 @@ use ac_ui::{UiFont, UiRoot};
 
 use super::scenery::{self, Sky};
 use crate::ui::modern::hud::lines::stroke;
-use crate::ui::modern::kit::{
-    self, HARM, Hits, MUTED, RED, Rect, SOFT, WARM, bronze, gold, put, put_mid, put_right,
-};
+use crate::ui::modern::kit::{self, HARM, Hits, RED, Rect, bronze, gold, put, put_mid, put_right};
 
 /// The fonts the screen draws with.
 #[derive(Debug, Clone, Default)]
@@ -184,6 +183,21 @@ pub struct StageScreen {
     pub exit_words: String,
     /// The version line.
     pub version: String,
+    /// The themes the corner's Theme button offers.
+    pub themes: Vec<ThemeChoice>,
+    /// Their list is open.
+    pub themes_open: bool,
+}
+
+/// A theme in the Theme button's list.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ThemeChoice {
+    /// What it is called.
+    pub name: String,
+    /// Its accent, for the swatch.
+    pub accent: Color,
+    /// It is the theme now.
+    pub chosen: bool,
 }
 
 /// What the screen asks for.
@@ -203,6 +217,12 @@ pub enum StageAsk {
     Restore,
     /// Create a character.
     Create,
+    /// Open or close the themes' list.
+    Themes,
+    /// Close the themes' list (a click elsewhere).
+    CloseThemes,
+    /// Take the theme at this place in the list.
+    Theme(usize),
     /// Show the credits.
     Credits,
     /// Ask to leave.
@@ -278,7 +298,6 @@ const QUESTION: &[&[(f32, f32)]] = &[
 /// The full-screen character selection.
 #[derive(Debug)]
 pub struct StageView {
-    theme: Horizon,
     fonts: StageFonts,
     /// What it shows.
     pub screen: StageScreen,
@@ -312,9 +331,8 @@ impl StageView {
 
     /// A screen in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: StageFonts) -> Self {
+    pub fn new(fonts: StageFonts) -> Self {
         Self {
-            theme,
             fonts,
             screen: StageScreen::default(),
             backdrop: super::backdrops::Backdrop::default(),
@@ -425,6 +443,29 @@ impl StageView {
         ((exit.0 - 4.0 - 80.0, exit.1, 80.0, 30.0), exit)
     }
 
+    /// The Theme button, left of Credits.
+    #[must_use]
+    pub fn theme_button(&self) -> Rect {
+        let (credits, _) = self.corner_buttons();
+        (credits.0 - 4.0 - 96.0, credits.1, 96.0, 30.0)
+    }
+
+    /// The themes' list, over the Theme button, and each row in it.
+    #[must_use]
+    pub fn theme_rows(&self) -> (Rect, Vec<Rect>) {
+        const ROW: f32 = 30.0;
+        let b = self.theme_button();
+        let n = self.screen.themes.len() as f32;
+        let w = 220.0;
+        let h = n * ROW + 12.0;
+        let x = (b.0 + b.2 - w).max(8.0);
+        let y = b.1 - 6.0 - h;
+        let rows = (0..self.screen.themes.len())
+            .map(|i| (x + 6.0, y + 6.0 + i as f32 * ROW, w - 12.0, ROW))
+            .collect();
+        ((x, y, w, h), rows)
+    }
+
     /// The Cancel button of the connecting screen.
     #[must_use]
     pub fn connecting_cancel_rect(&self) -> Rect {
@@ -460,7 +501,7 @@ impl StageView {
 
     fn draw_top(&self, rc: &mut RenderContext<'_>) {
         let f = &self.fonts;
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let y = 22.0;
         stroke(rc, 32.0, y + 7.0, 22.0, DIAMOND, gold(1.0), 1.8);
         let mut x = 64.0;
@@ -480,7 +521,7 @@ impl StageView {
                 x + 13.0,
                 y,
                 36.0,
-                SOFT,
+                tone::soft(1.0),
             );
         }
         if !self.screen.account.is_empty() {
@@ -492,20 +533,35 @@ impl StageView {
                 right,
                 y,
                 36.0,
-                SOFT,
+                tone::soft(1.0),
             );
-            stroke(rc, start - 21.0, y + 11.0, 14.0, PERSON, SOFT, 2.0);
-            rc.stroke_ellipse(start - 21.0 + 4.7, y + 11.0 + 2.3, 4.7, 4.7, SOFT, 1.6);
+            stroke(
+                rc,
+                start - 21.0,
+                y + 11.0,
+                14.0,
+                PERSON,
+                tone::soft(1.0),
+                2.0,
+            );
+            rc.stroke_ellipse(
+                start - 21.0 + 4.7,
+                y + 11.0 + 2.3,
+                4.7,
+                4.7,
+                tone::soft(1.0),
+                1.6,
+            );
         }
     }
 
     #[allow(clippy::too_many_lines)]
     fn draw_roster(&mut self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
         let f = self.fonts.clone();
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (inner, rows, outer) = self.row_rects();
         let round = CornerRadii::all(6.0);
-        fill_glass(rc, outer, round, hex(0x14_100C, 0.78));
+        fill_glass(rc, outer, round, tone::ground(0.78));
         rc.stroke_rounded_rect(outer.0, outer.1, outer.2, outer.3, round, bronze(0.35), 1.0);
         h.add(outer, Hit::Swallow);
         kit::spaced(
@@ -522,7 +578,7 @@ impl StageView {
             outer.0 + outer.2 - 18.0,
             outer.1 + 14.0,
             20.0,
-            MUTED,
+            tone::muted(1.0),
         );
         let total = self.screen.rows.len() as f32 * (ROW_H + ROW_GAP);
         self.scroll.hold(total, inner.3);
@@ -575,7 +631,7 @@ impl StageView {
                         "LEVEL",
                         (plate.0 + (plate.2 - w) * 0.5).round(),
                         plate.1 + 4.0,
-                        TextStyle::plain(SOFT).tracked(1.0),
+                        TextStyle::plain(tone::soft(1.0)).tracked(1.0),
                     );
                 }
                 if let Some(sf) = &f.strong {
@@ -598,7 +654,7 @@ impl StageView {
                     plate.1 + 11.0,
                     16.0,
                     QUESTION,
-                    MUTED,
+                    tone::muted(1.0),
                     2.0,
                 );
             }
@@ -639,7 +695,7 @@ impl StageView {
                 let ink = if row.pending {
                     hex(0xFF_8A8E, 0.75)
                 } else {
-                    MUTED
+                    tone::muted(1.0)
                 };
                 put(
                     rc,
@@ -693,7 +749,7 @@ impl StageView {
                 &self.screen.free,
                 c.0 + 58.0,
                 c.1 + 30.0,
-                MUTED,
+                tone::muted(1.0),
             );
         } else {
             dashed_rect(rc, c, bronze(0.25));
@@ -704,7 +760,7 @@ impl StageView {
                 c.0 + 16.0,
                 c.1,
                 c.3,
-                MUTED,
+                tone::muted(1.0),
             );
         }
         // The note.
@@ -724,7 +780,7 @@ impl StageView {
                     l,
                     outer.0 + 18.0 + tag + 8.0,
                     ny + 11.0 + i as f32 * 16.0,
-                    MUTED,
+                    tone::muted(1.0),
                 );
             }
         }
@@ -733,7 +789,7 @@ impl StageView {
     #[allow(clippy::too_many_lines)]
     fn draw_stage(&mut self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
         let f = self.fonts.clone();
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let cx = self.stage_centre();
         let Some(picked) = self.screen.picked.clone() else {
             return;
@@ -757,8 +813,8 @@ impl StageView {
             }
         };
         centred(rc, f.hero.as_ref(), &picked.name, 92.0, name_ink);
-        centred(rc, f.body.as_ref(), &picked.line1, 150.0, WARM);
-        centred(rc, f.small.as_ref(), &picked.line2, 172.0, SOFT);
+        centred(rc, f.body.as_ref(), &picked.line1, 150.0, tone::warm(1.0));
+        centred(rc, f.small.as_ref(), &picked.line2, 172.0, tone::soft(1.0));
         // The plinth and, for a character never played here, its outline.
         let py = self.plinth_y();
         scenery::plinth(rc, cx, py, 280.0, 56.0);
@@ -787,7 +843,7 @@ impl StageView {
                 r.1 + 52.0,
                 30.0,
                 QUESTION,
-                hex(0xF4_EBDC, 0.5),
+                tone::words(0.5),
                 2.0,
             );
         }
@@ -806,14 +862,7 @@ impl StageView {
                     .map_or(200.0, |b| text::measure(b, words, 0.0))
                     + 86.0;
                 let r = (cx - w * 0.5, ay, w, 56.0);
-                rc.fill_rounded_rect(
-                    r.0,
-                    r.1,
-                    r.2,
-                    r.3,
-                    CornerRadii::all(6.0),
-                    hex(0x14_100C, 0.9),
-                );
+                rc.fill_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(6.0), tone::ground(0.9));
                 rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(6.0), bronze(0.6), 1.0);
                 spinner(rc, r.0 + 36.0, r.1 + 28.0, 10.0, self.clock);
                 put_mid(rc, f.big.as_ref(), words, r.0 + 60.0, r.1, r.3, p.text);
@@ -842,7 +891,7 @@ impl StageView {
                             l,
                             (cx - w * 0.5).round(),
                             ay + 68.0 + i as f32 * 18.0,
-                            WARM,
+                            tone::warm(1.0),
                         );
                     }
                 }
@@ -866,7 +915,7 @@ impl StageView {
                         .map_or(100.0, |b| text::measure(b, "Enter world", 0.0));
                     let kx = r.0 + (r.2 + bw) * 0.5 + 12.0 - kw * 0.5;
                     let kr = (kx, r.1 + 18.0, kw, 20.0);
-                    let ink = hex(0x1A_140D, if self.screen.can_enter { 0.35 } else { 0.15 });
+                    let ink = tone::ink(if self.screen.can_enter { 0.35 } else { 0.15 });
                     rc.stroke_rounded_rect(kr.0, kr.1, kr.2, kr.3, CornerRadii::all(4.0), ink, 1.0);
                     put_mid(
                         rc,
@@ -875,7 +924,7 @@ impl StageView {
                         kr.0 + 7.0,
                         kr.1,
                         kr.3,
-                        hex(0x1A_140D, 0.9),
+                        tone::ink(0.9),
                     );
                 }
                 let d = self.delete_rect();
@@ -887,7 +936,7 @@ impl StageView {
                     d.2,
                     d.3,
                     round,
-                    hex(0x14_100C, if lit { 0.9 } else { 0.7 }),
+                    tone::ground(if lit { 0.9 } else { 0.7 }),
                 );
                 rc.stroke_rounded_rect(
                     d.0,
@@ -899,9 +948,9 @@ impl StageView {
                     1.0,
                 );
                 let ink = if self.screen.can_delete {
-                    WARM
+                    tone::warm(1.0)
                 } else {
-                    hex(0xE9_D3AE, 0.4)
+                    tone::warm(0.4)
                 };
                 stroke(rc, d.0 + 19.0, d.1 + 19.0, 18.0, BIN, ink, 2.0);
                 if let Some(sm) = &f.small {
@@ -913,7 +962,7 @@ impl StageView {
                         words,
                         (cx - w * 0.5).round(),
                         ay + 68.0,
-                        MUTED,
+                        tone::muted(1.0),
                     );
                 }
             }
@@ -922,8 +971,38 @@ impl StageView {
 
     fn draw_corner(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
         let f = &self.fonts;
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (credits, exit) = self.corner_buttons();
+        if !self.screen.themes.is_empty() {
+            let b = self.theme_button();
+            let lit = h.add(b, Hit::Ask(StageAsk::Themes));
+            if lit || self.screen.themes_open {
+                rc.fill_rounded_rect(
+                    b.0,
+                    b.1,
+                    b.2,
+                    b.3,
+                    CornerRadii::all(4.0),
+                    hex(0xFF_FFFF, 0.06),
+                );
+            }
+            let accent = self
+                .screen
+                .themes
+                .iter()
+                .find(|t| t.chosen)
+                .map_or(p.accent, |t| t.accent);
+            rc.fill_ellipse(b.0 + 14.0, b.1 + b.3 * 0.5 - 5.0, 10.0, 10.0, accent);
+            put_mid(
+                rc,
+                f.body.as_ref(),
+                "Theme",
+                b.0 + 32.0,
+                b.1,
+                b.3,
+                if lit { p.text } else { tone::soft(1.0) },
+            );
+        }
         let lit = h.add(credits, Hit::Ask(StageAsk::Credits));
         if lit {
             rc.fill_rounded_rect(
@@ -944,13 +1023,13 @@ impl StageView {
                 credits.0 + (credits.2 - w) * 0.5,
                 credits.1,
                 credits.3,
-                if lit { p.text } else { SOFT },
+                if lit { p.text } else { tone::soft(1.0) },
             );
         }
         let lit = h.add(exit, Hit::Ask(StageAsk::Exit));
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             exit,
             "Exit",
             f.strong.as_ref(),
@@ -965,14 +1044,74 @@ impl StageView {
             self.size.0 - 32.0,
             exit.1 + exit.3 + 4.0,
             16.0,
-            hex(0xC8_B89C, 0.7),
+            tone::soft(0.7),
         );
+        if self.screen.themes_open && !self.screen.themes.is_empty() {
+            // A click anywhere else closes the list.
+            h.add(
+                (0.0, 0.0, self.size.0, self.size.1),
+                Hit::Ask(StageAsk::CloseThemes),
+            );
+            let (panel, rows) = self.theme_rows();
+            let round = CornerRadii::all(6.0);
+            rc.soft_shadow(
+                panel.0,
+                panel.1,
+                panel.2,
+                panel.3,
+                6.0,
+                10.0,
+                30.0,
+                hex(0, 0.5),
+            );
+            fill_glass(rc, panel, round, tone::raised(0.97));
+            rc.stroke_rounded_rect(
+                panel.0,
+                panel.1,
+                panel.2,
+                panel.3,
+                round,
+                tone::bronze(0.45),
+                1.0,
+            );
+            for (i, (t, r)) in self.screen.themes.iter().zip(rows).enumerate() {
+                let lit = h.add(r, Hit::Ask(StageAsk::Theme(i)));
+                if lit || t.chosen {
+                    rc.fill_rounded_rect(
+                        r.0,
+                        r.1,
+                        r.2,
+                        r.3,
+                        CornerRadii::all(4.0),
+                        if t.chosen {
+                            tone::gold(0.14)
+                        } else {
+                            hex(0xFF_FFFF, 0.06)
+                        },
+                    );
+                }
+                rc.fill_ellipse(r.0 + 10.0, r.1 + r.3 * 0.5 - 6.0, 12.0, 12.0, t.accent);
+                put_mid(
+                    rc,
+                    f.body.as_ref(),
+                    &t.name,
+                    r.0 + 32.0,
+                    r.1,
+                    r.3,
+                    if t.chosen || lit {
+                        p.text
+                    } else {
+                        tone::soft(1.0)
+                    },
+                );
+            }
+        }
     }
 
     #[allow(clippy::too_many_lines)]
     fn draw_connecting(&self, rc: &mut RenderContext<'_>, c: &Connecting, h: &mut Hits<Hit>) {
         let f = &self.fonts;
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (cx, cy) = self.ring_centre();
         let r = self.ring_radius();
         // The portal: a violet glow and a slowly turning shimmer.
@@ -990,9 +1129,9 @@ impl StageView {
             rc.stroke_arc(cx, cy, r, top, tau * c.connection.min(1.0), outer, 4.0);
         }
         let ri = r - 16.0;
-        rc.stroke_arc(cx, cy, ri, 0.0, tau, hex(0xE9_D3AE, 0.12), 2.0);
+        rc.stroke_arc(cx, cy, ri, 0.0, tau, tone::warm(0.12), 2.0);
         if c.data > 0.0 {
-            rc.stroke_arc(cx, cy, ri, top, tau * c.data.min(1.0), WARM, 2.0);
+            rc.stroke_arc(cx, cy, ri, top, tau * c.data.min(1.0), tone::warm(1.0), 2.0);
         }
         let centred = |rc: &mut RenderContext<'_>,
                        font: Option<&Arc<UiFont>>,
@@ -1012,7 +1151,14 @@ impl StageView {
                 );
             }
         };
-        centred(rc, f.label.as_ref(), "CONNECTING TO", cy - 34.0, WARM, 2.3);
+        centred(
+            rc,
+            f.label.as_ref(),
+            "CONNECTING TO",
+            cy - 34.0,
+            tone::warm(1.0),
+            2.3,
+        );
         centred(rc, f.huge.as_ref(), &c.world, cy - 16.0, p.text, 0.0);
         // The two meters' lines.
         let mut y = cy + r + 40.0;
@@ -1022,9 +1168,15 @@ impl StageView {
                 4.0,
                 "Connection",
                 &c.connection_words,
-                if c.failed { HARM } else { WARM },
+                if c.failed { HARM } else { tone::warm(1.0) },
             ),
-            (WARM, 2.0, "Data", &c.data_words, MUTED),
+            (
+                tone::warm(1.0),
+                2.0,
+                "Data",
+                &c.data_words,
+                tone::muted(1.0),
+            ),
         ] {
             let lw = f
                 .strong
@@ -1088,7 +1240,7 @@ impl StageView {
         let lit = h.add(cancel, Hit::Ask(StageAsk::Cancel));
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             cancel,
             "Cancel",
             f.strong.as_ref(),
@@ -1100,7 +1252,7 @@ impl StageView {
 
     fn draw_empty(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
         let f = &self.fonts;
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let cx = self.size.0 * 0.5;
         let y = (self.size.1 * 0.28).round();
         let centred = |rc: &mut RenderContext<'_>,
@@ -1122,7 +1274,7 @@ impl StageView {
             }
         };
         scenery::plinth(rc, cx, self.size.1 - 265.0, 280.0, 70.0);
-        centred(rc, f.label.as_ref(), "WELCOME TO", y, SOFT, 2.3);
+        centred(rc, f.label.as_ref(), "WELCOME TO", y, tone::soft(1.0), 2.3);
         centred(
             rc,
             f.huge.as_ref(),
@@ -1136,7 +1288,7 @@ impl StageView {
             f.body.as_ref(),
             "You have no characters on this world yet.",
             y + 96.0,
-            WARM,
+            tone::warm(1.0),
             0.0,
         );
         let b = self.first_create_rect();
@@ -1154,14 +1306,14 @@ impl StageView {
             f.small.as_ref(),
             &self.screen.free,
             b.1 + b.3 + 16.0,
-            MUTED,
+            tone::muted(1.0),
             0.0,
         );
     }
 
     fn draw_card(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
         let f = &self.fonts;
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (title, words, danger, height) = match &self.screen.card {
             Card::None => return,
             Card::Delete(name) => (
@@ -1179,7 +1331,7 @@ impl StageView {
         let c = self.card_rect(height);
         let round = CornerRadii::all(6.0);
         rc.soft_shadow(c.0, c.1, c.2, c.3, 6.0, 18.0, 50.0, hex(0, 0.6));
-        rc.fill_rounded_rect(c.0, c.1, c.2, c.3, round, hex(0x18_130E, 0.97));
+        rc.fill_rounded_rect(c.0, c.1, c.2, c.3, round, tone::raised(0.97));
         let edge = if danger {
             hex(0xE5_484D, 0.7)
         } else {
@@ -1228,7 +1380,7 @@ impl StageView {
                     l,
                     c.0 + 18.0,
                     c.1 + 60.0 + i as f32 * 20.0,
-                    WARM,
+                    tone::warm(1.0),
                 );
             }
         }
@@ -1241,12 +1393,12 @@ impl StageView {
                     &format!("Type {} to confirm", self.screen.delete_word),
                     c.0 + 18.0,
                     c.1 + 130.0,
-                    SOFT,
+                    tone::soft(1.0),
                 );
                 let fr = self.delete_field_rect();
                 kit::field_box(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     fr,
                     "",
                     self.typed.is_empty(),
@@ -1260,7 +1412,7 @@ impl StageView {
                 let lit = h.add(left, Hit::Ask(StageAsk::CloseCard));
                 kit::button(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     left,
                     "Cancel",
                     f.strong.as_ref(),
@@ -1271,7 +1423,7 @@ impl StageView {
                 let lit = h.add(right, Hit::Ask(StageAsk::ConfirmDelete)) && ok;
                 kit::button(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     right,
                     "Delete",
                     f.strong.as_ref(),
@@ -1284,7 +1436,7 @@ impl StageView {
                 let lit = h.add(left, Hit::Ask(StageAsk::CloseCard));
                 kit::button(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     left,
                     "Stay",
                     f.strong.as_ref(),
@@ -1295,7 +1447,7 @@ impl StageView {
                 let lit = h.add(right, Hit::Ask(StageAsk::ConfirmExit));
                 kit::button(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     right,
                     "Leave",
                     f.strong.as_ref(),
@@ -1308,7 +1460,7 @@ impl StageView {
                 let lit = h.add(right, Hit::Ask(StageAsk::CloseCard));
                 kit::button(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     right,
                     "OK",
                     f.strong.as_ref(),
@@ -1400,15 +1552,7 @@ pub fn big_button(
         } else {
             r.0 + (r.2 - w) * 0.5
         };
-        put_mid(
-            rc,
-            Some(f),
-            words,
-            x.round(),
-            r.1,
-            r.3,
-            hex(0x1A_140D, fade),
-        );
+        put_mid(rc, Some(f), words, x.round(), r.1, r.3, tone::ink(fade));
     }
 }
 

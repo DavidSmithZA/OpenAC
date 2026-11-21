@@ -3,6 +3,7 @@
 //! the search box (and its field), thin scrollbars and wrapped text.
 //! Everything is in the window's own units, drawn by the window's widget.
 
+use crate::modern::tone;
 use std::sync::Arc;
 
 use crate::draw::{Color, RenderContext};
@@ -35,22 +36,18 @@ pub fn hot(hover: Option<(f32, f32)>, r: Rect) -> bool {
 /// The spacing of spaced capitals (group headings, labels).
 pub const LABEL_TRACKING: f32 = 1.14;
 
-/// Bronze at `alpha`.
+/// The trim (bronze in the classic look) at `alpha`.
 #[must_use]
-pub const fn bronze(alpha: f32) -> Color {
-    hex(0xC9_A062, alpha)
+pub fn bronze(alpha: f32) -> Color {
+    super::tone::bronze(alpha)
 }
 
-/// The gold of what is chosen, at `alpha`.
+/// The gold of what is chosen (the theme's accent), at `alpha`.
 #[must_use]
-pub const fn gold(alpha: f32) -> Color {
-    hex(0xE0_B068, alpha)
+pub fn gold(alpha: f32) -> Color {
+    super::tone::gold(alpha)
 }
 
-/// Words a step softer than the text.
-pub const SOFT: Color = hex(0xC8_B89C, 1.0);
-/// Warm words (descriptions).
-pub const WARM: Color = hex(0xE9_D3AE, 1.0);
 /// Helpful changes.
 pub const GOOD: Color = hex(0x7F_D08A, 1.0);
 /// Harmful words.
@@ -72,7 +69,7 @@ pub fn window_back(
 ) {
     let round = CornerRadii::all(theme.metrics.window_radius);
     rc.soft_shadow(0.0, 0.0, w, h, 6.0, 18.0, 50.0, hex(0, 0.55));
-    fill_glass(rc, (0.0, 0.0, w, h), round, hex(0x14_100C, 0.95));
+    fill_glass(rc, (0.0, 0.0, w, h), round, tone::ground(0.95));
     rc.stroke_rounded_rect(0.0, 0.0, w, h, round, bronze(0.8), 1.0);
     rc.fill_vertical_gradient(
         1.0,
@@ -190,7 +187,7 @@ pub fn draw_tab(
         let (fill, ink) = if tab.red {
             (hex(0xFF_6B70, 0.18), hex(0xFF_B3B5, 1.0))
         } else {
-            (bronze(0.16), WARM)
+            (bronze(0.16), tone::warm(1.0))
         };
         rc.fill_rounded_rect(x, py, w, 18.0, CornerRadii::all(9.0), fill);
         let ty = py + ((18.0 - b.line_height) * 0.5).round();
@@ -228,7 +225,7 @@ pub fn button(
         ButtonLook::Primary => (
             gold(if lit && enabled { 1.0 } else { 0.9 } * fade),
             gold(fade),
-            hex(0x1A_140D, fade),
+            tone::ink(fade),
         ),
         ButtonLook::Plain => (
             hex(0, if lit && enabled { 0.5 } else { 0.35 } * fade),
@@ -332,8 +329,8 @@ pub fn search_box(
     rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, radius, edge, 1.0);
     let s = 14.0;
     let (gx, gy) = (r.0 + 10.0, r.1 + (r.3 - s) * 0.5);
-    circle(rc, gx, gy, s, (11.0, 11.0), 7.0, SOFT, 1.6);
-    stroke(rc, gx, gy, s, HANDLE, SOFT, 1.6);
+    circle(rc, gx, gy, s, (11.0, 11.0), 7.0, tone::soft(1.0), 1.6);
+    stroke(rc, gx, gy, s, HANDLE, tone::soft(1.0), 1.6);
     if empty && let Some(f) = font {
         let y = r.1 + ((r.3 - f.line_height) * 0.5).round();
         text::draw(rc, f, hint, r.0 + 32.0, y, TextStyle::plain(p.muted));
@@ -479,7 +476,7 @@ pub fn spaced(rc: &mut RenderContext<'_>, font: Option<&Arc<UiFont>>, words: &st
             words,
             x,
             y,
-            TextStyle::plain(SOFT).tracked(LABEL_TRACKING),
+            TextStyle::plain(tone::soft(1.0)).tracked(LABEL_TRACKING),
         );
     }
 }
@@ -512,9 +509,6 @@ pub fn panel(rc: &mut RenderContext<'_>, r: Rect, edge_alpha: f32) {
     rc.fill_rounded_rect(r.0, r.1, r.2, r.3, round, hex(0, 0.28));
     rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, bronze(edge_alpha), 1.0);
 }
-
-/// The quiet grey of hints and notes.
-pub const MUTED: Color = hex(0xA8_9A82, 1.0);
 
 /// An input box in `r` (a field goes over it, [`mount_field`]); `empty`
 /// shows `hint` in it.
@@ -598,7 +592,7 @@ pub fn switch(rc: &mut RenderContext<'_>, r: Rect, on: bool, lit: bool) {
         hex(0xFF_FFFF, if lit { 0.2 } else { 0.14 })
     };
     rc.fill_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(r.3 * 0.5), track);
-    let knob = if on { hex(0x1A_140D, 1.0) } else { SOFT };
+    let knob = if on { tone::ink(1.0) } else { tone::soft(1.0) };
     let kx = if on { r.0 + r.2 - 17.0 } else { r.0 + 3.0 };
     rc.fill_rounded_rect(kx, r.1 + 3.0, 14.0, 14.0, CornerRadii::all(7.0), knob);
 }

@@ -8,7 +8,7 @@ use ac_ui::UiRoot;
 use ac_ui::draw::Color;
 use ac_ui::geometry::AnchorEdges;
 use ac_ui::modern::Horizon;
-use ac_ui::modern::theme::hex;
+use ac_ui::modern::tone;
 use ac_ui::tree::{Element, ElementId};
 use ac_ui::widgets::Field;
 
@@ -51,7 +51,7 @@ impl Scribe {
         f.clear_on_submit = false;
         f.text_color = theme.palette.text;
         f.background_color = Color::TRANSPARENT;
-        f.selection_color = hex(0xE0_B068, 0.35);
+        f.selection_color = tone::gold(0.35);
         f.set_editable_detached(&mut e, true);
         let field = ui.add(sheet, e, f);
         Self {

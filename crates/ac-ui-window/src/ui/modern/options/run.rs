@@ -116,7 +116,7 @@ impl WindowUi {
             &mut self.host.root,
             OPTIONS,
             (WIDTH, HEIGHT),
-            OptionsFrame::new(Horizon::BRONZE, fonts, model),
+            OptionsFrame::new(fonts, model),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -133,7 +133,7 @@ impl WindowUi {
             frame,
             OptionsFrame::search_rect(),
             field_font,
-            &Horizon::BRONZE,
+            &Horizon::current(),
         );
         ui.hide_window(OPTIONS);
         let Some(modern) = self.modern.as_mut() else {

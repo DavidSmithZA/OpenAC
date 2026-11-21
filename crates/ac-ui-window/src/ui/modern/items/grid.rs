@@ -3,6 +3,7 @@
 //! handed out again as the grid scrolls, so a pack of hundreds costs what
 //! a screenful does. A heading folds its group away when clicked.
 
+use ac_ui::modern::tone;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -74,7 +75,6 @@ enum Run {
 /// The grid.
 #[derive(Debug)]
 pub struct ItemGrid {
-    theme: Horizon,
     fonts: GridFonts,
     groups: Vec<GridGroup>,
     /// How cells are drawn.
@@ -105,9 +105,8 @@ pub struct ItemGrid {
 impl ItemGrid {
     /// An empty grid in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: GridFonts) -> Self {
+    pub fn new(fonts: GridFonts) -> Self {
         Self {
-            theme,
             fonts,
             groups: Vec::new(),
             look: CellLook::Grid,
@@ -280,7 +279,7 @@ impl ItemGrid {
                         Element::at(0.0, 0.0, 40.0, 40.0)
                             .with_anchors(ac_ui::geometry::AnchorEdges::NONE),
                         ItemCell::new(
-                            self.theme,
+                            Horizon::current(),
                             self.fonts.small.clone(),
                             self.fonts.name.clone(),
                         ),
@@ -415,7 +414,7 @@ impl Widget for ItemGrid {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (w, h) = self.laid;
         let inner = (w - BAR_ROOM).max(1.0);
         if let Some(f) = &self.fonts.heading {
@@ -447,7 +446,7 @@ impl Widget for ItemGrid {
                     title,
                     16.0,
                     (mid - f.line_height * 0.5).round(),
-                    TextStyle::plain(hex(0xE9_D3AE, 1.0)).tracked(0.8),
+                    TextStyle::plain(tone::warm(1.0)).tracked(0.8),
                 );
                 let meta_w = self
                     .fonts
@@ -467,7 +466,7 @@ impl Widget for ItemGrid {
                 let x0 = 16.0 + tw + 8.0;
                 let x1 = inner - meta_w - 8.0;
                 if x1 > x0 {
-                    rc.fill(x0, mid.round(), x1 - x0, 1.0, hex(0xC9_A062, 0.25));
+                    rc.fill(x0, mid.round(), x1 - x0, 1.0, tone::bronze(0.25));
                 }
             }
         }
@@ -480,7 +479,7 @@ impl Widget for ItemGrid {
                 BAR,
                 height,
                 CornerRadii::all(3.0),
-                hex(0xC9_A062, 0.7),
+                tone::bronze(0.7),
             );
         }
     }
@@ -513,7 +512,7 @@ mod tests {
         let g = ui.add(
             root,
             Element::at(0.0, 0.0, 352.0, 200.0),
-            ItemGrid::new(Horizon::BRONZE, GridFonts::default()),
+            ItemGrid::new(GridFonts::default()),
         );
         (ui, g)
     }

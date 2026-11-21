@@ -70,7 +70,7 @@ impl WindowUi {
             strong: self.modern_font(Weight::SemiBold, 12.5),
             big: self.modern_font(Weight::SemiBold, 18.0),
         };
-        let mut view = SheetView::new(Horizon::BRONZE, fonts);
+        let mut view = SheetView::new(Horizon::current(), fonts);
         view.closable = true;
         view.framed = true;
         let sheet = match hud::mount_piece(&mut self.host.root, INSPECT, (WIDTH, HEIGHT), view) {
@@ -84,7 +84,7 @@ impl WindowUi {
             e.draggable = true;
         }
         let scribe =
-            super::scribe::Scribe::mount(&mut self.host.root, sheet, Horizon::BRONZE, writing);
+            super::scribe::Scribe::mount(&mut self.host.root, sheet, Horizon::current(), writing);
         self.host.root.hide_window(INSPECT);
         let Some(modern) = self.modern.as_mut() else {
             return;
@@ -155,14 +155,14 @@ impl WindowUi {
                 &a.response,
                 true,
                 &names,
-                Horizon::BRONZE,
+                Horizon::current(),
             )),
             AppraisalPage::Creature => Some(sheets::creature_sheet(
                 o,
                 &a.response,
                 false,
                 &names,
-                Horizon::BRONZE,
+                Horizon::current(),
             )),
             AppraisalPage::Item | AppraisalPage::Spell => o.map(|o| {
                 let composed = crate::ui::facts::composed_names(&self.status.names);
@@ -272,7 +272,7 @@ impl WindowUi {
             return;
         };
         let sheet = i.sheet;
-        let cards = super::plugin_notes::cards(&self.facts.plugin_ui, &Horizon::BRONZE, id);
+        let cards = super::plugin_notes::cards(&self.facts.plugin_ui, &Horizon::current(), id);
         let made = super::plugin_notes::with_cards(base, cards);
         if let Some(v) = self.host.root.widget_mut::<SheetView>(sheet) {
             v.set(made);

@@ -59,7 +59,7 @@ pub struct TradeUi {
 impl WindowUi {
     /// The Trade window, hidden, in place of retail's secure-trade window.
     pub(in crate::ui) fn mount_modern_trade(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = TradeFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             strong: self.modern_font(Weight::SemiBold, 12.5),
@@ -73,7 +73,6 @@ impl WindowUi {
             body: self.modern_font(Weight::SemiBold, 12.0),
         };
         let band_widget = FootBand::new(
-            theme,
             self.modern_font(Weight::SemiBold, 9.5),
             self.modern_font(Weight::Regular, 10.5),
             self.modern_font(Weight::SemiBold, 12.0),
@@ -83,7 +82,7 @@ impl WindowUi {
             &mut self.host.root,
             TRADE,
             (super::trade_window::WIDTH, super::trade_window::HEIGHT),
-            TradeFrame::new(theme, fonts),
+            TradeFrame::new(fonts),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -110,7 +109,7 @@ impl WindowUi {
                 .with_visible(false),
             band_widget,
         );
-        let split = SplitPopover::mount(ui, theme, split_fonts);
+        let split = SplitPopover::mount(ui, split_fonts);
         ui.hide_window(TRADE);
         let Some(modern) = self.modern.as_mut() else {
             return;
@@ -445,7 +444,7 @@ impl WindowUi {
             )
         };
         let plugin_ui = &facts.plugin_ui;
-        let mark = |id: u32| plugin_notes::mark_on(plugin_ui, &Horizon::BRONZE, id);
+        let mark = |id: u32| plugin_notes::mark_on(plugin_ui, &Horizon::current(), id);
         let screen = trade_model::screen(
             trade,
             &facts.objects,

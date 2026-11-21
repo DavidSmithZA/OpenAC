@@ -93,7 +93,7 @@ fn create(ui: &mut ac_ui::UiRoot, command: CreationCommand) {
 impl WindowUi {
     /// The Studio, hidden.
     pub(in crate::ui) fn mount_modern_studio(&mut self) -> Option<StudioUi> {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = StudioFonts {
             title: self.modern_font(Weight::SemiBold, 18.0),
             heading: self.modern_font(Weight::SemiBold, 19.0),
@@ -116,7 +116,7 @@ impl WindowUi {
         let mut e = Element::at(0.0, 0.0, w, h).with_anchors(AnchorEdges::NONE);
         e.visible = false;
         e.accepts_focus = true;
-        let view = ui.add(root, e, StudioView::new(theme, fonts));
+        let view = ui.add(root, e, StudioView::new(fonts));
         let figure = ui.add(
             view,
             Element::at(0.0, 0.0, 10.0, 10.0)

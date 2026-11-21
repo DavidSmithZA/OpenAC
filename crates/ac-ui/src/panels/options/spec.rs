@@ -904,6 +904,18 @@ pub const QUICK_MOVE_KEY_CHOICES: &[ExplicitChoice] = &[
     choice("cmd", "Windows key"),
 ];
 
+/// The themes, by their saved names, as the Appearance picker calls them.
+pub const THEME_CHOICES: &[ExplicitChoice] = &[
+    choice("Classic", "Classic"),
+    choice("Moss", "Charcoal + moss"),
+    choice("Brass", "Warm graphite + brass"),
+    choice("LavenderDusk", "Lavender Dusk"),
+    choice("Ember", "Ember"),
+    choice("Bloodmoon", "Bloodmoon"),
+    choice("Glacier", "Glacier"),
+    choice("Parchment", "Parchment"),
+];
+
 /// OpenAC's modern interface: how its vitals and effects behave (Retail
 /// ignores these rows).
 fn modern_interface_rows() -> Vec<ConfigRow> {
@@ -916,6 +928,12 @@ fn modern_interface_rows() -> Vec<ConfigRow> {
     };
     vec![
         ConfigRow::ExplicitHeader(MODERN_INTERFACE_HEADER),
+        ConfigRow::ExplicitMenu {
+            label: "Theme",
+            choices: THEME_CHOICES,
+            default: "Classic",
+            target: OptionKey::Theme,
+        },
         explicit_toggle(
             "Animate the vital bars",
             def.animate_vitals,
@@ -1327,9 +1345,9 @@ mod tests {
             .expect("the modern interface section");
         assert_eq!(option_rows(&all[enhancements..modern]), 21);
         assert_eq!(modern - enhancements, 23);
-        // A header, seven rows, a separator.
-        assert_eq!(option_rows(&all[modern..]), 7);
-        assert_eq!(all.len() - modern, 9);
+        // A header, eight rows (the theme first), a separator.
+        assert_eq!(option_rows(&all[modern..]), 8);
+        assert_eq!(all.len() - modern, 10);
     }
 
     #[test]

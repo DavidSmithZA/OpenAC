@@ -434,6 +434,7 @@ fn is_openac(key: OptionKey) -> bool {
             CameraField::ModernMouseTurning | CameraField::BothMouseButtonsRunForward
         ) | OptionKey::Mixer(_)
             | OptionKey::RenderPack(_)
+            | OptionKey::Theme
     )
 }
 

@@ -3974,6 +3974,69 @@ fn the_modern_stage() {
     s.key(Key::Escape, Modifiers::NONE, true);
     s.step();
     s.save("stage-back");
+    // The Theme button, left of Credits: its list, and Glacier picked from
+    // it (saved, and everything takes it).
+    s.click(
+        0,
+        1440 - 32 - 64 - 4 - 80 - 4 - 48,
+        900 - 26 - 18 - 15,
+        Modifiers::NONE,
+    );
+    s.step();
+    s.save("stage-themes");
+    let (panel_x, panel_y) = (
+        1440 - 32 - 64 - 4 - 80 - 4 - 220,
+        900 - 26 - 18 - 30 - 6 - (8 * 30 + 12),
+    );
+    s.click(0, panel_x + 110, panel_y + 6 + 6 * 30 + 15, Modifiers::NONE);
+    assert_eq!(s.ui.settings().plugin_ui.theme, "Glacier");
+    s.step();
+    assert_eq!(
+        ac_ui::modern::Horizon::current(),
+        ac_ui_window::ui::modern::look_for_theme("Glacier")
+    );
+    s.save("stage-glacier");
+}
+
+/// The modern windows in other themes: the HUD, the inventory with an
+/// item's details, and Options on the Theme row, in Classic, three dark
+/// themes and the light Parchment (which keeps the dark glass).
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_themes() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    for theme in ["Classic", "Moss", "Glacier", "Bloodmoon", "Parchment"] {
+        let mut settings = s.ui.settings().clone();
+        theme.clone_into(&mut settings.plugin_ui.theme);
+        s.ui.settings_changed_elsewhere(&settings);
+        s.step();
+        assert_eq!(
+            ac_ui::modern::Horizon::current(),
+            ac_ui_window::ui::modern::look_for_theme(theme),
+            "{theme} is drawn"
+        );
+        assert!(s.ui.run_hotkey(Hotkey::Inventory));
+        s.step();
+        let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
+        s.click(0, first.0, first.1, Modifiers::NONE);
+        s.scene.apply(PresentationEvent::Player(PlayerView {
+            selected: Some(0x8000_0101),
+            ..PlayerView::default()
+        }));
+        s.step();
+        s.save(&format!("theme-{theme}-inventory"));
+        assert!(s.ui.run_hotkey(Hotkey::Inventory));
+        s.step();
+        assert!(s.ui.run_hotkey(Hotkey::Options));
+        s.step();
+        s.step();
+        s.save(&format!("theme-{theme}-options"));
+        assert!(s.ui.run_hotkey(Hotkey::Options));
+        s.step();
+    }
 }
 
 /// The session's creation side for the Studio pictures: each creation

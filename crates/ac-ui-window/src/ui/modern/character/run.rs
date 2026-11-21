@@ -83,7 +83,7 @@ impl WindowUi {
             &mut self.host.root,
             CHARACTER,
             (WIDTH, HEIGHT),
-            CharacterFrame::new(Horizon::BRONZE, fonts.clone()),
+            CharacterFrame::new(fonts.clone()),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -98,28 +98,28 @@ impl WindowUi {
         let skills = ui.add(
             frame,
             Element::at(SKILLS_X, SKILLS_TOP, SKILLS_W, SKILLS_H).with_anchors(AnchorEdges::NONE),
-            SkillList::new(Horizon::BRONZE, fonts.clone()),
+            SkillList::new(fonts.clone()),
         );
         let titles = ui.add(
             frame,
             Element::at(TITLES_X, TITLES_TOP, TITLES_W, TITLES_H)
                 .with_anchors(AnchorEdges::NONE)
                 .with_visible(false),
-            TitleGrid::new(Horizon::BRONZE, fonts),
+            TitleGrid::new(fonts),
         );
         let skill_search = kit::mount_search(
             ui,
             frame,
             CharacterFrame::skill_search_rect(),
             field_font.clone(),
-            &Horizon::BRONZE,
+            &Horizon::current(),
         );
         let title_search = kit::mount_search(
             ui,
             frame,
             CharacterFrame::title_search_rect(),
             field_font,
-            &Horizon::BRONZE,
+            &Horizon::current(),
         );
         ui.set_visible(title_search, false);
         ui.hide_window(CHARACTER);

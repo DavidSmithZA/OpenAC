@@ -2,6 +2,7 @@
 //! (sent as if typed in chat: any / or @ command the server knows), an
 //! icon, and whether it shows on this server only or on every server.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_host::settings::CustomRecall;
@@ -114,9 +115,9 @@ impl RecallDialog {
             f.record_history = false;
             f.max_characters = MAX_CHARACTERS;
             f.padding = 6.0;
-            f.text_color = theme.palette.text;
+            f.text_color = Horizon::current().palette.text;
             f.background_color = Color::TRANSPARENT;
-            f.selection_color = hex(0xE0_B068, 0.35);
+            f.selection_color = tone::gold(0.35);
             f.set_editable_detached(&mut e, true);
             ui.add(owner, e, f)
         };
@@ -249,7 +250,7 @@ impl RecallDialog {
         on: bool,
         live: bool,
     ) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let radius = CornerRadii::all(self.theme.metrics.radius);
         let fill = if on { p.accent_tint } else { hex(0, 0.3) };
         rc.fill_rounded_rect(left, SCOPE_TOP, w, 26.0, radius, fill);
@@ -320,7 +321,7 @@ impl Widget for RecallDialog {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (w, h) = (WIDTH, HEIGHT);
         let radius = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 12.0, 30.0, p.shadow);
@@ -383,7 +384,7 @@ impl Widget for RecallDialog {
             let fill = if on {
                 p.accent_tint
             } else if self.hovered == Some(Hit::Icon(i)) {
-                hex(0x2A_2116, 0.85)
+                tone::field(0.85)
             } else {
                 hex(0, 0.3)
             };
@@ -447,7 +448,7 @@ impl Widget for RecallDialog {
             28.0,
             radius,
             if hover(Hit::Cancel) {
-                hex(0x2A_2116, 0.85)
+                tone::field(0.85)
             } else {
                 hex(0, 0.3)
             },

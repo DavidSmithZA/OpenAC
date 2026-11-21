@@ -1,6 +1,7 @@
 //! The menu a speaker's name opens: Tell, Select (greyed when they are not
 //! nearby), Invite to fellowship, Add friend, Copy name, Squelch.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::RenderContext;
@@ -170,13 +171,13 @@ impl Widget for NameMenu {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let h = ui.element(me).map_or(self.height(), |e| e.height);
         rc.begin_overlay();
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, WIDTH, h, 6.0, 14.0, 34.0, p.shadow);
-        rc.fill_rounded_rect(0.0, 0.0, WIDTH, h, round, hex(0x18_130E, 0.97));
-        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, h, round, hex(0xC9_A062, 0.8), 1.0);
+        rc.fill_rounded_rect(0.0, 0.0, WIDTH, h, round, tone::raised(0.97));
+        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, h, round, tone::bronze(0.8), 1.0);
         if let Some(f) = &self.fonts.label {
             text::draw(rc, f, &self.who.0, 12.0, 8.0, TextStyle::plain(p.accent));
         }
@@ -187,7 +188,7 @@ impl Widget for NameMenu {
                 &self.who.2,
                 12.0,
                 24.0,
-                TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
         rc.fill_rounded_rect(
@@ -196,7 +197,7 @@ impl Widget for NameMenu {
             WIDTH - 16.0,
             1.0,
             CornerRadii::all(0.0),
-            hex(0xC9_A062, 0.25),
+            tone::bronze(0.25),
         );
         for (i, (action, words, off)) in self.rows.iter().enumerate() {
             let top = HEAD + i as f32 * ROW;
@@ -229,7 +230,7 @@ impl Widget for NameMenu {
                     reason,
                     WIDTH - 14.0 - w,
                     ty,
-                    TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                    TextStyle::plain(tone::muted(1.0)),
                 );
             }
             rc.pop_alpha();
@@ -244,7 +245,7 @@ mod tests {
 
     #[test]
     fn someone_far_away_cannot_be_selected_or_invited() {
-        let mut menu = NameMenu::new(Horizon::BRONZE, NameFonts::default());
+        let mut menu = NameMenu::new(Horizon::current(), NameFonts::default());
         menu.fill("Osk", 7, "General", false);
         let select_y = HEAD + ROW * 1.5;
         let invite_y = HEAD + ROW * 2.5;

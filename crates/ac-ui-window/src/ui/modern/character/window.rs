@@ -8,6 +8,7 @@
 //! Information page's cards. The skill list and the title grid are
 //! children that scroll by themselves.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext};
@@ -150,7 +151,6 @@ pub enum CharacterRequest {
 /// The Character window's frame.
 #[derive(Debug)]
 pub struct CharacterFrame {
-    theme: Horizon,
     fonts: CharacterFonts,
     /// The page shown.
     pub page: CharacterPage,
@@ -178,9 +178,8 @@ pub struct CharacterFrame {
 impl CharacterFrame {
     /// An empty window in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: CharacterFonts) -> Self {
+    pub fn new(fonts: CharacterFonts) -> Self {
         Self {
-            theme,
             fonts,
             page: CharacterPage::Stats,
             sheet: CharacterSheet::default(),
@@ -270,7 +269,7 @@ impl CharacterFrame {
     fn chips(&self) -> Vec<(&'static str, String, Color, Option<String>, Rect)> {
         let s = &self.sheet;
         let gold = kit::gold(1.0);
-        let text_c = self.theme.palette.text;
+        let text_c = Horizon::current().palette.text;
         let mut list: Vec<(&'static str, String, Color, Option<String>)> = vec![
             (
                 "Unassigned",
@@ -429,7 +428,7 @@ impl CharacterFrame {
         let color = match spelled.signum() {
             1 => kit::GOOD,
             -1 => kit::HARM,
-            _ => self.theme.palette.text,
+            _ => Horizon::current().palette.text,
         };
         let sub = if spelled == 0 {
             format!("base {base}")
@@ -619,7 +618,7 @@ impl CharacterFrame {
     }
 
     fn draw_frame(&self, rc: &mut RenderContext<'_>) {
-        let theme = &self.theme;
+        let theme = &Horizon::current();
         kit::window_back(rc, theme, WIDTH, HEIGHT, HEADER, true);
         let x = kit::title(
             rc,
@@ -666,7 +665,7 @@ impl CharacterFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_band(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let s = &self.sheet;
         rc.fill(0.0, HEADER + BAND_H - 1.0, WIDTH, 1.0, kit::bronze(0.25));
         // The level plate.
@@ -683,7 +682,7 @@ impl CharacterFrame {
                 "LEVEL",
                 px + (pw - w) * 0.5,
                 py + 10.0,
-                TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
         if let Some(f) = &self.fonts.level {
@@ -722,7 +721,7 @@ impl CharacterFrame {
                 &kit::fit(f, title, 250.0),
                 nx,
                 ny,
-                TextStyle::plain(kit::WARM),
+                TextStyle::plain(tone::warm(1.0)),
             );
             ny += 18.0;
         }
@@ -745,7 +744,7 @@ impl CharacterFrame {
                 &kit::fit(f, &words, 250.0),
                 nx,
                 ny,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
         // Experience.
@@ -754,7 +753,7 @@ impl CharacterFrame {
         let ty = HEADER + 22.0;
         if let (Some(sm), Some(st)) = (&self.fonts.small, &self.fonts.strong) {
             let total = format!("{} XP", format_xp(s.total_xp));
-            text::draw(rc, sm, "Total", bx, ty, TextStyle::plain(kit::SOFT));
+            text::draw(rc, sm, "Total", bx, ty, TextStyle::plain(tone::soft(1.0)));
             let tx = bx + text::measure(sm, "Total", 0.0) + 5.0;
             text::draw(rc, st, &total, tx, ty - 1.0, TextStyle::plain(p.text));
             let (next, after) = match (&s.xp_to_next_level_text, s.level) {
@@ -772,7 +771,7 @@ impl CharacterFrame {
                 &after,
                 bx + bw - aw,
                 ty,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
             let nw = text::measure(st, &next, 0.0);
             text::draw(
@@ -801,7 +800,7 @@ impl CharacterFrame {
             rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, edge, 1.0);
             if let (Some(sm), Some(st)) = (&self.fonts.small, &self.fonts.strong) {
                 let y = r.1 + ((r.3 - sm.line_height) * 0.5).round();
-                text::draw(rc, sm, k, r.0 + 10.0, y, TextStyle::plain(kit::SOFT));
+                text::draw(rc, sm, k, r.0 + 10.0, y, TextStyle::plain(tone::soft(1.0)));
                 let vx = r.0 + 10.0 + text::measure(sm, k, 0.0) + 6.0;
                 let vy = r.1 + ((r.3 - st.line_height) * 0.5).round();
                 text::draw(rc, st, &v, vx, vy, TextStyle::plain(c));
@@ -817,14 +816,14 @@ impl CharacterFrame {
                 words,
                 x,
                 y,
-                TextStyle::plain(kit::WARM).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::warm(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
         rc.fill(x, y + 18.0, w, 1.0, kit::bronze(0.25));
     }
 
     fn draw_attributes(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         self.group_title(rc, "ATTRIBUTES", ATTR_X, BODY_TOP, ATTR_W);
         let vitals_top = BODY_TOP + GROUP_TITLE + 6.0 * (ATTR_ROW + 2.0) + 14.0;
         self.group_title(rc, "VITALS", ATTR_X, vitals_top, ATTR_W);
@@ -845,7 +844,14 @@ impl CharacterFrame {
                 let c = short_cost(xp);
                 let w = text::measure(f, &c, 0.0);
                 let y = r.1 + ((r.3 - f.line_height) * 0.5).round();
-                text::draw(rc, f, &c, cost_right - w, y, TextStyle::plain(kit::SOFT));
+                text::draw(
+                    rc,
+                    f,
+                    &c,
+                    cost_right - w,
+                    y,
+                    TextStyle::plain(tone::soft(1.0)),
+                );
             }
             let value_right = cost_right - 50.0 - 8.0;
             if let Some(f) = &self.fonts.value {
@@ -871,7 +877,7 @@ impl CharacterFrame {
                     &sub,
                     r.0 + 10.0,
                     r.1 + 23.0,
-                    TextStyle::plain(kit::SOFT),
+                    TextStyle::plain(tone::soft(1.0)),
                 );
             }
             let can = !self.waiting && affordable(&self.sheet, row, Amount::One);
@@ -894,12 +900,12 @@ impl CharacterFrame {
                 "SKILLS",
                 SKILLS_X,
                 y,
-                TextStyle::plain(kit::WARM).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::warm(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
         kit::search_box(
             rc,
-            &self.theme,
+            &Horizon::current(),
             Self::skill_search_rect(),
             "Find a skill",
             self.search.is_empty() && !self.searching,
@@ -926,7 +932,7 @@ impl CharacterFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_aside(&mut self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (x, y, w, h) = Self::aside();
         let radius = CornerRadii::all(4.0);
         rc.fill_rounded_rect(x, y, w, h, radius, hex(0, 0.28));
@@ -966,7 +972,11 @@ impl CharacterFrame {
             } else {
                 kit::bronze(0.4)
             };
-            let ink = if chip_gold { kit::gold(1.0) } else { kit::SOFT };
+            let ink = if chip_gold {
+                kit::gold(1.0)
+            } else {
+                tone::soft(1.0)
+            };
             rc.stroke_rounded_rect(hx, y + 15.0, cw, 18.0, CornerRadii::all(9.0), edge, 1.0);
             text::draw(
                 rc,
@@ -1004,7 +1014,14 @@ impl CharacterFrame {
             } else {
                 String::new()
             };
-            text::draw(rc, f, &note, vx, y + 58.0, TextStyle::plain(kit::SOFT));
+            text::draw(
+                rc,
+                f,
+                &note,
+                vx,
+                y + 58.0,
+                TextStyle::plain(tone::soft(1.0)),
+            );
         }
         rc.fill(x, y + ASIDE_HEAD - 1.0, w, 1.0, kit::bronze(0.2));
         // The body.
@@ -1028,7 +1045,7 @@ impl CharacterFrame {
                 words,
                 left,
                 by,
-                TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
         by += 18.0;
@@ -1038,7 +1055,7 @@ impl CharacterFrame {
                 Tone::Plain => (p.text, p.text),
                 Tone::Good => (p.text, kit::GOOD),
                 Tone::Bad => (p.text, kit::HARM),
-                Tone::Quiet => (kit::SOFT, kit::SOFT),
+                Tone::Quiet => (tone::soft(1.0), tone::soft(1.0)),
             };
             if let (Some(b), Some(st)) = (&self.fonts.body, &self.fonts.strong) {
                 let vw = text::measure(st, v, 0.0);
@@ -1051,7 +1068,7 @@ impl CharacterFrame {
         by += 14.0;
         if let Some(f) = &self.fonts.body {
             let about = kit::wrap(f, &model::about(s, row), w - 36.0);
-            kit::lines(rc, f, &about, left, by, 18.0, kit::WARM);
+            kit::lines(rc, f, &about, left, by, 18.0, tone::warm(1.0));
         }
         rc.pop_clip();
         kit::scrollbar(
@@ -1093,7 +1110,7 @@ impl CharacterFrame {
                 cost_label,
                 x + 14.0,
                 ly,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
             let vw = text::measure(st, &cost_value, 0.0);
             text::draw(
@@ -1113,9 +1130,9 @@ impl CharacterFrame {
                 ButtonLook::Plain
             };
             let lit = hot(self.hover, r);
-            kit::button(rc, &self.theme, r, "", None, look, lit, can);
+            kit::button(rc, &Horizon::current(), r, "", None, look, lit, can);
             let ink = if amount == Amount::One {
-                hex(0x1A_140D, if can { 1.0 } else { 0.45 })
+                tone::ink(if can { 1.0 } else { 0.45 })
             } else {
                 Color {
                     a: if can { 1.0 } else { 0.45 },
@@ -1193,7 +1210,7 @@ impl CharacterFrame {
     }
 
     fn draw_titles(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let mut x = TITLES_X;
         if let Some(f) = &self.fonts.label {
             let y = BODY_TOP + ((28.0 - f.line_height) * 0.5).round();
@@ -1203,7 +1220,7 @@ impl CharacterFrame {
                 "EARNED TITLES",
                 x,
                 y,
-                TextStyle::plain(kit::WARM).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::warm(1.0)).tracked(kit::LABEL_TRACKING),
             );
             x += text::measure(f, "EARNED TITLES", kit::LABEL_TRACKING) + 10.0;
         }
@@ -1215,12 +1232,12 @@ impl CharacterFrame {
                 &self.extras.titles.len().to_string(),
                 x,
                 y,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
         kit::search_box(
             rc,
-            &self.theme,
+            &Horizon::current(),
             Self::title_search_rect(),
             "Find a title",
             self.search.is_empty() && !self.searching,
@@ -1248,7 +1265,7 @@ impl CharacterFrame {
                 "OTHERS SEE YOU AS",
                 ax + 16.0,
                 y,
-                TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
             y += 20.0;
         }
@@ -1271,7 +1288,7 @@ impl CharacterFrame {
                 &kit::fit(f, &words, aw - 32.0),
                 ax + 16.0,
                 y,
-                TextStyle::plain(kit::WARM),
+                TextStyle::plain(tone::warm(1.0)),
             );
             y += 22.0;
         }
@@ -1284,12 +1301,12 @@ impl CharacterFrame {
                 "Your current title. Pick another from the list to show it instead.".to_owned()
             };
             let lines = kit::wrap(f, &note, aw - 32.0);
-            kit::lines(rc, f, &lines, ax + 16.0, y, 16.0, kit::SOFT);
+            kit::lines(rc, f, &lines, ax + 16.0, y, 16.0, tone::soft(1.0));
         }
         let b = Self::title_button();
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             b,
             "Display this title",
             self.fonts.strong.as_ref(),
@@ -1300,7 +1317,7 @@ impl CharacterFrame {
     }
 
     fn draw_info(&mut self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (cards, total) = self.info_cards_layout();
         let room = BOTTOM - BODY_TOP;
         self.info_scroll.hold(total, room);
@@ -1325,7 +1342,7 @@ impl CharacterFrame {
                     &card.title,
                     x + 14.0,
                     cy,
-                    TextStyle::plain(kit::WARM).tracked(kit::LABEL_TRACKING),
+                    TextStyle::plain(tone::warm(1.0)).tracked(kit::LABEL_TRACKING),
                 );
                 cy += 20.0;
             }
@@ -1340,7 +1357,7 @@ impl CharacterFrame {
                         &kit::fit(b, k, w - 28.0 - vw - 10.0),
                         x + 14.0,
                         cy,
-                        TextStyle::plain(kit::SOFT),
+                        TextStyle::plain(tone::soft(1.0)),
                     );
                 }
                 cy += 20.0;
@@ -1348,7 +1365,7 @@ impl CharacterFrame {
             if let Some(f) = &self.fonts.body {
                 for para in &card.prose {
                     let lines = kit::wrap(f, para, w - 28.0);
-                    cy = kit::lines(rc, f, &lines, x + 14.0, cy, 18.0, kit::WARM) + 18.0;
+                    cy = kit::lines(rc, f, &lines, x + 14.0, cy, 18.0, tone::warm(1.0)) + 18.0;
                 }
             }
         }
@@ -1400,7 +1417,6 @@ pub enum SkillRequest {
 /// The skills under their group headings, scrolled by themselves.
 #[derive(Debug)]
 pub struct SkillList {
-    theme: Horizon,
     fonts: CharacterFonts,
     /// The groups shown.
     pub groups: Vec<(SkillGroup, Vec<CharacterSkill>)>,
@@ -1421,9 +1437,8 @@ pub struct SkillList {
 impl SkillList {
     /// An empty list.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: CharacterFonts) -> Self {
+    pub fn new(fonts: CharacterFonts) -> Self {
         Self {
-            theme,
             fonts,
             groups: Vec::new(),
             unassigned: 0,
@@ -1526,7 +1541,7 @@ impl Widget for SkillList {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (w, h) = ui
             .element(me)
             .map_or((SKILLS_W, SKILLS_H), |e| (e.width, e.height));
@@ -1539,13 +1554,13 @@ impl Widget for SkillList {
             if y + GROUP_H > 0.0 && y < h {
                 let color = match group {
                     SkillGroup::Specialized => kit::gold(1.0),
-                    SkillGroup::Trained => kit::WARM,
-                    SkillGroup::Untrained => kit::SOFT,
+                    SkillGroup::Trained => tone::warm(1.0),
+                    SkillGroup::Untrained => tone::soft(1.0),
                     SkillGroup::Unusable => hex(0x7A_7166, 1.0),
                 };
                 kit::group_heading(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     self.fonts.label.as_ref(),
                     0.0,
                     y + 6.0,
@@ -1579,7 +1594,7 @@ impl SkillList {
         y: f32,
         w: f32,
     ) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let right = w - 10.0;
         let on = self.chosen == Some(s.id);
         let radius = CornerRadii::all(4.0);
@@ -1596,8 +1611,8 @@ impl SkillList {
         }
         let dot = match group {
             SkillGroup::Specialized => kit::gold(1.0),
-            SkillGroup::Trained => kit::WARM,
-            SkillGroup::Untrained => kit::SOFT,
+            SkillGroup::Trained => tone::warm(1.0),
+            SkillGroup::Untrained => tone::soft(1.0),
             SkillGroup::Unusable => hex(0x7A_7166, 1.0),
         };
         rc.fill_rounded_rect(
@@ -1631,7 +1646,7 @@ impl SkillList {
                 ty,
                 TextStyle::plain(Color {
                     a: fade,
-                    ..kit::SOFT
+                    ..tone::soft(1.0)
                 }),
             );
         }
@@ -1699,7 +1714,10 @@ impl SkillList {
                     "Train",
                     b.0 + (b.2 - tw) * 0.5,
                     ty,
-                    TextStyle::plain(Color { a, ..kit::WARM }),
+                    TextStyle::plain(Color {
+                        a,
+                        ..tone::warm(1.0)
+                    }),
                 );
             }
         }
@@ -1714,7 +1732,6 @@ const TITLE_GAP: f32 = 6.0;
 /// The earned titles, three to a row, scrolled by themselves.
 #[derive(Debug)]
 pub struct TitleGrid {
-    theme: Horizon,
     fonts: CharacterFonts,
     /// The titles shown (id, words).
     pub titles: Vec<(u32, String)>,
@@ -1731,9 +1748,8 @@ pub struct TitleGrid {
 impl TitleGrid {
     /// An empty grid.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: CharacterFonts) -> Self {
+    pub fn new(fonts: CharacterFonts) -> Self {
         Self {
-            theme,
             fonts,
             titles: Vec::new(),
             shown: None,
@@ -1813,7 +1829,7 @@ impl Widget for TitleGrid {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (w, h) = ui
             .element(me)
             .map_or((TITLES_W, TITLES_H), |e| (e.width, e.height));
@@ -1913,7 +1929,7 @@ mod tests {
 
     #[test]
     fn the_level_plate_grows_with_the_number() {
-        let mut f = CharacterFrame::new(Horizon::BRONZE, CharacterFonts::default());
+        let mut f = CharacterFrame::new(CharacterFonts::default());
         f.sheet = sheet();
         assert_eq!(f.level_words(), "4,782");
         f.sheet.level = None;
@@ -1922,7 +1938,7 @@ mod tests {
 
     #[test]
     fn a_plus_raises_by_one_and_waits_for_the_sheet() {
-        let mut f = CharacterFrame::new(Horizon::BRONZE, CharacterFonts::default());
+        let mut f = CharacterFrame::new(CharacterFonts::default());
         f.sheet = sheet();
         let (row, r) = CharacterFrame::attr_rows()[0];
         let plus = CharacterFrame::plus_rect(r);
@@ -1947,7 +1963,7 @@ mod tests {
 
     #[test]
     fn an_untrained_skill_trains_with_credits() {
-        let mut f = CharacterFrame::new(Horizon::BRONZE, CharacterFonts::default());
+        let mut f = CharacterFrame::new(CharacterFonts::default());
         f.sheet = sheet();
         f.sheet.skill_credits = 7;
         f.choose(Row::Skill(23));

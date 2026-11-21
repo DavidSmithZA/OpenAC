@@ -4,6 +4,7 @@
 //! and an order; and the Components page's rows: what the player carries
 //! of each component against the amount it is restocked to.
 
+use ac_ui::modern::tone;
 use std::collections::{BTreeMap, HashMap};
 
 use ac_core::spells::MagicSchool;
@@ -51,7 +52,7 @@ pub fn school_color(school: MagicSchool) -> Color {
     SCHOOLS
         .iter()
         .find(|(s, _, _)| *s == school)
-        .map_or(hex(0xC8_B89C, 1.0), |(_, _, c)| *c)
+        .map_or(tone::soft(1.0), |(_, _, c)| *c)
 }
 
 /// A school's name.

@@ -8,6 +8,7 @@
 //! a time. Under it, the game's short status messages ("out of range")
 //! show one at a time and fade.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_plugin_abi::world::ObjectClass;
@@ -238,9 +239,9 @@ impl TargetLine {
         f.select_all_on_focus = true;
         f.max_characters = 10;
         f.padding = 5.0;
-        f.text_color = Horizon::BRONZE.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
-        f.selection_color = hex(0xE0_B068, 0.35);
+        f.selection_color = tone::gold(0.35);
         f.character_filter = Some(Box::new(|c: char| c.is_ascii_digit()));
         f.set_editable_detached(&mut e, true);
         let field = ui.add(me, e, f);
@@ -357,7 +358,7 @@ impl TargetLine {
         label: Option<&str>,
         icon: fn(&mut RenderContext<'_>, f32, f32, Color),
     ) -> f32 {
-        let p = &self.theme.palette;
+        let p = &Horizon::current().palette;
         let font = self.small_font.clone();
         let label_width = match (label, &font) {
             (Some(l), Some(f)) => text::measure(f, l, 0.0),
@@ -372,18 +373,18 @@ impl TargetLine {
         let which = self.buttons[index].0;
         self.buttons[index] = (which, left, width);
         let fill = if self.pressed == Some(which) && self.hovered == Some(which) {
-            hex(0x0A_0806, 0.85)
+            tone::deep(0.85)
         } else if self.hovered == Some(which) {
-            hex(0x2A_2116, 0.85)
+            tone::field(0.85)
         } else {
-            hex(0x14_100C, 0.7)
+            tone::ground(0.7)
         };
         let radius = self.theme.metrics.slot_radius;
         rc.fill_rounded_rect(left, 0.0, width, BUTTON, CornerRadii::all(radius), fill);
         let edge = if self.hovered == Some(which) {
             p.accent
         } else {
-            hex(0xC9_A062, 0.7)
+            tone::bronze(0.7)
         };
         rc.stroke_rounded_rect(
             left,
@@ -423,7 +424,7 @@ impl TargetLine {
     /// element draws the typed amount over the frame drawn here) and "of"
     /// the stack. Returns the row's bottom.
     fn draw_split(&self, rc: &mut RenderContext<'_>, view: SplitView) -> f32 {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let shadow = p.text_shadow;
         let mid = SPLIT_TOP + SPLIT_ROW * 0.5;
         if let Some(font) = &self.small_font {
@@ -466,7 +467,7 @@ impl TargetLine {
             mid - ring,
             ring * 2.0,
             ring * 2.0,
-            hex(0x1A_140D, 0.9),
+            tone::ink(0.9),
         );
         rc.fill_ellipse(knob - held, mid - held, held * 2.0, held * 2.0, p.accent);
         let radius = CornerRadii::all(self.theme.metrics.slot_radius);
@@ -476,12 +477,12 @@ impl TargetLine {
             FIELD_WIDTH,
             SPLIT_ROW,
             radius,
-            hex(0x14_100C, 0.7),
+            tone::ground(0.7),
         );
         let edge = if self.split_typing {
             p.accent
         } else {
-            hex(0xC9_A062, 0.7)
+            tone::bronze(0.7)
         };
         rc.stroke_rounded_rect(
             FIELD_LEFT,
@@ -690,7 +691,7 @@ impl Widget for TargetLine {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let shadow = p.text_shadow;
         let mut bottom = 0.0;
         if let Some(target) = self.target.clone() {
@@ -838,7 +839,7 @@ mod tests {
 
     #[test]
     fn a_status_message_fades_out_on_its_own() {
-        let mut line = TargetLine::new(Horizon::BRONZE, None, None, None);
+        let mut line = TargetLine::new(Horizon::current(), None, None, None);
         line.show_status("You are too far away!".to_owned());
         line.show_status("   ".to_owned());
         assert_eq!(line.status.as_ref().unwrap().0, "You are too far away!");
@@ -888,7 +889,7 @@ mod tests {
         let me = ui.add(
             root,
             Element::at(0.0, 0.0, WIDTH, HEIGHT),
-            TargetLine::new(Horizon::BRONZE, None, None, None),
+            TargetLine::new(Horizon::current(), None, None, None),
         );
         TargetLine::mount_split_field(&mut ui, me, None);
         let field = ui.widget::<TargetLine>(me).unwrap().split_field.unwrap();
@@ -920,7 +921,7 @@ mod tests {
 
     #[test]
     fn without_a_selection_no_button_answers() {
-        let line = TargetLine::new(Horizon::BRONZE, None, None, None);
+        let line = TargetLine::new(Horizon::current(), None, None, None);
         assert_eq!(line.button_at(400.0, 10.0), None);
     }
 }

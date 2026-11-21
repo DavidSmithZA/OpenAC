@@ -5,6 +5,7 @@
 //! (Clear, what the options allow, Salvage N items), Add from packs with its
 //! material chips, and what a salvage produced.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext, TextureRef};
@@ -103,7 +104,6 @@ pub enum SalvageAsk {
 /// The Salvage window's frame.
 #[derive(Debug)]
 pub struct SalvageFrame {
-    theme: Horizon,
     fonts: SalvageFonts,
     /// What it shows.
     pub screen: SalvageScreen,
@@ -125,9 +125,8 @@ pub struct SalvageFrame {
 impl SalvageFrame {
     /// A frame in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: SalvageFonts) -> Self {
+    pub fn new(fonts: SalvageFonts) -> Self {
         Self {
-            theme,
             fonts,
             screen: SalvageScreen::default(),
             picking: false,
@@ -343,7 +342,7 @@ impl SalvageFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_staging(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         // The heading and Add from packs.
         let mut x = PAD;
@@ -358,7 +357,7 @@ impl SalvageFrame {
                 &self.screen.count,
                 x,
                 TOP + 7.0,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
         let a = Self::add_button();
@@ -462,7 +461,7 @@ impl SalvageFrame {
                 if hot(self.hover, cross) {
                     p.accent
                 } else {
-                    kit::SOFT
+                    tone::soft(1.0)
                 },
                 1.5,
             );
@@ -474,7 +473,14 @@ impl SalvageFrame {
             }
             if let Some(sm) = &f.small {
                 let s = kit::fit(sm, &r.sub, room_w);
-                text::draw(rc, sm, &s, tx, row.1 + 26.0, TextStyle::plain(kit::SOFT));
+                text::draw(
+                    rc,
+                    sm,
+                    &s,
+                    tx,
+                    row.1 + 26.0,
+                    TextStyle::plain(tone::soft(1.0)),
+                );
             }
         }
         rc.pop_clip();
@@ -524,20 +530,20 @@ impl SalvageFrame {
                 "Drag more items here"
             };
             let top = d.1 + (d.3 - b.line_height - 4.0 - sm.line_height) * 0.5;
-            text::draw_centred(rc, b, words, cx, top, TextStyle::plain(kit::SOFT));
+            text::draw_centred(rc, b, words, cx, top, TextStyle::plain(tone::soft(1.0)));
             text::draw_centred(
                 rc,
                 sm,
                 "A whole pack adds everything in it that can be salvaged.",
                 cx,
                 top + b.line_height + 4.0,
-                TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
     }
 
     fn draw_bags(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let b = (RIGHT_X, TOP, RIGHT_W, BODY_H);
         let round = CornerRadii::all(4.0);
@@ -550,7 +556,7 @@ impl SalvageFrame {
                 "YOU GET ONE BAG PER MATERIAL",
                 b.0 + 14.0,
                 b.1 + 12.0,
-                TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
         let mut y = b.1 + 34.0;
@@ -563,7 +569,7 @@ impl SalvageFrame {
                 "Add items to see which bags you get.",
                 b.0 + b.2 * 0.5,
                 y + 20.0,
-                TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
         for bag in &self.screen.bags {
@@ -604,7 +610,7 @@ impl SalvageFrame {
                     &bag.sub,
                     tile.0 + 36.0,
                     y + 22.0,
-                    TextStyle::plain(kit::SOFT),
+                    TextStyle::plain(tone::soft(1.0)),
                 );
             }
             rc.fill(b.0 + 10.0, y + 40.0, b.2 - 20.0, 1.0, bronze(0.12));
@@ -628,7 +634,7 @@ impl SalvageFrame {
                 b.0 + 14.0,
                 fy + 12.0,
                 sm.line_height + 4.0,
-                hex(0xA8_9A82, 1.0),
+                tone::muted(1.0),
             );
         }
     }
@@ -649,7 +655,7 @@ impl SalvageFrame {
             let (close, more) = Self::done_buttons();
             kit::button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 close,
                 "Close",
                 f.strong.as_ref(),
@@ -659,7 +665,7 @@ impl SalvageFrame {
             );
             kit::button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 more,
                 "Salvage more",
                 f.strong.as_ref(),
@@ -673,7 +679,7 @@ impl SalvageFrame {
         let clear = Self::clear_rect();
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             clear,
             "Clear",
             f.strong.as_ref(),
@@ -688,13 +694,13 @@ impl SalvageFrame {
                 &self.screen.rule,
                 clear.0 + clear.2 + 12.0,
                 fy + ((FOOT - sm.line_height) * 0.5).round(),
-                TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
         let go = Self::go_rect();
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             go,
             &self.screen.go,
             f.strong.as_ref(),
@@ -708,7 +714,7 @@ impl SalvageFrame {
         let Some(d) = &self.screen.done else {
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let mut x = PAD;
         if let Some(t) = &f.title {
@@ -722,7 +728,7 @@ impl SalvageFrame {
                 "The bags are in your main pack.",
                 x,
                 TOP + 3.0,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
         let w = (WIDTH - 2.0 * PAD - 8.0) / 2.0;
@@ -767,7 +773,7 @@ impl SalvageFrame {
                     &c.from,
                     tile.0 + 52.0,
                     r.1 + 34.0,
-                    TextStyle::plain(kit::SOFT),
+                    TextStyle::plain(tone::soft(1.0)),
                 );
                 let ww = text::measure(sm, &c.workmanship, 0.0);
                 text::draw(
@@ -776,7 +782,7 @@ impl SalvageFrame {
                     &c.workmanship,
                     r.0 + r.2 - 12.0 - ww,
                     r.1 + 36.0,
-                    TextStyle::plain(kit::SOFT),
+                    TextStyle::plain(tone::soft(1.0)),
                 );
             }
             if let Some(t) = &f.title {
@@ -804,13 +810,13 @@ impl SalvageFrame {
                 "The same lines are in chat.",
                 PAD,
                 y,
-                TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
     }
 
     fn draw_pick(&self, rc: &mut RenderContext<'_>, icons: &[Option<TextureRef>]) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let b = self.pick_box();
         rc.soft_shadow(b.0, b.1, b.2, b.3, 6.0, 16.0, 40.0, hex(0, 0.6));
@@ -820,7 +826,7 @@ impl SalvageFrame {
             b.2,
             b.3,
             CornerRadii::all(6.0),
-            hex(0x18_130E, 0.98),
+            tone::raised(0.98),
         );
         rc.stroke_rounded_rect(b.0, b.1, b.2, b.3, CornerRadii::all(6.0), bronze(0.8), 1.0);
         if let Some(st) = &f.strong {
@@ -836,7 +842,7 @@ impl SalvageFrame {
         let c = Self::pick_close();
         kit::close(
             rc,
-            &self.theme,
+            &Horizon::current(),
             (c.0 - 3.0, c.1 - 3.0, 30.0, 30.0),
             hot(self.hover, c),
         );
@@ -878,7 +884,7 @@ impl SalvageFrame {
                     &chip.count.to_string(),
                     r.0 + 25.0 + w,
                     ty,
-                    TextStyle::plain(kit::SOFT),
+                    TextStyle::plain(tone::soft(1.0)),
                 );
             }
         }
@@ -893,7 +899,7 @@ impl SalvageFrame {
                 "Nothing you carry can be salvaged.",
                 room.0 + 4.0,
                 room.1 + 10.0,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
         for ((_, row, add), (r, icon)) in self
@@ -950,7 +956,7 @@ impl SalvageFrame {
                 let ink = if r.refused {
                     hex(0xFF_B3B6, 1.0)
                 } else {
-                    kit::SOFT
+                    tone::soft(1.0)
                 };
                 text::draw(rc, sm, &s, x, row.1 + 21.0, TextStyle::plain(ink));
             }
@@ -958,7 +964,7 @@ impl SalvageFrame {
                 let words = if r.added { "Added" } else { "Add" };
                 kit::button(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     add,
                     words,
                     f.strong.as_ref(),
@@ -1095,12 +1101,19 @@ impl Widget for SalvageFrame {
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
         let f = &self.fonts;
-        kit::window_back(rc, &self.theme, WIDTH, HEIGHT, HEADER, true);
-        let x = kit::title(rc, &self.theme, f.title.as_ref(), ANVIL, "Salvage", HEADER);
+        kit::window_back(rc, &Horizon::current(), WIDTH, HEIGHT, HEADER, true);
+        let x = kit::title(
+            rc,
+            &Horizon::current(),
+            f.title.as_ref(),
+            ANVIL,
+            "Salvage",
+            HEADER,
+        );
         if let Some(sm) = &f.small {
             let w = kit::fit(sm, &self.screen.sub, 380.0);
             let ty = ((HEADER - sm.line_height) * 0.5).round();
-            text::draw(rc, sm, &w, x + 14.0, ty, TextStyle::plain(kit::SOFT));
+            text::draw(rc, sm, &w, x + 14.0, ty, TextStyle::plain(tone::soft(1.0)));
             let hint = "Right-click an item to inspect it";
             let hw = text::measure(sm, hint, 0.0);
             let c = Self::close_rect();
@@ -1110,12 +1123,12 @@ impl Widget for SalvageFrame {
                 hint,
                 c.0 - 12.0 - hw,
                 ty,
-                TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
         kit::close(
             rc,
-            &self.theme,
+            &Horizon::current(),
             Self::close_rect(),
             hot(self.hover, Self::close_rect()),
         );

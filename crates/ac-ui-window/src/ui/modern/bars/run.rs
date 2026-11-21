@@ -246,7 +246,7 @@ impl WindowUi {
             body: self.modern_font(Weight::Medium, BODY_SIZE),
             small: self.modern_font(Weight::Regular, SMALL_SIZE),
         };
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let ui = &mut self.host.root;
         let root = ui.root();
         let (sw, sh) = ui.size();
@@ -505,7 +505,7 @@ impl WindowUi {
         if shape == b.built_shape && b.built.len() == layout.bars.len() {
             return;
         }
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let ui = &mut self.host.root;
         for built in b.built.drain(..) {
             ui.destroy(built.frame);
@@ -535,7 +535,7 @@ impl WindowUi {
                 Element::at(0.0, 0.0, 100.0, TAB_HEIGHT)
                     .with_visible(false)
                     .with_anchors(AnchorEdges::NONE),
-                BarTab::new(theme, b.fonts.clone(), i),
+                BarTab::new(b.fonts.clone(), i),
             );
             b.built.push(Built {
                 frame,

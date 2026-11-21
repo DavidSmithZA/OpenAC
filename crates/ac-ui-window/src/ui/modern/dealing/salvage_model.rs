@@ -12,6 +12,7 @@ use ac_core::items::{
 use ac_runtime::inventory::shop::group_thousands;
 use ac_ui::draw::{Color, TextureRef};
 use ac_ui::modern::theme::hex;
+use ac_ui::modern::tone;
 
 use super::vendor_model::carried;
 
@@ -26,11 +27,11 @@ pub fn material_color(material: u32) -> Color {
     match name {
         "Steel" | "Iron" | "Metal" | "Pyreal" => hex(0xB8_C2CC, 1.0),
         "Silver" | "White Quartz" | "White Sapphire" => hex(0xD8_DEE6, 1.0),
-        "Gold" | "Brass" | "Bronze" | "Copper" => hex(0xE0_B068, 1.0),
+        "Gold" | "Brass" | "Bronze" | "Copper" => tone::gold(1.0),
         "Granite" | "Stone" | "Alabaster" | "Marble" | "Obsidian" | "Sandstone" | "Serpentine"
         | "Ceramic" | "Porcelain" => hex(0x9A_968C, 1.0),
         "Wood" | "Ebony" | "Mahogany" | "Oak" | "Pine" | "Teak" => hex(0xB0_8050, 1.0),
-        "Cloth" | "Linen" | "Satin" | "Silk" | "Velvet" | "Wool" | "Ivory" => hex(0xE9_D3AE, 1.0),
+        "Cloth" | "Linen" | "Satin" | "Silk" | "Velvet" | "Wool" | "Ivory" => tone::warm(1.0),
         "Leather" | "Armoredillo Hide" | "Gromnie Hide" | "Reed Shark Hide" => hex(0xC0_8A5A, 1.0),
         "Unknown" => hex(0xB3_AA9C, 1.0),
         _ => hex(0xC9_A2FF, 1.0),
@@ -361,7 +362,7 @@ pub fn picks(
         material: 0,
         name: "All".to_owned(),
         count: chips.iter().map(|c| c.count).sum(),
-        color: hex(0xE0_B068, 1.0),
+        color: tone::gold(1.0),
     };
     chips.insert(0, all);
     (chips, rows)

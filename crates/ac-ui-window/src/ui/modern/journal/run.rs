@@ -71,7 +71,7 @@ impl WindowUi {
     /// The Journal, hidden, in place of retail's journal; and the quests on
     /// screen.
     pub(in crate::ui) fn mount_modern_journal(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = JournalFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             heading: self.modern_font(Weight::SemiBold, 16.0),
@@ -91,7 +91,7 @@ impl WindowUi {
             &mut self.host.root,
             JOURNAL,
             (WIDTH, HEIGHT),
-            JournalFrame::new(theme, fonts),
+            JournalFrame::new(fonts),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -123,7 +123,7 @@ impl WindowUi {
             ui,
             hud::QUESTS,
             (super::quests_hud::WIDTH, 60.0),
-            QuestsHud::new(theme, hud_fonts),
+            QuestsHud::new(hud_fonts),
         ) {
             Ok(id) => {
                 ui.hide_window(hud::QUESTS);

@@ -4,6 +4,7 @@
 //! shows, and what is clicked, chosen or dropped in it carried out with
 //! retail's item requests and pack drop rules.
 
+use ac_ui::modern::tone;
 use std::collections::{HashMap, HashSet};
 
 use ac_core::items::{ClientObject, EquipMask};
@@ -16,7 +17,6 @@ use ac_ui::event::{ItemDragPayload, ItemDragSource};
 use ac_ui::geometry::AnchorEdges;
 use ac_ui::icons::IconSource;
 use ac_ui::modern::Horizon;
-use ac_ui::modern::theme::hex;
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::items::{emit, offer_target};
 use ac_ui::panels::pack_drops::{self, DropAnswer, DropSpot};
@@ -120,7 +120,7 @@ pub struct InventoryUi {
 impl WindowUi {
     /// The inventory, hidden, in place of retail's.
     pub(in crate::ui) fn mount_modern_inventory(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let label = self.modern_font(Weight::SemiBold, 10.5);
         let small = self.modern_font(Weight::Regular, 10.5);
         let body = self.modern_font(Weight::Regular, 12.0);
@@ -184,9 +184,9 @@ impl WindowUi {
         f.record_history = false;
         f.clear_on_submit = false;
         f.stay_focused_after_submit = true;
-        f.text_color = theme.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
-        f.selection_color = hex(0xE0_B068, 0.35);
+        f.selection_color = tone::gold(0.35);
         f.set_editable_detached(&mut e, true);
         let ui = &mut self.host.root;
         let search = ui.add(frame, e, f);
@@ -242,7 +242,7 @@ impl WindowUi {
             frame,
             Element::at(inv::GRID_X, inv::GRID_Y, inv::GRID_W, inv::GRID_H)
                 .with_anchors(AnchorEdges::NONE),
-            ItemGrid::new(theme, grid_fonts),
+            ItemGrid::new(grid_fonts),
         );
         let mut sheet = SheetView::new(theme, sheet_fonts);
         sheet.foot = Some(Foot::default());
@@ -261,7 +261,7 @@ impl WindowUi {
             body: self.modern_font(Weight::SemiBold, 12.0),
         };
         let ui = &mut self.host.root;
-        let split = super::split::SplitPopover::mount(ui, theme, split_fonts);
+        let split = super::split::SplitPopover::mount(ui, split_fonts);
         let band = ui.add(
             frame,
             Element::at(
@@ -272,7 +272,7 @@ impl WindowUi {
             )
             .with_anchors(AnchorEdges::NONE)
             .with_visible(false),
-            super::plugin_notes::FootBand::new(theme, label.clone(), small.clone(), strong.clone()),
+            super::plugin_notes::FootBand::new(label.clone(), small.clone(), strong.clone()),
         );
         ui.hide_window(INVENTORY);
         let Some(modern) = self.modern.as_mut() else {
@@ -1163,7 +1163,11 @@ impl WindowUi {
             lit: false,
             actions: false,
             note: None,
-            mark: super::plugin_notes::mark_on(&facts.plugin_ui, &Horizon::BRONZE, o.object_id()),
+            mark: super::plugin_notes::mark_on(
+                &facts.plugin_ui,
+                &Horizon::current(),
+                o.object_id(),
+            ),
         };
         let groups: Vec<GridGroup> = grid_view
             .groups
@@ -1224,7 +1228,7 @@ impl WindowUi {
                 frame,
                 Element::at(inv::RAIL_X, 0.0, inv::RAIL_W, PackButton::height(face))
                     .with_anchors(AnchorEdges::NONE),
-                PackButton::new(Horizon::BRONZE, inv.rail_font.clone(), face),
+                PackButton::new(inv.rail_font.clone(), face),
             );
             inv.packs.push(b);
         }
@@ -1358,7 +1362,7 @@ impl WindowUi {
             );
             let sheet = super::plugin_notes::with_cards(
                 sheet,
-                super::plugin_notes::cards(&facts.plugin_ui, &Horizon::BRONZE, o.object_id()),
+                super::plugin_notes::cards(&facts.plugin_ui, &Horizon::current(), o.object_id()),
             );
             let worn = o.currently_equipped_location != EquipMask::NONE;
             let primary = if worn {

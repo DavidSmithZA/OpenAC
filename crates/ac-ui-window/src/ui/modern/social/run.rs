@@ -20,7 +20,7 @@ use super::model::{self, HIDEABLE, SocialInput, Tab};
 use super::window::{
     FellowSwitch, HEIGHT, ManageAsk, Slot, SocialAsk, SocialFonts, SocialFrame, WIDTH,
 };
-use crate::ui::modern::dialogs::look::{GOLD, Glyph, Look, RED};
+use crate::ui::modern::dialogs::look::{Glyph, Look, RED};
 use crate::ui::modern::hud::fellows::{FellowsFonts, FellowsHud};
 use crate::ui::modern::{hud, kit};
 use crate::ui::social_panels::{SOCIAL_WINDOW, SocialPage};
@@ -67,7 +67,7 @@ impl WindowUi {
     /// The Social window, hidden, in place of retail's social panel; and
     /// the fellows on screen.
     pub(in crate::ui) fn mount_modern_social(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = SocialFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             heading: self.modern_font(Weight::SemiBold, 16.0),
@@ -119,7 +119,7 @@ impl WindowUi {
             ui,
             hud::FELLOWS,
             (hud::fellows::WIDTH, 60.0),
-            FellowsHud::new(theme, fellows_fonts),
+            FellowsHud::new(fellows_fonts),
         ) {
             Ok(id) => {
                 ui.hide_window(hud::FELLOWS);
@@ -375,7 +375,7 @@ impl WindowUi {
                 let look = Look::new(
                     &format!("Swear allegiance to {name}?"),
                     Glyph::Question,
-                    GOLD,
+                    ac_ui::modern::tone::gold(1.0),
                     "Swear",
                     "Cancel",
                 );

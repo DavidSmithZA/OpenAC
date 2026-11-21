@@ -6,6 +6,7 @@
 //! The frame holds the values (see [`OptionsModel`]) and changes them
 //! itself; what it asks of the game window is in [`OptionsRequest`].
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext};
@@ -244,7 +245,6 @@ struct Placed {
 /// The Options window's frame.
 #[derive(Debug)]
 pub struct OptionsFrame {
-    theme: Horizon,
     fonts: OptionsFonts,
     /// The rows and their values.
     pub model: OptionsModel,
@@ -292,9 +292,8 @@ fn group_on_character(rows: &[Row], g: usize) -> bool {
 impl OptionsFrame {
     /// A frame over `model`, on Interface.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: OptionsFonts, model: OptionsModel) -> Self {
+    pub fn new(fonts: OptionsFonts, model: OptionsModel) -> Self {
         Self {
-            theme,
             fonts,
             model,
             section: Section::Interface,
@@ -1011,7 +1010,7 @@ impl Widget for OptionsFrame {
 
 impl OptionsFrame {
     fn draw_frame(&self, rc: &mut RenderContext<'_>) {
-        let theme = &self.theme;
+        let theme = &Horizon::current();
         kit::window_back(rc, theme, WIDTH, HEIGHT, HEADER, true);
         kit::title(rc, theme, self.fonts.title.as_ref(), COG, "Options", HEADER);
         let c = kit::close_rect(WIDTH, HEADER);
@@ -1028,7 +1027,7 @@ impl OptionsFrame {
     }
 
     fn draw_nav(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         rc.fill(0.0, HEADER, NAV_W, HEIGHT - HEADER, hex(0, 0.22));
         rc.fill(NAV_W - 1.0, HEADER, 1.0, HEIGHT - HEADER, kit::bronze(0.25));
         let searching = !self.search.trim().is_empty();
@@ -1043,11 +1042,15 @@ impl OptionsFrame {
             } else if lit {
                 rc.fill_rounded_rect(r.0, r.1, r.2, r.3, radius, hex(0xFF_FFFF, 0.05));
             }
-            let ic = if current { kit::gold(1.0) } else { kit::SOFT };
+            let ic = if current {
+                kit::gold(1.0)
+            } else {
+                tone::soft(1.0)
+            };
             stroke(rc, r.0 + 10.0, r.1 + 10.0, 16.0, s.glyph(), ic, 1.8);
             if let Some(f) = &self.fonts.nav {
                 let y = r.1 + ((r.3 - f.line_height) * 0.5).round();
-                let fg = if current { p.text } else { kit::WARM };
+                let fg = if current { p.text } else { tone::warm(1.0) };
                 text::draw(rc, f, s.words(), r.0 + 36.0, y, TextStyle::plain(fg));
             }
             if self.model.changed_in(*s) > 0 || (*s == Section::Controls && self.keys_changed > 0) {
@@ -1065,7 +1068,7 @@ impl OptionsFrame {
         rc.fill(12.0, select.1 - 12.0, NAV_W - 24.0, 1.0, kit::bronze(0.25));
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             select,
             "Character select",
             self.fonts.control.as_ref(),
@@ -1075,7 +1078,7 @@ impl OptionsFrame {
         );
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             exit,
             "Exit game",
             self.fonts.control.as_ref(),
@@ -1086,7 +1089,7 @@ impl OptionsFrame {
     }
 
     fn draw_content(&self, rc: &mut RenderContext<'_>, layout: &[Placed], total: f32) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let x0 = Self::content_x();
         let right = Self::content_right();
         rc.push_clip(NAV_W, ROOM_TOP, WIDTH - NAV_W, ROOM);
@@ -1115,7 +1118,14 @@ impl OptionsFrame {
                         text::draw(rc, f, &title, x0, top, TextStyle::plain(p.text));
                     }
                     if let Some(f) = &self.fonts.intro {
-                        text::draw(rc, f, &intro, x0, top + 28.0, TextStyle::plain(kit::SOFT));
+                        text::draw(
+                            rc,
+                            f,
+                            &intro,
+                            x0,
+                            top + 28.0,
+                            TextStyle::plain(tone::soft(1.0)),
+                        );
                     }
                 }
                 Line::Heading(words, server) => {
@@ -1137,7 +1147,7 @@ impl OptionsFrame {
                             "Nothing matches. Try another word.",
                             x0,
                             top + 8.0,
-                            TextStyle::plain(kit::SOFT),
+                            TextStyle::plain(tone::soft(1.0)),
                         );
                     }
                 }
@@ -1171,7 +1181,7 @@ impl OptionsFrame {
                 title,
                 x,
                 top + 4.0,
-                TextStyle::plain(kit::WARM).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::warm(1.0)).tracked(kit::LABEL_TRACKING),
             );
             tx += text::measure(f, title, kit::LABEL_TRACKING) + 12.0;
         }
@@ -1182,7 +1192,7 @@ impl OptionsFrame {
                 "Saved on your character",
                 tx,
                 top + 4.0,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
         rc.fill(x, top + 24.0, right - x, 1.0, kit::bronze(0.25));
@@ -1190,7 +1200,7 @@ impl OptionsFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_row(&self, rc: &mut RenderContext<'_>, i: usize, top: f32, h: f32, crumbs: bool) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let row = &self.model.rows[i];
         let x0 = Self::content_x();
         let right = Self::content_right();
@@ -1254,12 +1264,19 @@ impl OptionsFrame {
                     row.section.words(),
                     title_case(spec::GROUPS[row.group].title)
                 );
-                text::draw(rc, s, &crumb, tx, y + 3.0, TextStyle::plain(kit::SOFT));
+                text::draw(
+                    rc,
+                    s,
+                    &crumb,
+                    tx,
+                    y + 3.0,
+                    TextStyle::plain(tone::soft(1.0)),
+                );
             }
         }
         y += 21.0;
         if let Some(f) = &self.fonts.desc {
-            kit::lines(rc, f, &desc, x0, y, 16.0, kit::SOFT);
+            kit::lines(rc, f, &desc, x0, y, 16.0, tone::soft(1.0));
         }
         let value = row.key.and_then(|k| self.model.value(k));
         for (part, r) in self.row_parts(i, top, h) {
@@ -1343,11 +1360,11 @@ impl OptionsFrame {
                     );
                     if let Some(f) = &self.fonts.control {
                         let ink = if on {
-                            hex(0x1A_140D, 1.0)
+                            tone::ink(1.0)
                         } else {
                             Color {
                                 a: fade,
-                                ..kit::WARM
+                                ..tone::warm(1.0)
                             }
                         };
                         let w = text::measure(f, &labels[k], 0.0);
@@ -1406,7 +1423,7 @@ impl OptionsFrame {
                         r.1 + 8.0,
                         14.0,
                         CHEVRON,
-                        kit::SOFT,
+                        tone::soft(1.0),
                         1.6,
                     );
                 }
@@ -1414,7 +1431,7 @@ impl OptionsFrame {
                     if let Control::Button(_, verb) = row.control {
                         kit::button(
                             rc,
-                            &self.theme,
+                            &Horizon::current(),
                             r,
                             verb,
                             self.fonts.control.as_ref(),
@@ -1430,7 +1447,7 @@ impl OptionsFrame {
     }
 
     fn draw_key(&self, rc: &mut RenderContext<'_>, k: usize, top: f32) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let Some(line) = self.keys.get(k) else {
             return;
         };
@@ -1498,7 +1515,7 @@ impl OptionsFrame {
                             hex(0, if lit { 0.35 } else { 0.18 }),
                             kit::bronze(if lit { 0.7 } else { 0.3 }),
                             1.0,
-                            kit::SOFT,
+                            tone::soft(1.0),
                             "Add key".to_owned(),
                         )
                     };
@@ -1532,7 +1549,7 @@ impl OptionsFrame {
                     };
                     kit::button(
                         rc,
-                        &self.theme,
+                        &Horizon::current(),
                         r,
                         words,
                         self.fonts.control.as_ref(),
@@ -1566,7 +1583,7 @@ impl OptionsFrame {
 
     fn draw_grid(&self, rc: &mut RenderContext<'_>, i: usize, top: f32) {
         use crate::ui::modern::chat::model::{GROUPS, group_mask};
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let x0 = Self::content_x();
         let right = Self::content_right();
         let n = self.tabs.len().max(1) as f32;
@@ -1578,7 +1595,7 @@ impl OptionsFrame {
                 "MESSAGE TYPE",
                 x0,
                 top + 10.0,
-                TextStyle::plain(kit::SOFT).tracked(0.6),
+                TextStyle::plain(tone::soft(1.0)).tracked(0.6),
             );
             for (t, tab) in self.tabs.iter().enumerate() {
                 let words = kit::fit(f, &tab.name.to_uppercase(), col - 8.0);
@@ -1590,7 +1607,7 @@ impl OptionsFrame {
                     &words,
                     (cx - w * 0.5).round(),
                     top + 10.0,
-                    TextStyle::plain(kit::SOFT).tracked(0.6),
+                    TextStyle::plain(tone::soft(1.0)).tracked(0.6),
                 );
             }
         }
@@ -1617,7 +1634,7 @@ impl OptionsFrame {
                 let radius = CornerRadii::all(3.0);
                 if on {
                     rc.fill_rounded_rect(b.0, b.1, b.2, b.3, radius, kit::gold(1.0));
-                    stroke(rc, b.0, b.1, 16.0, TICK, hex(0x1A_140D, 1.0), 2.0);
+                    stroke(rc, b.0, b.1, 16.0, TICK, tone::ink(1.0), 2.0);
                 } else {
                     rc.stroke_rounded_rect(
                         b.0,
@@ -1641,13 +1658,13 @@ impl OptionsFrame {
                 "The chat's tabs show here.",
                 x0 + GRID_LABEL_W,
                 top + 10.0,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
     }
 
     fn draw_foot(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         rc.fill(NAV_W, HEIGHT - FOOT, WIDTH - NAV_W, 1.0, kit::bronze(0.35));
         let changes = self.model.changed().len() + self.keys_changed;
         let words = match changes {
@@ -1673,7 +1690,7 @@ impl OptionsFrame {
                 &words,
                 NAV_W + PAD_X + 14.0,
                 cy - (f.line_height * 0.5).round(),
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
         for (part, r) in self.foot_buttons() {
@@ -1698,13 +1715,13 @@ impl OptionsFrame {
                             "Defaults",
                             (r.0 + (r.2 - w) * 0.5).round(),
                             r.1 + ((r.3 - f.line_height) * 0.5).round(),
-                            TextStyle::plain(if lit { p.text } else { kit::SOFT }),
+                            TextStyle::plain(if lit { p.text } else { tone::soft(1.0) }),
                         );
                     }
                 }
                 Part::Revert => kit::button(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     r,
                     "Revert",
                     self.fonts.control.as_ref(),
@@ -1714,7 +1731,7 @@ impl OptionsFrame {
                 ),
                 Part::Apply => kit::button(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     r,
                     "Apply",
                     self.fonts.control.as_ref(),
@@ -1739,7 +1756,7 @@ impl OptionsFrame {
         let Control::Choice { labels, .. } = &row.control else {
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let value = row.key.and_then(|k| self.model.value(k));
         let chosen = Self::choice_index(row, value.as_ref());
         let back = (
@@ -1750,7 +1767,7 @@ impl OptionsFrame {
         );
         let radius = CornerRadii::all(4.0);
         rc.soft_shadow(back.0, back.1, back.2, back.3, 4.0, 10.0, 24.0, hex(0, 0.5));
-        rc.fill_rounded_rect(back.0, back.1, back.2, back.3, radius, hex(0x18_130E, 0.98));
+        rc.fill_rounded_rect(back.0, back.1, back.2, back.3, radius, tone::raised(0.98));
         rc.stroke_rounded_rect(
             back.0,
             back.1,
@@ -1794,11 +1811,11 @@ fn draw_switch(rc: &mut RenderContext<'_>, r: Rect, on: bool, fade: f32, lit: bo
     };
     rc.fill_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(r.3 * 0.5), track);
     let knob = if on {
-        hex(0x1A_140D, fade)
+        tone::ink(fade)
     } else {
         Color {
             a: fade,
-            ..kit::SOFT
+            ..tone::soft(1.0)
         }
     };
     let kx = if on { r.0 + r.2 - 17.0 } else { r.0 + 3.0 };
@@ -1862,11 +1879,7 @@ mod tests {
             options1: ac_runtime::character::DEFAULT_OPTIONS1,
             options2: ac_runtime::character::DEFAULT_OPTIONS2,
         };
-        OptionsFrame::new(
-            Horizon::BRONZE,
-            OptionsFonts::default(),
-            OptionsModel::new(rows(&src), live),
-        )
+        OptionsFrame::new(OptionsFonts::default(), OptionsModel::new(rows(&src), live))
     }
 
     fn row_top(f: &mut OptionsFrame, label: &str) -> (usize, f32, f32) {

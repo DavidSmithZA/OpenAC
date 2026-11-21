@@ -4,6 +4,7 @@
 //! with what the player carries, how much is on the row and Add; what is
 //! on the rows (click to take one off); Buy or Pay maintenance.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_runtime::inventory::HousePurchaseTab;
@@ -19,9 +20,7 @@ use ac_ui::{UiFont, UiRoot};
 use super::model::SaleScreen;
 use super::window::HOUSE;
 use crate::ui::modern::hud::lines::stroke;
-use crate::ui::modern::kit::{
-    self, ButtonLook, Hits, MUTED, Rect, bronze, gold, put, put_mid, put_right,
-};
+use crate::ui::modern::kit::{self, ButtonLook, Hits, Rect, bronze, gold, put, put_mid, put_right};
 
 /// The window's size.
 pub const WIDTH: f32 = 640.0;
@@ -74,7 +73,6 @@ pub struct SaleFonts {
 /// The house sale window's frame.
 #[derive(Debug)]
 pub struct SaleFrame {
-    theme: Horizon,
     fonts: SaleFonts,
     /// What it shows.
     pub screen: SaleScreen,
@@ -89,9 +87,8 @@ pub struct SaleFrame {
 impl SaleFrame {
     /// A frame in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: SaleFonts) -> Self {
+    pub fn new(fonts: SaleFonts) -> Self {
         Self {
-            theme,
             fonts,
             screen: SaleScreen::default(),
             tab: HousePurchaseTab::Buy,
@@ -186,8 +183,8 @@ impl Widget for SaleFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let theme = self.theme;
-        let p = theme.palette;
+        let theme = Horizon::current();
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         let s = self.screen.clone();
         let mut h = Hits::new(self.hits.hover);
@@ -198,7 +195,7 @@ impl Widget for SaleFrame {
         } else if s.yours {
             (gold(1.0), gold(0.6))
         } else {
-            (kit::SOFT, bronze(0.4))
+            (tone::soft(1.0), bronze(0.4))
         };
         if let Some(st) = &f.strong {
             let w = text::measure(st, &s.owner, 0.0) + 30.0;
@@ -251,11 +248,11 @@ impl Widget for SaleFrame {
             WIDTH - PAD,
             heading,
             None,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         y += 24.0;
         for (k, v, ok) in &s.rules {
-            put_mid(rc, f.body.as_ref(), k, PAD, y, 24.0, kit::WARM);
+            put_mid(rc, f.body.as_ref(), k, PAD, y, 24.0, tone::warm(1.0));
             let ink = match ok {
                 Some(true) => kit::GOOD,
                 Some(false) => kit::HARM,
@@ -286,7 +283,7 @@ impl Widget for SaleFrame {
             WIDTH - PAD,
             heading,
             None,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         y += 26.0;
         let area = Self::rows_area();
@@ -341,7 +338,7 @@ impl Widget for SaleFrame {
                 &row.carry,
                 r.0 + 20.0 + nw,
                 y + 9.0,
-                MUTED,
+                tone::muted(1.0),
             );
             let share = if row.num > 0 {
                 ((row.paid + row.staged) as f32 / row.num as f32).min(1.0)
@@ -370,7 +367,7 @@ impl Widget for SaleFrame {
                 status_x,
                 y,
                 ROW,
-                if full { kit::GOOD } else { kit::WARM },
+                if full { kit::GOOD } else { tone::warm(1.0) },
             );
             let b = (
                 r.0 + r.2 - 10.0 - add_w,
@@ -405,7 +402,7 @@ impl Widget for SaleFrame {
                 WIDTH - PAD,
                 "ON THE ROWS",
                 None,
-                kit::SOFT,
+                tone::soft(1.0),
             );
             y += 24.0;
             let mut x = PAD;
@@ -436,14 +433,14 @@ impl Widget for SaleFrame {
                     r.0 + r.2 - 16.0,
                     r.1,
                     r.3,
-                    if lit { kit::HARM } else { kit::SOFT },
+                    if lit { kit::HARM } else { tone::soft(1.0) },
                 );
                 x += w + 6.0;
             }
             y += 30.0;
         }
         if let Some(sm) = &f.small {
-            put(rc, Some(sm), &s.hint, PAD, y + 4.0, MUTED);
+            put(rc, Some(sm), &s.hint, PAD, y + 4.0, tone::muted(1.0));
         }
         // The foot.
         let fy = HEIGHT - FOOT;
@@ -473,7 +470,7 @@ impl Widget for SaleFrame {
             let lines = kit::wrap(sm, &s.foot, b.0 - PAD - 12.0);
             let lh = sm.line_height + 3.0;
             let top = fy + (FOOT - lines.len() as f32 * lh) * 0.5;
-            kit::lines(rc, sm, &lines, PAD, top, lh, kit::SOFT);
+            kit::lines(rc, sm, &lines, PAD, top, lh, tone::soft(1.0));
         }
         self.hits = h;
     }

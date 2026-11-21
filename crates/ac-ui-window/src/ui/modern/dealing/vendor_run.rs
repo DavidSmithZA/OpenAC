@@ -68,7 +68,7 @@ pub struct VendorUi {
 impl WindowUi {
     /// The Vendor window, hidden, in place of retail's vendor window.
     pub(in crate::ui) fn mount_modern_vendor(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = VendorFonts {
             title: self.modern_font(Weight::SemiBold, 14.0),
             strong: self.modern_font(Weight::SemiBold, 12.5),
@@ -101,7 +101,7 @@ impl WindowUi {
         let list = ui.add(
             frame,
             Element::at(r.0, r.1, r.2, r.3).with_anchors(AnchorEdges::NONE),
-            VendorList::new(theme, fonts),
+            VendorList::new(fonts),
         );
         let (search_rect, q) = ui
             .widget::<VendorFrame>(frame)
@@ -123,13 +123,12 @@ impl WindowUi {
         f.select_all_on_focus = true;
         f.max_characters = DIGITS;
         f.character_filter = Some(Box::new(|c: char| c.is_ascii_digit()));
-        f.text_color = theme.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
         f.selection_color = gold(0.35);
         f.set_editable_detached(&mut e, true);
         let quantity = ui.add(frame, e, f);
         let band_widget = crate::ui::modern::items::plugin_notes::FootBand::new(
-            theme,
             self.modern_font(Weight::SemiBold, 9.5),
             self.modern_font(Weight::Regular, 10.5),
             self.modern_font(Weight::SemiBold, 12.0),
@@ -709,7 +708,7 @@ impl WindowUi {
         };
         let plugin_ui = &facts.plugin_ui;
         let mark = |id: u32| {
-            crate::ui::modern::items::plugin_notes::mark_on(plugin_ui, &Horizon::BRONZE, id)
+            crate::ui::modern::items::plugin_notes::mark_on(plugin_ui, &Horizon::current(), id)
         };
         let screen: VendorScreen =
             vendor_model::screen(&shop_facts, &choices, &mut icon, &resolve, &mark);

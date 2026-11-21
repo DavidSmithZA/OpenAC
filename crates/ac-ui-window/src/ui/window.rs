@@ -593,6 +593,8 @@ pub struct WindowUi {
     /// The modern interface, while the launcher asked for it
     /// (`super::modern`).
     pub(super) modern: Option<super::modern::ModernLayer>,
+    /// The saved theme the modern look was last made from, and that look.
+    pub(super) modern_theme: Option<(String, ac_ui::modern::Horizon)>,
     /// The resolutions the display offers (the options windows' menu).
     pub(super) resolutions: Vec<String>,
 }
@@ -693,6 +695,7 @@ impl WindowUi {
             barber: super::barber_window::BarberWindow::default(),
             miss_caches: MissCaches::default(),
             modern: None,
+            modern_theme: None,
             resolutions: resolution_choices.clone(),
         };
         let pregame_dats = dats.clone();
@@ -1533,6 +1536,7 @@ impl WindowUi {
             .map_or(0.0, |t| now.duration_since(t).as_secs_f64());
         let now_ms =
             i64::try_from(now.duration_since(self.started).as_millis()).unwrap_or(i64::MAX);
+        self.follow_modern_theme();
         self.tick_status(dt, size);
         self.report_window_layouts();
         self.tick_plugin_ui(now);

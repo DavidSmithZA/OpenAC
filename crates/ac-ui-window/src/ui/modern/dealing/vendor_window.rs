@@ -7,6 +7,7 @@
 //! or of the player's items is a child of its own, so it scrolls by itself.
 //! Anything dropped on the window from the packs goes on the sell list.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext, TextureRef};
@@ -611,7 +612,7 @@ impl VendorFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_header(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         stroke(rc, 20.0, (HEADER - 22.0) * 0.5, 22.0, SHOP, gold(1.0), 1.8);
         if let Some(t) = &f.title {
@@ -620,7 +621,7 @@ impl VendorFrame {
         }
         if let Some(s) = &f.small {
             let sub = kit::fit(s, &self.screen.sub, 260.0);
-            text::draw(rc, s, &sub, 58.0, 30.0, TextStyle::plain(kit::SOFT));
+            text::draw(rc, s, &sub, 58.0, 30.0, TextStyle::plain(tone::soft(1.0)));
         }
         for (tab, r) in self.tabs() {
             let (words, n) = match tab {
@@ -635,7 +636,7 @@ impl VendorFrame {
             };
             kit::draw_tab(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 &t,
                 r,
                 f.strong.as_ref(),
@@ -683,7 +684,14 @@ impl VendorFrame {
             );
             if let (Some(a), Some(sm)) = (also, &f.small) {
                 let ty = r.1 + ((30.0 - sm.line_height) * 0.5).round();
-                text::draw(rc, sm, &a, r.0 + 33.0 + w1, ty, TextStyle::plain(kit::SOFT));
+                text::draw(
+                    rc,
+                    sm,
+                    &a,
+                    r.0 + 33.0 + w1,
+                    ty,
+                    TextStyle::plain(tone::soft(1.0)),
+                );
             }
         }
         let hint = match self.screen.tab {
@@ -692,7 +700,7 @@ impl VendorFrame {
         };
         kit::search_box(
             rc,
-            &self.theme,
+            &Horizon::current(),
             search,
             hint,
             self.search_empty,
@@ -701,14 +709,14 @@ impl VendorFrame {
         );
         kit::close(
             rc,
-            &self.theme,
+            &Horizon::current(),
             self.close_rect(),
             hot(self.hover, self.close_rect()),
         );
     }
 
     fn draw_rail(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         if let Some(l) = &f.label {
             text::draw(
@@ -717,7 +725,7 @@ impl VendorFrame {
                 self.screen.rail_title,
                 self.rail_x(),
                 self.rail_top(),
-                TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
         for ((key, r), row) in self.rail_rects().into_iter().zip(&self.screen.rail) {
@@ -744,7 +752,7 @@ impl VendorFrame {
                     &n,
                     r.0 + r.2 - 8.0 - w,
                     ty,
-                    TextStyle::plain(kit::SOFT),
+                    TextStyle::plain(tone::soft(1.0)),
                 );
             }
         }
@@ -769,7 +777,7 @@ impl VendorFrame {
             t.1 + 4.0,
             12.0,
             12.0,
-            if on { hex(0x1A_140D, 1.0) } else { kit::SOFT },
+            if on { tone::ink(1.0) } else { tone::soft(1.0) },
         );
         if let Some(b) = &f.body {
             let ty = t.1 + ((20.0 - b.line_height) * 0.5).round();
@@ -808,7 +816,7 @@ impl VendorFrame {
             &head,
             self.rail_x() + 10.0,
             y + 10.0,
-            TextStyle::plain(kit::WARM),
+            TextStyle::plain(tone::warm(1.0)),
         );
         kit::lines(
             rc,
@@ -817,12 +825,12 @@ impl VendorFrame {
             self.rail_x() + 10.0,
             y + 10.0 + st.line_height + 4.0,
             step,
-            kit::SOFT,
+            tone::soft(1.0),
         );
     }
 
     fn draw_heading(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let mut x = self.mid_x();
         // The narrow window's title is the drop-down's button.
@@ -844,7 +852,7 @@ impl VendorFrame {
             let v = |dx: f32, dy: f32| (cx + dx, cy + dy);
             let down: &[(f32, f32)] = &[v(-4.0, -2.0), v(0.0, 2.0), v(4.0, -2.0)];
             for w in down.windows(2) {
-                rc.line(w[0].0, w[0].1, w[1].0, w[1].1, kit::SOFT, 1.6);
+                rc.line(w[0].0, w[0].1, w[1].0, w[1].1, tone::soft(1.0), 1.6);
             }
             x = b.0 + 10.0;
         }
@@ -867,7 +875,7 @@ impl VendorFrame {
         if let Some(sm) = &f.small {
             let ty = TOP + ((28.0 - sm.line_height) * 0.5).round();
             let count = kit::fit(sm, &self.screen.list_count, sort.0 - 8.0 - x);
-            text::draw(rc, sm, &count, x, ty, TextStyle::plain(kit::SOFT));
+            text::draw(rc, sm, &count, x, ty, TextStyle::plain(tone::soft(1.0)));
             let round = CornerRadii::all(4.0);
             rc.fill_rounded_rect(sort.0, sort.1, sort.2, sort.3, round, hex(0, 0.35));
             rc.stroke_rounded_rect(
@@ -886,7 +894,7 @@ impl VendorFrame {
                 "Sort",
                 sort.0 + 8.0,
                 ty,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
             let w = text::measure(sm, "Sort ", 0.0);
             text::draw(
@@ -928,12 +936,12 @@ impl VendorFrame {
                     &line,
                     b.0 + 12.0,
                     b.1 + 30.0,
-                    TextStyle::plain(kit::SOFT),
+                    TextStyle::plain(tone::soft(1.0)),
                 );
             }
             kit::button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 button,
                 "Add to list",
                 f.strong.as_ref(),
@@ -946,7 +954,7 @@ impl VendorFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_card(&self, rc: &mut RenderContext<'_>, icons: &CardIcons) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let b = (self.side_x(), TOP, SIDE_W, CARD_H);
         let round = CornerRadii::all(4.0);
@@ -966,7 +974,7 @@ impl VendorFrame {
                     b.0 + 14.0,
                     b.1 + 20.0,
                     s.line_height + 4.0,
-                    kit::SOFT,
+                    tone::soft(1.0),
                 );
             }
             return;
@@ -1007,7 +1015,7 @@ impl VendorFrame {
                 tile.0 + 60.0,
                 tile.1 + 24.0,
                 sm.line_height + 2.0,
-                kit::SOFT,
+                tone::soft(1.0),
             );
         }
         let d = self.detail_button();
@@ -1021,7 +1029,7 @@ impl VendorFrame {
             bronze(if hot(self.hover, d) { 0.8 } else { 0.45 }),
             1.0,
         );
-        stroke(rc, d.0 + 6.0, d.1 + 6.0, 16.0, EYE, kit::SOFT, 1.4);
+        stroke(rc, d.0 + 6.0, d.1 + 6.0, 16.0, EYE, tone::soft(1.0), 1.4);
         circle(
             rc,
             d.0 + 6.0,
@@ -1029,14 +1037,21 @@ impl VendorFrame {
             16.0,
             (12.0, 12.0),
             3.0,
-            kit::SOFT,
+            tone::soft(1.0),
             1.4,
         );
         // The quantity.
         let (label, minus, plus, most) = self.quantity_parts();
         if let Some(sm) = &f.small {
             let ty = label.1 + ((28.0 - sm.line_height) * 0.5).round();
-            text::draw(rc, sm, "Quantity", label.0, ty, TextStyle::plain(kit::SOFT));
+            text::draw(
+                rc,
+                sm,
+                "Quantity",
+                label.0,
+                ty,
+                TextStyle::plain(tone::soft(1.0)),
+            );
         }
         let qbox = (minus.0, minus.1, 28.0 + 44.0 + 28.0, 28.0);
         rc.fill_rounded_rect(qbox.0, qbox.1, qbox.2, qbox.3, round, hex(0, 0.35));
@@ -1090,7 +1105,7 @@ impl VendorFrame {
         }
         if let Some(sm) = &f.small {
             let lines = kit::wrap(sm, &c.note, b.2 - 28.0);
-            let color = tone_color(c.note_tone, kit::SOFT);
+            let color = tone_color(c.note_tone, tone::soft(1.0));
             kit::lines(
                 rc,
                 sm,
@@ -1104,7 +1119,7 @@ impl VendorFrame {
         let (now, add) = self.card_buttons();
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             now,
             c.primary,
             f.strong.as_ref(),
@@ -1114,7 +1129,7 @@ impl VendorFrame {
         );
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             add,
             "Add to list",
             f.strong.as_ref(),
@@ -1126,7 +1141,7 @@ impl VendorFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_cart(&mut self, rc: &mut RenderContext<'_>, icons: &CardIcons) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let b = self.cart_box();
         let round = CornerRadii::all(4.0);
         rc.fill_rounded_rect(b.0, b.1, b.2, b.3, round, hex(0, 0.28));
@@ -1139,7 +1154,7 @@ impl VendorFrame {
                 self.screen.cart_title,
                 b.0 + 14.0,
                 b.1 + 14.0,
-                TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
             let x =
                 b.0 + 14.0 + text::measure(l, self.screen.cart_title, kit::LABEL_TRACKING) + 8.0;
@@ -1156,7 +1171,7 @@ impl VendorFrame {
                     &words,
                     x,
                     b.1 + 13.0,
-                    TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                    TextStyle::plain(tone::muted(1.0)),
                 );
             }
         }
@@ -1167,7 +1182,7 @@ impl VendorFrame {
                 let color = if hot(self.hover, c) {
                     p.text
                 } else {
-                    kit::SOFT
+                    tone::soft(1.0)
                 };
                 text::draw(rc, sm, "Clear", c.0 + 6.0, ty, TextStyle::plain(color));
             }
@@ -1194,7 +1209,7 @@ impl VendorFrame {
                 room.0 + 4.0,
                 room.1 + 6.0,
                 sm.line_height + 3.0,
-                hex(0xA8_9A82, 1.0),
+                tone::muted(1.0),
             );
         }
         for ((_, row, cross), r) in self.cart_rows().into_iter().zip(&self.screen.cart) {
@@ -1236,7 +1251,7 @@ impl VendorFrame {
             text::draw(rc, st, &name, tile.0 + 32.0, ty, TextStyle::plain(p.text));
             let nx = tile.0 + 32.0 + text::measure(st, &name, 0.0) + 8.0;
             let sy = row.1 + ((CART_ROW - sm.line_height) * 0.5).round();
-            text::draw(rc, sm, &qty, nx, sy, TextStyle::plain(kit::SOFT));
+            text::draw(rc, sm, &qty, nx, sy, TextStyle::plain(tone::soft(1.0)));
             let pw = text::measure(st, &r.price, 0.0);
             text::draw(
                 rc,
@@ -1253,7 +1268,7 @@ impl VendorFrame {
                 cross.1 + 4.0,
                 14.0,
                 CROSS,
-                if lit { p.accent } else { kit::SOFT },
+                if lit { p.accent } else { tone::soft(1.0) },
                 1.5,
             );
         }
@@ -1302,13 +1317,13 @@ impl VendorFrame {
                 &self.screen.now,
                 b.0 + 14.0,
                 y,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
             let w = text::measure(sm, &self.screen.after, 0.0);
             let color = if self.screen.after_bad {
                 kit::HARM
             } else {
-                kit::SOFT
+                tone::soft(1.0)
             };
             text::draw(
                 rc,
@@ -1321,7 +1336,7 @@ impl VendorFrame {
         }
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             button,
             &self.screen.cart_button,
             f.strong.as_ref(),
@@ -1352,7 +1367,7 @@ impl VendorFrame {
                 &name,
                 b.0 + 12.0,
                 y,
-                TextStyle::plain(self.theme.palette.text),
+                TextStyle::plain(Horizon::current().palette.text),
             );
             y += 18.0;
         }
@@ -1367,13 +1382,13 @@ impl VendorFrame {
             );
             y += 18.0;
             if let Some(l) = &r.limit {
-                text::draw(rc, sm, l, b.0 + 12.0, y, TextStyle::plain(kit::SOFT));
+                text::draw(rc, sm, l, b.0 + 12.0, y, TextStyle::plain(tone::soft(1.0)));
             }
         }
     }
 
     fn draw_leave(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.fill_rounded_rect(0.0, 0.0, self.width, HEIGHT, round, hex(0, 0.45));
@@ -1385,7 +1400,7 @@ impl VendorFrame {
             b.2,
             b.3,
             CornerRadii::all(6.0),
-            hex(0x18_130E, 0.98),
+            tone::raised(0.98),
         );
         rc.stroke_rounded_rect(b.0, b.1, b.2, b.3, CornerRadii::all(6.0), bronze(0.8), 1.0);
         if let Some(s) = &f.strong {
@@ -1426,13 +1441,13 @@ impl VendorFrame {
                 b.0 + 16.0,
                 b.1 + 42.0,
                 sm.line_height + 4.0,
-                kit::WARM,
+                tone::warm(1.0),
             );
         }
         let (stay, leave) = self.leave_buttons();
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             stay,
             "Stay",
             f.strong.as_ref(),
@@ -1442,7 +1457,7 @@ impl VendorFrame {
         );
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             leave,
             "Leave",
             f.strong.as_ref(),
@@ -1543,7 +1558,7 @@ impl Widget for VendorFrame {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        kit::window_back(rc, &self.theme, self.width, HEIGHT, HEADER, true);
+        kit::window_back(rc, &Horizon::current(), self.width, HEIGHT, HEADER, true);
         self.draw_header(rc);
         if !self.narrow() {
             self.draw_rail(rc);
@@ -1579,7 +1594,7 @@ impl Widget for VendorFrame {
             let r = self.rail_panel();
             let round = CornerRadii::all(6.0);
             rc.soft_shadow(r.0, r.1, r.2, r.3, 6.0, 12.0, 30.0, hex(0, 0.5));
-            ac_ui::modern::theme::fill_glass(rc, r, round, hex(0x14_100C, 0.97));
+            ac_ui::modern::theme::fill_glass(rc, r, round, tone::ground(0.97));
             rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, bronze(0.6), 1.0);
             self.draw_rail(rc);
         }
@@ -1612,7 +1627,6 @@ pub enum ListAsk {
 /// The list of goods, or of the player's items.
 #[derive(Debug)]
 pub struct VendorList {
-    theme: Horizon,
     fonts: VendorFonts,
     /// The rows.
     pub rows: Vec<VendorRow>,
@@ -1627,9 +1641,8 @@ pub struct VendorList {
 impl VendorList {
     /// A list in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: VendorFonts) -> Self {
+    pub fn new(fonts: VendorFonts) -> Self {
         Self {
-            theme,
             fonts,
             rows: Vec::new(),
             chosen: None,
@@ -1655,7 +1668,7 @@ impl VendorList {
     }
 
     fn draw_row(&self, rc: &mut RenderContext<'_>, r: &VendorRow, y: f32, w: f32) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let on = self.chosen == Some(r.id);
         let lit = self.hover.is_some_and(|(_, hy)| hy >= y && hy < y + ROW);
@@ -1716,7 +1729,7 @@ impl VendorList {
                 &sub,
                 x,
                 y + 26.0,
-                TextStyle::plain(tone_color(r.sub_tone, kit::SOFT)),
+                TextStyle::plain(tone_color(r.sub_tone, tone::soft(1.0))),
             );
         }
         if let (Some(chip), Some(t)) = (&r.on_list, &f.tiny) {
@@ -1746,7 +1759,7 @@ impl VendorList {
                 &r.price_sub,
                 w - 10.0 - sw,
                 y + 27.0,
-                TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
     }
@@ -1837,7 +1850,7 @@ impl Widget for VendorList {
                 "Nothing here.",
                 10.0,
                 12.0,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
         for (i, r) in self.rows.iter().enumerate() {

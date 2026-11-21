@@ -292,6 +292,17 @@ pub const GROUPS: &[Group] = &[
     // Interface.
     Group {
         section: Section::Interface,
+        title: "STYLE",
+        items: &[Item::Key(
+            OptionKey::Theme,
+            w(
+                "Theme",
+                "The colours of windows, bars and the radar, and of plugin windows. Classic is bronze.",
+            ),
+        )],
+    },
+    Group {
+        section: Section::Interface,
         title: "SIZE",
         items: &[disp(
             DisplayField::UiScale,

@@ -66,6 +66,8 @@ pub struct PreGameUi {
     pub figure_look: Option<ChargenLook>,
     presence: ConnectionPresence,
     credits_open: bool,
+    /// The Stage's themes' list is open.
+    themes_open: bool,
     credits_resources: Option<CreditsResources>,
     exit_card: bool,
     enter_sent: Option<(Generation, u64)>,
@@ -321,7 +323,7 @@ impl WindowUi {
             self.mounted
                 .retain(|m| *m != crate::ui::pregame::PREGAME_SCREENS);
         }
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = StageFonts {
             hero: self.modern_font(Weight::SemiBold, 38.0),
             huge: self.modern_font(Weight::SemiBold, 39.0),
@@ -359,7 +361,7 @@ impl WindowUi {
         let mut e = Element::at(0.0, 0.0, w, h).with_anchors(AnchorEdges::NONE);
         e.visible = false;
         e.accepts_focus = true;
-        let stage = ui.add(root, e, StageView::new(theme, fonts));
+        let stage = ui.add(root, e, StageView::new(fonts));
         let figure = ui.add(
             stage,
             Element::at(0.0, 0.0, 10.0, 10.0)
@@ -382,7 +384,7 @@ impl WindowUi {
         let mut e = Element::at(0.0, 0.0, w, h).with_anchors(AnchorEdges::NONE);
         e.visible = false;
         e.accepts_focus = true;
-        let mut view = CreditsView::new(theme, credits_fonts);
+        let mut view = CreditsView::new(credits_fonts);
         view.resources.clone_from(&credits_resources);
         let credits = ui.add(root, e, view);
         let studio = self.mount_modern_studio();
@@ -398,6 +400,7 @@ impl WindowUi {
             figure_look: None,
             presence: ConnectionPresence::default(),
             credits_open: false,
+            themes_open: false,
             credits_resources,
             exit_card: false,
             enter_sent: None,
@@ -470,6 +473,7 @@ impl WindowUi {
             .filter(|w| !w.is_empty())
             .or_else(|| self.status.server_world.clone())
             .unwrap_or_else(|| "Dereth".to_owned());
+        let saved_theme = ac_plugin_ui::ThemeKind::from_saved(&self.settings().plugin_ui.theme);
         let Some(p) = self.modern.as_mut().and_then(|m| m.pregame.as_mut()) else {
             return;
         };
@@ -520,6 +524,15 @@ impl WindowUi {
             _ => StageScreen::default(),
         };
         screen.version = crate::ui::pregame::version_line();
+        screen.themes = ac_plugin_ui::ThemeKind::ALL
+            .into_iter()
+            .map(|k| stage::ThemeChoice {
+                name: k.display_name().to_owned(),
+                accent: super::look_for_theme(k.saved_name()).palette.accent,
+                chosen: k == saved_theme,
+            })
+            .collect();
+        screen.themes_open = p.themes_open;
         screen.delete_word.clone_from(&p.delete_word);
         screen.exit_words.clone_from(&p.exit_words);
         if let Some(s) = selection.as_ref().filter(|_| choosing) {
@@ -669,6 +682,7 @@ impl WindowUi {
             .is_some_and(|v| std::mem::take(&mut v.leave));
         // What the screens asked.
         let mut open_studio = false;
+        let mut picked_theme = None;
         for ask in asks {
             let ui = &mut self.host.root;
             let Some(p) = self.modern.as_mut().and_then(|m| m.pregame.as_mut()) else {
@@ -726,6 +740,12 @@ impl WindowUi {
                         open_studio = true;
                     }
                 }
+                StageAsk::Themes => p.themes_open = !p.themes_open,
+                StageAsk::CloseThemes => p.themes_open = false,
+                StageAsk::Theme(i) => {
+                    p.themes_open = false;
+                    picked_theme = ac_plugin_ui::ThemeKind::ALL.get(i).copied();
+                }
                 StageAsk::Credits => p.credits_open = true,
                 StageAsk::Exit => p.exit_card = true,
                 StageAsk::ConfirmExit | StageAsk::Cancel => {
@@ -745,6 +765,12 @@ impl WindowUi {
                 v.started = clock;
                 v.leave = false;
             }
+        }
+        if let Some(kind) = picked_theme {
+            self.edit_settings(ac_ui::panels::options::Section::PluginUi, true, |s| {
+                kind.saved_name().clone_into(&mut s.plugin_ui.theme);
+            });
+            self.follow_plugin_theme_setting();
         }
         if open_studio {
             self.open_modern_studio(scene);

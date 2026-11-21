@@ -9,6 +9,7 @@
 //! draws the band behind them. The buttons only note what was asked; the
 //! window carries it out.
 
+use ac_ui::modern::tone;
 use std::f32::consts::{FRAC_PI_2, PI};
 use std::sync::Arc;
 
@@ -253,16 +254,14 @@ impl Panel {
 }
 
 /// The band behind the buttons (the HUD piece).
-#[derive(Debug)]
-pub struct PanelStrip {
-    theme: Horizon,
-}
+#[derive(Debug, Default)]
+pub struct PanelStrip;
 
 impl PanelStrip {
-    /// The band in `theme`.
+    /// The band.
     #[must_use]
-    pub fn new(theme: Horizon) -> Self {
-        Self { theme }
+    pub fn new() -> Self {
+        Self
     }
 
     /// Where button `index` sits in the band.
@@ -284,7 +283,7 @@ impl Widget for PanelStrip {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let round = CornerRadii::all(8.0);
         rc.fill_rounded_rect(0.0, 0.0, WIDTH, HEIGHT, round, p.hud);
         rc.stroke_rounded_rect(0.0, 0.0, WIDTH, HEIGHT, round, p.trim, 1.0);
@@ -450,26 +449,17 @@ impl Widget for PanelButton {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let round = CornerRadii::all(6.0);
         let lit = self.over.is_some();
         if lit {
-            rc.soft_shadow(
-                0.0,
-                0.0,
-                BUTTON,
-                BUTTON,
-                6.0,
-                0.0,
-                14.0,
-                hex(0xE0_B068, 0.7),
-            );
-            rc.fill_rounded_rect(0.0, 0.0, BUTTON, BUTTON, round, hex(0xE0_B068, 0.25));
+            rc.soft_shadow(0.0, 0.0, BUTTON, BUTTON, 6.0, 0.0, 14.0, tone::gold(0.7));
+            rc.fill_rounded_rect(0.0, 0.0, BUTTON, BUTTON, round, tone::gold(0.25));
             rc.stroke_rounded_rect(0.0, 0.0, BUTTON, BUTTON, round, p.accent, 1.0);
         } else if self.pressed && self.hovered {
-            rc.fill_rounded_rect(0.0, 0.0, BUTTON, BUTTON, round, hex(0x0A_0806, 0.6));
+            rc.fill_rounded_rect(0.0, 0.0, BUTTON, BUTTON, round, tone::deep(0.6));
         } else if self.hovered {
-            rc.fill_rounded_rect(0.0, 0.0, BUTTON, BUTTON, round, hex(0x2A_2116, 0.8));
+            rc.fill_rounded_rect(0.0, 0.0, BUTTON, BUTTON, round, tone::field(0.8));
         } else if self.open {
             rc.fill_rounded_rect(0.0, 0.0, BUTTON, BUTTON, round, p.accent_tint);
         }
@@ -503,7 +493,7 @@ impl Widget for PanelButton {
         let (Some(note), Some(f)) = (&self.note, &self.font) else {
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let words_w = text::measure(f, &note.words, 0.0);
         let room_w = note
             .room
@@ -574,7 +564,7 @@ mod tests {
 
     #[test]
     fn the_hover_names_the_key_and_the_dot() {
-        let mut b = PanelButton::new(Horizon::BRONZE, None, Panel::House);
+        let mut b = PanelButton::new(Horizon::current(), None, Panel::House);
         let e = Element::at(0.0, 0.0, BUTTON, BUTTON);
         assert_eq!(b.tooltip_text(&e).as_deref(), Some("House"));
         b.key = Some("F10".to_owned());
