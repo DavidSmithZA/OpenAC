@@ -70,7 +70,7 @@ pub const BACKDROP_STATE: [(u32, u32); 7] = [
 ];
 
 /// The description per template.
-const DESCRIPTION_KEY: [(u32, &str); 7] = [
+pub const DESCRIPTION_KEY: [(u32, &str); 7] = [
     (0, "ID_CharGen_CustomText"),
     (1, "ID_CharGen_BowText"),
     (2, "ID_CharGen_SwashText"),

@@ -30,7 +30,7 @@ pub const HERITAGE_BY_BUTTON: [(u32, u32); 13] = [
 ];
 
 /// The bonus-skills text of each heritage.
-const BONUS_SKILLS_KEY: [(u32, &str); 10] = [
+pub const BONUS_SKILLS_KEY: [(u32, &str); 10] = [
     (H::ALUVIAN.0, "ID_CharGen_AluvianText_BonusSkills_Trained"),
     (H::GHARUNDIM.0, "ID_CharGen_GaruText_BonusSkills_Trained"),
     (H::SHO.0, "ID_CharGen_ShoText_BonusSkills_Trained"),

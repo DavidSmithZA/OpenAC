@@ -42,7 +42,7 @@ pub const HOW_TO_SCROLL_ID: u32 = 0x1000_02E7;
 pub const MAX_NAME_LENGTH: usize = 32;
 
 /// The name suggestions per heritage: (male, female).
-const NAME_SUGGESTIONS: [(u32, &str, &str); 4] = [
+pub const NAME_SUGGESTIONS: [(u32, &str, &str); 4] = [
     (
         H::ALUVIAN.0,
         "ID_CharGen_AluMaleNames",
