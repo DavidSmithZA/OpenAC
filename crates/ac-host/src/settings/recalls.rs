@@ -103,8 +103,12 @@ mod tests {
             let nanos = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_or(0, |d| d.as_nanos());
+            // Tests run side by side and the clock can read the same for
+            // two of them: a counter keeps their folders apart.
+            static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+            let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let dir = std::env::temp_dir().join(format!(
-                "openac-custom-recalls-{}-{nanos}",
+                "openac-custom-recalls-{}-{nanos}-{n}",
                 std::process::id()
             ));
             std::fs::create_dir_all(&dir).unwrap();
