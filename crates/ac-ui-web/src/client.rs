@@ -828,6 +828,7 @@ impl ClientPanels {
             match request {
                 KeyboardRequest::Apply(bindings) => self.gameplay.set_bindings(bindings),
                 KeyboardRequest::BeginCapture => self.gameplay.begin_capture(),
+                KeyboardRequest::CancelCapture => self.gameplay.cancel_capture(),
             }
         }
     }
