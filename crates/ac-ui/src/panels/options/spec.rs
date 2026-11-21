@@ -886,6 +886,24 @@ pub const EFFECT_WARNING_CHOICES: &[ExplicitChoice] = &[
     choice("15", "15 minutes"),
 ];
 
+/// The key held for the modern interface's quick move, as each system
+/// names it.
+#[cfg(target_os = "macos")]
+pub const QUICK_MOVE_KEY_CHOICES: &[ExplicitChoice] = &[
+    choice("ctrl", "Control"),
+    choice("alt", "Option"),
+    choice("cmd", "Command"),
+];
+
+/// The key held for the modern interface's quick move, as each system
+/// names it.
+#[cfg(not(target_os = "macos"))]
+pub const QUICK_MOVE_KEY_CHOICES: &[ExplicitChoice] = &[
+    choice("ctrl", "Ctrl"),
+    choice("alt", "Alt"),
+    choice("cmd", "Windows key"),
+];
+
 /// OpenAC's modern interface: how its vitals and effects behave (Retail
 /// ignores these rows).
 fn modern_interface_rows() -> Vec<ConfigRow> {
@@ -927,6 +945,12 @@ fn modern_interface_rows() -> Vec<ConfigRow> {
             choices: EFFECT_WARNING_CHOICES,
             default: menu_default(EFFECT_WARNING_CHOICES, def.effect_warning_minutes),
             target: display(DisplayField::ModernEffectWarning),
+        },
+        ConfigRow::ExplicitMenu {
+            label: "Quick move key",
+            choices: QUICK_MOVE_KEY_CHOICES,
+            default: def.quick_move_key.name(),
+            target: display(DisplayField::ModernQuickMoveKey),
         },
         ConfigRow::Separator,
     ]
@@ -1297,9 +1321,9 @@ mod tests {
             .expect("the modern interface section");
         assert_eq!(option_rows(&all[enhancements..modern]), 21);
         assert_eq!(modern - enhancements, 23);
-        // A header, five rows, a separator.
-        assert_eq!(option_rows(&all[modern..]), 5);
-        assert_eq!(all.len() - modern, 7);
+        // A header, six rows, a separator.
+        assert_eq!(option_rows(&all[modern..]), 6);
+        assert_eq!(all.len() - modern, 8);
     }
 
     #[test]

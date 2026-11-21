@@ -179,6 +179,41 @@ pub struct ModernHudSettings {
     /// The helpful effects' count turns amber this many minutes before one
     /// ends (0: never).
     pub effect_warning_minutes: i32,
+    /// The key held to move the modern pieces anywhere (quick move).
+    pub quick_move_key: QuickMoveKey,
+}
+
+/// The key held for quick move.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum QuickMoveKey {
+    /// Control.
+    #[default]
+    Ctrl,
+    /// Alt (Option on a Mac).
+    Alt,
+    /// Command on a Mac, the Windows key elsewhere.
+    Cmd,
+}
+
+impl QuickMoveKey {
+    /// Every choice, in the order offered.
+    pub const ALL: [Self; 3] = [Self::Ctrl, Self::Alt, Self::Cmd];
+
+    /// The name saved in the settings.
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Ctrl => "ctrl",
+            Self::Alt => "alt",
+            Self::Cmd => "cmd",
+        }
+    }
+
+    /// The choice saved as `name`.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|k| k.name() == name)
+    }
 }
 
 impl Default for ModernHudSettings {
@@ -189,6 +224,7 @@ impl Default for ModernHudSettings {
             low_health_percent: 25,
             low_health_edge_glow: true,
             effect_warning_minutes: 5,
+            quick_move_key: QuickMoveKey::Ctrl,
         }
     }
 }
@@ -721,6 +757,12 @@ fn read_display(d: &[Member], version: i32) -> Result<DisplaySettings, Unreadabl
                     m.effect_warning_minutes,
                 )?
                 .clamp(0, 60),
+                quick_move_key: QuickMoveKey::from_name(&read_string(
+                    d,
+                    "modernQuickMoveKey",
+                    m.quick_move_key.name(),
+                ))
+                .unwrap_or(m.quick_move_key),
             }
         },
     })
@@ -782,7 +824,7 @@ fn display_object(d: &DisplaySettings) -> String {
             out
         },
     );
-    let fields: [(&str, String); 30] = [
+    let fields: [(&str, String); 31] = [
         ("automaticDegrades", boolean(d.automatic_degrades)),
         (
             "buildingDetailTextures",
@@ -819,6 +861,10 @@ fn display_object(d: &DisplaySettings) -> String {
         (
             "modernEffectWarningMinutes",
             d.modern_hud.effect_warning_minutes.to_string(),
+        ),
+        (
+            "modernQuickMoveKey",
+            string(d.modern_hud.quick_move_key.name()),
         ),
         (
             "modernLowHealthEdgeGlow",
@@ -990,6 +1036,7 @@ mod tests {
                 low_health_percent: 33,
                 low_health_edge_glow: false,
                 effect_warning_minutes: 2,
+                quick_move_key: QuickMoveKey::Alt,
             },
         };
         t.store().save_display(&original).unwrap();

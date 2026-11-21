@@ -80,6 +80,8 @@ pub enum DisplayField {
     /// The modern interface: how long before a helpful effect ends its
     /// count warns.
     ModernEffectWarning,
+    /// The modern interface: the key held for quick move.
+    ModernQuickMoveKey,
 }
 
 /// A chat setting.
@@ -290,6 +292,9 @@ impl LiveValues {
                     DisplayField::ModernEffectWarning => {
                         Text(d.modern_hud.effect_warning_minutes.to_string())
                     }
+                    DisplayField::ModernQuickMoveKey => {
+                        Text(d.modern_hud.quick_move_key.name().to_owned())
+                    }
                 }
             }
             OptionKey::Chat(f) => {
@@ -420,6 +425,10 @@ impl LiveValues {
                     }
                     (DisplayField::ModernEffectWarning, Text(x)) => {
                         d.modern_hud.effect_warning_minutes = x.parse().ok()?;
+                    }
+                    (DisplayField::ModernQuickMoveKey, Text(x)) => {
+                        d.modern_hud.quick_move_key =
+                            ac_host::settings::QuickMoveKey::from_name(x)?;
                     }
                     _ => return None,
                 }
