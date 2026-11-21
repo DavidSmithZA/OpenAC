@@ -20,7 +20,18 @@ recall, quick move and plugin hook boards.
   still shows the old in-game row, which is dropped). It is one setting
   for the whole launcher. The client reads it when it starts. Each
   interface keeps its own layout.
-- **Look:** "Horizon", bronze trim. The world comes first and the chrome
+- **Theme (user, 2026-11-21):** the modern interface follows the one
+  client theme the plugin dock already has (`plugin_ui.theme`: Classic,
+  Moss, Brass, Lavender Dusk, Ember, Bloodmoon, Glacier, Parchment).
+  Classic is Bronze. A theme's accent is the trim and highlights, its
+  background the glass tint, its text, muted and selected map across;
+  health, stamina, mana, good, bad and enemy stay fixed. Under the light
+  Parchment the modern windows stay dark and take only its accent. Picked
+  in Options › Interface (Theme, replacing Trim), on the Stage at
+  character select, or in the dock; all three write the same setting and
+  everything follows at once. Bronze / Neutral trim and separate modern
+  colours were not taken; a Custom theme could come later.
+- **Look:** "Horizon", bronze trim (Classic theme). The world comes first and the chrome
   stays thin: slim vitals top centre, target under them, counts of the
   effects on you top left, round radar top right, chat with no panel behind it bottom left, and a small strip of
   panel buttons bottom right. Fonts are Inter.
@@ -62,9 +73,12 @@ recall, quick move and plugin hook boards.
   for things you wear or wield and Use for things you use. The small
   buttons are Give, Drop, Salvage, and More (split, inscribe, add to
   bar, link in chat).
-- Small screens: with nothing selected the window narrows to 792 px. The
-  details then pop up as a card beside the item, which can be pinned back
-  into the window. Docked, Pop-up or Auto is an option.
+- Small screens: with nothing selected the window narrows to 792 px.
+  Where the wide window (1080) does not fit, it stays at 792 and the
+  details show as a card inside the window, over the equipment column,
+  with the grid still there to pick another item; Esc, its close button
+  or a click on empty space puts it away. No option and no pinning
+  (user, 2026-11-21: Docked / Pop-up / Auto cut).
 - Drag to equip (the slots an item covers light up), split a stack, and
   an over-burdened state.
 

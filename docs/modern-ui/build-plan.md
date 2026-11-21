@@ -386,10 +386,8 @@ Screens (`options/*.rs`), checked offscreen (`the_modern_options`):
    and closing. Key profiles: Load and Save as (still retail's dialogs
    until M7). The Configure Keyboard key opens Options on Controls.
 
-Not done in M6: the item details' Docked /
-Pop-up / Auto choice (the pop-up card is not built: it has to float
-outside the inventory frame); Trim (Bronze / Neutral: every modern
-window draws Bronze). Not live-tested yet.
+Not done in M6: the item details' small-screen card; Trim. Both decided
+2026-11-21 (see To build, decided 2026-11-21). Not live-tested yet.
 
 **M7 built 2026-11-20** on `feat/modern-ui-m7` (off `feat/modern-ui-m6`).
 Retail windows it replaces: `vendor`, `secure-trade` and `salvage`, and the
@@ -892,6 +890,26 @@ buttons). The item hooks land with M4. (Options pages drawn by plugins
 were cut, user 2026-11-21: plugin settings stay in the plugin's own dock
 windows.) Retail never calls them;
 the plugin API is shared, so retail could show the same answers later.
+
+### To build, decided 2026-11-21
+
+- Item details on small screens (Docked / Pop-up / Auto cut): where the
+  wide inventory (1080) does not fit, it stays at 792 and the details are
+  a card inside the window over the equipment column; Esc, its close
+  button or a click on empty space puts it away. No option, no pinning.
+- Theme (Trim cut): the modern interface follows `plugin_ui.theme`.
+  1. The about 80 places that write the bronze directly take it from the
+     palette.
+  2. A theme's 7 colours map onto `HorizonPalette` (accent: trim and
+     highlights; background: glass tint; text, muted, selected across);
+     the vitals, good, bad, warn and enemy stay fixed; Classic is
+     `Horizon::BRONZE`; Parchment keeps the dark glass and takes only its
+     accent.
+  3. Options › Interface › Theme (replacing Trim), a theme button on the
+     Stage, and the dock's picker write the same setting; a change
+     redraws everything at once.
+  4. Snapshot tests: every window in two or three themes, Parchment
+     among them.
 
 ### Later, not blocking
 
