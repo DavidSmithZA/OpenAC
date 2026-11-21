@@ -194,6 +194,7 @@ impl WorldRenderer {
                 }
                 PreviewRequest::ZoomIn => preview.zoom_in(),
                 PreviewRequest::ZoomOut => preview.zoom_out(),
+                PreviewRequest::TurnBy(tenths) => preview.turn_by(*tenths as f32 / 10.0),
             }
         }
         if self.viewports.gpu.is_none() {

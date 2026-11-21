@@ -141,6 +141,18 @@ pub enum PreviewRequest {
     ZoomIn,
     /// Zoom out.
     ZoomOut,
+    /// Turn the figure by this many tenths of a degree (clockwise when
+    /// positive) and stop any turning (a drag across it).
+    TurnBy(i32),
+}
+
+/// How far a drag of `dx` units across a figure turns it, as a
+/// [`PreviewRequest::TurnBy`]: half a degree a unit, a drag to the right
+/// turning it clockwise; `None` for less than a tenth of a degree.
+#[must_use]
+pub fn drag_turn(dx: f32) -> Option<PreviewRequest> {
+    let tenths = (dx * 5.0).round();
+    (tenths.is_finite() && tenths != 0.0).then(|| PreviewRequest::TurnBy(tenths as i32))
 }
 
 /// The step a spin takes from `current` through `count` styles by
