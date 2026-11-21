@@ -911,6 +911,12 @@ the plugin API is shared, so retail could show the same answers later.
   4. Snapshot tests: every window in two or three themes, Parchment
      among them.
 
+### Upstream (on hold, user 2026-11-21)
+
+How the modern interface goes to Erik (the PR's shape, and whether the
+backdrops and the detailed world map ship) waits until the feature is
+releasable.
+
 ### Later, not blocking
 
 - Backdrop blur behind glass panels (needs the renderer to copy and blur
