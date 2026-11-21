@@ -214,6 +214,8 @@ pub struct MapView {
     pub layers: Layers,
     /// The side column shows.
     pub side: bool,
+    /// The screen was compact last frame.
+    was_compact: bool,
     /// The place picked.
     pub pick: Option<Pick>,
     /// A new pin being named.
@@ -253,6 +255,7 @@ impl MapView {
             screen: MapScreen::default(),
             layers: Layers::default(),
             side: true,
+            was_compact: false,
             pick: None,
             new_pin: None,
             search: String::new(),
@@ -298,11 +301,27 @@ impl MapView {
         self.hold_centre();
     }
 
+    /// A screen too narrow for the side column beside the map: it is a
+    /// drawer from the bar over the map instead, shut until asked for.
+    #[must_use]
+    pub fn compact(&self) -> bool {
+        self.size.0 <= SIDE_W + SIDE_GAP * 2.0 + 300.0
+    }
+
+    /// Follows the screen: on becoming compact the drawer starts shut.
+    pub fn follow_screen(&mut self) {
+        let compact = self.compact();
+        if compact && !self.was_compact {
+            self.side = false;
+        }
+        self.was_compact = compact;
+    }
+
     /// The map square on the screen.
     #[must_use]
     pub fn square(&self) -> Rect {
         let (w, h) = self.size;
-        let room = if self.side && w > SIDE_W + SIDE_GAP * 2.0 + 300.0 {
+        let room = if self.side && !self.compact() {
             w - SIDE_W - SIDE_GAP * 2.0
         } else {
             w
@@ -990,6 +1009,39 @@ impl MapView {
         );
     }
 
+    /// With the side column shut: where the player is and the date, on
+    /// the map's top corner.
+    fn draw_where(&self, rc: &mut RenderContext<'_>) {
+        let p = self.theme.palette;
+        let f = &self.fonts;
+        let coords = self.screen.me.map_or_else(
+            || "Not known yet".to_owned(),
+            |m| coordinates_text(m.x, m.y),
+        );
+        let (Some(st), Some(sm)) = (&f.strong, &f.small) else {
+            return;
+        };
+        let w =
+            text::measure(st, &coords, 0.0).max(text::measure(sm, &self.screen.date, 0.0)) + 28.0;
+        let dated = !self.screen.date.is_empty();
+        let date_h = if dated { 4.0 + sm.line_height } else { 0.0 };
+        let r = (16.0, BAR + 16.0, w, 12.0 + st.line_height + date_h + 12.0);
+        let round = CornerRadii::all(6.0);
+        ac_ui::modern::theme::fill_glass(rc, r, round, hex(0x14_100C, 0.9));
+        rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, bronze(0.5), 1.0);
+        put(rc, Some(st), &coords, r.0 + 14.0, r.1 + 12.0, p.text);
+        if dated {
+            put(
+                rc,
+                Some(sm),
+                &self.screen.date,
+                r.0 + 14.0,
+                r.1 + 12.0 + st.line_height + 4.0,
+                kit::SOFT,
+            );
+        }
+    }
+
     #[allow(clippy::too_many_lines)]
     fn draw_side(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
         let p = self.theme.palette;
@@ -1328,9 +1380,12 @@ impl Widget for MapView {
         let mut h = Hits::new(self.hits.hover);
         let (w, hh) = self.size;
         rc.fill(0.0, 0.0, w, hh, hex(0x11_181D, 1.0));
+        self.follow_screen();
         self.draw_map(rc, &mut h);
         if self.side {
             self.draw_side(rc, &mut h);
+        } else {
+            self.draw_where(rc);
         }
         self.draw_bar(rc, &mut h);
         self.hits = h;
