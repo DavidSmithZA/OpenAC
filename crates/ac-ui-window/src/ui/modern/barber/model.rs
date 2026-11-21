@@ -3,9 +3,7 @@
 //! styles, colours and shade, the heritage's one option, and a line of
 //! what has changed since the barber opened.
 
-use ac_core::chargen::{
-    ChargenGenderOptions, ChargenHeritageGroup as H, ChargenSwatchRgb, get_palette_index,
-};
+use ac_core::chargen::{ChargenGenderOptions, ChargenSwatchRgb, get_palette_index};
 use ac_runtime::gameplay::BarberView;
 use ac_runtime::session::creation::{CreationAppearance, UNSET};
 use ac_ui::draw::Color;
@@ -360,7 +358,7 @@ pub fn shade_indices(count: usize, stops: usize) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ac_core::chargen::ChargenHairStyle;
+    use ac_core::chargen::{ChargenHairStyle, ChargenHeritageGroup as H};
 
     fn gender() -> ChargenGenderOptions {
         ChargenGenderOptions {
