@@ -342,7 +342,7 @@ fn bind_maps_every_retail_action_row_and_seeds_it_from_the_live_bindings() {
     assert_eq!(bow.current, [key(Key::A)]);
     // Every retail row's caption is in the enabled colour.
     for r in s.rows() {
-        let t = s.host.root.widget::<Text>(r.caption).unwrap();
+        let t = s.host.root.widget::<Text>(r.caption.unwrap()).unwrap();
         assert_eq!(t.default_color, Color::WHITE);
     }
 }
@@ -870,7 +870,7 @@ fn an_unmapped_row_keeps_its_keys_in_the_unmapped_bindings() {
     let r = s.row(0x7777_7777);
     assert_eq!(r.mapped, None);
     assert_eq!(r.current, [key(Key::W)]);
-    let caption = s.host.root.widget::<Text>(r.caption).unwrap();
+    let caption = s.host.root.widget::<Text>(r.caption.unwrap()).unwrap();
     assert_eq!(
         caption.default_color,
         ac_ui::panels::options::STORE_ONLY_CAPTION_COLOR
@@ -1032,4 +1032,65 @@ mod real_dats {
             .clone();
         assert!(label.is_some_and(|l| !l.is_empty()));
     }
+}
+
+#[test]
+fn the_rows_without_the_screen_are_the_screens_rows_and_edit_alike() {
+    let rows = || {
+        snapshot(vec![
+            row(0x4, 0x29, RetailActionClass::Movement),
+            row(0x4, 0x2A, RetailActionClass::Movement),
+            row(0x9, 0x10, RetailActionClass::Combat),
+        ])
+    };
+    let mut b = KeyBindings::new();
+    bind(&mut b, key(Key::W), InputAction::MovementForward);
+    bind(&mut b, key(Key::Up), InputAction::MovementForward);
+    let mut s = screen(rows(), b.clone());
+    let mut screenless = KeyboardConfigController::without_screen(
+        rows(),
+        &synthetic_string,
+        Box::new(template),
+        RetailKeyNames::new(Box::new(|_, _| None), None),
+        b,
+        RetailUnmappedKeyBindings::new(),
+    );
+    let fields = |r: &kb::KeyRow| {
+        (
+            r.input_map,
+            r.action_id,
+            r.class,
+            r.mapped,
+            r.label.clone(),
+            r.current.clone(),
+            r.saved.clone(),
+            r.defaults.clone(),
+        )
+    };
+    let on_screen: Vec<_> = s.rows().iter().map(fields).collect();
+    let without: Vec<_> = screenless.rows().iter().map(fields).collect();
+    assert_eq!(on_screen, without);
+    assert!(
+        screenless
+            .rows()
+            .iter()
+            .all(|r| r.caption.is_none() && r.key_buttons.is_empty())
+    );
+    // An edit works the same: the slot empties, the row counts as changed,
+    // and a revert puts it back.
+    let mut ui = UiRoot::new();
+    let index = screenless
+        .rows()
+        .iter()
+        .position(|r| r.action_id == 0x29)
+        .unwrap();
+    screenless.erase(&mut ui, index, 0);
+    assert_eq!(screenless.rows()[index].current, [key(Key::Up)]);
+    assert!(screenless.changed());
+    screenless.revert(&mut ui);
+    assert_eq!(
+        screenless.rows()[index].current,
+        [key(Key::W), key(Key::Up)]
+    );
+    assert!(!screenless.changed());
 }

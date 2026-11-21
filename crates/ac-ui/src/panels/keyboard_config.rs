@@ -138,8 +138,8 @@ pub struct KeyRow {
     pub mapped: Option<InputAction>,
     /// The caption.
     pub label: Option<String>,
-    /// The caption element.
-    pub caption: ElementId,
+    /// The caption element (none without the screen).
+    pub caption: Option<ElementId>,
     /// The key buttons.
     pub key_buttons: Vec<ElementId>,
     /// The keys now (live, maybe unsaved).
@@ -331,6 +331,43 @@ impl KeyboardConfigController {
         Some(c)
     }
 
+    /// The key rows without the screen, for an interface that lists and
+    /// edits the keys its own way. The rows are those the screen lists, in
+    /// its order (page by page, grouped by input map); every edit, revert,
+    /// save and reload works as on the screen.
+    pub fn without_screen(
+        snapshot: RetailActionMapSnapshot,
+        resolve_string: &dyn Fn(u32, u32) -> Option<String>,
+        templates: Box<ResolveTemplate>,
+        names: RetailKeyNames,
+        bindings: KeyBindings,
+        unmapped: RetailUnmappedKeyBindings,
+    ) -> Self {
+        let mut c = Self {
+            rows: Vec::new(),
+            snapshot: snapshot.clone(),
+            bindings,
+            unmapped,
+            names,
+            templates,
+            capture: None,
+            pending: None,
+            revert: None,
+            filename: None,
+            buttons: HashMap::new(),
+        };
+        for (_, class) in PAGES {
+            let mut class_rows: Vec<&RetailActionMapRow> =
+                snapshot.rows.iter().filter(|r| r.class == class).collect();
+            class_rows.sort_by_key(|r| r.input_map);
+            for row in class_rows {
+                let label = resolve_string(INPUT_MAP_STRING_TABLE_ID, row.label_hash);
+                c.push_row(row, label, None, Vec::new());
+            }
+        }
+        c
+    }
+
     /// The rows, in build order.
     #[must_use]
     pub fn rows(&self) -> &[KeyRow] {
@@ -414,7 +451,21 @@ impl KeyboardConfigController {
             caption_text.set_lines(vec![Line::new(label.clone(), color)]);
         }
         let caption = ui.add(built, caption_element, caption_text);
+        self.push_row(row, label, Some(caption), key_buttons);
+        let index = self.rows.len() - 1;
+        self.refresh_row(ui, index);
+    }
 
+    /// Row `row` of the action map listed, its keys from the bindings (or
+    /// the stored unmapped keys, or the dat's defaults).
+    fn push_row(
+        &mut self,
+        row: &RetailActionMapRow,
+        label: Option<String>,
+        caption: Option<ElementId>,
+        key_buttons: Vec<ElementId>,
+    ) {
+        let mapped = identity::resolve(row.input_map, row.action_id);
         let live: Vec<Binding> = mapped
             .map(|a| self.bindings.for_action(a).copied().collect())
             .unwrap_or_default();
@@ -452,8 +503,6 @@ impl KeyboardConfigController {
             defaults,
             template,
         });
-        let index = self.rows.len() - 1;
-        self.refresh_row(ui, index);
     }
 
     fn bind_screen_buttons(&mut self, ui: &mut UiRoot, root: ElementId) {
