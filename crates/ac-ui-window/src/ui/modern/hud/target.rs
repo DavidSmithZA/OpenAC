@@ -802,22 +802,7 @@ impl Widget for TargetLine {
 /// `text` cut with an ellipsis to fit `width` in `font`.
 #[must_use]
 pub fn fit(font: &UiFont, text: &str, width: f32) -> String {
-    if font.measure_width(text) <= width {
-        return text.to_owned();
-    }
-    let ellipsis = '\u{2026}';
-    let room = width - font.advance(ellipsis);
-    let mut kept = String::new();
-    for c in text.chars() {
-        kept.push(c);
-        if font.measure_width(&kept) > room {
-            kept.pop();
-            break;
-        }
-    }
-    kept.truncate(kept.trim_end().len());
-    kept.push(ellipsis);
-    kept
+    ac_ui::modern::kit::fit(font, text, width)
 }
 
 #[cfg(test)]

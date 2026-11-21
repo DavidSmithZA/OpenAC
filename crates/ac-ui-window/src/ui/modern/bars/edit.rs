@@ -97,39 +97,7 @@ fn caret(rc: &mut RenderContext<'_>, cx: f32, cy: f32, color: Color) {
 /// Splits `words` into lines no wider than `width` in `font`.
 #[must_use]
 pub fn wrap(font: &UiFont, words: &str, width: f32) -> Vec<String> {
-    let mut lines = Vec::new();
-    let mut line = String::new();
-    // The line's width so far, added up a word at a time; the whole line is
-    // measured again only near the edge (where a pair's kerning at the join
-    // could tip it), so a long text costs about its length, not its square.
-    let space = text::measure(font, " ", 0.0);
-    let mut used = 0.0;
-    for word in words.split_whitespace() {
-        let w = text::measure(font, word, 0.0);
-        if line.is_empty() {
-            line = word.to_owned();
-            used = w;
-            continue;
-        }
-        let guess = used + space + w;
-        let fits = if guess < width - 2.0 {
-            true
-        } else {
-            text::measure(font, &format!("{line} {word}"), 0.0) <= width
-        };
-        if fits {
-            line.push(' ');
-            line.push_str(word);
-            used = guess;
-        } else {
-            lines.push(std::mem::replace(&mut line, word.to_owned()));
-            used = w;
-        }
-    }
-    if !line.is_empty() {
-        lines.push(line);
-    }
-    lines
+    ac_ui::modern::kit::wrap_line(font, words, width)
 }
 
 /// The world dimmed while editing, with a guide down the middle. Clicks go

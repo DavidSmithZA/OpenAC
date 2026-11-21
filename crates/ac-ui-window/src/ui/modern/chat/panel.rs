@@ -1435,18 +1435,7 @@ fn label_cap(widths: &[f32], room: f32) -> f32 {
 
 /// `name` cut on a whole character with an ellipsis to fit `width`.
 pub(crate) fn shorten(font: &UiFont, name: &str, width: f32) -> String {
-    let dots = if font.glyph('\u{2026}').is_some() {
-        "\u{2026}"
-    } else {
-        "..."
-    };
-    for (n, _) in name.char_indices().rev().filter(|&(n, _)| n > 0) {
-        let cut = format!("{}{dots}", name[..n].trim_end());
-        if text::measure(font, &cut, 0.0) <= width {
-            return cut;
-        }
-    }
-    dots.to_owned()
+    ac_ui::modern::kit::shorten(font, name, width)
 }
 
 fn line_holds(line: &ShownLine, query: &str) -> bool {
