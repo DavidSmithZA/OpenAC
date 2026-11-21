@@ -665,6 +665,17 @@ Quick move key: Options › Controls › Quick move (Control, Option or
 Command on a Mac; Ctrl, Alt or the Windows key elsewhere), default Control,
 live at once (settings `modernQuickMoveKey`).
 
+Backdrops (2026-11-21, same branch, 73d5c66f): the Stage (connecting and
+character selection) and the Studio show pictures of the world instead of
+the drawn skies: fifteen views the user picked from 25 candidates rendered
+by the client (gallery artifact 2q8nGyTm3wiikX37v4v21S), finished with a
+painterly pass, bundled as WebP in `assets/backdrops` (4 MB; native only).
+A random one shows for 30 s with a slow push in, the next fades in over
+1.5 s; only the shown picture is held, and all are let go in the world.
+For upstream: these are renders of the game's own art, so whether they
+may ship in the repository is Erik's call (they could instead be made on
+the player's computer from the dats).
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
