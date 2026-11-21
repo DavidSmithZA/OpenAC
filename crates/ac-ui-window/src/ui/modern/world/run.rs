@@ -39,6 +39,9 @@ pub struct MapUi {
     pub last_outside: Option<(f64, f64)>,
     /// The map has been centred on the player once.
     centred: bool,
+    /// The character `last_outside` and `centred` are about ("world/name");
+    /// another character starts them afresh.
+    about: Option<String>,
 }
 
 /// Whether `cell` is a cell inside (a dungeon or a building).
@@ -109,6 +112,7 @@ impl WindowUi {
             pin_name,
             pins: None,
             last_outside: None,
+            about: None,
             centred: false,
         });
         modern.replace(MAP_HOUSE_WINDOW);
@@ -251,6 +255,18 @@ impl WindowUi {
     /// placed and what it asked for done.
     #[allow(clippy::too_many_lines)]
     pub(in crate::ui) fn tick_modern_map(&mut self) {
+        if self.map_ui().is_none() {
+            return;
+        }
+        // Another character: where it was and the centring start afresh.
+        let character = self.map_character();
+        if let Some(m) = self.modern.as_mut().and_then(|m| m.map.as_mut())
+            && m.about != character
+        {
+            m.about = character;
+            m.last_outside = None;
+            m.centred = false;
+        }
         let Some(m) = self.map_ui() else {
             return;
         };

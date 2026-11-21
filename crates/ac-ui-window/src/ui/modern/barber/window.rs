@@ -537,8 +537,11 @@ impl PickGrid {
         let rows_fit = (((room + 4.0) / (height + 4.0)).floor() as usize).max(1);
         let cols = count.div_ceil(rows_fit).clamp(8, 12);
         let page = (rows_fit * cols).max(1);
-        let first = (now.max(1) - 1) / page * page;
-        let last = (first + page).min(count);
+        // A pick past the last style (the view not caught up yet) pages
+        // as the last.
+        let now = now.clamp(1, count.max(1));
+        let first = (now - 1) / page * page;
+        let last = (first + page).min(count).max(first);
         let rows = (last - first).div_ceil(cols).max(1);
         Self {
             cols,
@@ -968,6 +971,8 @@ impl WindowUi {
                         barber_command(ui, BarberCommand::SetAppearance(slot, n));
                     }
                     part = p;
+                    // Another part's slider starts afresh.
+                    last_shade = None;
                 }
                 BarberAsk::Step(step) => {
                     if let Some((slot, n)) =

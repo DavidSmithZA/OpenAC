@@ -160,6 +160,11 @@ impl WindowUi {
             return;
         };
         if staging.tool() == 0 {
+            // No tool in use: nothing asked of the closed window is kept
+            // for the next salvage.
+            if let Some(f) = self.host.root.widget_mut::<SalvageFrame>(frame) {
+                f.asks.clear();
+            }
             self.salvage_finish(staging, frame);
             return;
         }

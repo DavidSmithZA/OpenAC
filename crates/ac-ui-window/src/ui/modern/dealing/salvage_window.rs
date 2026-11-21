@@ -1001,8 +1001,10 @@ fn dashed(rc: &mut RenderContext<'_>, r: Rect, color: Color) {
     }
 }
 
+/// Only what is carried in the packs comes in (as retail: worn gear and
+/// things on the ground do not).
 fn from_packs(p: &ItemDragPayload) -> bool {
-    !p.source_kind.is_alias() && p.source_kind != ItemDragSource::Ground && p.obj_id != 0
+    p.source_kind == ItemDragSource::Inventory && p.obj_id != 0
 }
 
 impl Widget for SalvageFrame {

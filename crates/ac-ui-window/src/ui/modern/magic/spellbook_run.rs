@@ -414,6 +414,25 @@ impl WindowUi {
             .root
             .widget::<SpellList>(list)
             .and_then(|l| l.chosen);
+        // A spell no longer known (forgotten) is no longer chosen.
+        let known = |id: u32| {
+            self.facts
+                .numbers()
+                .and_then(|n| n.spellbook())
+                .is_some_and(|b| b.knows(id))
+        };
+        let chosen = match chosen {
+            Some(id) if !known(id) => {
+                if let Some(l) = self.host.root.widget_mut::<SpellList>(list) {
+                    l.chosen = None;
+                }
+                if let Some(f) = self.host.root.widget_mut::<BookFrame>(frame) {
+                    f.asking_forget = false;
+                }
+                None
+            }
+            other => other,
+        };
         let details = chosen.and_then(|id| {
             let numbers = self.facts.numbers()?;
             let spell = numbers.spellbook()?.try_get_metadata(id)?.clone();

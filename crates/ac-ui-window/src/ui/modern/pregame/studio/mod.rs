@@ -77,6 +77,10 @@ pub struct StudioUi {
     card: StudioCard,
     last_shade: Option<f32>,
     random: SeededRandom,
+    /// The name last sent to the session (sent again only when it changes).
+    name_sent: Option<String>,
+    /// The creation screens' words, each table read once.
+    strings: std::rc::Rc<ac_ui::strings::StringResolver>,
 }
 
 fn create(ui: &mut ac_ui::UiRoot, command: CreationCommand) {
@@ -99,6 +103,13 @@ impl WindowUi {
             label: self.modern_font(Weight::SemiBold, 9.0),
         };
         let field_font = self.modern_font(Weight::SemiBold, 19.0);
+        let dats = self.content.dats().clone();
+        let strings = std::rc::Rc::new(ac_ui::strings::StringResolver::new(move |id| {
+            dats.get::<ac_dat::objects::StringTable>(id).ok().flatten()
+        }));
+        self.miss_caches
+            .strings
+            .push(std::rc::Rc::downgrade(&strings));
         let ui = &mut self.host.root;
         let (w, h) = ui.size();
         let root = ui.root();
@@ -132,6 +143,8 @@ impl WindowUi {
             roll_sent: None,
             finish_sent: None,
             refusal_seen: None,
+            name_sent: None,
+            strings,
             held_headgear: None,
             card: StudioCard::None,
             last_shade: None,
@@ -347,6 +360,7 @@ impl WindowUi {
             s.card = StudioCard::None;
         }
         let (step, group, part) = (s.step, s.group, s.part);
+        let strings = std::rc::Rc::clone(&s.strings);
         let captions = self.studio_captions(snap.heritage_id);
         let world = selection
             .as_ref()
@@ -357,10 +371,6 @@ impl WindowUi {
                 v.entries.len() + 1,
                 usize::try_from(v.slot_count.max(0)).unwrap_or(0),
             )
-        });
-        let dats = self.content.dats().clone();
-        let strings = ac_ui::strings::StringResolver::new(move |id| {
-            dats.get::<ac_dat::objects::StringTable>(id).ok().flatten()
         });
         let words =
             |k: &str| strings.resolve(ac_ui::pregame::SCREEN_STRING_TABLE, compute_hash(k), 0);
@@ -448,6 +458,7 @@ impl WindowUi {
                 StudioAsk::Finish => {
                     let name: String = typed.trim().to_owned();
                     if name != snap.name {
+                        s.name_sent = Some(name.clone());
                         commands.push(CreationCommand::SetName(name));
                     }
                     s.finish_sent = Some(current);
@@ -471,6 +482,10 @@ impl WindowUi {
                         .iter()
                         .find(|r| r.attribute == a)
                         .map(|r| r.value);
+                    // A slider drag asks once per move: only the last
+                    // value this frame for that attribute goes out.
+                    commands
+                        .retain(|c| !matches!(c, CreationCommand::SetAttribute(b, _) if *b == a));
                     if now != Some(v) {
                         commands.push(CreationCommand::SetAttribute(a, v.clamp(10, 100)));
                     }
@@ -606,8 +621,16 @@ impl WindowUi {
         if clean != typed && set_field.is_none() {
             set_field = Some(clean.clone());
         }
-        if set_field.is_none() && clean.trim() != snap.name.trim() && screen.step == Step::Name {
-            commands.push(CreationCommand::SetName(clean.trim().to_owned()));
+        // The name as typed goes to the session once per change (the
+        // session's copy comes back a frame or more later).
+        let name = clean.trim();
+        if set_field.is_none()
+            && name != snap.name.trim()
+            && screen.step == Step::Name
+            && s.name_sent.as_deref() != Some(name)
+        {
+            s.name_sent = Some(name.to_owned());
+            commands.push(CreationCommand::SetName(name.to_owned()));
         }
         let show_card = s.card.clone();
         let still_open = s.open;

@@ -398,7 +398,7 @@ impl Chip {
             ChipKind::Burden => panel_id::INVENTORY,
             ChipKind::Chess => {
                 // Brings the board back; it never puts it away.
-                if ui.is_window_visible(crate::ui::indicator_panels::MINI_GAME_WINDOW) {
+                if ui.is_window_visible(crate::ui::modern::chess::window::CHESS) {
                     return;
                 }
                 panel_id::MINI_GAME

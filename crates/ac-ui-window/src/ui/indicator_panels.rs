@@ -255,7 +255,8 @@ impl WindowUi {
     /// with no result hides it, and the indicator-bar button is lit while a
     /// game is on (OpenAC `MiniGameUiController.Tick`).
     pub(super) fn update_mini_game(&mut self) {
-        feed_mini_game(&mut self.host, &mut self.panels, &mut self.facts);
+        let follow = self.modern.as_mut().map(|m| &mut m.chess_follow);
+        feed_mini_game(&mut self.host, &mut self.panels, &mut self.facts, follow);
     }
 
     /// The resignation question was answered: a yes resigns.
@@ -391,15 +392,20 @@ pub(super) fn feed_mini_game(
     host: &mut UiHost,
     panels: &mut MainPanels,
     facts: &mut InterfaceFacts,
+    standing_in: Option<&mut ac_ui::panels::mini_game::MiniGameFollow>,
 ) {
     let begins = std::mem::take(&mut facts.game_begins);
     if !begins.is_empty() {
         panels.set_visibility(&mut host.root, panel_id::MINI_GAME, true);
     }
     let view = facts.chess.as_ref();
-    let update = host
-        .with_controller::<MiniGameController, _>(MINI_GAME_WINDOW, |c, ui| c.update(ui, view))
-        .unwrap_or_default();
+    // Another interface's window stands in: it follows the games itself.
+    let update = match standing_in {
+        Some(follow) => view.map(|v| follow.follow(v)).unwrap_or_default(),
+        None => host
+            .with_controller::<MiniGameController, _>(MINI_GAME_WINDOW, |c, ui| c.update(ui, view))
+            .unwrap_or_default(),
+    };
     if update.hide {
         panels.set_visibility(&mut host.root, panel_id::MINI_GAME, false);
     }
@@ -555,7 +561,7 @@ mod tests {
 
     impl Harness {
         fn feed(&mut self) {
-            feed_mini_game(&mut self.host, &mut self.panels, &mut self.facts);
+            feed_mini_game(&mut self.host, &mut self.panels, &mut self.facts, None);
         }
 
         fn shown(&self) -> bool {

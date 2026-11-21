@@ -272,6 +272,8 @@ pub struct OptionsFrame {
     menu: Option<usize>,
     /// The row whose slider is held.
     held: Option<usize>,
+    /// What the held slider changed so far (saved when it is let go).
+    slid: Option<Stored>,
 }
 
 /// The words of row group `g` and whether its settings are saved on the
@@ -304,6 +306,7 @@ impl OptionsFrame {
             hover: None,
             menu: None,
             held: None,
+            slid: None,
             keys: Vec::new(),
             keys_changed: 0,
             capture: None,
@@ -793,7 +796,11 @@ impl OptionsFrame {
             v = min + ((v - min) / step).round() * step;
         }
         if let Some(key) = row.key {
-            self.set(key, &OptionValue::Float(v as f32), persist);
+            let changed = self.model.set(key, &OptionValue::Float(v as f32));
+            if changed.is_some() {
+                self.slid = changed;
+            }
+            self.changed(changed, persist);
         }
     }
 
@@ -826,11 +833,15 @@ impl OptionsFrame {
             Part::CharacterSelect => self.requests.push(OptionsRequest::CharacterSelect),
             Part::ExitGame => self.requests.push(OptionsRequest::ExitGame),
             Part::Defaults => {
-                let section = (self.search.trim().is_empty()).then_some(self.section);
-                for s in self.model.defaults(section) {
+                // While searching, only the rows found go back.
+                let touched = match self.searching_rows() {
+                    Some(rows) => self.model.defaults_of(&rows),
+                    None => self.model.defaults(Some(self.section)),
+                };
+                for s in touched {
                     self.requests.push(OptionsRequest::Changed(s, true));
                 }
-                if section == Some(Section::Controls) {
+                if self.search.trim().is_empty() && self.section == Section::Controls {
                     self.requests.push(OptionsRequest::KeysDefaults);
                 }
             }
@@ -949,7 +960,14 @@ impl Widget for OptionsFrame {
             }
             kind::MOUSE_UP | kind::CAPTURE_CHANGED => {
                 if let Some(i) = self.held.take() {
-                    self.slide(i, x, true);
+                    // A release moves it a last time; a lost capture (no
+                    // place) keeps it where it is. Either way what the
+                    // hold changed is saved now.
+                    if e.kind == kind::MOUSE_UP {
+                        self.slide(i, x, false);
+                    }
+                    let slid = self.slid.take();
+                    self.changed(slid, true);
                 }
                 true
             }

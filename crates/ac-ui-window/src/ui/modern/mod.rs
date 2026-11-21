@@ -134,6 +134,9 @@ pub struct ModernLayer {
     /// The selected stack's split quantity (the target line shows it;
     /// drags move that many).
     pub split: ac_ui::panels::items::SelectionSplit,
+    /// The games as the Chess window follows them (a game ended by
+    /// resigning or with no result puts it away).
+    pub chess_follow: ac_ui::panels::mini_game::MiniGameFollow,
 }
 
 /// The effects counts and status chips, and the pane their counts open.

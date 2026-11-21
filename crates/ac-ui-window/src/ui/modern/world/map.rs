@@ -348,8 +348,16 @@ impl MapView {
             return;
         };
         let half = self.region() * 0.5;
-        self.centre.0 = self.centre.0.clamp(half, art.width - half);
-        self.centre.1 = self.centre.1.clamp(half, art.height - half);
+        // An axis the region does not fit in stays centred on the art.
+        let hold = |c: f32, size: f32| {
+            if size - half >= half {
+                c.clamp(half, size - half)
+            } else {
+                size * 0.5
+            }
+        };
+        self.centre.0 = hold(self.centre.0, art.width);
+        self.centre.1 = hold(self.centre.1, art.height);
     }
 
     /// The screen point of map coordinates.

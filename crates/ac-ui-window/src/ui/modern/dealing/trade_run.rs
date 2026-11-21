@@ -146,6 +146,17 @@ impl WindowUi {
         };
         let (frame, search, band, split) = (t.frame, t.search, t.band, t.split);
         let was_open = t.open;
+        if !was_open && !self.facts.trade.open {
+            // No trade: nothing asked of the closed window is kept for the
+            // next one.
+            let ui = &mut self.host.root;
+            if let Some(f) = ui.widget_mut::<TradeFrame>(frame) {
+                f.asks.clear();
+            }
+            SplitPopover::take(ui, split);
+            FootBand::take(ui, band);
+            return;
+        }
         let trade = self.facts.trade.clone();
         if trade.open != was_open {
             let ui = &mut self.host.root;

@@ -73,6 +73,9 @@ pub struct PreGameUi {
     /// When each pending deletion was first seen: its seconds then and the
     /// clock.
     pending_seen: HashMap<u32, (u32, f64)>,
+    /// When what the Stage shows of the character playing was last looked
+    /// at (at most once a second).
+    remembered_at: Option<Instant>,
     delete_word: String,
     exit_words: String,
     epoch: Instant,
@@ -396,6 +399,7 @@ impl WindowUi {
             restore_sent: None,
             remembered: None,
             pending_seen: HashMap::new(),
+            remembered_at: None,
             delete_word,
             exit_words,
             epoch: Instant::now(),
@@ -825,6 +829,16 @@ impl WindowUi {
         if self.modern_pregame_active() || !scene.in_world() {
             return;
         }
+        let now = Instant::now();
+        let Some(p) = self.modern.as_mut().and_then(|m| m.pregame.as_mut()) else {
+            return;
+        };
+        if p.remembered_at
+            .is_some_and(|at| now.duration_since(at).as_secs_f32() < 1.0)
+        {
+            return;
+        }
+        p.remembered_at = Some(now);
         let Some(player) = scene.player() else {
             return;
         };

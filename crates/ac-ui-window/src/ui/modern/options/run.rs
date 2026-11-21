@@ -164,9 +164,11 @@ impl WindowUi {
     }
 
     /// The values changed outside the window (a console command, the
-    /// player's options words arriving): the window's copy follows. While
+    /// player's options words arriving): the window's copy of those
+    /// follows (`settings`: the client settings; else the character's
+    /// options words), the rest of it is left as the window has it. While
     /// it is closed the saved copy follows too.
-    pub(in crate::ui) fn follow_modern_option_values(&mut self) {
+    pub(in crate::ui) fn follow_modern_option_values(&mut self, settings: bool) {
         let Some(frame) = self
             .modern
             .as_ref()
@@ -175,11 +177,19 @@ impl WindowUi {
         else {
             return;
         };
-        let live = self.live_option_values();
+        let now = self.live_option_values();
         let open = self.host.root.is_window_visible(OPTIONS);
-        if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame)
-            && f.model.live != live
-        {
+        if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+            let mut live = f.model.live.clone();
+            if settings {
+                live.settings = now.settings;
+            } else {
+                live.options1 = now.options1;
+                live.options2 = now.options2;
+            }
+            if f.model.live == live {
+                return;
+            }
             f.model.live = live;
             if !open {
                 f.model.applied();
@@ -282,7 +292,7 @@ impl WindowUi {
                 let mut commands = Vec::new();
                 self.use_mouse_turning_settings(&mut commands);
                 self.send_session(commands);
-                self.follow_modern_option_values();
+                self.follow_modern_option_values(true);
             }
             OptionsRequest::Act(Action::LoadKeys) => {
                 self.keyboard_output(KeyboardConfigOutput::OpenLoad);

@@ -305,15 +305,24 @@ impl WindowUi {
     /// The page read goes into the page's fields when the journal or the
     /// page changed (not while the player types).
     fn fill_journal_page(&mut self, fields: &[(Slot, ElementId)]) {
-        let Some(view) = self.facts.journal.clone() else {
+        let Some(now) = self
+            .facts
+            .journal
+            .as_ref()
+            .map(|v| (v.revision, v.current_page))
+        else {
             return;
         };
-        let now = (view.revision, view.current_page);
         let rendered = self.journal_ui().and_then(|j| j.rendered);
         if rendered == Some(now) {
             return;
         }
-        let page = view.current();
+        // The field being typed in keeps its words unless the page turned.
+        let same_page = rendered.is_some_and(|(_, page)| page == now.1);
+        let focus = self.host.root.keyboard_focus();
+        let Some(page) = self.facts.journal.as_ref().map(|v| v.current().clone()) else {
+            return;
+        };
         for (slot, words) in [
             (Slot::Label, page.label.clone()),
             (Slot::Title, page.title.clone()),
@@ -322,7 +331,9 @@ impl WindowUi {
             (Slot::Hours, timer_field_text(page.timer_hours)),
             (Slot::Minutes, timer_field_text(page.timer_minutes)),
         ] {
-            if let Some(id) = self.journal_field(fields, slot) {
+            if let Some(id) = self.journal_field(fields, slot)
+                && !(same_page && focus == Some(id))
+            {
                 kit::set_field_text(&mut self.host.root, id, &words);
             }
         }
@@ -559,6 +570,8 @@ impl WindowUi {
                 return;
             }
             JournalAsk::Record => {
+                // What was typed goes first, so the page read back keeps it.
+                self.commit_journal_page(fields);
                 let player = self.facts.state.player;
                 let cell = scene
                     .object_by_guid(player)
@@ -583,7 +596,10 @@ impl WindowUi {
                 self.commit_journal_page(fields);
                 journal(JournalCommand::StartTimer)
             }
-            JournalAsk::Stop => journal(JournalCommand::ResetTimer),
+            JournalAsk::Stop => {
+                self.commit_journal_page(fields);
+                journal(JournalCommand::ResetTimer)
+            }
         };
         emit(&mut self.host.root, out);
     }

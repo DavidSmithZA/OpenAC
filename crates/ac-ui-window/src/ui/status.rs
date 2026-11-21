@@ -27,7 +27,7 @@ use ac_ui::panels::toolbar::ToolbarKey;
 
 /// The windows whose visibility the game decides (OpenAC's
 /// state-managed windows): their visibility is neither restored nor saved.
-const STATE_MANAGED: [&str; 9] = [
+const STATE_MANAGED: [&str; 15] = [
     super::salvage_window::SALVAGE_WINDOW,
     COMBAT_WINDOW,
     JUMP_POWERBAR_WINDOW,
@@ -37,6 +37,13 @@ const STATE_MANAGED: [&str; 9] = [
     VENDOR_WINDOW,
     TRADE_WINDOW,
     HOUSE_PURCHASE_WINDOW,
+    // The modern windows the game opens and closes.
+    super::modern::dealing::salvage_run::SALVAGE,
+    super::modern::dealing::trade_run::TRADE,
+    super::modern::dealing::vendor_run::VENDOR,
+    super::modern::items::loot::LOOT,
+    super::modern::house::run::SALE,
+    super::modern::barber::window::BARBER,
 ];
 
 /// The jump power bar's window.
@@ -760,7 +767,7 @@ impl WindowUi {
             return self.run_hotkey(hotkey);
         }
         if let Some(panel) = panel_for_action(action) {
-            self.panels.toggle(&mut self.host.root, panel);
+            self.toggle_panel(panel);
             return true;
         }
         if action == InputAction::ToggleCompass {

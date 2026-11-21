@@ -800,7 +800,9 @@ impl WindowUi {
                 .unwrap_or_default();
             if let Some(f) = self.host.root.widget_mut::<ChessFrame>(frame) {
                 f.screen = screen;
-                if !name.is_empty() {
+                // A board in use names itself (even unnamed, so another
+                // board's name never stays); after the game the name stays.
+                if view.board_guid != 0 {
                     f.board_name = name;
                 }
             }

@@ -1451,6 +1451,8 @@ pub enum ListAsk {
     Add(u32),
     /// Its full details (a right click).
     Inspect(u32),
+    /// An item from the packs let go over the list (as over the window).
+    Dropped(ItemDragPayload),
 }
 
 /// The list of goods, or of the player's items.
@@ -1639,6 +1641,18 @@ impl Widget for VendorList {
                 if let Some(id) = self.row_at(y) {
                     self.asks.push(ListAsk::Choose(id));
                     self.asks.push(ListAsk::Inspect(id));
+                }
+                true
+            }
+            kind::DRAG_ENTER | kind::DRAG_OVER => true,
+            kind::DROP_RELEASED => {
+                if let Some(p) = e
+                    .payload
+                    .as_ref()
+                    .and_then(|p| p.get::<ItemDragPayload>())
+                    .filter(|p| from_packs(p))
+                {
+                    self.asks.push(ListAsk::Dropped(p.clone()));
                 }
                 true
             }

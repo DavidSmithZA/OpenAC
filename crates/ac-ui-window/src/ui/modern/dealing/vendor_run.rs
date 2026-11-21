@@ -211,6 +211,16 @@ impl WindowUi {
         let Some(shop) = shop else {
             return;
         };
+        // While the leave card shows, only the card takes the pointer.
+        {
+            let ui = &mut self.host.root;
+            let leaving = ui.widget::<VendorFrame>(frame).is_some_and(|f| f.leaving);
+            for id in [list, search, quantity, band] {
+                if let Some(e) = ui.element_mut(id) {
+                    e.click_through = leaving;
+                }
+            }
+        }
         if opened {
             let ui = &mut self.host.root;
             ui.show_window(VENDOR);
@@ -296,6 +306,7 @@ impl WindowUi {
                         ObjectRef::Guid(id),
                     )));
                 }
+                ListAsk::Dropped(p) => self.vendor_drop(&shop, &p, frame),
             }
         }
         // A split for a sale: stage or sell the new stack once it is in.
@@ -603,6 +614,18 @@ impl WindowUi {
             v.choices.tab = VendorTab::Sell;
             v.choices.chosen = Some(p.obj_id);
             v.choices.quantity = None;
+        }
+        // The split amount picked for the selected stack goes, as retail's
+        // drop does (the rest of the stack stays in the pack).
+        let amount = i32::try_from(self.drag_amount(p.obj_id)).unwrap_or(i32::MAX);
+        let stack = self
+            .facts
+            .objects
+            .get(p.obj_id)
+            .map_or(1, |o| o.stack_size.max(1));
+        if amount > 0 && amount < stack {
+            self.vendor_sell(p.obj_id, amount, false);
+            return;
         }
         self.vendor_list(VendorCommand::AddToSellList(ObjectRef::Guid(p.obj_id)));
     }

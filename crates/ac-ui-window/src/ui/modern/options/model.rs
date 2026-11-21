@@ -532,11 +532,17 @@ impl OptionsModel {
     /// stored sections changed. The atmospheric quality goes first, so
     /// its own settings land on the preset it picks.
     pub fn defaults(&mut self, section: Option<Section>) -> Vec<Stored> {
+        let all: Vec<usize> = (0..self.rows.len())
+            .filter(|&i| section.is_none_or(|s| s == self.rows[i].section))
+            .collect();
+        self.defaults_of(&all)
+    }
+
+    /// The rows `rows` (indices) back to their defaults, as
+    /// [`Self::defaults`].
+    pub fn defaults_of(&mut self, rows: &[usize]) -> Vec<Stored> {
         let mut pairs: Vec<(OptionKey, OptionValue)> = Vec::new();
-        for r in &self.rows {
-            if section.is_some_and(|s| s != r.section) {
-                continue;
-            }
+        for r in rows.iter().filter_map(|&i| self.rows.get(i)) {
             if let (Some(k), Some(v)) = (r.key, &r.default) {
                 pairs.push((k, v.clone()));
             }

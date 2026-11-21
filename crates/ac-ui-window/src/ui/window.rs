@@ -849,7 +849,7 @@ impl WindowUi {
 
     /// The options window's copy of the settings follows this window's.
     fn show_settings_in_options(&mut self) {
-        self.follow_modern_option_values();
+        self.follow_modern_option_values(true);
         let settings = self.settings.clone();
         self.host
             .with_controller::<ac_ui::panels::options::OptionsWindowController, _>(
@@ -1754,6 +1754,15 @@ impl WindowUi {
         true
     }
 
+    /// Main panel `panel` shows or goes, whichever interface shows it (the
+    /// modern Effects and Character windows take their pages' panels).
+    pub(super) fn toggle_panel(&mut self, panel: u32) {
+        if self.modern_effects_toggle(panel, false) || self.modern_character_toggle(panel, false) {
+            return;
+        }
+        self.panels.toggle(&mut self.host.root, panel);
+    }
+
     /// OpenAC `RetailUiRuntime.OpenCharacterPanel`.
     pub(super) fn open_character(&mut self, tab: CharacterTab) -> bool {
         if let Some(done) = self.modern_open_character(tab) {
@@ -1848,11 +1857,7 @@ impl WindowUi {
             return;
         }
         match output {
-            PanelOutput::TogglePanel(panel) if self.modern_effects_toggle(panel, false) => {}
-            PanelOutput::TogglePanel(panel) if self.modern_character_toggle(panel, false) => {}
-            PanelOutput::TogglePanel(panel) => {
-                self.panels.toggle(&mut self.host.root, panel);
-            }
+            PanelOutput::TogglePanel(panel) => self.toggle_panel(panel),
             PanelOutput::ClosePanel(panel) if self.modern_effects_toggle(panel, true) => {}
             PanelOutput::ClosePanel(panel) if self.modern_character_toggle(panel, true) => {}
             PanelOutput::ClosePanel(panel) => {
