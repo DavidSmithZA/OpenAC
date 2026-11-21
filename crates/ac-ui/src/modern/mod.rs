@@ -18,6 +18,7 @@ pub mod quick_move;
 pub mod text;
 pub mod theme;
 pub mod tip;
+pub mod tone;
 pub mod tween;
 
 pub use theme::Horizon;
