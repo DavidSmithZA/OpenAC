@@ -152,7 +152,7 @@ pub enum PreviewRequest {
 #[must_use]
 pub fn drag_turn(dx: f32) -> Option<PreviewRequest> {
     let tenths = (dx * 5.0).round();
-    (tenths.is_finite() && tenths != 0.0).then(|| PreviewRequest::TurnBy(tenths as i32))
+    (tenths.is_finite() && tenths != 0.0).then_some(PreviewRequest::TurnBy(tenths as i32))
 }
 
 /// The step a spin takes from `current` through `count` styles by
