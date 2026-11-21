@@ -266,6 +266,8 @@ pub struct StudioView {
     pub skills_scroll: kit::Scroll,
     hits: Hits<Hit>,
     sliding: Option<Slider>,
+    /// The figure is being dragged round: the pointer's last x.
+    turning: Option<f32>,
     /// Where the skills list is (for the wheel).
     skills_room: Rect,
 }
@@ -289,6 +291,7 @@ impl StudioView {
             skills_scroll: kit::Scroll::default(),
             hits: Hits::default(),
             sliding: None,
+            turning: None,
             skills_room: (0.0, 0.0, 0.0, 0.0),
         }
     }
@@ -2462,6 +2465,13 @@ impl Widget for StudioView {
                     self.asks.push(value_at(s, x));
                     return true;
                 }
+                if let Some(last) = self.turning {
+                    if let Some(turn) = ac_ui::pregame::chargen::appearance::drag_turn(x - last) {
+                        self.asks.push(StudioAsk::Preview(turn));
+                        self.turning = Some(x);
+                    }
+                    return true;
+                }
                 false
             }
             kind::HOVER_LEAVE => {
@@ -2469,14 +2479,23 @@ impl Widget for StudioView {
                 false
             }
             kind::MOUSE_DOWN => {
-                if let Some(Hit::Slider(s)) = self.hits.at(x, y) {
-                    self.sliding = Some(s);
-                    ui.set_capture(me);
-                    self.asks.push(value_at(s, x));
+                match self.hits.at(x, y) {
+                    Some(Hit::Slider(s)) => {
+                        self.sliding = Some(s);
+                        ui.set_capture(me);
+                        self.asks.push(value_at(s, x));
+                    }
+                    // A drag across the figure turns it.
+                    None | Some(Hit::Swallow) if kit::inside(self.figure_rect(), x, y) => {
+                        self.turning = Some(x);
+                        ui.set_capture(me);
+                    }
+                    _ => {}
                 }
                 true
             }
             kind::MOUSE_UP | kind::CAPTURE_CHANGED => {
+                self.turning = None;
                 if let Some(s) = self.sliding.take()
                     && e.kind == kind::MOUSE_UP
                 {

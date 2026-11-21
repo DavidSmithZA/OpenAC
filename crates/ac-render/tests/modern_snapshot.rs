@@ -3534,6 +3534,23 @@ fn the_modern_barber() {
     );
     s.step();
     s.save("barber-skin");
+    // A drag to the right across the figure turns it clockwise.
+    let _ = s.ui.viewport_requests(&s.scene, 1.0);
+    let figure = BarberFrame::figure_rect();
+    let (cx, cy) = (
+        fx + (figure.0 + figure.2 * 0.5) as i32,
+        fy + (figure.1 + figure.3 * 0.5) as i32,
+    );
+    s.drag((cx - 40, cy), (cx + 40, cy));
+    let (_, controls) = s.ui.viewport_requests(&s.scene, 1.0);
+    let turned: i32 = controls
+        .iter()
+        .filter_map(|(_, c)| match c {
+            ac_ui::pregame::chargen::appearance::PreviewRequest::TurnBy(t) => Some(*t),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(turned, 400, "80 units at half a degree each: {controls:?}");
     // Accept.
     let (_, accept) =
         s.ui.host()
@@ -3843,6 +3860,30 @@ fn the_modern_studio() {
     s.click(0, clothes_x, 84 + 100 + 17, Modifiers::NONE);
     pump_creation(&mut s, &mut creation);
     s.save("studio-clothes");
+    // A drag to the left across the figure turns it the other way.
+    let _ = s.ui.viewport_requests(&s.scene, 1.0);
+    let view = shown::<ac_ui_window::ui::modern::pregame::studio::view::StudioView>(&s)
+        .expect("the Studio shows");
+    let figure =
+        s.ui.host()
+            .root
+            .widget::<ac_ui_window::ui::modern::pregame::studio::view::StudioView>(view)
+            .expect("its view")
+            .figure_rect();
+    let (cx, cy) = (
+        (figure.0 + figure.2 * 0.5) as i32,
+        (figure.1 + figure.3 * 0.5) as i32,
+    );
+    s.drag((cx + 30, cy), (cx - 30, cy));
+    let (_, controls) = s.ui.viewport_requests(&s.scene, 1.0);
+    let turned: i32 = controls
+        .iter()
+        .filter_map(|(_, c)| match c {
+            ac_ui::pregame::chargen::appearance::PreviewRequest::TurnBy(t) => Some(*t),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(turned, -300, "{controls:?}");
     for name in ["town", "name"] {
         s.key(Key::Enter, Modifiers::NONE, true);
         pump_creation(&mut s, &mut creation);

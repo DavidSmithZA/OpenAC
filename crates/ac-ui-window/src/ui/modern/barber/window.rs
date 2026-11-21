@@ -151,6 +151,8 @@ pub struct BarberFrame {
     hits: Hits<Hit>,
     /// The shade slider is held.
     sliding: bool,
+    /// The figure is being dragged round: the pointer's last x.
+    turning_by_hand: Option<f32>,
 }
 
 impl BarberFrame {
@@ -166,6 +168,7 @@ impl BarberFrame {
             asks: Vec::new(),
             hits: Hits::default(),
             sliding: false,
+            turning_by_hand: None,
         }
     }
 
@@ -643,6 +646,13 @@ impl Widget for BarberFrame {
                         .push(BarberAsk::Shade(Self::shade_value(track(), x)));
                     return true;
                 }
+                if let Some(last) = self.turning_by_hand {
+                    if let Some(turn) = ac_ui::pregame::chargen::appearance::drag_turn(x - last) {
+                        self.asks.push(BarberAsk::Turn(turn));
+                        self.turning_by_hand = Some(x);
+                    }
+                    return true;
+                }
                 false
             }
             kind::HOVER_LEAVE => {
@@ -661,12 +671,20 @@ impl Widget for BarberFrame {
                         self.asks
                             .push(BarberAsk::Shade(Self::shade_value(track(), x)));
                     }
+                    // A drag across the figure turns it (and stops the
+                    // buttons' turning).
+                    None if kit::inside(Self::figure_rect(), x, y) => {
+                        self.turning_by_hand = Some(x);
+                        self.turning = None;
+                        ui.set_capture(me);
+                    }
                     _ => {}
                 }
                 true
             }
             kind::MOUSE_UP | kind::CAPTURE_CHANGED => {
                 self.holding = false;
+                self.turning_by_hand = None;
                 if self.sliding && e.kind == kind::MOUSE_UP {
                     self.asks
                         .push(BarberAsk::Shade(Self::shade_value(track(), x)));
@@ -823,6 +841,10 @@ impl WindowUi {
             Element::at(r.0, r.1, r.2, r.3).with_anchors(AnchorEdges::NONE),
             ac_ui::widgets::Viewport::default(),
         );
+        // The frame under it takes the drag that turns the figure.
+        if let Some(e) = ui.element_mut(figure) {
+            e.click_through = true;
+        }
         ui.hide_window(BARBER);
         let Some(modern) = self.modern.as_mut() else {
             return;
