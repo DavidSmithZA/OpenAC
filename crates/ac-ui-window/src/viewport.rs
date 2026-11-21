@@ -25,16 +25,19 @@ pub enum ViewportSlot {
     ChargenSummary,
     /// The barber window.
     Barber,
+    /// The modern character selection's figure: a remembered look.
+    Stage,
 }
 
 impl ViewportSlot {
     /// Every slot.
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::Paperdoll,
         Self::Examine,
         Self::ChargenAppearance,
         Self::ChargenSummary,
         Self::Barber,
+        Self::Stage,
     ];
 
     /// The slot's position in [`Self::ALL`].
@@ -46,6 +49,7 @@ impl ViewportSlot {
             Self::ChargenAppearance => 2,
             Self::ChargenSummary => 3,
             Self::Barber => 4,
+            Self::Stage => 5,
         }
     }
 

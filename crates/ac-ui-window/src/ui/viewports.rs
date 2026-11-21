@@ -227,6 +227,58 @@ pub fn compose(
     })
 }
 
+/// A character's look in the world as the modern character selection
+/// remembers it.
+#[must_use]
+pub fn remembered_look(key: &AppearanceKey) -> ac_host::settings::RememberedLook {
+    ac_host::settings::RememberedLook {
+        setup: key.setup_id,
+        base_palette: key.palette.as_ref().map_or(0, |p| p.base_palette_id),
+        palettes: key.palette.as_ref().map_or_else(Vec::new, |p| {
+            p.ranges
+                .iter()
+                .map(|r| (r.palette_id, r.offset, r.count))
+                .collect()
+        }),
+        textures: key.texture_changes.clone(),
+        parts: key.part_changes.clone(),
+    }
+}
+
+/// The figure of a remembered look, standing as a creation preview stands
+/// (its heritage's rest pose and idle), with no scenery behind it.
+#[must_use]
+pub fn stage_look(
+    look: &ac_host::settings::RememberedLook,
+    heritage: u32,
+    gender: u32,
+) -> ChargenLook {
+    ChargenLook {
+        heritage,
+        gender: i32::try_from(gender).unwrap_or(0),
+        selection: ChargenAppearanceSelection::default(),
+        key: AppearanceKey {
+            setup_id: look.setup,
+            palette: (!look.palettes.is_empty()).then(|| PaletteSpec {
+                base_palette_id: look.base_palette,
+                ranges: look
+                    .palettes
+                    .iter()
+                    .map(|&(palette_id, offset, count)| SubPaletteRange {
+                        palette_id,
+                        offset,
+                        count,
+                    })
+                    .collect(),
+            }),
+            texture_changes: look.textures.clone(),
+            part_changes: look.parts.clone(),
+            close_degrades: false,
+        },
+        backdrop_setup: 0,
+    }
+}
+
 /// Whether `id` and every element above it show.
 fn shown(root: &UiRoot, id: ElementId) -> bool {
     let mut at = Some(id);
@@ -602,5 +654,29 @@ mod tests {
             selection(&CreationAppearance::default()),
             ChargenAppearanceSelection::default()
         );
+    }
+
+    #[test]
+    fn a_remembered_look_stands_as_it_was_seen() {
+        use crate::appearance::{AppearanceKey, PaletteSpec, SubPaletteRange};
+        let key = AppearanceKey {
+            setup_id: 0x0200_004E,
+            palette: Some(PaletteSpec {
+                base_palette_id: 0x0400_007E,
+                ranges: vec![SubPaletteRange::from_wire(0x0400_1071, 3, 1)],
+            }),
+            texture_changes: vec![(16, 0x0500_0001, 0x0500_0002)],
+            part_changes: vec![(9, 0x0100_1234)],
+            close_degrades: true,
+        };
+        let look = super::stage_look(&super::remembered_look(&key), 1, 2);
+        assert_eq!(
+            look.key,
+            AppearanceKey {
+                close_degrades: false,
+                ..key
+            }
+        );
+        assert_eq!((look.heritage, look.gender, look.backdrop_setup), (1, 2, 0));
     }
 }

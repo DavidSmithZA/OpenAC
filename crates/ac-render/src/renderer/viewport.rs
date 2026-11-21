@@ -33,8 +33,9 @@ use crate::viewport::{
 pub(crate) struct Viewports {
     format: wgpu::TextureFormat,
     gpu: Option<Vec<ViewportGpu>>,
-    /// The appearance page's preview, the summary page's and the barber's.
-    chargen: [ChargenPreviewState; 3],
+    /// The appearance page's preview, the summary page's, the barber's and
+    /// the character selection's figure.
+    chargen: [ChargenPreviewState; 4],
     /// Pose animations by pose enum (`None`: the dats have none).
     poses: HashMap<u32, Option<Arc<Animation>>>,
     /// Models the previews draw that no world object holds (the scenery
@@ -42,8 +43,8 @@ pub(crate) struct Viewports {
     models: HashSet<u32>,
     /// The looks each creation preview shows and last asked for, kept
     /// from the sweep.
-    shown_looks: [Option<AppearanceKey>; 3],
-    wanted_looks: [Option<AppearanceKey>; 3],
+    shown_looks: [Option<AppearanceKey>; 4],
+    wanted_looks: [Option<AppearanceKey>; 4],
     epoch: Instant,
     generation: u64,
 }
@@ -57,11 +58,12 @@ impl Viewports {
                 ChargenPreviewState::new(false),
                 ChargenPreviewState::new(true),
                 ChargenPreviewState::barber(),
+                ChargenPreviewState::new(true),
             ],
             poses: HashMap::new(),
             models: HashSet::new(),
-            shown_looks: [None, None, None],
-            wanted_looks: [None, None, None],
+            shown_looks: [None, None, None, None],
+            wanted_looks: [None, None, None, None],
             epoch: Instant::now(),
             generation: 0,
         }
@@ -72,20 +74,22 @@ impl Viewports {
         self.models.iter().copied()
     }
 
-    /// Character creation is over: its previews let their looks go and
-    /// start afresh next time (their figures name the looks' variants).
+    /// Character creation (and selection) is over: their previews let
+    /// their looks go and start afresh next time (their figures name the
+    /// looks' variants).
     pub(crate) fn end_creation(&mut self) {
-        if self.shown_looks[..BARBER]
+        let pregame = [0, 1, STAGE];
+        if pregame
             .iter()
-            .chain(&self.wanted_looks[..BARBER])
-            .any(Option::is_some)
+            .any(|&i| self.shown_looks[i].is_some() || self.wanted_looks[i].is_some())
         {
-            for index in 0..BARBER {
+            for index in pregame {
                 self.shown_looks[index] = None;
                 self.wanted_looks[index] = None;
             }
             self.chargen[0] = ChargenPreviewState::new(false);
             self.chargen[1] = ChargenPreviewState::new(true);
+            self.chargen[STAGE] = ChargenPreviewState::new(true);
         }
     }
 
@@ -109,13 +113,16 @@ impl Viewports {
 
 /// The barber preview's place among the look previews.
 const BARBER: usize = 2;
+/// The character selection figure's place among the look previews.
+const STAGE: usize = 3;
 
 /// A look preview's place: the appearance page's, the summary page's, the
-/// barber's.
+/// barber's, the character selection's.
 fn preview_index(slot: ViewportSlot) -> usize {
     match slot {
         ViewportSlot::ChargenSummary => 1,
         ViewportSlot::Barber => BARBER,
+        ViewportSlot::Stage => STAGE,
         _ => 0,
     }
 }
@@ -198,6 +205,7 @@ impl WorldRenderer {
                     "chargen viewport",
                     "summary viewport",
                     "barber viewport",
+                    "stage viewport",
                 ]
                 .into_iter()
                 .map(|label| ViewportGpu::new(device, layout, label))
