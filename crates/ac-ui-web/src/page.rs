@@ -279,18 +279,24 @@ pub fn picture_of(batch: &UiBatch, runs: &[UiRun]) -> (Vec<Vertex>, Vec<PageRun>
             color: v.color,
         })
         .collect();
+    // The page has no blurred copy of the frame: glass draws nothing
+    // there, and the fill over it still shows.
     let runs = runs
         .iter()
-        .map(|run| {
-            (
-                texture_of(run.key.texture),
+        .filter_map(|run| {
+            let texture = match run.key.texture {
+                UiTexture::Backdrop => return None,
+                other => texture_of(other),
+            };
+            Some((
+                texture,
                 match run.key.filter {
                     ac_ui::draw::Filter::Linear => Filter::Linear,
                     ac_ui::draw::Filter::Nearest => Filter::Nearest,
                 },
                 run.first,
                 run.count,
-            )
+            ))
         })
         .collect();
     (vertices, runs)
@@ -300,7 +306,7 @@ pub fn picture_of(batch: &UiBatch, runs: &[UiRun]) -> (Vec<Vertex>, Vec<PageRun>
 #[must_use]
 pub fn texture_of(texture: UiTexture) -> Texture {
     match texture {
-        UiTexture::White => Texture::White,
+        UiTexture::White | UiTexture::Backdrop => Texture::White,
         UiTexture::Named(TextureRef::Surface(id)) => Texture::Surface(id),
         UiTexture::Named(TextureRef::Runtime(id)) => Texture::Runtime(id),
     }

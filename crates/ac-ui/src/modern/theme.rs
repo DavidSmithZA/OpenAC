@@ -3,7 +3,29 @@
 //! design's (`docs/modern-ui` on the design branch); a screen takes its
 //! colours and sizes from here, never from numbers of its own.
 
-use crate::draw::Color;
+use crate::draw::{Color, RenderContext};
+use crate::shapes::CornerRadii;
+
+/// The most of a glass fill's colour that stays over the blurred world:
+/// a fill more solid than this lets the blur show through it; a lighter
+/// one keeps its own.
+pub const GLASS_MOST: f32 = 0.8;
+
+/// A window's or pop-up's back as frosted glass: the world behind it
+/// blurred under `color` (no more solid than [`GLASS_MOST`]); where glass
+/// is off, `color` as it is.
+pub fn fill_glass(
+    rc: &mut RenderContext<'_>,
+    (x, y, w, h): (f32, f32, f32, f32),
+    radii: CornerRadii,
+    color: Color,
+) {
+    let tint = Color {
+        a: color.a.min(GLASS_MOST),
+        ..color
+    };
+    rc.fill_glass_rounded_rect(x, y, w, h, radii, tint, color);
+}
 
 /// A colour from `0xRRGGBB` and an alpha from 0 to 1.
 #[must_use]

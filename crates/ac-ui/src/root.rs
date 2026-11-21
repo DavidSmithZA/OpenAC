@@ -317,6 +317,7 @@ pub struct UiRoot {
     media_seconds: f64,
     pixels_per_unit: f32,
     sharp_fonts: Option<Arc<SharpFonts>>,
+    glass: bool,
 
     pub(crate) windows: WindowManager,
     output: Vec<UiOutput>,
@@ -405,6 +406,7 @@ impl UiRoot {
             media_seconds: 0.0,
             pixels_per_unit: 1.0,
             sharp_fonts: None,
+            glass: false,
             windows: WindowManager::default(),
             output: Vec::new(),
             window_blocks: HashMap::new(),
@@ -1000,6 +1002,18 @@ impl UiRoot {
         self.pixels_per_unit = pixels;
     }
 
+    /// Tell the UI whether glass shows the world behind it blurred (the
+    /// renderer can blur, and the player wants it).
+    pub fn set_glass(&mut self, on: bool) {
+        self.glass = on;
+    }
+
+    /// Whether glass shows the world behind it blurred.
+    #[must_use]
+    pub fn glass(&self) -> bool {
+        self.glass
+    }
+
     /// Tell the UI which sharper font bakes to draw from on this display. The
     /// fonts themselves are untouched, so nothing measures differently.
     pub fn set_sharp_fonts(&mut self, fonts: Option<Arc<SharpFonts>>) {
@@ -1585,7 +1599,8 @@ impl UiRoot {
         let mut rc = RenderContext::new(&mut list, screen, sprites)
             .with_media_seconds(media)
             .with_pixels_per_unit(self.pixels_per_unit * sx.max(sy))
-            .with_sharp_fonts(self.sharp_fonts.clone());
+            .with_sharp_fonts(self.sharp_fonts.clone())
+            .with_glass(self.glass);
         let root = self.root;
         self.draw_tree(root, &mut rc);
         rc.begin_overlay();

@@ -23,6 +23,10 @@
 //!   one pixel wide and a snap would fold them;
 //! - a solid fill, an untextured polygon or coloured triangles sample a
 //!   1 x 1 white texture, so everything goes through one pipeline;
+//! - glass (the world behind blurred) is coloured triangles in a run of
+//!   its own; the renderer samples its blurred copy of the frame at each
+//!   pixel's place on the screen, so the corners carry no texture
+//!   coordinates;
 //! - a render surface id of 0 names nothing and draws nothing (never a
 //!   placeholder: a 0 resolved to the magenta texture is the 1-pixel
 //!   magenta edge bug).
@@ -50,6 +54,9 @@ pub enum UiTexture {
     White,
     /// A texture the draw list named.
     Named(TextureRef),
+    /// The frame drawn so far, blurred, sampled where each pixel lies on
+    /// the screen (glass).
+    Backdrop,
 }
 
 /// A texture and how it is sampled.
@@ -171,7 +178,8 @@ impl UiBatch {
                 };
                 self.fan(key, vertices, *color, grid);
             }
-            DrawCmd::Triangles { vertices } => self.triangles(vertices, grid.scale),
+            DrawCmd::Triangles { vertices } => self.triangles(white(), vertices, grid.scale),
+            DrawCmd::Backdrop { vertices } => self.triangles(backdrop(), vertices, grid.scale),
             DrawCmd::Glyphs {
                 texture,
                 tint,
@@ -248,7 +256,7 @@ impl UiBatch {
         self.run(key, added);
     }
 
-    fn triangles(&mut self, corners: &[ColorVertex], (sx, sy): (f32, f32)) {
+    fn triangles(&mut self, key: UiTextureKey, corners: &[ColorVertex], (sx, sy): (f32, f32)) {
         let whole = corners.len() - corners.len() % 3;
         if whole == 0 {
             return;
@@ -259,7 +267,15 @@ impl UiBatch {
                 uv: [0.0, 0.0],
                 color: [p.color.r, p.color.g, p.color.b, p.color.a],
             }));
-        self.run(white(), u32::try_from(whole).unwrap_or(u32::MAX));
+        self.run(key, u32::try_from(whole).unwrap_or(u32::MAX));
+    }
+
+    /// Whether any run is glass.
+    #[must_use]
+    pub fn has_backdrop(&self) -> bool {
+        self.runs
+            .iter()
+            .any(|r| r.key.texture == UiTexture::Backdrop)
     }
 }
 
@@ -267,6 +283,13 @@ fn white() -> UiTextureKey {
     UiTextureKey {
         texture: UiTexture::White,
         filter: Filter::Nearest,
+    }
+}
+
+fn backdrop() -> UiTextureKey {
+    UiTextureKey {
+        texture: UiTexture::Backdrop,
+        filter: Filter::Linear,
     }
 }
 
@@ -531,6 +554,39 @@ mod tests {
         assert_eq!(batch.vertices[6].position, [2.0, 6.0]);
         assert_eq!(batch.vertices[7].position, [6.0, 6.0]);
         assert_eq!(batch.vertices[7].color, [0.0, 0.0, 1.0, 0.0]);
+    }
+
+    // Glass is a run of its own between the fills around it, its corners
+    // scaled like coloured triangles and carrying no texture coordinates.
+    #[test]
+    fn glass_is_a_run_of_its_own() {
+        let corner = |x: f32, y: f32| ColorVertex::new(x, y, Color::WHITE);
+        let shape = vec![corner(0.0, 0.0), corner(10.0, 0.0), corner(0.0, 10.0)];
+        let batch = UiBatch::build_scaled(
+            &list(
+                vec![
+                    DrawCmd::Triangles {
+                        vertices: shape.clone(),
+                    },
+                    DrawCmd::Backdrop {
+                        vertices: shape.clone(),
+                    },
+                    DrawCmd::Triangles { vertices: shape },
+                ],
+                vec![],
+                (1.0, 1.0),
+            ),
+            2.0,
+        );
+        let kinds: Vec<UiTexture> = batch.runs.iter().map(|r| r.key.texture).collect();
+        assert_eq!(
+            kinds,
+            [UiTexture::White, UiTexture::Backdrop, UiTexture::White]
+        );
+        assert!(batch.has_backdrop());
+        assert_eq!(batch.vertices[4].position, [20.0, 0.0]);
+        assert_eq!(batch.vertices[4].uv, [0.0, 0.0]);
+        assert!(!UiBatch::build(&list(vec![], vec![], (1.0, 1.0))).has_backdrop());
     }
 
     #[test]

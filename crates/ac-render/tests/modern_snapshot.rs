@@ -366,12 +366,14 @@ impl Shot {
                 color: v.color,
             })
             .collect();
+        // No world here to blur: glass draws nothing, as on the web.
         let runs: Vec<[u32; 5]> = batch
             .runs
             .iter()
+            .filter(|r| r.key.texture != UiTexture::Backdrop)
             .map(|r| {
                 let (kind, id) = match r.key.texture {
-                    UiTexture::White => (0, 0),
+                    UiTexture::White | UiTexture::Backdrop => (0, 0),
                     UiTexture::Named(TextureRef::Surface(id)) => (1, id),
                     UiTexture::Named(TextureRef::Runtime(h)) => (2, h),
                 };
