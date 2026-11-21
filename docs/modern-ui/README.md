@@ -676,7 +676,8 @@ allegiance, × player killer, + everyone else) and colours.
 - Options › Controls › Moving the interface: Quick move on/off (OPENAC),
   the key, snapping, and retail's lock.
 - On a Mac, Ctrl + click often means right-click, so the Mac default
-  may need another key; decided at implementation (user, 2026-11-19).
+  is Command (user, 2026-11-21); Control elsewhere. Options › Controls
+  offers Control, Option (Alt) and Command (Windows key).
 
 ## Plugin hooks (drawn 2026-11-19)
 
