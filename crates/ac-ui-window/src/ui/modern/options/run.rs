@@ -267,12 +267,9 @@ impl WindowUi {
             }
             OptionsRequest::Applied => {
                 self.send_session(vec![SessionCommand::SaveCharacterOptions]);
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.keep(ui);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.keep(ui);
+                });
             }
             OptionsRequest::CharacterSelect => self.ask_end_character_session(),
             OptionsRequest::ExitGame => self.send_session(vec![SessionCommand::Shutdown]),
@@ -295,12 +292,9 @@ impl WindowUi {
             }
             OptionsRequest::CaptureKey { .. } => self.request_key_capture(),
             OptionsRequest::EraseKey { row, slot } => {
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.erase(ui, row, slot);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.erase(ui, row, slot);
+                });
             }
             OptionsRequest::TakeKey => {
                 let pending = self
@@ -309,29 +303,20 @@ impl WindowUi {
                     .and_then(|m| m.options.as_mut())
                     .and_then(|o| o.pending.take());
                 if let Some((row, slot, chord, takes)) = pending {
-                    self.host.with_controller::<KeyboardConfigController, _>(
-                        KEYBOARD_WINDOW,
-                        |c, ui| {
-                            c.assign(ui, row, slot, chord, &takes);
-                        },
-                    );
+                    self.with_key_config(|c, ui| {
+                        c.assign(ui, row, slot, chord, &takes);
+                    });
                 }
             }
             OptionsRequest::KeysRevert => {
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.revert(ui);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.revert(ui);
+                });
             }
             OptionsRequest::KeysDefaults => {
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.defaults(ui);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.defaults(ui);
+                });
             }
             OptionsRequest::TabShows { tab, group, on } => {
                 let mask = crate::ui::modern::chat::model::group_mask(group);
@@ -373,12 +358,11 @@ impl WindowUi {
         if let Some(o) = self.modern.as_mut().and_then(|m| m.options.as_mut()) {
             o.pending = None;
         }
-        self.host
-            .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, ui| {
-                if c.changed() {
-                    c.revert(ui);
-                }
-            });
+        self.with_key_config(|c, ui| {
+            if c.changed() {
+                c.revert(ui);
+            }
+        });
         let (keys, keys_changed) = self.modern_key_lines();
         if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
             f.keys = keys;
@@ -389,27 +373,26 @@ impl WindowUi {
     /// Every key binding as the Controls section lists it, and how many
     /// differ from the saved keys.
     fn modern_key_lines(&mut self) -> (Vec<KeyLine>, usize) {
-        self.host
-            .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, _| {
-                let lines: Vec<KeyLine> = c
-                    .rows()
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(row, r)| {
-                        Some(KeyLine {
-                            row,
-                            label: r.label.clone()?,
-                            group: class_words(r.class),
-                            keys: r.current.iter().map(|k| key_words(c, *k)).collect(),
-                            changed: r.changed(),
-                            mapped: r.mapped.is_some(),
-                        })
+        self.with_key_config(|c, _| {
+            let lines: Vec<KeyLine> = c
+                .rows()
+                .iter()
+                .enumerate()
+                .filter_map(|(row, r)| {
+                    Some(KeyLine {
+                        row,
+                        label: r.label.clone()?,
+                        group: class_words(r.class),
+                        keys: r.current.iter().map(|k| key_words(c, *k)).collect(),
+                        changed: r.changed(),
+                        mapped: r.mapped.is_some(),
                     })
-                    .collect();
-                let changed = c.rows().iter().filter(|r| r.changed()).count();
-                (lines, changed)
-            })
-            .unwrap_or_default()
+                })
+                .collect();
+            let changed = c.rows().iter().filter(|r| r.changed()).count();
+            (lines, changed)
+        })
+        .unwrap_or_default()
     }
 
     /// The key caught for the Options window, when it asked for one:
@@ -430,30 +413,28 @@ impl WindowUi {
         let Some(chord) = chord else {
             return Some(false);
         };
-        let found =
-            self.host
-                .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, _| {
-                    let held = c
-                        .rows()
-                        .get(row)
-                        .is_some_and(|r| r.current.contains(&chord));
-                    let name = key_words(c, chord);
-                    let labels = |rows: &[usize]| {
-                        rows.iter()
-                            .filter_map(|r| c.rows().get(*r).and_then(|r| r.label.clone()))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    };
-                    let conflict = c.conflict(chord, row);
-                    let words = match &conflict {
-                        KeyConflict::Reserved => {
-                            format!("{name} is kept by the game for its own use.")
-                        }
-                        KeyConflict::Rows(rows) => format!("{name} is used by {}.", labels(rows)),
-                        KeyConflict::None => String::new(),
-                    };
-                    (held, conflict, words)
-                });
+        let found = self.with_key_config(|c, _| {
+            let held = c
+                .rows()
+                .get(row)
+                .is_some_and(|r| r.current.contains(&chord));
+            let name = key_words(c, chord);
+            let labels = |rows: &[usize]| {
+                rows.iter()
+                    .filter_map(|r| c.rows().get(*r).and_then(|r| r.label.clone()))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            };
+            let conflict = c.conflict(chord, row);
+            let words = match &conflict {
+                KeyConflict::Reserved => {
+                    format!("{name} is kept by the game for its own use.")
+                }
+                KeyConflict::Rows(rows) => format!("{name} is used by {}.", labels(rows)),
+                KeyConflict::None => String::new(),
+            };
+            (held, conflict, words)
+        });
         let Some((held, conflict, words)) = found else {
             return Some(false);
         };
@@ -462,12 +443,9 @@ impl WindowUi {
         }
         match conflict {
             KeyConflict::None => {
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.assign(ui, row, slot, chord, &[]);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.assign(ui, row, slot, chord, &[]);
+                });
             }
             KeyConflict::Reserved | KeyConflict::Rows(_) => {
                 let takes = match conflict {

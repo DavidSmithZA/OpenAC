@@ -12,9 +12,7 @@ use ac_runtime::session::SessionCommand;
 use ac_ui::bundled_font::Weight;
 use ac_ui::geometry::AnchorEdges;
 use ac_ui::modern::Horizon;
-use ac_ui::panels::character::{
-    ATTRIBUTE_ROWS, CharacterSheet, CharacterStatController, CharacterTab, VITAL_ROWS,
-};
+use ac_ui::panels::character::{ATTRIBUTE_ROWS, CharacterSheet, CharacterTab, VITAL_ROWS};
 use ac_ui::panels::character_titles::sorted_titles;
 use ac_ui::panels::items::emit;
 use ac_ui::panels::{PanelOutput, panel_id};
@@ -360,12 +358,7 @@ impl WindowUi {
         };
         let (frame, skills, titles) = (c.frame, c.skills, c.titles);
         let raised_from = c.raised_from.clone();
-        let sheet = self
-            .host
-            .with_controller::<CharacterStatController, _>(CHARACTER_WINDOW, |c, _| {
-                c.sheet().clone()
-            })
-            .unwrap_or_default();
+        let sheet = self.sheet.clone();
         let waiting = raised_from.as_ref().is_some_and(|s| *s == sheet);
         if !waiting && let Some(c) = self.modern.as_mut().and_then(|m| m.character.as_mut()) {
             c.raised_from = None;

@@ -969,12 +969,8 @@ impl WindowUi {
         &mut self,
         f: impl FnOnce(&ac_ui::panels::items::ItemsView<'_>, Option<u32>) -> R,
     ) -> R {
-        use ac_ui::panels::toolbar::ToolbarWindowController;
         let selected = self.player_view.and_then(|v| v.selected);
-        let split = self.host.with_controller::<ToolbarWindowController, _>(
-            crate::ui::window::TOOLBAR_WINDOW,
-            |c, _| c.split.quantity().clone(),
-        );
+        let split = self.split_quantity();
         let pending: Vec<u32> = self.facts.state.pending_item.into_iter().collect();
         let resolve = crate::ui::facts::composed_names(&self.status.names);
         let view = self

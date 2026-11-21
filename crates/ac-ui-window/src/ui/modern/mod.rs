@@ -1,12 +1,12 @@
 //! OpenAC's modern interface, mounted over the retail one while the
 //! launcher asks for it.
 //!
-//! The modern interface is built a screen at a time. Each modern piece
-//! names the retail windows it stands in for ([`ModernLayer::replaced`]);
-//! those stay hidden, and the window layout persistence leaves them alone
-//! so the player's retail layout is kept for when Retail is picked again.
-//! Every retail window nothing stands in for yet shows as before, so the
-//! game is fully playable whatever has been built.
+//! Each modern piece names the retail windows it stands in for
+//! ([`ModernLayer::replace`]); once the layer is mounted those are taken
+//! down ([`ModernLayer::take_down`]): unregistered, their controllers
+//! dropped and their elements freed, so nothing retail is mounted in game.
+//! The window layout persistence only follows registered windows, so the
+//! player's saved retail layout is kept for when Retail is picked again.
 //!
 //! Modern windows have names of their own, so their layout is saved apart
 //! from the retail windows'; where each one first appears is in
@@ -131,6 +131,9 @@ pub struct ModernLayer {
     pub questions: Option<dialogs::run::QuestionsUi>,
     /// Packs used anywhere since the inventory last looked.
     pub opened_packs: Vec<u32>,
+    /// The selected stack's split quantity (the target line shows it;
+    /// drags move that many).
+    pub split: ac_ui::panels::items::SelectionSplit,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -188,10 +191,8 @@ impl ModernLayer {
         }
     }
 
-    /// Tells the window layout persistence to leave the replaced windows
-    /// alone, and where the modern windows first go.
-    pub fn leave_alone(&self, host: &mut UiHost, layouts: &mut LayoutPersistence) {
-        layouts.set_left_alone(host, self.replaced.iter().copied());
+    /// Where the modern windows first go.
+    pub fn place_windows(layouts: &mut LayoutPersistence) {
         layouts.set_default_places(Box::new(|name, (w, h)| {
             places::default_place(name).map(|place| {
                 let rect = place.rect((w as f32, h as f32));
@@ -200,15 +201,14 @@ impl ModernLayer {
         }));
     }
 
-    /// Hides every replaced retail window something showed (a key, a
-    /// toolbar button, the game itself); called before each frame is drawn,
-    /// so none is ever seen.
-    pub fn hide_replaced(&self, host: &mut UiHost) {
-        for name in &self.replaced {
-            if host.root.is_window_visible(name) {
-                host.root.hide_window(name);
-            }
-        }
+    /// Takes every replaced retail window down for good; returns the names
+    /// taken down. Called once, after the modern pieces are mounted.
+    pub fn take_down(&self, host: &mut UiHost) -> Vec<&'static str> {
+        self.replaced
+            .iter()
+            .copied()
+            .filter(|name| host.remove_window(name))
+            .collect()
     }
 }
 
@@ -272,6 +272,17 @@ const TIP_SIZE: f32 = 12.0;
 const QUICK_MOVE_NAME_SIZE: f32 = 11.0;
 
 impl WindowUi {
+    /// Takes down the retail windows the modern pieces stand in for: they
+    /// are no longer mounted, fed or shown.
+    pub(super) fn take_down_replaced(&mut self) {
+        let Some(modern) = self.modern.as_ref() else {
+            return;
+        };
+        let gone = modern.take_down(&mut self.host);
+        self.mounted.retain(|name| !gone.contains(name));
+        self.stale.retain(|name| !gone.contains(name));
+    }
+
     /// The HUD pieces built so far, each standing in for its retail
     /// windows.
     pub(super) fn mount_hud(&mut self) {
@@ -535,18 +546,6 @@ impl WindowUi {
             let held = ac_ui::panels::inventory::count_loose_contents(&view, player);
             drop_note(held, capacity)
         });
-        let world_open = self
-            .host
-            .root
-            .is_window_visible(super::map_window::MAP_HOUSE_WINDOW);
-        let on_house = world_open
-            && self
-                .host
-                .with_controller::<ac_ui::panels::map_house::MapHousePanelController, _>(
-                    super::map_window::MAP_HOUSE_WINDOW,
-                    |c, ui| c.is_showing_house(ui),
-                )
-                .unwrap_or(false);
         let due = self.facts.house.as_ref().is_some_and(|h| {
             h.owns_house
                 && h.lines
@@ -573,8 +572,8 @@ impl WindowUi {
                 Panel::Inventory => inventory,
                 Panel::Spellbook => spellbook,
                 Panel::Journal => journal,
-                Panel::Map => world_open && !on_house || map_open,
-                Panel::House => on_house || house_open,
+                Panel::Map => map_open,
+                Panel::House => house_open,
                 Panel::Social => social,
                 Panel::Options => options,
             };
@@ -1226,11 +1225,13 @@ impl WindowUi {
         self.feed_modern_split();
     }
 
-    /// The target line's split amount and the one drags use (the retail
-    /// toolbar's, kept while it is hidden) follow each other.
+    /// The target line's split amount follows the split quantity drags
+    /// use, and sets it when the player moves it.
     fn feed_modern_split(&mut self) {
-        use ac_ui::panels::toolbar::ToolbarWindowController;
-        let Some(id) = self.modern.as_ref().and_then(|m| m.target) else {
+        let Some(modern) = self.modern.as_mut() else {
+            return;
+        };
+        let Some(id) = modern.target else {
             return;
         };
         let chosen = self
@@ -1238,25 +1239,31 @@ impl WindowUi {
             .root
             .widget_mut::<hud::target::TargetLine>(id)
             .and_then(|line| line.split_chosen.take());
+        if let Some(value) = chosen {
+            modern.split.set_value(value);
+        }
         let selected = self.player_view.and_then(|v| v.selected);
-        let quantity = self.host.with_controller::<ToolbarWindowController, _>(
-            super::window::TOOLBAR_WINDOW,
-            |c, ui| {
-                if let Some(value) = chosen {
-                    c.split.set_value(ui, value);
-                }
-                c.split.quantity().clone()
-            },
-        );
-        let split = quantity
-            .filter(|q| selected.is_some() && q.maximum() > 1)
-            .map(|q| hud::target::SplitView {
-                value: q.value(),
-                stack: q.maximum(),
-            });
+        let q = modern.split.quantity();
+        let split = (selected.is_some() && q.maximum() > 1).then(|| hud::target::SplitView {
+            value: q.value(),
+            stack: q.maximum(),
+        });
         self.host
             .root
             .with::<hud::target::TargetLine, _>(id, |line, ui| line.show_split(ui, split));
+    }
+
+    /// The selected stack's split quantity drags use: the modern target
+    /// line's on Modern, else the retail toolbar's.
+    pub(super) fn split_quantity(&mut self) -> Option<ac_core::items::StackSplitQuantity> {
+        if let Some(modern) = self.modern.as_ref() {
+            return Some(modern.split.quantity().clone());
+        }
+        self.host
+            .with_controller::<ac_ui::panels::toolbar::ToolbarWindowController, _>(
+                super::window::TOOLBAR_WINDOW,
+                |c, _| c.split.quantity().clone(),
+            )
     }
 
     /// The split key: the target line's amount takes the keyboard. False
@@ -1450,25 +1457,23 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_layer_hides_nothing() {
+    fn an_empty_layer_takes_nothing_down() {
         let mut host = host_with(&["radar", "chat"]);
-        ModernLayer::new().hide_replaced(&mut host);
+        assert!(ModernLayer::new().take_down(&mut host).is_empty());
         assert!(host.root.is_window_visible("radar"));
         assert!(host.root.is_window_visible("chat"));
     }
 
     #[test]
-    fn a_replaced_window_stays_hidden_whoever_shows_it() {
+    fn a_replaced_window_is_taken_down() {
         let mut host = host_with(&["radar", "chat"]);
         let mut layer = ModernLayer::new();
         layer.replace("radar");
         layer.replace("radar");
         assert_eq!(layer.replaced(), ["radar"]);
-        layer.hide_replaced(&mut host);
-        assert!(!host.root.is_window_visible("radar"));
-        host.root.show_window("radar");
-        layer.hide_replaced(&mut host);
-        assert!(!host.root.is_window_visible("radar"));
+        assert_eq!(layer.take_down(&mut host), ["radar"]);
+        assert!(host.root.window("radar").is_none());
+        assert!(!host.root.show_window("radar"));
         assert!(host.root.is_window_visible("chat"));
     }
 }

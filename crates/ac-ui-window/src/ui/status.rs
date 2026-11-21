@@ -672,12 +672,8 @@ impl WindowUi {
         };
         let stack = u32::try_from(object.stack_size.max(1)).unwrap_or(1);
         let selected = self.player_view.and_then(|v| v.selected).unwrap_or(0);
-        self.host
-            .with_controller::<ac_ui::panels::toolbar::ToolbarWindowController, _>(
-                super::window::TOOLBAR_WINDOW,
-                |c, _| c.split.quantity().object_split_size(item, selected, stack),
-            )
-            .unwrap_or(stack)
+        self.split_quantity()
+            .map_or(stack, |q| q.object_split_size(item, selected, stack))
     }
 
     /// The cursor the pointer shows now (OpenAC `CursorFeedbackController.Update`

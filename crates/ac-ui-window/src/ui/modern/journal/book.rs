@@ -493,6 +493,9 @@ pub struct BookUi {
     rendered: Option<u64>,
     /// The book shown last frame (0: none).
     was_open: u32,
+    /// A book was open when the game last said (a book opening shows the
+    /// reader, a book closing hides it).
+    told_open: bool,
 }
 
 /// The reader's screen for `view`.
@@ -598,6 +601,7 @@ impl WindowUi {
             menu,
             rendered: None,
             was_open: 0,
+            told_open: false,
         });
         modern.replace(BOOK_WINDOW);
         self.panels.stand_in(panel_id::BOOK, BOOK);
@@ -610,6 +614,23 @@ impl WindowUi {
             .widget::<Field>(page)
             .filter(|f| f.editable())
             .map(Field::text)
+    }
+
+    /// The game opened or closed a book: the reader shows or goes.
+    pub(in crate::ui) fn follow_modern_book(&mut self, dirty: crate::ui::facts::Dirty) {
+        if !dirty.book {
+            return;
+        }
+        let open = self.facts.book.as_ref().is_some_and(|v| v.book_guid != 0);
+        let Some(b) = self.modern.as_mut().and_then(|m| m.book.as_mut()) else {
+            return;
+        };
+        if b.told_open == open {
+            return;
+        }
+        b.told_open = open;
+        self.panels
+            .set_visibility(&mut self.host.root, panel_id::BOOK, open);
     }
 
     /// Each frame: the reader follows the open book; turning a page or

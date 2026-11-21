@@ -538,8 +538,11 @@ pub struct WindowUi {
     /// A character report's values the character sheet takes over the
     /// numbers (a window shown without a session).
     reported_sheet: Option<ReportedSheet>,
+    /// The character sheet as last built from the facts, for whichever
+    /// interface shows it.
+    pub(super) sheet: CharacterSheet,
     /// Panels shown since they were last fed.
-    stale: Vec<&'static str>,
+    pub(super) stale: Vec<&'static str>,
     /// Whether the character was in the world when the social panel was
     /// last fed (its declarations follow the world entries).
     pub(super) social_in_world: Option<bool>,
@@ -669,6 +672,7 @@ impl WindowUi {
             dialog_layout: None,
             fed_selection: None,
             reported_sheet: None,
+            sheet: CharacterSheet::default(),
             stale: Vec::new(),
             social_in_world: None,
             fed_social_selection: None,
@@ -1251,6 +1255,7 @@ impl WindowUi {
         self.tick_modern_map();
         self.update_salvage();
         self.update_book(dirty);
+        self.follow_modern_book(dirty);
         self.tick_modern_book();
         self.update_map_house(scene);
         self.update_barber(dirty, scene);
@@ -1295,6 +1300,7 @@ impl WindowUi {
             status,
             panels,
             reported_sheet,
+            sheet: kept_sheet,
             modern,
             ..
         } = self;
@@ -1307,11 +1313,20 @@ impl WindowUi {
         let selection_facts = super::status::selection_facts(state, selected, status);
         let player = state.player;
         let pending: Vec<u32> = state.pending_item.into_iter().collect();
-        let split = host.with_controller::<ToolbarWindowController, _>(TOOLBAR_WINDOW, |c, _| {
-            c.split.quantity().clone()
-        });
-        let numbers = facts.player.as_ref().map(|p| &p.numbers);
         let resolve = super::facts::composed_names(&status.names);
+        // The split quantity drags use: the modern target line's follows
+        // the selection here, the retail toolbar's inside its update.
+        let split = match modern.as_mut() {
+            Some(m) => {
+                m.split
+                    .follow(&facts.items_view(selected, &pending, None, &resolve));
+                Some(m.split.quantity().clone())
+            }
+            None => host.with_controller::<ToolbarWindowController, _>(TOOLBAR_WINDOW, |c, _| {
+                c.split.quantity().clone()
+            }),
+        };
+        let numbers = facts.player.as_ref().map(|p| &p.numbers);
         let view = facts.items_view(selected, &pending, split.as_ref(), &resolve);
         let shown =
             |host: &UiHost, name: &str| host.root.is_window_visible(name) || stale.contains(&name);
@@ -1373,6 +1388,7 @@ impl WindowUi {
             host.with_controller::<CharacterStatController, _>(CHARACTER_WINDOW, |c, ui| {
                 c.apply(ui, &sheet);
             });
+            *kept_sheet = sheet;
         }
         // The spellbook and the spell bars.
         if let Some(book) = numbers.and_then(|n| n.spellbook()) {
@@ -1534,9 +1550,6 @@ impl WindowUi {
         self.tick_modern_recalls();
         self.tick_modern_chat();
         self.follow_modern_pieces();
-        if let Some(modern) = &self.modern {
-            modern.hide_replaced(&mut self.host);
-        }
         let list = self
             .host
             .draw((size.0 as f32, size.1 as f32), &self.content);
@@ -1560,12 +1573,10 @@ impl WindowUi {
                 self.modern = Some(super::modern::ModernLayer::new());
                 self.mount_hud();
                 self.mount_modern_pregame();
-                if let Some(modern) = self.modern.as_mut() {
-                    if let Some(layouts) = self.status.layouts.as_mut() {
-                        modern.leave_alone(&mut self.host, layouts);
-                    }
-                    modern.hide_replaced(&mut self.host);
+                if let Some(layouts) = self.status.layouts.as_mut() {
+                    super::modern::ModernLayer::place_windows(layouts);
                 }
+                self.take_down_replaced();
                 self.mount_quick_move();
             }
         }
@@ -1872,11 +1883,9 @@ impl WindowUi {
             } => self.ask(message, DialogAction::Either(*on_yes, *on_no)),
             PanelOutput::TrainSkill { skill, credits } => {
                 let name = self
-                    .host
-                    .with_controller::<CharacterStatController, _>(CHARACTER_WINDOW, |c, _| {
-                        c.sheet().skill(skill).map(|s| s.name.clone())
-                    })
-                    .flatten()
+                    .sheet
+                    .skill(skill)
+                    .map(|s| s.name.clone())
                     .unwrap_or_else(|| format!("skill {skill}"));
                 self.ask(
                     train_skill_message(credits, &name),

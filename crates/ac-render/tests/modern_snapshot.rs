@@ -442,25 +442,22 @@ fn the_modern_bars() {
     s.set_mode(CombatMode::NON_COMBAT);
     // The spellbook open; its first spell carried to the Main bar's tenth
     // slot (empty), a picture on the way.
-    use ac_render::ui::window::{Hotkey, SPELLBOOK_WINDOW};
-    use ac_ui::panels::magic::{SpellbookPage, SpellbookWindowController};
+    use ac_render::ui::window::Hotkey;
+    use ac_ui::panels::magic::SpellbookPage;
+    use ac_ui_window::ui::modern::magic::spellbook_window::SpellList;
     assert!(s.ui.run_hotkey(Hotkey::Spellbook(SpellbookPage::Spells)));
     s.step();
     s.step();
-    let list =
-        s.ui.host_mut()
-            .with_controller::<SpellbookWindowController, _>(SPELLBOOK_WINDOW, |c, _| c.list())
-            .expect("the spellbook");
-    let row = {
-        let root = &s.ui.host().root;
-        let cell = root
-            .widget::<ac_ui::widgets::ItemList>(list)
-            .and_then(|l| l.item(0))
-            .expect("a spell row");
-        let (x, y) = root.screen_position(cell);
-        let e = root.element(cell).unwrap();
-        ((x + e.width * 0.3) as i32, (y + e.height * 0.5) as i32)
-    };
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-spellbook")
+            .expect("the spellbook")
+            .frame;
+    let list = shown_in::<SpellList>(&s, frame).expect("the list");
+    let (lx, ly, _, _) = rect_of(&s, list);
+    // The first spell's row (under its school's heading).
+    let row = (lx + 100, ly + 30 + 19);
     println!("spell row at {row:?}");
     s.save("spell-book-open");
     let to = (MAIN_SLOT.0 + 43 * 9, MAIN_SLOT.1);

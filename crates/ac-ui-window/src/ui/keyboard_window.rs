@@ -97,6 +97,9 @@ pub struct KeyboardUi {
     requests: Vec<KeyboardRequest>,
     dialogs: DialogFactory<KeyboardDialog>,
     instructions: u32,
+    /// The key rows without the screen, while the modern Options window
+    /// lists the keys (the screen is not mounted then).
+    screenless: Option<KeyboardConfigController>,
 }
 
 impl KeyboardUi {
@@ -130,17 +133,91 @@ impl WindowUi {
             })
             .unwrap_or_default();
         self.keyboard.unmapped = unmapped.clone();
+        if self.modern.is_some() {
+            self.attach_screenless_keys(bindings, unmapped);
+            return;
+        }
         if self.host.has_controller(KEYBOARD_WINDOW) {
-            self.host
-                .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, ui| {
-                    c.reload(ui, bindings.clone(), unmapped);
-                });
+            self.with_key_config(|c, ui| {
+                c.reload(ui, bindings.clone(), unmapped);
+            });
             return;
         }
         match self.mount_keyboard_config(bindings.clone(), unmapped) {
             Ok(()) => self.mounted.push(KEYBOARD_WINDOW),
             Err(e) => self.notices.push(format!("ui: {KEYBOARD_WINDOW}: {e}")),
         }
+    }
+
+    /// The key rows without the screen (Modern): built on the first
+    /// bindings, reloaded with later ones.
+    fn attach_screenless_keys(
+        &mut self,
+        bindings: &KeyBindings,
+        unmapped: RetailUnmappedKeyBindings,
+    ) {
+        if let Some(c) = self.keyboard.screenless.as_mut() {
+            c.reload(&mut self.host.root, bindings.clone(), unmapped);
+            self.host.pump();
+            return;
+        }
+        let snapshot = match action_map::read(self.content.dats()) {
+            Ok(Some(snapshot)) => snapshot,
+            Ok(None) => {
+                self.notices
+                    .push("ui: keys: the dat action map 0x26000000 is not in the dats".into());
+                return;
+            }
+            Err(e) => {
+                self.notices.push(format!("ui: keys: {e}"));
+                return;
+            }
+        };
+        let dats = self.content.dats().clone();
+        let template_strings = std::rc::Rc::new(StringResolver::new(move |id| {
+            dats.get::<StringTable>(id).ok().flatten()
+        }));
+        let dats = self.content.dats().clone();
+        let name_strings = std::rc::Rc::new(StringResolver::new(move |id| {
+            dats.get::<StringTable>(id).ok().flatten()
+        }));
+        for strings in [&template_strings, &name_strings] {
+            self.miss_caches
+                .strings
+                .push(std::rc::Rc::downgrade(strings));
+        }
+        let names = RetailKeyNames::new(
+            Box::new(move |table, hash| name_strings.resolve(table, hash, 0)),
+            (self.os_key_names)(),
+        );
+        let strings = self.content.strings();
+        let resolve_string = |table: u32, hash: u32| strings.resolve(table, hash, 0);
+        self.keyboard.screenless = Some(KeyboardConfigController::without_screen(
+            snapshot,
+            &resolve_string,
+            Box::new(move |key, variables| {
+                template_strings.resolve_template(TEMPLATE_STRING_TABLE_ID, key, variables)
+            }),
+            names,
+            bindings.clone(),
+            unmapped,
+        ));
+    }
+
+    /// Runs `f` on the key rows: the screenless ones on Modern, else the
+    /// Configure Keyboard screen's; then routes what they queued. `None`
+    /// before the first bindings.
+    pub(in crate::ui) fn with_key_config<R>(
+        &mut self,
+        f: impl FnOnce(&mut KeyboardConfigController, &mut ac_ui::root::UiRoot) -> R,
+    ) -> Option<R> {
+        if let Some(c) = self.keyboard.screenless.as_mut() {
+            let r = f(c, &mut self.host.root);
+            self.host.pump();
+            return Some(r);
+        }
+        self.host
+            .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, f)
     }
 
     /// OpenAC `RetailUiRuntime.MountKeyboardConfig`.
@@ -258,10 +335,7 @@ impl WindowUi {
     /// The working bindings of the screen (none when it is not mounted).
     #[must_use]
     pub fn keyboard_bindings(&mut self) -> Option<KeyBindings> {
-        self.host
-            .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, _| {
-                c.bindings().clone()
-            })
+        self.with_key_config(|c, _| c.bindings().clone())
     }
 
     /// A key capture ended (`None`: Escape); true when the dispatcher must
@@ -271,10 +345,7 @@ impl WindowUi {
             return still;
         }
         let reply = self
-            .host
-            .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, ui| {
-                c.captured(ui, chord)
-            })
+            .with_key_config(|c, ui| c.captured(ui, chord))
             .unwrap_or(CaptureReply::NotCapturing);
         match reply {
             CaptureReply::StillCapturing => true,
@@ -353,10 +424,9 @@ impl WindowUi {
             &variables,
         );
         let Some(text) = text else {
-            self.host
-                .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, _| {
-                    c.capture_refused();
-                });
+            self.with_key_config(|c, _| {
+                c.capture_refused();
+            });
             return;
         };
         self.keyboard.instructions =
@@ -428,12 +498,9 @@ impl WindowUi {
             KeyboardDialog::Message => {}
             KeyboardDialog::Overwrite => {
                 let accepted = data.get_bool(property::CONFIRMATION_RESULT);
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.overwrite_answered(ui, accepted);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.overwrite_answered(ui, accepted);
+                });
             }
             KeyboardDialog::Load(files) => {
                 let choice = data.get_i32(property::MENU_SELECTION, -1);
@@ -537,11 +604,10 @@ impl WindowUi {
         }
         let unmapped = self.keyboard.unmapped.clone();
         let current = keymap_file::active_profile_name(storage);
-        self.host
-            .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, ui| {
-                c.reload(ui, loaded, unmapped);
-                c.set_filename(ui, &current);
-            });
+        self.with_key_config(|c, ui| {
+            c.reload(ui, loaded, unmapped);
+            c.set_filename(ui, &current);
+        });
     }
 
     /// OK with changes: the active profile and the mirrors.
@@ -572,12 +638,9 @@ impl WindowUi {
                         .push(format!("keyboard config: JSON mirror save failed: {e}"));
                 }
                 let current = keymap_file::active_profile_name(storage);
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.set_filename(ui, &current);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.set_filename(ui, &current);
+                });
             }
             KeymapSaveStatus::Exists => {
                 if let Some(text) =

@@ -514,6 +514,10 @@ impl WindowUi {
                 true
             }
             PanelOutput::ResetSplitQuantity { stack } => {
+                if let Some(modern) = self.modern.as_mut() {
+                    modern.split.reset_to_whole(*stack);
+                    return true;
+                }
                 self.host
                     .with_controller::<ToolbarWindowController, _>(TOOLBAR_WINDOW, |c, ui| {
                         c.split.reset_to_whole(ui, *stack);

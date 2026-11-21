@@ -15,7 +15,6 @@ use ac_runtime::session::SessionCommand;
 use ac_ui::bundled_font::Weight;
 use ac_ui::modern::Horizon;
 use ac_ui::panels::PanelOutput;
-use ac_ui::panels::character::CharacterStatController;
 use ac_ui::panels::dialog_factory::{DialogData, DialogType, DialogValue, property};
 use ac_ui::panels::items::emit;
 use ac_ui::root::ElementMessage;
@@ -25,7 +24,7 @@ use super::card::{CardFonts, Form, Part, QuestionCard, Shown};
 use super::invites::{Invite, InviteCards, InviteFonts};
 use super::look::{self, Look};
 use crate::ui::keyboard_window::KeyboardDialog;
-use crate::ui::window::{CHARACTER_WINDOW, DialogAction, WindowUi};
+use crate::ui::window::{DialogAction, WindowUi};
 
 /// What an answer goes back to.
 #[derive(Debug, Clone)]
@@ -586,14 +585,8 @@ impl WindowUi {
                     credits,
                 })),
             ),
-            DialogAction::Train { .. } => {
-                self.host.with_controller::<CharacterStatController, _>(
-                    CHARACTER_WINDOW,
-                    |c, ui| {
-                        c.release_raise(ui);
-                    },
-                );
-            }
+            // The modern Character window holds no raise for a training.
+            DialogAction::Train { .. } => {}
         }
     }
 
