@@ -24,6 +24,11 @@ use crate::ui::modern::kit::{self, ButtonLook, Rect, Scroll, Tab, bronze, gold, 
 
 /// The window's size.
 pub const WIDTH: f32 = 1040.0;
+/// Its width on a small screen: the categories or packs drop down over
+/// the list, and what the vendor buys shows with them.
+pub const NARROW_WIDTH: f32 = 792.0;
+/// The list's width in the narrow window.
+const NARROW_MID_W: f32 = NARROW_WIDTH - RAIL_X - 16.0 - SIDE_W - 20.0;
 pub const HEIGHT: f32 = 640.0;
 const HEADER: f32 = 56.0;
 const TOP: f32 = 72.0;
@@ -32,7 +37,6 @@ const RAIL_X: f32 = 20.0;
 const RAIL_W: f32 = 180.0;
 const MID_X: f32 = 216.0;
 const MID_W: f32 = 440.0;
-const SIDE_X: f32 = 672.0;
 const SIDE_W: f32 = 348.0;
 const SEARCH_W: f32 = 200.0;
 const RAIL_ROW: f32 = 30.0;
@@ -168,6 +172,10 @@ pub struct VendorFrame {
     /// Something from the packs is held over it.
     over: bool,
     cart_scroll: Scroll,
+    /// Its width: [`WIDTH`], or [`NARROW_WIDTH`] on a small screen.
+    pub width: f32,
+    /// The narrow window's drop-down of categories or packs is open.
+    pub rail_open: bool,
 }
 
 impl VendorFrame {
@@ -188,16 +196,101 @@ impl VendorFrame {
             hover: None,
             over: false,
             cart_scroll: Scroll::default(),
+            width: WIDTH,
+            rail_open: false,
+        }
+    }
+
+    /// The narrow window (a small screen).
+    #[must_use]
+    pub fn narrow(&self) -> bool {
+        self.width < WIDTH
+    }
+
+    fn mid_x(&self) -> f32 {
+        if self.narrow() { RAIL_X } else { MID_X }
+    }
+
+    fn mid_w(&self) -> f32 {
+        if self.narrow() { NARROW_MID_W } else { MID_W }
+    }
+
+    fn side_x(&self) -> f32 {
+        self.mid_x() + self.mid_w() + 16.0
+    }
+
+    fn search_w(&self) -> f32 {
+        if self.narrow() { 150.0 } else { SEARCH_W }
+    }
+
+    /// The categories' or packs' left: their column, or the drop-down's.
+    fn rail_x(&self) -> f32 {
+        if self.narrow() {
+            self.mid_x() + 10.0
+        } else {
+            RAIL_X
+        }
+    }
+
+    /// Where the categories or packs start: their column's top, or under
+    /// the list's heading in the drop-down.
+    fn rail_top(&self) -> f32 {
+        if self.narrow() { TOP + 40.0 } else { TOP }
+    }
+
+    /// The drop-down's button (the list's title) in the narrow window.
+    fn rail_button(&self) -> Rect {
+        let words = self
+            .fonts
+            .strong
+            .as_ref()
+            .map_or(140.0, |f| text::measure(f, &self.screen.list_title, 0.0));
+        (self.mid_x(), TOP, words + 34.0, 28.0)
+    }
+
+    /// The drop-down's panel: the categories or packs, and on Sell the
+    /// toggle and what the vendor buys.
+    fn rail_panel(&self) -> Rect {
+        let rows = self.rail_rects();
+        let mut bottom = rows
+            .last()
+            .map_or(self.rail_top() + 20.0, |(_, r)| r.1 + r.3);
+        if self.screen.tab == VendorTab::Sell {
+            bottom = self.toggle_rect().1 + 20.0 + 14.0 + self.buys_height();
+        }
+        let top = TOP + 30.0;
+        (self.mid_x(), top, self.mid_w(), bottom - top + 12.0)
+    }
+
+    /// The height of what the vendor buys, in words.
+    fn buys_height(&self) -> f32 {
+        let (Some(s), Some(st)) = (&self.fonts.small, &self.fonts.strong) else {
+            return 0.0;
+        };
+        let lines: usize = self
+            .screen
+            .buys
+            .iter()
+            .map(|l| kit::wrap(s, l, self.rail_w() - 20.0).len())
+            .sum();
+        10.0 + st.line_height + 4.0 + lines as f32 * (s.line_height + 4.0) + 10.0
+    }
+
+    fn rail_w(&self) -> f32 {
+        if self.narrow() {
+            self.mid_w() - 20.0
+        } else {
+            RAIL_W
         }
     }
 
     /// The search box.
     #[must_use]
-    pub fn search_rect() -> Rect {
+    pub fn search_rect(&self) -> Rect {
         (
-            WIDTH - 16.0 - 30.0 - 12.0 - SEARCH_W,
+            self.width - 16.0 - 30.0 - 12.0 - self.search_w(),
             (HEADER - 30.0) * 0.5,
-            SEARCH_W,
+            self.search_w(),
             30.0,
         )
     }
@@ -217,7 +310,7 @@ impl VendorFrame {
         } else {
             0.0
         };
-        (MID_X, top, MID_W, BOTTOM - top - gap)
+        (self.mid_x(), top, self.mid_w(), BOTTOM - top - gap)
     }
 
     /// Where the plugins' band goes (under the list).
@@ -228,28 +321,28 @@ impl VendorFrame {
 
     /// The middle column's left and width (the band spans it).
     #[must_use]
-    pub fn band_span() -> (f32, f32) {
-        (MID_X, MID_W)
+    pub fn band_span(&self) -> (f32, f32) {
+        (self.mid_x(), self.mid_w())
     }
 
     /// The quantity field's place in the chosen card.
     #[must_use]
-    pub fn quantity_rect() -> Rect {
-        let (_, minus, _, _) = Self::quantity_parts();
+    pub fn quantity_rect(&self) -> Rect {
+        let (_, minus, _, _) = self.quantity_parts();
         (minus.0 + 28.0, minus.1, 44.0, 28.0)
     }
 
-    fn quantity_parts() -> (Rect, Rect, Rect, Rect) {
+    fn quantity_parts(&self) -> (Rect, Rect, Rect, Rect) {
         let y = TOP + 14.0 + 48.0 + 12.0;
-        let label = (SIDE_X + 14.0, y, 56.0, 28.0);
-        let minus = (SIDE_X + 14.0 + 62.0, y, 28.0, 28.0);
+        let label = (self.side_x() + 14.0, y, 56.0, 28.0);
+        let minus = (self.side_x() + 14.0 + 62.0, y, 28.0, 28.0);
         let plus = (minus.0 + 28.0 + 44.0, y, 28.0, 28.0);
         let most = (plus.0 + 28.0 + 8.0, y, 74.0, 28.0);
         (label, minus, plus, most)
     }
 
-    fn close_rect() -> Rect {
-        (WIDTH - 16.0 - 30.0, (HEADER - 30.0) * 0.5, 30.0, 30.0)
+    fn close_rect(&self) -> Rect {
+        (self.width - 16.0 - 30.0, (HEADER - 30.0) * 0.5, 30.0, 30.0)
     }
 
     fn tabs(&self) -> [(VendorTab, Rect); 2] {
@@ -290,6 +383,9 @@ impl VendorFrame {
     }
 
     fn rail_rects(&self) -> Vec<(u32, Rect)> {
+        if self.narrow() && !self.rail_open {
+            return Vec::new();
+        }
         self.screen
             .rail
             .iter()
@@ -298,9 +394,9 @@ impl VendorFrame {
                 (
                     r.key,
                     (
-                        RAIL_X,
-                        TOP + 20.0 + i as f32 * (RAIL_ROW + 2.0),
-                        RAIL_W,
+                        self.rail_x(),
+                        self.rail_top() + 20.0 + i as f32 * (RAIL_ROW + 2.0),
+                        self.rail_w(),
                         RAIL_ROW,
                     ),
                 )
@@ -314,7 +410,7 @@ impl VendorFrame {
             .last()
             .map_or(TOP + 20.0, |(_, r)| r.1 + r.3)
             + 16.0;
-        (RAIL_X, y, RAIL_W, 20.0)
+        (self.rail_x(), y, self.rail_w(), 20.0)
     }
 
     fn sort_rect(&self) -> Rect {
@@ -324,7 +420,7 @@ impl VendorFrame {
             .small
             .as_ref()
             .map_or(90.0, |f| text::measure(f, &words, 0.0) + 26.0);
-        (MID_X + MID_W - w, TOP + 1.0, w, 26.0)
+        (self.mid_x() + self.mid_w() - w, TOP + 1.0, w, 26.0)
     }
 
     /// The sort's words.
@@ -334,49 +430,54 @@ impl VendorFrame {
 
     fn restock_button(&self) -> Rect {
         (
-            MID_X + MID_W - 12.0 - 96.0,
+            self.mid_x() + self.mid_w() - 12.0 - 96.0,
             TOP + 36.0 + (BANNER - 30.0) * 0.5,
             96.0,
             30.0,
         )
     }
 
-    fn detail_button() -> Rect {
-        (SIDE_X + SIDE_W - 14.0 - 28.0, TOP + 14.0 + 10.0, 28.0, 28.0)
-    }
-
-    fn card_buttons() -> (Rect, Rect) {
-        let y = TOP + CARD_H - 14.0 - 32.0;
-        let w = (SIDE_W - 28.0 - 6.0) / 2.0;
+    fn detail_button(&self) -> Rect {
         (
-            (SIDE_X + 14.0, y, w, 32.0),
-            (SIDE_X + 14.0 + w + 6.0, y, w, 32.0),
+            self.side_x() + SIDE_W - 14.0 - 28.0,
+            TOP + 14.0 + 10.0,
+            28.0,
+            28.0,
         )
     }
 
-    fn cart_box() -> Rect {
+    fn card_buttons(&self) -> (Rect, Rect) {
+        let y = TOP + CARD_H - 14.0 - 32.0;
+        let w = (SIDE_W - 28.0 - 6.0) / 2.0;
         (
-            SIDE_X,
+            (self.side_x() + 14.0, y, w, 32.0),
+            (self.side_x() + 14.0 + w + 6.0, y, w, 32.0),
+        )
+    }
+
+    fn cart_box(&self) -> Rect {
+        (
+            self.side_x(),
             TOP + CARD_H + 10.0,
             SIDE_W,
             BOTTOM - TOP - CARD_H - 10.0,
         )
     }
 
-    fn clear_rect() -> Rect {
-        let b = Self::cart_box();
+    fn clear_rect(&self) -> Rect {
+        let b = self.cart_box();
         (b.0 + b.2 - 14.0 - 44.0, b.1 + 8.0, 44.0, 22.0)
     }
 
     fn cart_rows_room(&self) -> Rect {
-        let b = Self::cart_box();
+        let b = self.cart_box();
         let top = b.1 + 36.0;
         let bottom = b.1 + b.3 - 14.0 - 34.0 - 8.0 - 18.0 - 6.0 - 22.0 - 10.0;
         (b.0 + 10.0, top, b.2 - 18.0, (bottom - top).max(0.0))
     }
 
-    fn cart_button() -> Rect {
-        let b = Self::cart_box();
+    fn cart_button(&self) -> Rect {
+        let b = self.cart_box();
         (b.0 + 14.0, b.1 + b.3 - 14.0 - 34.0, b.2 - 28.0, 34.0)
     }
 
@@ -400,14 +501,14 @@ impl VendorFrame {
             .collect()
     }
 
-    fn leave_box() -> Rect {
+    fn leave_box(&self) -> Rect {
         let w = 400.0;
         let h = 150.0;
-        ((WIDTH - w) * 0.5, (HEIGHT - h) * 0.5, w, h)
+        ((self.width - w) * 0.5, (HEIGHT - h) * 0.5, w, h)
     }
 
-    fn leave_buttons() -> (Rect, Rect) {
-        let b = Self::leave_box();
+    fn leave_buttons(&self) -> (Rect, Rect) {
+        let b = self.leave_box();
         let y = b.1 + b.3 - 16.0 - 32.0;
         let leave = (b.0 + b.2 - 16.0 - 90.0, y, 90.0, 32.0);
         let stay = (leave.0 - 8.0 - 90.0, y, 90.0, 32.0);
@@ -416,7 +517,7 @@ impl VendorFrame {
 
     fn click(&mut self, x: f32, y: f32) {
         if self.leaving {
-            let (stay, leave) = Self::leave_buttons();
+            let (stay, leave) = self.leave_buttons();
             if inside(stay, x, y) {
                 self.asks.push(VendorAsk::Stay);
             } else if inside(leave, x, y) {
@@ -424,23 +525,40 @@ impl VendorFrame {
             }
             return;
         }
-        if inside(Self::close_rect(), x, y) {
+        if inside(self.close_rect(), x, y) {
             self.asks.push(VendorAsk::Close);
             return;
         }
         if let Some((tab, _)) = self.tabs().into_iter().find(|(_, r)| inside(*r, x, y)) {
+            self.rail_open = false;
             self.asks.push(VendorAsk::Tab(tab));
             return;
+        }
+        // The narrow window's drop-down: its button opens and closes it; a
+        // click outside it closes it and does nothing else.
+        if self.narrow() {
+            if inside(self.rail_button(), x, y) {
+                self.rail_open = !self.rail_open;
+                return;
+            }
+            if self.rail_open && !inside(self.rail_panel(), x, y) {
+                self.rail_open = false;
+                return;
+            }
         }
         if let Some((key, _)) = self
             .rail_rects()
             .into_iter()
             .find(|(_, r)| inside(*r, x, y))
         {
+            self.rail_open = false;
             self.asks.push(VendorAsk::Rail(key));
             return;
         }
-        if self.screen.tab == VendorTab::Sell && inside(self.toggle_rect(), x, y) {
+        if self.screen.tab == VendorTab::Sell
+            && (!self.narrow() || self.rail_open)
+            && inside(self.toggle_rect(), x, y)
+        {
             self.asks.push(VendorAsk::OnlyTaken(!self.only_taken));
             return;
         }
@@ -456,8 +574,8 @@ impl VendorFrame {
             return;
         }
         if let Some(c) = &self.screen.chosen {
-            let (_, minus, plus, most) = Self::quantity_parts();
-            let (now, add) = Self::card_buttons();
+            let (_, minus, plus, most) = self.quantity_parts();
+            let (now, add) = self.card_buttons();
             if inside(minus, x, y) {
                 self.asks.push(VendorAsk::Less);
             } else if inside(plus, x, y) {
@@ -468,11 +586,11 @@ impl VendorFrame {
                 self.asks.push(VendorAsk::Now);
             } else if inside(add, x, y) && c.can_add {
                 self.asks.push(VendorAsk::Add);
-            } else if inside(Self::detail_button(), x, y) {
+            } else if inside(self.detail_button(), x, y) {
                 self.asks.push(VendorAsk::Inspect);
             }
         }
-        if !self.screen.cart.is_empty() && inside(Self::clear_rect(), x, y) {
+        if !self.screen.cart.is_empty() && inside(self.clear_rect(), x, y) {
             self.asks.push(VendorAsk::Clear);
             return;
         }
@@ -486,7 +604,7 @@ impl VendorFrame {
             self.asks.push(VendorAsk::Remove(id));
             return;
         }
-        if self.screen.can_cart && inside(Self::cart_button(), x, y) {
+        if self.screen.can_cart && inside(self.cart_button(), x, y) {
             self.asks.push(VendorAsk::All);
         }
     }
@@ -526,7 +644,7 @@ impl VendorFrame {
             );
         }
         // The purse, then the search, then close.
-        let search = Self::search_rect();
+        let search = self.search_rect();
         if let Some(s) = &f.strong {
             let also = self
                 .screen
@@ -584,8 +702,8 @@ impl VendorFrame {
         kit::close(
             rc,
             &self.theme,
-            Self::close_rect(),
-            hot(self.hover, Self::close_rect()),
+            self.close_rect(),
+            hot(self.hover, self.close_rect()),
         );
     }
 
@@ -597,8 +715,8 @@ impl VendorFrame {
                 rc,
                 l,
                 self.screen.rail_title,
-                RAIL_X,
-                TOP,
+                self.rail_x(),
+                self.rail_top(),
                 TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
             );
         }
@@ -669,26 +787,26 @@ impl VendorFrame {
         };
         let mut lines: Vec<String> = Vec::new();
         for line in &self.screen.buys {
-            lines.extend(kit::wrap(s, line, RAIL_W - 20.0));
+            lines.extend(kit::wrap(s, line, self.rail_w() - 20.0));
         }
         let step = s.line_height + 4.0;
         let h = 10.0 + st.line_height + 4.0 + lines.len() as f32 * step + 10.0;
         let y = t.1 + 20.0 + 14.0;
         rc.fill_rounded_rect(
-            RAIL_X,
+            self.rail_x(),
             y,
-            RAIL_W,
+            self.rail_w(),
             h,
             CornerRadii::all(4.0),
             hex(0xFF_FFFF, 0.04),
         );
         let head = format!("{} buys", self.screen.name);
-        let head = kit::fit(st, &head, RAIL_W - 20.0);
+        let head = kit::fit(st, &head, self.rail_w() - 20.0);
         text::draw(
             rc,
             st,
             &head,
-            RAIL_X + 10.0,
+            self.rail_x() + 10.0,
             y + 10.0,
             TextStyle::plain(kit::WARM),
         );
@@ -696,7 +814,7 @@ impl VendorFrame {
             rc,
             s,
             &lines,
-            RAIL_X + 10.0,
+            self.rail_x() + 10.0,
             y + 10.0 + st.line_height + 4.0,
             step,
             kit::SOFT,
@@ -706,7 +824,30 @@ impl VendorFrame {
     fn draw_heading(&self, rc: &mut RenderContext<'_>) {
         let p = self.theme.palette;
         let f = &self.fonts;
-        let mut x = MID_X;
+        let mut x = self.mid_x();
+        // The narrow window's title is the drop-down's button.
+        if self.narrow() {
+            let b = self.rail_button();
+            let round = CornerRadii::all(4.0);
+            let lit = self.rail_open || hot(self.hover, b);
+            rc.fill_rounded_rect(b.0, b.1, b.2, b.3, round, hex(0, 0.35));
+            rc.stroke_rounded_rect(
+                b.0,
+                b.1,
+                b.2,
+                b.3,
+                round,
+                bronze(if lit { 0.9 } else { 0.45 }),
+                1.0,
+            );
+            let (cx, cy) = (b.0 + b.2 - 14.0, b.1 + b.3 * 0.5);
+            let v = |dx: f32, dy: f32| (cx + dx, cy + dy);
+            let down: &[(f32, f32)] = &[v(-4.0, -2.0), v(0.0, 2.0), v(4.0, -2.0)];
+            for w in down.windows(2) {
+                rc.line(w[0].0, w[0].1, w[1].0, w[1].1, kit::SOFT, 1.6);
+            }
+            x = b.0 + 10.0;
+        }
         if let Some(s) = &f.strong {
             let ty = TOP + ((28.0 - s.line_height) * 0.5).round();
             text::draw(
@@ -718,6 +859,9 @@ impl VendorFrame {
                 TextStyle::plain(p.text),
             );
             x += text::measure(s, &self.screen.list_title, 0.0) + 10.0;
+            if self.narrow() {
+                x += 24.0;
+            }
         }
         let sort = self.sort_rect();
         if let Some(sm) = &f.small {
@@ -758,7 +902,7 @@ impl VendorFrame {
         if self.screen.tab == VendorTab::Buy
             && let Some(r) = &self.screen.restock
         {
-            let b = (MID_X, TOP + 36.0, MID_W, BANNER);
+            let b = (self.mid_x(), TOP + 36.0, self.mid_w(), BANNER);
             let round = CornerRadii::all(4.0);
             rc.fill_rounded_rect(b.0, b.1, b.2, b.3, round, gold(0.12));
             rc.stroke_rounded_rect(b.0, b.1, b.2, b.3, round, gold(0.6), 1.0);
@@ -804,7 +948,7 @@ impl VendorFrame {
     fn draw_card(&self, rc: &mut RenderContext<'_>, icons: &CardIcons) {
         let p = self.theme.palette;
         let f = &self.fonts;
-        let b = (SIDE_X, TOP, SIDE_W, CARD_H);
+        let b = (self.side_x(), TOP, SIDE_W, CARD_H);
         let round = CornerRadii::all(4.0);
         rc.fill_rounded_rect(b.0, b.1, b.2, b.3, round, hex(0, 0.28));
         rc.stroke_rounded_rect(b.0, b.1, b.2, b.3, round, bronze(0.35), 1.0);
@@ -842,7 +986,7 @@ impl VendorFrame {
                 Color::WHITE,
             );
         }
-        let room = Self::detail_button().0 - (tile.0 + 60.0) - 8.0;
+        let room = self.detail_button().0 - (tile.0 + 60.0) - 8.0;
         if let Some(s) = &f.strong {
             let name = kit::fit(s, &c.name, room);
             text::draw(
@@ -866,7 +1010,7 @@ impl VendorFrame {
                 kit::SOFT,
             );
         }
-        let d = Self::detail_button();
+        let d = self.detail_button();
         rc.fill_rounded_rect(d.0, d.1, d.2, d.3, round, hex(0, 0.35));
         rc.stroke_rounded_rect(
             d.0,
@@ -889,7 +1033,7 @@ impl VendorFrame {
             1.4,
         );
         // The quantity.
-        let (label, minus, plus, most) = Self::quantity_parts();
+        let (label, minus, plus, most) = self.quantity_parts();
         if let Some(sm) = &f.small {
             let ty = label.1 + ((28.0 - sm.line_height) * 0.5).round();
             text::draw(rc, sm, "Quantity", label.0, ty, TextStyle::plain(kit::SOFT));
@@ -957,7 +1101,7 @@ impl VendorFrame {
                 color,
             );
         }
-        let (now, add) = Self::card_buttons();
+        let (now, add) = self.card_buttons();
         kit::button(
             rc,
             &self.theme,
@@ -983,7 +1127,7 @@ impl VendorFrame {
     #[allow(clippy::too_many_lines)]
     fn draw_cart(&mut self, rc: &mut RenderContext<'_>, icons: &CardIcons) {
         let p = self.theme.palette;
-        let b = Self::cart_box();
+        let b = self.cart_box();
         let round = CornerRadii::all(4.0);
         rc.fill_rounded_rect(b.0, b.1, b.2, b.3, round, hex(0, 0.28));
         rc.stroke_rounded_rect(b.0, b.1, b.2, b.3, round, bronze(0.35), 1.0);
@@ -1017,7 +1161,7 @@ impl VendorFrame {
             }
         }
         if !self.screen.cart.is_empty() {
-            let c = Self::clear_rect();
+            let c = self.clear_rect();
             if let Some(sm) = &f.small {
                 let ty = c.1 + ((c.3 - sm.line_height) * 0.5).round();
                 let color = if hot(self.hover, c) {
@@ -1123,7 +1267,7 @@ impl VendorFrame {
             self.cart_scroll.at,
         );
         // The total, what the player has now and after, the button.
-        let button = Self::cart_button();
+        let button = self.cart_button();
         let total_y = button.1 - 8.0 - 18.0 - 6.0 - 22.0;
         rc.fill(b.0 + 14.0, total_y - 6.0, b.2 - 28.0, 1.0, bronze(0.2));
         if let (Some(st), Some(t)) = (&f.strong, &f.title) {
@@ -1194,7 +1338,7 @@ impl VendorFrame {
         let f = &self.fonts;
         let lines = 2 + usize::from(r.limit.is_some());
         let h = 14.0 + lines as f32 * 18.0 + 10.0;
-        let b = (MID_X, BOTTOM - h, MID_W, h);
+        let b = (self.mid_x(), BOTTOM - h, self.mid_w(), h);
         let round = CornerRadii::all(4.0);
         rc.soft_shadow(b.0, b.1, b.2, b.3, 4.0, 8.0, 20.0, hex(0, 0.5));
         rc.fill_rounded_rect(b.0, b.1, b.2, b.3, round, hex(0x2A_1414, 0.97));
@@ -1232,8 +1376,8 @@ impl VendorFrame {
         let p = self.theme.palette;
         let f = &self.fonts;
         let round = CornerRadii::all(self.theme.metrics.window_radius);
-        rc.fill_rounded_rect(0.0, 0.0, WIDTH, HEIGHT, round, hex(0, 0.45));
-        let b = Self::leave_box();
+        rc.fill_rounded_rect(0.0, 0.0, self.width, HEIGHT, round, hex(0, 0.45));
+        let b = self.leave_box();
         rc.soft_shadow(b.0, b.1, b.2, b.3, 6.0, 18.0, 50.0, hex(0, 0.6));
         rc.fill_rounded_rect(
             b.0,
@@ -1285,7 +1429,7 @@ impl VendorFrame {
                 kit::WARM,
             );
         }
-        let (stay, leave) = Self::leave_buttons();
+        let (stay, leave) = self.leave_buttons();
         kit::button(
             rc,
             &self.theme,
@@ -1399,9 +1543,11 @@ impl Widget for VendorFrame {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        kit::window_back(rc, &self.theme, WIDTH, HEIGHT, HEADER, true);
+        kit::window_back(rc, &self.theme, self.width, HEIGHT, HEADER, true);
         self.draw_header(rc);
-        self.draw_rail(rc);
+        if !self.narrow() {
+            self.draw_rail(rc);
+        }
         self.draw_heading(rc);
         let icons = CardIcons {
             chosen: self.screen.chosen.as_ref().and_then(|c| c.icon),
@@ -1410,7 +1556,7 @@ impl Widget for VendorFrame {
         self.draw_card(rc, &icons);
         self.draw_cart(rc, &icons);
         if self.over {
-            let b = Self::cart_box();
+            let b = self.cart_box();
             rc.stroke_rounded_rect(
                 b.0 - 2.0,
                 b.1 - 2.0,
@@ -1429,6 +1575,14 @@ impl Widget for VendorFrame {
         _me: ElementId,
         rc: &mut RenderContext<'_>,
     ) {
+        if self.narrow() && self.rail_open {
+            let r = self.rail_panel();
+            let round = CornerRadii::all(6.0);
+            rc.soft_shadow(r.0, r.1, r.2, r.3, 6.0, 12.0, 30.0, hex(0, 0.5));
+            ac_ui::modern::theme::fill_glass(rc, r, round, hex(0x14_100C, 0.97));
+            rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, bronze(0.6), 1.0);
+            self.draw_rail(rc);
+        }
         self.draw_refused(rc);
         if self.leaving {
             self.draw_leave(rc);

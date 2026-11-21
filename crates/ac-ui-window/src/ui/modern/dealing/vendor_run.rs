@@ -103,8 +103,11 @@ impl WindowUi {
             Element::at(r.0, r.1, r.2, r.3).with_anchors(AnchorEdges::NONE),
             VendorList::new(theme, fonts),
         );
-        let search = kit::mount_search(ui, frame, VendorFrame::search_rect(), search_font, &theme);
-        let q = VendorFrame::quantity_rect();
+        let (search_rect, q) = ui
+            .widget::<VendorFrame>(frame)
+            .map(|f| (f.search_rect(), f.quantity_rect()))
+            .unwrap_or_default();
+        let search = kit::mount_search(ui, frame, search_rect, search_font, &theme);
         let mut e =
             Element::at(q.0 + 1.0, q.1 + 2.0, q.2 - 2.0, q.3 - 4.0).with_anchors(AnchorEdges::NONE);
         Field::configure(&mut e);
@@ -132,7 +135,9 @@ impl WindowUi {
             self.modern_font(Weight::SemiBold, 12.0),
         );
         let ui = &mut self.host.root;
-        let (band_x, band_w) = VendorFrame::band_span();
+        let (band_x, band_w) = ui
+            .widget::<VendorFrame>(frame)
+            .map_or((216.0, 440.0), VendorFrame::band_span);
         let band = ui.add(
             frame,
             Element::at(band_x, 0.0, band_w, 1.0)
@@ -363,7 +368,11 @@ impl WindowUi {
             .root
             .widget::<VendorFrame>(frame)
             .map_or(0.0, VendorFrame::band_top);
-        let (_, band_w) = VendorFrame::band_span();
+        let (_, band_w) = self
+            .host
+            .root
+            .widget::<VendorFrame>(frame)
+            .map_or((216.0, 440.0), VendorFrame::band_span);
         crate::ui::modern::items::plugin_notes::FootBand::show(
             &mut self.host.root,
             band,
@@ -706,24 +715,64 @@ impl WindowUi {
             vendor_model::screen(&shop_facts, &choices, &mut icon, &resolve, &mark);
         let chosen = screen.chosen.as_ref().map(|c| (c.id, c.quantity));
         let rows = screen.rows.clone();
-        let list_rect = {
+        let Some((search, band)) = self.vendor_mut().map(|v| (v.search, v.band)) else {
+            return;
+        };
+        // A screen too small for it gets the narrow window.
+        let width = super::width_for(
+            self.host.root.size().0,
+            super::vendor_window::WIDTH,
+            super::vendor_window::NARROW_WIDTH,
+        );
+        let (list_rect, search_rect, quantity_rect, band_span, rail_open) = {
             let ui = &mut self.host.root;
             let Some(f) = ui.widget_mut::<VendorFrame>(frame) else {
                 return;
             };
+            if f.width != width {
+                f.width = width;
+                f.rail_open = false;
+            }
             f.screen = screen;
-            f.list_rect()
+            (
+                f.list_rect(),
+                f.search_rect(),
+                f.quantity_rect(),
+                VendorFrame::band_span(f),
+                f.rail_open,
+            )
         };
         let ui = &mut self.host.root;
+        if let Some(e) = ui.element_mut(frame)
+            && (e.width - width).abs() > 0.5
+        {
+            e.width = width;
+        }
         if let Some(l) = ui.widget_mut::<VendorList>(list) {
             l.rows = rows;
             l.chosen = chosen.map(|c| c.0);
         }
-        if let Some(e) = ui.element_mut(list)
-            && (e.top != list_rect.1 || e.height != list_rect.3)
-        {
+        // The open drop-down lies over the list: the list leaves it the
+        // pointer.
+        if let Some(e) = ui.element_mut(list) {
+            e.left = list_rect.0;
+            e.width = list_rect.2;
             e.top = list_rect.1;
             e.height = list_rect.3;
+            if rail_open {
+                e.click_through = true;
+            }
+        }
+        if let Some(e) = ui.element_mut(search) {
+            e.left = search_rect.0;
+            e.width = search_rect.2;
+        }
+        if let Some(e) = ui.element_mut(quantity) {
+            e.left = quantity_rect.0 + 1.0;
+        }
+        if let Some(e) = ui.element_mut(band) {
+            e.left = band_span.0;
+            e.width = band_span.1;
         }
         // The quantity field shows the chosen quantity unless it is being
         // typed in.
