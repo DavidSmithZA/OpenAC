@@ -1484,6 +1484,7 @@ impl Widget for StageView {
             StageMode::Connecting(c) => {
                 self.draw_sky(rc, w, hh, Sky::Portal, false);
                 self.draw_connecting(rc, &c, &mut h);
+                self.draw_card(rc, &mut h);
             }
             StageMode::Empty => {
                 self.draw_sky(rc, w, hh, Sky::Dusk, false);

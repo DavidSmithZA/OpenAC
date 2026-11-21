@@ -870,7 +870,7 @@ impl WindowUi {
             None
         };
         let toggle_words = view.toggle.and_then(|t| text(TOGGLE_TABLE, t.string_key()));
-        let catalog = self.barber.catalog();
+        let catalog = Some(self.viewports.catalog());
         let colors = match (gender, catalog) {
             (Some(g), Some(c)) => ac_ui::pregame::chargen::appearance::swatch_colors(
                 part,

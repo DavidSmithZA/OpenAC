@@ -465,6 +465,9 @@ impl WindowUi {
         let choosing = !connecting_shows && selection_shows(selection.as_ref(), direct);
         if !choosing {
             p.credits_open = false;
+        }
+        // Leaving can be asked while connecting too (Escape).
+        if !choosing && !connecting_shows {
             p.exit_card = false;
         }
         // The countdowns of pending deletions run from when they were seen.
@@ -543,6 +546,9 @@ impl WindowUi {
             } else {
                 Card::None
             };
+        }
+        if !choosing && p.exit_card {
+            screen.card = Card::Exit;
         }
         // The figure: the picked character's look as remembered.
         let look = selection.as_ref().filter(|_| choosing).and_then(|s| {
@@ -685,8 +691,10 @@ impl WindowUi {
                         lifecycle(ui, LifecycleCommand::ConfirmDelete);
                     }
                 }
+                // The card shown is the one closed: an error or a deletion
+                // goes back to the game, the exit card only here.
                 StageAsk::CloseCard => {
-                    if p.exit_card {
+                    if matches!(screen.card, Card::Exit) {
                         p.exit_card = false;
                     } else {
                         lifecycle(ui, LifecycleCommand::Cancel);

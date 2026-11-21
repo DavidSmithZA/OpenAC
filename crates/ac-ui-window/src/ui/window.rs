@@ -1635,15 +1635,16 @@ impl WindowUi {
                 outputs: self.host.take_outputs(),
             };
         }
-        // Escape closes the full-screen map first.
-        if pressed && key == Key::Escape && !self.pregame_active() && self.modern_map_escape() {
+        // The bars' key pop-up takes a key while it listens (Escape too,
+        // even with the map open over it).
+        if !self.pregame_active() && self.modern_bars_key_first(key, modifiers, pressed) {
             return Routed {
                 world: None,
                 outputs: self.host.take_outputs(),
             };
         }
-        // The bars' key pop-up takes a key while it listens.
-        if !self.pregame_active() && self.modern_bars_key_first(key, modifiers, pressed) {
+        // Escape closes the full-screen map next.
+        if pressed && key == Key::Escape && !self.pregame_active() && self.modern_map_escape() {
             return Routed {
                 world: None,
                 outputs: self.host.take_outputs(),

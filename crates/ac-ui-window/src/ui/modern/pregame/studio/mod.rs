@@ -195,9 +195,7 @@ impl WindowUi {
         let Some(g) = ac_ui::pregame::chargen::appearance::gender_of(s, options) else {
             return (Vec::new(), Vec::new());
         };
-        let Some(c) = self.barber.catalog() else {
-            return (Vec::new(), Vec::new());
-        };
+        let c = self.viewports.catalog();
         let colors = swatch_colors(part, g, &s.appearance, c as &dyn SwatchSourcesDyn)
             .into_iter()
             .map(|c| c.map_or(Color::rgba(0.5, 0.5, 0.5, 1.0), rgb))

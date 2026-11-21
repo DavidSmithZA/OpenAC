@@ -71,6 +71,13 @@ impl std::fmt::Debug for UiViewports {
 }
 
 impl UiViewports {
+    /// The creation tables, always read from the dats (the modern Studio
+    /// and barber take their colours from them).
+    #[must_use]
+    pub(crate) fn catalog(&self) -> &DatChargenCatalog {
+        &self.catalog
+    }
+
     /// Viewports reading the creation tables from `dats`.
     #[must_use]
     pub fn new(dats: Arc<DatCollection>) -> Self {
