@@ -511,6 +511,27 @@ impl WindowUi {
                 ));
             }
         }
+        // The modern character selection's figure: the picked character as
+        // this computer remembers it.
+        let stage = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.pregame.as_ref())
+            .and_then(|p| Some((p.figure, p.figure_look.clone()?)));
+        if let Some((figure, look)) = stage
+            && shown(&self.host.root, figure)
+            && let Some((size, aspect)) = extent(&self.host.root, figure, pixels_per_unit)
+        {
+            requests.push((
+                figure,
+                ViewportRequest {
+                    slot: ViewportSlot::Stage,
+                    size,
+                    aspect,
+                    subject: ViewportSubject::Chargen(Box::new(look)),
+                },
+            ));
+        }
         let mut out = Vec::with_capacity(requests.len());
         for (element, request) in requests {
             self.viewports.elements[request.slot.index()] = Some(element);

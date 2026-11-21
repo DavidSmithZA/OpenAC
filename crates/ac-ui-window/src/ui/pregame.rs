@@ -75,6 +75,10 @@ impl WindowUi {
         {
             self.status.server_world = Some(world.to_owned());
         }
+        if self.modern.as_ref().is_some_and(|m| m.pregame.is_some()) {
+            self.tick_modern_pregame(scene);
+            return;
+        }
         let Some(screens) = self.pregame.as_mut() else {
             return;
         };
@@ -109,7 +113,7 @@ impl WindowUi {
     /// never learns of them (the layouts stop counting changes as the
     /// player's before a window is hidden, and count them again only once
     /// the world shows, see `feed_status`).
-    fn hide_in_game_windows(&mut self, active: bool) {
+    pub(in crate::ui) fn hide_in_game_windows(&mut self, active: bool) {
         if active
             && let Some(layouts) = self.status.layouts.as_mut()
             && layouts.gameplay_active()
@@ -149,9 +153,11 @@ impl WindowUi {
     /// Whether a pre-game screen (or its dialog) shows.
     #[must_use]
     pub fn pregame_active(&self) -> bool {
-        self.pregame
-            .as_ref()
-            .is_some_and(|s| s.is_active(&self.host.root))
+        self.modern_pregame_active()
+            || self
+                .pregame
+                .as_ref()
+                .is_some_and(|s| s.is_active(&self.host.root))
     }
 
     /// The pre-game screens.

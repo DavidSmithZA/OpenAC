@@ -36,7 +36,7 @@ pub struct MapUi {
     /// The pins (read once).
     pins: Option<MapPins>,
     /// Where the player was last outside.
-    last_outside: Option<(f64, f64)>,
+    pub last_outside: Option<(f64, f64)>,
     /// The map has been centred on the player once.
     centred: bool,
 }

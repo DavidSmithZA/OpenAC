@@ -28,6 +28,7 @@ pub mod kit;
 pub mod magic;
 pub mod options;
 pub mod places;
+pub mod pregame;
 pub mod social;
 pub mod world;
 
@@ -120,6 +121,8 @@ pub struct ModernLayer {
     pub chess: Option<chess::window::ChessUi>,
     /// The Barber window.
     pub barber: Option<barber::window::BarberUi>,
+    /// The pre-game screens (connecting, selection, credits, creation).
+    pub pregame: Option<pregame::PreGameUi>,
     /// The player as the radar last read them (the map's arrow).
     pub last_player: Option<ac_ui::panels::radar::RadarPlayer>,
     /// The player's vitals as last fed (the map's bar).

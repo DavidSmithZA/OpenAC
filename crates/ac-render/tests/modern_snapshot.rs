@@ -3559,3 +3559,216 @@ fn the_modern_barber() {
         s.sent
     );
 }
+
+fn roster(pending_delete: u32) -> ac_runtime::session::selection::SelectionSnapshot {
+    use ac_runtime::session::selection::{
+        SelectionButtons, SelectionEntry, SelectionLifecycle, SelectionSnapshot,
+    };
+    let names = [
+        (0x5000_0001, "Aerin Vale", 0),
+        (0x5000_0002, "Brannoch Stoneheart", 0),
+        (0x5000_0003, "Ki Sora", 0),
+        (0x5000_0004, "Quill", 0),
+        (0x5000_0005, "Old Mule", 2832),
+    ];
+    SelectionSnapshot {
+        lifecycle: SelectionLifecycle::AwaitingSelection,
+        revision: 1,
+        account_name: "ashfall".to_owned(),
+        slot_count: 11,
+        world_name: "Leafcull".to_owned(),
+        server_population: Some(312),
+        highlighted_character_id: 0x5000_0001,
+        pending_delete_character_id: pending_delete,
+        entries: names
+            .iter()
+            .enumerate()
+            .map(|(i, (id, name, grey))| SelectionEntry {
+                active_index: i,
+                character_id: *id,
+                name: (*name).to_owned(),
+                seconds_greyed_out: *grey,
+            })
+            .collect(),
+        buttons: SelectionButtons {
+            can_enter: true,
+            can_delete: true,
+            can_restore: false,
+            delete_visible: true,
+            restore_visible: false,
+            can_create: true,
+        },
+        ..SelectionSnapshot::default()
+    }
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_stage() {
+    use ac_core::combat::CombatMode;
+    use ac_host::settings::{RememberedCharacter, RememberedCharacters, SettingsStore};
+    use ac_runtime::session::pregame::{ConnectionStatus, ConnectionView, PreGameEvent};
+    use ac_runtime::session::{LifecycleCommand, SessionCommand};
+    let dir = out_dir().join("stage-settings");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("the settings folder");
+    let file = dir.join("settings.json");
+    let mut remembered = RememberedCharacters::default();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    for (name, level, heritage, place, days) in [
+        ("Aerin Vale", 4783, 1, "Ayan Baqur", 1),
+        ("Brannoch Stoneheart", 312, 8, "Mayoi", 3),
+        ("Ki Sora", 1026, 3, "Shoushi", 15),
+        ("Old Mule", 58, 2, "Yaraq", 150),
+    ] {
+        remembered.set(
+            &format!("Leafcull/{name}"),
+            RememberedCharacter {
+                level,
+                heritage,
+                gender: 2,
+                place: place.to_owned(),
+                played: now - days * 86_400,
+                look: None,
+            },
+        );
+    }
+    SettingsStore::new(file.clone())
+        .save_remembered_characters(&remembered)
+        .expect("the remembered characters");
+    let mut s = Shot::with_settings(CombatMode::NON_COMBAT, Some(file));
+    let tables = ac_runtime::gameplay::GameTables::load(&dats()).expect("the game tables");
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Options(
+            Arc::clone(tables.chargen()),
+        )));
+    let started = Instant::now();
+    let mut connection = ConnectionView {
+        status: ConnectionStatus::CheckingData,
+        connection_progress: 0.64,
+        update_progress: 0.22,
+        error: None,
+        started,
+        direct_launch: false,
+    };
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Connection(
+            connection.clone(),
+        )));
+    s.step();
+    s.step();
+    assert!(s.ui.pregame_active(), "connecting shows");
+    s.save("stage-connecting");
+    connection.status = ConnectionStatus::Failed;
+    connection.connection_progress = 0.38;
+    connection.update_progress = 0.0;
+    connection.error = Some("Could not connect to Leafcull. The server did not answer.".to_owned());
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Connection(
+            connection.clone(),
+        )));
+    s.step();
+    s.save("stage-failed");
+    // Ready long ago: the roster.
+    connection.status = ConnectionStatus::Ready;
+    connection.connection_progress = 1.0;
+    connection.update_progress = 1.0;
+    connection.error = None;
+    connection.started = started
+        .checked_sub(Duration::from_secs(10))
+        .unwrap_or(started);
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Connection(
+            connection.clone(),
+        )));
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(roster(0)),
+        )));
+    s.step();
+    s.step();
+    assert!(s.ui.pregame_active(), "selection shows");
+    s.save("stage");
+    // A character never played here.
+    let mut r = roster(0);
+    r.highlighted_character_id = 0x5000_0004;
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(r),
+        )));
+    s.step();
+    s.save("stage-unknown");
+    // A character pending deletion.
+    let mut r = roster(0);
+    r.highlighted_character_id = 0x5000_0005;
+    r.buttons.can_enter = false;
+    r.buttons.can_restore = true;
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(r),
+        )));
+    s.step();
+    s.save("stage-pending");
+    // Enter: the Enter key on the picked character.
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(roster(0)),
+        )));
+    s.step();
+    s.sent.clear();
+    s.key(Key::Enter, Modifiers::NONE, true);
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Lifecycle(LifecycleCommand::Enter(Some(_)))
+        )),
+        "{:?}",
+        s.sent
+    );
+    s.save("stage-entering");
+    // The delete card.
+    let mut r = roster(0x5000_0002);
+    r.revision = 2;
+    r.highlighted_character_id = 0x5000_0002;
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(r),
+        )));
+    s.step();
+    s.step();
+    s.save("stage-delete");
+    // An empty account.
+    let mut r = roster(0);
+    r.revision = 3;
+    r.entries.clear();
+    r.highlighted_character_id = 0;
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(r),
+        )));
+    s.step();
+    s.save("stage-empty");
+    // The credits.
+    let mut r = roster(0);
+    r.revision = 4;
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(r),
+        )));
+    s.step();
+    s.click(
+        0,
+        1440 - 32 - 64 - 4 - 40,
+        900 - 26 - 18 - 15,
+        Modifiers::NONE,
+    );
+    for _ in 0..40 {
+        s.step();
+    }
+    s.save("stage-credits");
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.step();
+    s.save("stage-back");
+}

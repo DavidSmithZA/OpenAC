@@ -1559,6 +1559,7 @@ impl WindowUi {
                 }
                 self.modern = Some(super::modern::ModernLayer::new());
                 self.mount_hud();
+                self.mount_modern_pregame();
                 if let Some(modern) = self.modern.as_mut() {
                     if let Some(layouts) = self.status.layouts.as_mut() {
                         modern.leave_alone(&mut self.host, layouts);
@@ -1608,6 +1609,13 @@ impl WindowUi {
         modifiers: Modifiers,
         text: Option<&str>,
     ) -> Routed<K> {
+        // The modern pre-game screens take their keys first.
+        if pressed && self.modern_pregame_key(key) {
+            return Routed {
+                world: None,
+                outputs: self.host.take_outputs(),
+            };
+        }
         // Escape closes the full-screen map first.
         if pressed && key == Key::Escape && !self.pregame_active() && self.modern_map_escape() {
             return Routed {

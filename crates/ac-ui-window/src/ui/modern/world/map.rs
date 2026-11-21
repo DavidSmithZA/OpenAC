@@ -236,6 +236,12 @@ pub struct MapView {
 }
 
 impl MapView {
+    /// The towns on the map (none before its art is set).
+    #[must_use]
+    pub fn towns(&self) -> &[Town] {
+        &self.towns
+    }
+
     /// The map in `theme`.
     #[must_use]
     pub fn new(theme: Horizon, fonts: MapFonts) -> Self {
