@@ -702,6 +702,15 @@ impl KeyboardConfigController {
         self.refresh_revert(ui);
     }
 
+    /// The keys as they are now were written elsewhere (a profile saved
+    /// under a name): they count as saved, nothing more is written.
+    pub fn mark_saved(&mut self, ui: &mut UiRoot) {
+        for row in &mut self.rows {
+            row.saved = row.current.clone();
+        }
+        self.refresh_revert(ui);
+    }
+
     /// The name of `chord`, as the key buttons show it.
     #[must_use]
     pub fn describe(&self, chord: KeyChord) -> String {
