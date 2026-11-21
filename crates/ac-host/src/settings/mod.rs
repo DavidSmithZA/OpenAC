@@ -187,15 +187,26 @@ pub struct ModernHudSettings {
 }
 
 /// The key held for quick move.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QuickMoveKey {
     /// Control.
-    #[default]
     Ctrl,
     /// Alt (Option on a Mac).
     Alt,
     /// Command on a Mac, the Windows key elsewhere.
     Cmd,
+}
+
+impl Default for QuickMoveKey {
+    /// Command on a Mac, where Control with a click is a right-click;
+    /// Control elsewhere.
+    fn default() -> Self {
+        if cfg!(target_os = "macos") {
+            Self::Cmd
+        } else {
+            Self::Ctrl
+        }
+    }
 }
 
 impl QuickMoveKey {
@@ -227,7 +238,7 @@ impl Default for ModernHudSettings {
             low_health_percent: 25,
             low_health_edge_glow: true,
             effect_warning_minutes: 5,
-            quick_move_key: QuickMoveKey::Ctrl,
+            quick_move_key: QuickMoveKey::default(),
             glass_blur: true,
         }
     }
@@ -1050,6 +1061,24 @@ mod tests {
         let (loaded, warning) = t.store().load_display();
         assert_eq!(warning, None);
         assert_eq!(loaded, original);
+    }
+
+    #[test]
+    fn quick_move_key_defaults_to_command_on_a_mac_and_control_elsewhere() {
+        let expected = if cfg!(target_os = "macos") {
+            QuickMoveKey::Cmd
+        } else {
+            QuickMoveKey::Ctrl
+        };
+        assert_eq!(
+            DisplaySettings::default().modern_hud.quick_move_key,
+            expected
+        );
+        // A file from before the option reads the system's default.
+        let t = Temp::new("quickmovedefault");
+        t.write(r#"{ "version": 4, "display": {} }"#);
+        let (loaded, _) = t.store().load_display();
+        assert_eq!(loaded.modern_hud.quick_move_key, expected);
     }
 
     #[test]

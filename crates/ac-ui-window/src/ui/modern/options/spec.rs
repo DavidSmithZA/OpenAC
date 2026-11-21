@@ -660,7 +660,7 @@ pub const GROUPS: &[Group] = &[
             DisplayField::ModernQuickMoveKey,
             w(
                 "Quick move key",
-                "Hold it and drag any piece of the interface anywhere; with a right-click, the piece's menu. On a Mac, Control with a click is often a right-click, so Option or Command may suit you better.",
+                "Hold it and drag any piece of the interface anywhere; with a right-click, the piece's menu. On a Mac it is Command at first, as Control with a click is a right-click there.",
             ),
         )],
     },
