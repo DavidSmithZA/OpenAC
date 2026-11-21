@@ -562,6 +562,68 @@ Not done in M9: the opponent's name (the game does not send it; the side
 says "Your opponent"); dragging a piece (click, then click); turning the
 barber figure by dragging it. Not live-tested yet.
 
+**M10 built 2026-11-21** on `feat/modern-ui-m10` (off `feat/modern-ui-m9`).
+On Modern the retail pre-game screens are no longer mounted (taken down
+when the modern layer mounts). Neutral moves first, one commit each:
+
+- Credits: what they show read without building the retail screen
+  (`ac_ui::pregame::credits_resources`, 71b5c9e3).
+- When the connecting screen shows (`ConnectionPresence`, ba5f88fb) and
+  when character selection shows (`selection_shows`, 068409b3), as rules
+  both interfaces use.
+- Settings: the remembered characters (`modernCharacters`, a member per
+  "world/name": level, heritage, gender, last place, when, the look as
+  worn; ec185fc0).
+- Viewports: a Stage slot that draws a remembered look as the creation
+  previews draw theirs (rest pose and idle, no scenery; 3ee54f3f).
+- Creation: the part-pick and style-step rules (`pick_command`,
+  `step_command`) and the counts they read (1716c2d8); the keys of the
+  game's own words for heritages, professions, towns and name examples
+  made public (0f7e7717).
+
+Screens, each checked offscreen (`the_modern_stage`, `the_modern_studio`):
+
+1. Connecting, the Stage and the credits (`pregame/{stage,credits,mod}`,
+   19a025f7). Connecting: the portal ring (outer arc the connection,
+   inner the data check), the status lines, red with the reason on a
+   failure, Cancel. The Stage: the roster (level plate, name, heritage ·
+   last place; "Not played on this computer yet"; pending deletions red
+   with their countdown, counted from when seen), the picked character
+   centre stage in the sky of its last place (desert, Sho blossom, coast,
+   dusk; unknown grey; faded while pending), its name large with level ·
+   heritage and last in · when, the figure from the remembered look,
+   Enter world (Enter key, double click), Delete (the card wants the
+   game's word typed, "DELETE"), Restore with the warning, the error card,
+   "Entering world…" and "Please wait…"; world, population, account
+   across the top; Credits, Exit (asks, the game's words), version in the
+   corner; an empty account's welcome and Create your first character;
+   arrows walk the roster. The credits: the game's pictures rising on the
+   left, its text on the right (starting part way up so the screen is
+   never empty), any key or click or Back to your characters. While a
+   character plays on Modern, what the Stage shows of it is saved (on a
+   change, and every five minutes).
+2. The Studio (`pregame/studio/*`, 82f44a93): opened from Create, rolling
+   a random character and turning its gender as retail does. The rail,
+   the glass panel per step with Random (none on Skills), the So far card
+   (the summary with skills on Name), the figure (whole body; the face up
+   close on Appearance › Face, headgear off while it shows as retail),
+   Turn and Zoom, Back · Step N of M · Next / Finish, Randomize all and
+   Exit asking first. Heritage tiles with masteries read from the game's
+   bonus words; the professions' and towns' words are the game's; the
+   name examples come from the game's naming words (Aluvian,
+   Gharu'ndim, Sho, Viamontian only); the server's refusal shows its words
+   and, for a name in use, three near names that try at once (OPENAC).
+
+Not done in M10: pulling the host-facing methods into a trait and
+removing the hiding list (the last step of "nothing retail mounted";
+the retail windows are still built under Modern and hidden), to agree
+before starting; Lugian and the Olthoi have no mastery words in the game
+data (their tiles say nothing, or Always PK); the README's "a big change
+makes you Custom, titled Adventurer" warning (retail has no such rule
+that the client knows of); typed attribute values (slider and steps
+instead); clothing shade tracks are plain (only hair and skin read their
+palettes); the figures do not turn by dragging. Not live-tested yet.
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
@@ -721,7 +783,7 @@ Replaces: social, journal, contracts, book, map/house, house purchase.
 Barber, Chess. (Credits moved to M10, beside the character selection
 they are reached from.)
 
-### M10 Pre-game ("Login", "Character creation", "Small pieces")
+### M10 Pre-game ("Login", "Character creation", "Small pieces") (built 2026-11-21)
 
 Connecting screen (portal ring) and Stage character select, with the
 per-computer character memory; Studio character creation; Credits.
