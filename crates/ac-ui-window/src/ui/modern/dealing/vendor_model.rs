@@ -597,7 +597,7 @@ pub fn screen(
             // The chosen listing.
             let chosen = choices
                 .chosen
-                .and_then(|g| view.items.iter().find(|i| i.item_guid == g))
+                .and_then(|g| goods.iter().copied().find(|i| i.item_guid == g))
                 .or_else(|| goods.first().copied());
             if let Some(item) = chosen {
                 let most = most_of(item).max(1);

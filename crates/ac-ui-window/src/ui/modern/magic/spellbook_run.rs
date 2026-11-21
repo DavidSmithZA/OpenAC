@@ -251,9 +251,8 @@ impl WindowUi {
                     regroup = true;
                 }
                 BookRequest::Cast(spell) => {
-                    if !self.modern_cast(spell) {
-                        self.notices
-                            .push("Go into Magic mode, or hold a caster, to cast.".to_owned());
+                    if let Err(words) = self.modern_cast(spell) {
+                        self.notices.push(words.to_owned());
                     }
                 }
                 BookRequest::AddToBar(spell) => {

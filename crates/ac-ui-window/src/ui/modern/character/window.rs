@@ -589,6 +589,7 @@ impl CharacterFrame {
                 if inside(Self::title_button(), x, y)
                     && let Some(id) = self.title_pick
                     && Some(id) != self.extras.display_title
+                    && self.extras.titles.iter().any(|(t, _)| *t == id)
                 {
                     self.requests.push(CharacterRequest::SetTitle(id));
                 }
@@ -610,9 +611,9 @@ impl CharacterFrame {
             _ => model::raise(&self.sheet, row, amount),
         };
         if let Some(out) = out {
-            let training = matches!(out, PanelOutput::TrainSkill { .. });
-            // A training is asked first; the sheet answers either way.
-            self.waiting = !training;
+            // A training is asked first; either way nothing more is sent
+            // until the sheet answers.
+            self.waiting = true;
             self.requests.push(CharacterRequest::Send(out));
         }
     }

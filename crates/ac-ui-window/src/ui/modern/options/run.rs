@@ -151,17 +151,33 @@ impl WindowUi {
         self.panels.stand_in(panel_id::OPTIONS, OPTIONS);
     }
 
-    /// The Options window opens on `section`. Without it, retail's options
-    /// window opens instead.
+    /// The section the Options window shows, while it shows.
+    pub(in crate::ui) fn modern_options_showing(&self) -> Option<super::spec::Section> {
+        let frame = self.modern.as_ref()?.options.as_ref()?.frame;
+        if !self.host.root.is_window_visible(OPTIONS) {
+            return None;
+        }
+        let f = self.host.root.widget::<OptionsFrame>(frame)?;
+        f.search.trim().is_empty().then_some(f.section)
+    }
+
+    /// The Options window opens on `section` (a search typed is cleared,
+    /// so the section shows). Without it, retail's options window opens
+    /// instead.
     pub(in crate::ui) fn modern_options_on(&mut self, section: super::spec::Section) {
-        if let Some(frame) = self
+        if let Some((frame, search)) = self
             .modern
             .as_ref()
             .and_then(|m| m.options.as_ref())
-            .map(|o| o.frame)
-            && let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame)
+            .map(|o| (o.frame, o.search))
         {
-            f.show(section);
+            self.host
+                .root
+                .with::<Field, _>(search, |f, _| f.set_text(""));
+            if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+                f.search.clear();
+                f.show(section);
+            }
         }
         self.panels
             .set_visibility(&mut self.host.root, panel_id::OPTIONS, true);

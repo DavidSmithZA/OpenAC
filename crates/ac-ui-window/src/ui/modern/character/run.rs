@@ -58,6 +58,8 @@ pub struct CharacterUi {
     since: f64,
     /// It was showing last frame.
     was_open: bool,
+    /// The character it was showing (another starts with nothing picked).
+    player: u32,
 }
 
 impl WindowUi {
@@ -134,6 +136,7 @@ impl WindowUi {
             raised_for: 0.0,
             since: 0.0,
             was_open: false,
+            player: 0,
         });
         modern.replace(CHARACTER_WINDOW);
         modern.replace(crate::ui::character_pages::CHARACTER_INFO_WINDOW);
@@ -224,6 +227,24 @@ impl WindowUi {
         };
         let (frame, skills, titles, ss, ts) =
             (c.frame, c.skills, c.titles, c.skill_search, c.title_search);
+        let player = self.facts.state.player;
+        if c.player != player {
+            // Another character: no row, title or raise of the last one's.
+            let ui = &mut self.host.root;
+            if let Some(f) = ui.widget_mut::<CharacterFrame>(frame) {
+                f.chosen = None;
+                f.title_pick = None;
+                f.waiting = false;
+            }
+            if let Some(g) = ui.widget_mut::<TitleGrid>(titles) {
+                g.pick = None;
+                g.picked = None;
+            }
+            if let Some(c) = self.modern.as_mut().and_then(|m| m.character.as_mut()) {
+                c.player = player;
+                c.raised_from = None;
+            }
+        }
         if !self.host.root.is_window_visible(CHARACTER) {
             let ui = &mut self.host.root;
             if let Some(focus) = ui.keyboard_focus()
@@ -340,9 +361,7 @@ impl WindowUi {
         let sheet = frame
             .and_then(|f| self.host.root.widget::<CharacterFrame>(f))
             .map(|f| f.sheet.clone());
-        if !matches!(out, PanelOutput::TrainSkill { .. })
-            && let Some(c) = self.modern.as_mut().and_then(|m| m.character.as_mut())
-        {
+        if let Some(c) = self.modern.as_mut().and_then(|m| m.character.as_mut()) {
             c.raised_from = sheet;
             c.raised_for = 0.0;
         }
@@ -359,7 +378,13 @@ impl WindowUi {
         let (frame, skills, titles) = (c.frame, c.skills, c.titles);
         let raised_from = c.raised_from.clone();
         let sheet = self.sheet.clone();
-        let waiting = raised_from.as_ref().is_some_and(|s| *s == sheet);
+        // A raise spends experience, a training a credit: the wait ends
+        // when either moves (or after a while: a refused raise spends
+        // nothing), not when anything else on the sheet does.
+        let spent = |s: &CharacterSheet| (s.unassigned_xp, s.skill_credits);
+        let waiting = raised_from
+            .as_ref()
+            .is_some_and(|s| spent(s) == spent(&sheet));
         if !waiting && let Some(c) = self.modern.as_mut().and_then(|m| m.character.as_mut()) {
             c.raised_from = None;
         }

@@ -1085,8 +1085,8 @@ impl WindowUi {
                 }
             }
             SlotContent::Spell { id, .. } => {
-                if !target_mode {
-                    self.modern_cast(id);
+                if !target_mode && let Err(words) = self.modern_cast(id) {
+                    self.notices.push(words.to_owned());
                 }
             }
         }
@@ -1095,14 +1095,18 @@ impl WindowUi {
     /// Casts `spell` as a bar slot does: in Magic at once; in Peace with a
     /// caster held, the player goes to Magic and it is cast once there
     /// (not a spell that needs a target with no fit target selected);
-    /// otherwise nothing. False when nothing was sent.
-    pub(in crate::ui) fn modern_cast(&mut self, id: u32) -> bool {
+    /// otherwise nothing.
+    ///
+    /// # Errors
+    ///
+    /// Why nothing was sent, in words for the player.
+    pub(in crate::ui) fn modern_cast(&mut self, id: u32) -> Result<(), &'static str> {
         if self.facts.state.combat_mode == CombatMode::MAGIC {
             cast(&mut self.host.root, id);
-            return true;
+            return Ok(());
         }
         if !self.peace_with_caster() {
-            return false;
+            return Err("Go into Magic mode, or hold a caster, to cast.");
         }
         let selected = self.player_view.and_then(|v| v.selected);
         let player = self.facts.state.player;
@@ -1111,11 +1115,14 @@ impl WindowUi {
             .numbers()
             .and_then(|n| n.spellbook())
             .map(|bk| cast_gate(&self.facts.objects, player, bk, id, selected));
-        if matches!(
-            gate,
-            Some(SpellCastGate::NoTargetSelected | SpellCastGate::TargetIncompatible)
-        ) {
-            return false;
+        match gate {
+            Some(SpellCastGate::NoTargetSelected) => {
+                return Err("Select a target for this spell first.");
+            }
+            Some(SpellCastGate::TargetIncompatible) => {
+                return Err("This spell cannot be cast on what you have selected.");
+            }
+            _ => {}
         }
         // The runtime goes to Magic and casts once the stance is taken up.
         emit(
@@ -1124,7 +1131,7 @@ impl WindowUi {
                 spell: id,
             })),
         );
-        true
+        Ok(())
     }
 
     /// Whether a spell can be cast from a window now: in Magic, or in Peace

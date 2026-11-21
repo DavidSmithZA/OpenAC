@@ -503,9 +503,14 @@ impl WindowUi {
                 VendorTab::Sell => VendorCommand::ClearSellList,
             }),
             VendorAsk::Remove(id) => self.vendor_list(match choices.tab {
+                // The whole row of a stacking kind, else one (retail).
                 VendorTab::Buy => VendorCommand::RemoveFromBuyList {
                     item: ObjectRef::Guid(id),
-                    amount: -1,
+                    amount: shop
+                        .items
+                        .iter()
+                        .find(|i| i.item_guid == id)
+                        .map_or(-1, ac_ui::panels::vendor_rules::removal_amount),
                 },
                 VendorTab::Sell => VendorCommand::RemoveFromSellList(ObjectRef::Guid(id)),
             }),
@@ -719,9 +724,11 @@ impl WindowUi {
         // typed in.
         let shown_quantity = chosen.map(|c| c.1);
         ui.set_visible(quantity, shown_quantity.is_some());
+        // (Compared with what the field holds: typing past the most leaves
+        // a number in it that is not the one used.)
         if !typing
             && let Some(n) = shown_quantity
-            && self.vendor_mut().is_some_and(|v| v.typed != Some(n))
+            && kit::field_text(&self.host.root, quantity) != n.to_string()
         {
             if let Some(f) = self.host.root.widget_mut::<Field>(quantity) {
                 f.set_text(&n.to_string());

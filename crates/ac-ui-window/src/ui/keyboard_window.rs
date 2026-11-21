@@ -316,10 +316,20 @@ impl WindowUi {
 
     /// The Configure Keyboard key, or the options window's button: the
     /// screen opens or closes. On Modern the Options window opens on
-    /// Controls, which lists every key in its place.
+    /// Controls, which lists every key in its place (and closes when it
+    /// already shows them).
     pub fn toggle_keyboard_config(&mut self) -> bool {
         if self.modern.as_ref().is_some_and(|m| m.options.is_some()) {
-            self.modern_options_on(super::modern::options::spec::Section::Controls);
+            let controls = super::modern::options::spec::Section::Controls;
+            if self.modern_options_showing() == Some(controls) {
+                self.panels.set_visibility(
+                    &mut self.host.root,
+                    ac_ui::panels::panel_id::OPTIONS,
+                    false,
+                );
+            } else {
+                self.modern_options_on(controls);
+            }
             return true;
         }
         if !self.host.has_controller(KEYBOARD_WINDOW) {
