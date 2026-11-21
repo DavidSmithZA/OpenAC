@@ -22,12 +22,13 @@ use crate::ui::modern::kit::{self, ButtonLook, Rect, Scroll, bronze, gold, hot, 
 
 /// The window's size.
 pub const WIDTH: f32 = 900.0;
+/// Its width on a small screen: the same two columns, the hint lines go.
+pub const NARROW_WIDTH: f32 = 792.0;
 pub const HEIGHT: f32 = 560.0;
 const HEADER: f32 = 52.0;
 const FOOT: f32 = 72.0;
 const PAD: f32 = 20.0;
 const GAP: f32 = 24.0;
-const COL_W: f32 = (WIDTH - 2.0 * PAD - GAP) / 2.0;
 const HEAD: f32 = 48.0;
 const SIDE_FOOT: f32 = 36.0;
 const ROW: f32 = 46.0;
@@ -109,6 +110,8 @@ pub struct TradeCard {
 pub struct TradeFrame {
     theme: Horizon,
     fonts: TradeFonts,
+    /// Its width: [`WIDTH`], or [`NARROW_WIDTH`] on a small screen.
+    pub width: f32,
     /// What it shows.
     pub screen: TradeScreen,
     /// Add from packs shows, with these rows.
@@ -135,6 +138,7 @@ impl TradeFrame {
         Self {
             theme,
             fonts,
+            width: WIDTH,
             screen: TradeScreen::default(),
             picking: false,
             pick: Vec::new(),
@@ -149,8 +153,16 @@ impl TradeFrame {
         }
     }
 
-    fn close_rect() -> Rect {
-        kit::close_rect(WIDTH, HEADER)
+    fn close_rect(&self) -> Rect {
+        kit::close_rect(self.width, HEADER)
+    }
+
+    fn col_w(&self) -> f32 {
+        (self.width - 2.0 * PAD - GAP) / 2.0
+    }
+
+    fn narrow(&self) -> bool {
+        self.width < WIDTH
     }
 
     fn columns(&self) -> [Rect; 2] {
@@ -168,8 +180,8 @@ impl TradeFrame {
                 0.0
             };
         [
-            (PAD, top, COL_W, bottom - top),
-            (PAD + COL_W + GAP, top, COL_W, bottom - top),
+            (PAD, top, self.col_w(), bottom - top),
+            (PAD + self.col_w() + GAP, top, self.col_w(), bottom - top),
         ]
     }
 
@@ -247,7 +259,7 @@ impl TradeFrame {
             150.0
         };
         (
-            WIDTH - PAD - w,
+            self.width - PAD - w,
             HEIGHT - FOOT + (FOOT - 40.0) * 0.5,
             w,
             40.0,
@@ -317,7 +329,7 @@ impl TradeFrame {
 
     #[allow(clippy::too_many_lines)]
     fn click(&mut self, x: f32, y: f32, right: bool) {
-        if inside(Self::close_rect(), x, y) {
+        if inside(self.close_rect(), x, y) {
             self.asks.push(TradeAsk::Close);
             return;
         }
@@ -905,7 +917,7 @@ impl TradeFrame {
     #[allow(clippy::too_many_lines)]
     fn draw_frame(&self, rc: &mut RenderContext<'_>) {
         let f = &self.fonts;
-        kit::window_back(rc, &self.theme, WIDTH, HEIGHT, HEADER, true);
+        kit::window_back(rc, &self.theme, self.width, HEIGHT, HEADER, true);
         let mut x = kit::title(
             rc,
             &self.theme,
@@ -936,10 +948,10 @@ impl TradeFrame {
                 TextStyle::plain(ink),
             );
         }
-        if let Some(sm) = &f.small {
+        if let Some(sm) = f.small.as_ref().filter(|_| !self.narrow()) {
             let hint = "Click any item to look at it";
             let w = text::measure(sm, hint, 0.0);
-            let c = Self::close_rect();
+            let c = self.close_rect();
             text::draw(
                 rc,
                 sm,
@@ -952,12 +964,12 @@ impl TradeFrame {
         kit::close(
             rc,
             &self.theme,
-            Self::close_rect(),
-            hot(self.hover, Self::close_rect()),
+            self.close_rect(),
+            hot(self.hover, self.close_rect()),
         );
         // The banner.
         if let Some(b) = &self.screen.banner {
-            let r = (PAD, 64.0, WIDTH - 2.0 * PAD, 44.0);
+            let r = (PAD, 64.0, self.width - 2.0 * PAD, 44.0);
             let (fill, edge) = if b.bad {
                 (hex(0xFF_6B70, 0.10), hex(0xFF_8A8E, 0.6))
             } else {
@@ -990,11 +1002,11 @@ impl TradeFrame {
         }
         // The foot.
         let fy = HEIGHT - FOOT;
-        rc.fill(0.0, fy, WIDTH, 1.0, bronze(0.35));
+        rc.fill(0.0, fy, self.width, 1.0, bronze(0.35));
         rc.fill_rounded_rect(
             1.0,
             fy + 1.0,
-            WIDTH - 2.0,
+            self.width - 2.0,
             FOOT - 2.0,
             CornerRadii::new(0.0, 0.0, 5.0, 5.0),
             hex(0, 0.2),
@@ -1044,7 +1056,7 @@ impl TradeFrame {
             hot(self.hover, accept),
             true,
         );
-        if let Some(sm) = &f.body {
+        if let Some(sm) = f.body.as_ref().filter(|_| !self.narrow()) {
             let (hint, ink) = if mine && !self.screen.theirs.accepted {
                 (
                     format!("Waiting for {} to accept\u{2026}", self.screen.partner),

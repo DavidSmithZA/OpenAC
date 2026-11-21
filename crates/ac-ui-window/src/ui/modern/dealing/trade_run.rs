@@ -468,10 +468,22 @@ impl WindowUi {
             Vec::new()
         };
         let ui = &mut self.host.root;
+        // A screen too small for it gets the narrow window.
+        let width = super::width_for(
+            ui.size().0,
+            super::trade_window::WIDTH,
+            super::trade_window::NARROW_WIDTH,
+        );
+        if let Some(e) = ui.element_mut(frame)
+            && (e.width - width).abs() > 0.5
+        {
+            e.width = width;
+        }
         let band_top = {
             let Some(f) = ui.widget_mut::<TradeFrame>(frame) else {
                 return;
             };
+            f.width = width;
             f.screen = screen;
             f.pick = pick;
             f.pick_empty = words.is_empty();
@@ -484,7 +496,7 @@ impl WindowUi {
             }
             f.band_top()
         };
-        FootBand::show(ui, band, feet, band_top, super::trade_window::WIDTH);
+        FootBand::show(ui, band, feet, band_top, width);
     }
 }
 
