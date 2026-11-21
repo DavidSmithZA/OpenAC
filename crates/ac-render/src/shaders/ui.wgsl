@@ -45,6 +45,19 @@ fn fs_main(v: VertexOut) -> @location(0) vec4<f32> {
     return color;
 }
 
+// Glass: the frame drawn so far, blurred, where this pixel lies on the
+// screen, times the tint.
+@fragment
+fn fs_backdrop(v: VertexOut) -> @location(0) vec4<f32> {
+    let uv = v.clip.xy / screen.size;
+    let blurred = textureSampleLevel(ui_texture, ui_sampler, uv, 0.0).rgb;
+    let color = vec4<f32>(blurred, 1.0) * v.color;
+    if (color.a < 0.005) {
+        discard;
+    }
+    return color;
+}
+
 // A one-byte coverage texture (a font's glyphs): white with that alpha,
 // times tint, as the four-channel image (255, 255, 255, value) draws.
 @fragment

@@ -1598,6 +1598,14 @@ impl WindowUi {
         self.follow_display_density(pixels);
     }
 
+    /// Whether the renderer can blur the frame behind glass. The modern
+    /// interface's windows then show the world blurred, unless the player
+    /// turned it off (followed every frame, so the option shows at once).
+    pub fn set_glass_possible(&mut self, possible: bool) {
+        let on = possible && self.modern.is_some() && self.settings().display.modern_hud.glass_blur;
+        self.host.root.set_glass(on);
+    }
+
     /// The textures the UI names: dat surfaces and composed icons.
     #[must_use]
     pub fn surfaces(&self) -> DatSurfaces<'_> {

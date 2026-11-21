@@ -14,6 +14,7 @@ pub use ac_ui_window::ui::{
     plugin_ui, pregame, salvage_window, status, stores, textures, viewports, window,
 };
 
+pub mod backdrop;
 pub mod clipboard;
 pub mod cursor;
 pub mod gpu;

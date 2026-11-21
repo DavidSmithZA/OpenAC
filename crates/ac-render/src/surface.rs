@@ -1255,7 +1255,7 @@ impl AttachedWindow {
             });
         self.encode_world(&mut encoder, &view, None);
         if let Some(ui) = self.ui_renderer.as_ref() {
-            ui.draw(&mut encoder, &view);
+            ui.draw(&mut encoder, &view, Some(&texture));
         }
 
         // Rows of a buffer copy are padded to 256 bytes.
@@ -1490,7 +1490,13 @@ impl FramePhases for AttachedWindow {
             return Ok(());
         };
         if let Some(renderer) = self.ui_renderer.as_ref() {
-            renderer.draw(encoder, &frame.view);
+            // Glass blurs a copy of the frame, when the frame can be copied.
+            let source = self
+                .config
+                .usage
+                .contains(wgpu::TextureUsages::COPY_SRC)
+                .then_some(&frame.texture.texture);
+            renderer.draw(encoder, &frame.view, source);
         }
         // The brightness ramp acts on the whole picture, and only in
         // exclusive fullscreen (a window's ramp has no effect).
@@ -2826,6 +2832,7 @@ impl AttachedWindow {
             ui.set_level_of_detail(fps, multiplier);
         }
         ui.set_pixels_per_unit(scale.pixels_per_unit());
+        ui.set_glass_possible(self.config.usage.contains(wgpu::TextureUsages::COPY_SRC));
         let list = ui.frame(Instant::now(), size);
         // Drawn in framebuffer pixels, on the whole-pixel grid.
         let batch = UiBatch::build_scaled(&list, scale.pixels_per_unit());
