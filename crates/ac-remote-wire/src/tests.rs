@@ -1267,6 +1267,8 @@ fn interface_events() -> Vec<InterfaceEvent> {
             self_items: vec![1],
             item_names: BTreeMap::from([(1, "Gem".to_owned())]),
             partner_name: Some("Bob".into()),
+            refusals: 2,
+            trades: 4,
             revision: 3,
             ..TradeView::default()
         })),
@@ -2927,7 +2929,7 @@ fn the_subscription_filters_the_stateless_kinds() {
 /// a link must be built from the same layout).
 #[test]
 fn the_shape_is_pinned() {
-    assert_eq!(shape_hex(), "60bacf5e217f5cb1", "{:#x}", shape());
+    assert_eq!(shape_hex(), "621753b813b5af1e", "{:#x}", shape());
 }
 
 /// The size of a representative attach: a snapshot of a busy spot, a full
