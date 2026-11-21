@@ -386,7 +386,12 @@ impl Shot {
         std::fs::create_dir_all(&dir).expect("the snapshot folder");
         let path = dir.join(format!("{name}.png"));
         std::fs::write(&path, ac_bits::png::encode_rgba(W, H, &rgba)).expect("the PNG");
-        println!("saved {}", path.display());
+        println!(
+            "saved {} ({} runs, {} vertices)",
+            path.display(),
+            batch.runs.len(),
+            batch.vertices.len()
+        );
         for notice in self.ui.take_notices() {
             println!("notice: {notice}");
         }
