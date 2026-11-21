@@ -122,6 +122,16 @@ impl UiViewports {
         look
     }
 
+    /// The creation look for `preview` (cached while the choices stay), for
+    /// the modern Studio.
+    pub(crate) fn look_for(
+        &mut self,
+        options: &ChargenOptions,
+        preview: &ChargenPreview,
+    ) -> Option<ChargenLook> {
+        self.look(options, preview)
+    }
+
     /// The creation look for `preview` (cached while the choices stay).
     fn look(&mut self, options: &ChargenOptions, preview: &ChargenPreview) -> Option<ChargenLook> {
         if let Some((heritage, gender, appearance, look)) = &self.composed
@@ -504,6 +514,42 @@ impl WindowUi {
                     figure,
                     ViewportRequest {
                         slot: ViewportSlot::Barber,
+                        size,
+                        aspect,
+                        subject: ViewportSubject::Chargen(Box::new(look)),
+                    },
+                ));
+            }
+        }
+        // The modern Studio's figure: the whole body, or the face up close
+        // on the appearance step's face.
+        let studio = self
+            .modern
+            .as_mut()
+            .and_then(|m| m.pregame.as_mut())
+            .and_then(|p| p.studio.as_mut())
+            .map(|s| {
+                (
+                    s.figure,
+                    s.figure_look.clone(),
+                    std::mem::take(&mut s.turns),
+                )
+            });
+        if let Some((figure, look, turns)) = studio {
+            let slot = if look.as_ref().is_some_and(|(_, face)| *face) {
+                ViewportSlot::ChargenAppearance
+            } else {
+                ViewportSlot::ChargenSummary
+            };
+            controls.extend(turns.into_iter().map(|r| (slot, r)));
+            if let Some((look, _)) = look
+                && shown(&self.host.root, figure)
+                && let Some((size, aspect)) = extent(&self.host.root, figure, pixels_per_unit)
+            {
+                requests.push((
+                    figure,
+                    ViewportRequest {
+                        slot,
                         size,
                         aspect,
                         subject: ViewportSubject::Chargen(Box::new(look)),

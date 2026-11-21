@@ -89,6 +89,12 @@ impl PreGameUi {
             .as_secs_f64()
     }
 
+    /// Seconds since the screens were made (their spinners' clock).
+    #[must_use]
+    pub fn clock_now(&self) -> f64 {
+        self.clock()
+    }
+
     /// Whether a pre-game screen shows.
     #[must_use]
     pub fn is_active(&self) -> bool {
@@ -116,10 +122,11 @@ pub fn who(options: Option<&ChargenOptions>, heritage: u32, gender: u32) -> Stri
         .and_then(|k| h.genders_by_key.get(&k))
         .map(|g| g.name.clone())
         .unwrap_or_default();
+    let name = studio::model::heritage_name(heritage, &h.name);
     if g.is_empty() {
-        h.name.clone()
+        name
     } else {
-        format!("{g} {}", h.name)
+        format!("{g} {name}")
     }
 }
 

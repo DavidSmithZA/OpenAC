@@ -3772,3 +3772,85 @@ fn the_modern_stage() {
     s.step();
     s.save("stage-back");
 }
+
+/// The session's creation side for the Studio pictures: each creation
+/// request the window sent is carried out and the new state handed back.
+fn pump_creation(s: &mut Shot, creation: &mut ac_runtime::session::creation::CharacterCreation) {
+    use ac_runtime::session::pregame::PreGameEvent;
+    use ac_runtime::session::{LifecycleCommand, SessionCommand};
+    for _ in 0..3 {
+        let sent = std::mem::take(&mut s.sent);
+        for c in sent {
+            if let SessionCommand::Lifecycle(LifecycleCommand::Create(c)) = c {
+                let _ = creation.apply_command(&c);
+            }
+        }
+        s.scene
+            .apply(PresentationEvent::PreGame(PreGameEvent::Creation(
+                Box::new(creation.snapshot()),
+            )));
+        s.step();
+    }
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_studio() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::session::Generation;
+    use ac_runtime::session::creation::{CharacterCreation, SeededRandom};
+    use ac_runtime::session::pregame::{ConnectionStatus, ConnectionView, PreGameEvent};
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let tables = ac_runtime::gameplay::GameTables::load(&dats()).expect("the game tables");
+    let options = Arc::clone(tables.chargen());
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Options(
+            Arc::clone(&options),
+        )));
+    let now = Instant::now();
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Connection(
+            ConnectionView {
+                status: ConnectionStatus::Ready,
+                connection_progress: 1.0,
+                update_progress: 1.0,
+                error: None,
+                started: now.checked_sub(Duration::from_secs(10)).unwrap_or(now),
+                direct_launch: false,
+            },
+        )));
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(roster(0)),
+        )));
+    let mut creation = CharacterCreation::new(Arc::clone(&options), Box::new(SeededRandom::new(7)));
+    creation.begin(Generation(1));
+    pump_creation(&mut s, &mut creation);
+    // Create character, under the roster.
+    s.click(0, 200, 84 + 44 + 5 * 68 + 30, Modifiers::NONE);
+    pump_creation(&mut s, &mut creation);
+    pump_creation(&mut s, &mut creation);
+    assert!(s.ui.pregame_active());
+    s.save("studio-heritage");
+    for name in ["profession", "skills", "appearance"] {
+        s.key(Key::Enter, Modifiers::NONE, true);
+        pump_creation(&mut s, &mut creation);
+        s.save(&format!("studio-{name}"));
+    }
+    // The clothes.
+    s.sent.clear();
+    s.ui.host_mut();
+    let clothes_x = 24 + 18 + (384 / 4) * 3;
+    s.click(0, clothes_x, 84 + 100 + 17, Modifiers::NONE);
+    pump_creation(&mut s, &mut creation);
+    s.save("studio-clothes");
+    for name in ["town", "name"] {
+        s.key(Key::Enter, Modifiers::NONE, true);
+        pump_creation(&mut s, &mut creation);
+        s.save(&format!("studio-{name}"));
+    }
+    // Exit asks first.
+    s.key(Key::Escape, Modifiers::NONE, true);
+    pump_creation(&mut s, &mut creation);
+    s.save("studio-exit");
+}

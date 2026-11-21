@@ -772,7 +772,7 @@ impl StageView {
                 r.2,
                 r.3,
                 CornerRadii::new(62.0, 62.0, 14.0, 14.0),
-                hex(0xFFFF_FF, 0.35),
+                hex(0x00FF_FFFF, 0.35),
                 1.5,
             );
             stroke(
@@ -1042,39 +1042,40 @@ impl StageView {
             put(rc, f.body.as_ref(), words, x + 38.0 + lw, y + 1.0, ink);
             y += 28.0;
         }
-        if c.failed && !c.error.is_empty() {
-            if let Some(b) = &f.body {
-                let lines = kit::wrap(b, &c.error, 392.0);
-                let bh = lines.len() as f32 * 19.0 + 20.0;
-                let br = (cx - 210.0, y + 4.0, 420.0, bh);
-                rc.fill_rounded_rect(
-                    br.0,
-                    br.1,
-                    br.2,
-                    br.3,
-                    CornerRadii::all(5.0),
-                    hex(0x50_1414, 0.5),
+        if c.failed
+            && !c.error.is_empty()
+            && let Some(b) = &f.body
+        {
+            let lines = kit::wrap(b, &c.error, 392.0);
+            let bh = lines.len() as f32 * 19.0 + 20.0;
+            let br = (cx - 210.0, y + 4.0, 420.0, bh);
+            rc.fill_rounded_rect(
+                br.0,
+                br.1,
+                br.2,
+                br.3,
+                CornerRadii::all(5.0),
+                hex(0x50_1414, 0.5),
+            );
+            rc.stroke_rounded_rect(
+                br.0,
+                br.1,
+                br.2,
+                br.3,
+                CornerRadii::all(5.0),
+                hex(0xFF_6B70, 0.55),
+                1.0,
+            );
+            for (i, l) in lines.iter().enumerate() {
+                let w = text::measure(b, l, 0.0);
+                put(
+                    rc,
+                    Some(b),
+                    l,
+                    (cx - w * 0.5).round(),
+                    br.1 + 10.0 + i as f32 * 19.0,
+                    hex(0xFF_D0D2, 1.0),
                 );
-                rc.stroke_rounded_rect(
-                    br.0,
-                    br.1,
-                    br.2,
-                    br.3,
-                    CornerRadii::all(5.0),
-                    hex(0xFF_6B70, 0.55),
-                    1.0,
-                );
-                for (i, l) in lines.iter().enumerate() {
-                    let w = text::measure(b, l, 0.0);
-                    put(
-                        rc,
-                        Some(b),
-                        l,
-                        (cx - w * 0.5).round(),
-                        br.1 + 10.0 + i as f32 * 19.0,
-                        hex(0xFF_D0D2, 1.0),
-                    );
-                }
             }
         }
         let cancel = self.connecting_cancel_rect();

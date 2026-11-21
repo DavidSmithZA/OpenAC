@@ -25,6 +25,8 @@ pub enum Sky {
     Portal,
     /// Everywhere else, the credits and an empty account.
     Dusk,
+    /// Character creation's warm, dark studio.
+    Studio,
 }
 
 /// A sky's colours: (stop, colour) down the screen, the far and near
@@ -101,6 +103,18 @@ const FADED: Palette = Palette {
     near: 0x17_1411,
     glow: hex(0xD2_BEA0, 0.16),
 };
+const STUDIO: Palette = Palette {
+    stops: &[
+        (0.0, 0x0B_0907),
+        (0.30, 0x1B_1612),
+        (0.42, 0x3A_2E22),
+        (0.62, 0x1B_1612),
+        (1.0, 0x0B_0907),
+    ],
+    far: 0x1E_1812,
+    near: 0x12_0E0A,
+    glow: hex(0xFF_D696, 0.2),
+};
 const PORTAL: Palette = Palette {
     stops: &[
         (0.0, 0x0A_090C),
@@ -136,6 +150,7 @@ impl Sky {
             Self::Faded => &FADED,
             Self::Portal => &PORTAL,
             Self::Dusk => &DUSK,
+            Self::Studio => &STUDIO,
         }
     }
 
