@@ -56,8 +56,76 @@ pub struct ConnectionScreen {
     completed_text: String,
     initial_update_text: TextContent,
     shown: Option<ConnectionView>,
-    presentation_completed: bool,
+    presence: ConnectionPresence,
+}
+
+/// When the connecting screen shows: while the session connects, checks
+/// its data or has just become ready (at least [`MINIMUM_VISIBLE`] from
+/// the start), and whenever the connection failed; never for a direct
+/// launch's progress. Kept apart from the screen so any interface shows
+/// its connecting screen by the same rule.
+#[derive(Debug, Clone)]
+pub struct ConnectionPresence {
+    status: Option<ConnectionStatus>,
+    started: Option<Instant>,
+    completed: bool,
     minimum_visible: Duration,
+}
+
+impl Default for ConnectionPresence {
+    fn default() -> Self {
+        Self::new(MINIMUM_VISIBLE)
+    }
+}
+
+impl ConnectionPresence {
+    /// The rule with the progress shown at least `minimum_visible`.
+    #[must_use]
+    pub fn new(minimum_visible: Duration) -> Self {
+        Self {
+            status: None,
+            started: None,
+            completed: false,
+            minimum_visible,
+        }
+    }
+
+    /// Whether the screen shows for `view` at `now` (called every frame).
+    pub fn shows(&mut self, view: Option<&ConnectionView>, now: Instant) -> bool {
+        let status = view.map_or(ConnectionStatus::Inactive, |v| v.status);
+        let previous = self.status;
+        let restarted = self.started.zip(view).is_some_and(|(a, b)| a != b.started);
+        if status == ConnectionStatus::Inactive
+            || (status == ConnectionStatus::Connecting
+                && previous != Some(ConnectionStatus::Connecting))
+            || restarted
+        {
+            self.completed = false;
+        }
+        self.status = view.map(|v| v.status);
+        self.started = view.map(|v| v.started);
+        let failure = matches!(
+            status,
+            ConnectionStatus::Unsupported | ConnectionStatus::Failed
+        );
+        let mut progress = view.is_some_and(|v| !v.direct_launch)
+            && !self.completed
+            && matches!(
+                status,
+                ConnectionStatus::Connecting
+                    | ConnectionStatus::CheckingData
+                    | ConnectionStatus::Ready
+            );
+        if progress
+            && status == ConnectionStatus::Ready
+            && let Some(v) = view
+            && now.saturating_duration_since(v.started) >= self.minimum_visible
+        {
+            self.completed = true;
+            progress = false;
+        }
+        failure || progress
+    }
 }
 
 impl ConnectionScreen {
@@ -164,14 +232,13 @@ impl ConnectionScreen {
             completed_text: completed,
             initial_update_text,
             shown: None,
-            presentation_completed: false,
-            minimum_visible: MINIMUM_VISIBLE,
+            presence: ConnectionPresence::default(),
         })
     }
 
     /// Show the progress for at least `minimum` (tests).
     pub fn set_minimum_visible(&mut self, minimum: Duration) {
-        self.minimum_visible = minimum;
+        self.presence = ConnectionPresence::new(minimum);
     }
 
     /// The screen's root.
@@ -204,41 +271,7 @@ impl ConnectionScreen {
     /// ready and has shown for the minimum time; a failure or a refused
     /// update shows until the connection starts over.
     pub fn update(&mut self, ui: &mut UiRoot, view: Option<&ConnectionView>, now: Instant) {
-        let status = view.map_or(ConnectionStatus::Inactive, |v| v.status);
-        let previous = self.shown.as_ref().map(|v| v.status);
-        let restarted = self
-            .shown
-            .as_ref()
-            .zip(view)
-            .is_some_and(|(a, b)| a.started != b.started);
-        if status == ConnectionStatus::Inactive
-            || (status == ConnectionStatus::Connecting
-                && previous != Some(ConnectionStatus::Connecting))
-            || restarted
-        {
-            self.presentation_completed = false;
-        }
-        let failure = matches!(
-            status,
-            ConnectionStatus::Unsupported | ConnectionStatus::Failed
-        );
-        let mut progress = view.is_some_and(|v| !v.direct_launch)
-            && !self.presentation_completed
-            && matches!(
-                status,
-                ConnectionStatus::Connecting
-                    | ConnectionStatus::CheckingData
-                    | ConnectionStatus::Ready
-            );
-        if progress
-            && status == ConnectionStatus::Ready
-            && let Some(v) = view
-            && now.saturating_duration_since(v.started) >= self.minimum_visible
-        {
-            self.presentation_completed = true;
-            progress = false;
-        }
-        if !(failure || progress) {
+        if !self.presence.shows(view, now) {
             if self.is_visible(ui) {
                 ui.set_visible(self.root, false);
             }
