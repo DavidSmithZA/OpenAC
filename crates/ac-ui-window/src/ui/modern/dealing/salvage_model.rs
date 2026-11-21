@@ -342,6 +342,20 @@ pub fn picks(
             material: m,
         });
     }
+    if filter != 0 && !chips.iter().any(|c| c.material == filter) {
+        // Nothing of that material is left: everything shows.
+        return picks(
+            objects,
+            player,
+            tool,
+            staged,
+            material,
+            allow_multiple,
+            0,
+            icon,
+            names,
+        );
+    }
     chips.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.name.cmp(&b.name)));
     let all = MaterialChip {
         material: 0,
