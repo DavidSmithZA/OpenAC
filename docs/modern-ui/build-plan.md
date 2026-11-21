@@ -624,6 +624,47 @@ that the client knows of); typed attribute values (slider and steps
 instead); clothing shade tracks are plain (only hair and skin read their
 palettes); the figures do not turn by dragging. Not live-tested yet.
 
+**M10 finished 2026-11-21** on `feat/modern-ui-retail-off` (off
+`feat/modern-ui-m10`): nothing retail is mounted in game on Modern.
+
+- Neutral first, one commit each: the selected stack's split quantity
+  follows the selection on its own (`ac_ui::panels::items::SelectionSplit`,
+  the toolbar's split uses it); the key rows without the Configure Keyboard
+  screen (`KeyboardConfigController::without_screen`); `UiHost::remove_window`
+  (unregistered, controller dropped, elements freed); the Game Center's
+  follow rule (`MiniGameFollow`); a house's guest list goes with the house.
+- The retail windows the modern pieces stand in for are taken down once
+  when the layer mounts, not hidden before every frame; the hiding list is
+  gone. What the modern pieces read from them moved out first: the split
+  amount (the target line's own), the character sheet (built by the window
+  for either interface), the key rows (screenless on Modern: Configure
+  Keyboard is never built there), the book opening the reader, the chess
+  window following the games, the panel strip's map check. Layout
+  persistence only follows registered windows, so the saved retail layout
+  is untouched for when Retail is picked again.
+- The trait: not built. With one window type serving both interfaces it
+  would have a single implementor, so it would add a layer and remove
+  nothing; it makes sense only if Modern ever becomes its own window type.
+  The web client never sets an interface, so it is unchanged.
+
+Review of M5 to M10 (two independent reviews; Codex ran out of credits
+after one milestone) and the fixes, same branch: vendor leave card clicks,
+drops on the goods list, dropped stacks honour the split; Options sliders
+save when let go, Defaults while searching only touches the rows found,
+settings and options words follow separately; panel keys open the modern
+Effects and Character windows; trade and salvage keep nothing asked while
+closed and take only pack items; game-decided windows (salvage, trade,
+vendor, loot, house sale, barber) are no longer restored at login; a
+forgotten spell is unchosen; journal typing survives Record and Stop; the
+map's zoom clamp could panic; map and Stage memory reset on a character
+switch; barber slider and paging; Studio name and attribute sends, one
+text table; the Stage's remembering throttled; retail no longer keeps
+salvage results.
+
+Quick move key: Options › Controls › Quick move (Control, Option or
+Command on a Mac; Ctrl, Alt or the Windows key elsewhere), default Control,
+live at once (settings `modernQuickMoveKey`).
+
 ## Shape of the build
 
 **One window, retail parts swapped out one at a time.** With Modern on,
@@ -817,9 +858,11 @@ PR says what retail does).
 
 ## Open points
 
-- Quick move's default key on a Mac (Ctrl + click is often right-click
-  there); decide during M0.
-- Server level cap: XP bar says "Max level" or keeps counting
-  (from the design).
-- Officers and bans in Manage allegiance: revisit at M8 (from the
-  design).
+- Quick move's key on a Mac: now a choice in Options › Controls (default
+  Control everywhere). Whether a Mac should default to Option is still
+  yours to say.
+- Server level cap: settled by the game itself. At the top of the
+  experience table the Character window shows the game's own words for
+  it ("Infinity!"), as retail does; no "Max level" text.
+- Officers and bans in Manage allegiance: the client is not told who the
+  officers are, so Manage stays monarch-only.
