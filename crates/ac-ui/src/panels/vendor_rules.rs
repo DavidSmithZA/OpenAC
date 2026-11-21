@@ -136,3 +136,157 @@ impl PendingSplit {
         }
     }
 }
+
+/// How long a guarded split waits for its new stack, seconds.
+pub const SPLIT_WAIT_SECONDS: f64 = 10.0;
+
+/// A split asked for so part of a stack can be sold or offered, made safe
+/// against what [`PendingSplit`] leaves to chance: a stack of the same kind
+/// and size the player already had is never taken for the new one; the new
+/// stack is handed on only once the split's own request is over and
+/// another can go out (so the next request is not refused for a busy
+/// slot); and a split that never shows is given up after
+/// [`SPLIT_WAIT_SECONDS`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct GuardedSplit {
+    split: PendingSplit,
+    /// The player's stacks of the kind when the split was asked for.
+    known: Vec<u32>,
+    /// When it was asked for, seconds on the caller's clock.
+    started: f64,
+}
+
+impl GuardedSplit {
+    /// Split `quantity` off `item` (in `items`) at `now` seconds: the
+    /// request to send, what to tell the player, and the split to follow.
+    ///
+    /// # Errors
+    ///
+    /// The refusal's words when no request can go out now.
+    pub fn start(
+        item: &ClientObject,
+        quantity: i32,
+        items: &ItemsView<'_>,
+        now: f64,
+    ) -> Result<(Self, SessionCommand, String), &'static str> {
+        let (split, command, words) = PendingSplit::start(item, quantity, items.can_make_request)?;
+        let known = items
+            .objects
+            .objects()
+            .filter(|o| {
+                o.weenie_class_id == item.weenie_class_id
+                    && items
+                        .objects
+                        .is_owned_by_object(o.object_id(), items.player)
+            })
+            .map(ClientObject::object_id)
+            .collect();
+        Ok((
+            Self {
+                split,
+                known,
+                started: now,
+            },
+            command,
+            words,
+        ))
+    }
+
+    /// Where the split stands against `items` at `now` seconds.
+    pub fn follow(&mut self, items: &ItemsView<'_>, now: f64) -> SplitOutcome {
+        let s = self.split;
+        let found = items.objects.objects().find(|o| {
+            o.object_id() != s.source
+                && !self.known.contains(&o.object_id())
+                && o.weenie_class_id == s.weenie_class_id
+                && o.stack_size == s.quantity
+                && items
+                    .objects
+                    .is_owned_by_object(o.object_id(), items.player)
+        });
+        let in_flight = items.is_pending(s.source);
+        if in_flight {
+            self.split.seen_in_flight = true;
+        }
+        match found {
+            Some(o) if !in_flight && items.can_make_request => SplitOutcome::Arrived(o.object_id()),
+            Some(_) => SplitOutcome::Waiting,
+            None if self.split.seen_in_flight && !in_flight => SplitOutcome::Failed,
+            None if now - self.started > SPLIT_WAIT_SECONDS => SplitOutcome::Failed,
+            None => SplitOutcome::Waiting,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ac_core::items::ClientObjectTable;
+
+    const PLAYER: u32 = 0x5000_0001;
+    const ARROWS: u32 = 300;
+
+    fn stack(table: &mut ClientObjectTable, id: u32, size: i32) {
+        let mut o = ClientObject::new(id);
+        o.weenie_class_id = ARROWS;
+        o.stack_size = size;
+        o.container_id = PLAYER;
+        table.add_or_update(o, &mut Vec::new());
+    }
+
+    fn view<'a>(objects: &'a ClientObjectTable, pending: &'a [u32], free: bool) -> ItemsView<'a> {
+        ItemsView {
+            pending_sources: pending,
+            can_make_request: free,
+            ..ItemsView::new(objects, PLAYER)
+        }
+    }
+
+    // A stack of the same kind and size the player already carried (the
+    // wielded arrows) is not the new one; the new one is handed on once
+    // the split's request is over and another may go out.
+    #[test]
+    fn only_a_new_stack_counts_and_only_once_requests_are_free() {
+        let mut table = ClientObjectTable::new();
+        stack(&mut table, 1, 100);
+        stack(&mut table, 2, 10);
+        let source = table.get(1).cloned().expect("the stack");
+        let (mut split, _, _) =
+            GuardedSplit::start(&source, 10, &view(&table, &[], true), 0.0).expect("asked");
+        assert_eq!(
+            split.follow(&view(&table, &[1], false), 0.1),
+            SplitOutcome::Waiting
+        );
+        stack(&mut table, 3, 10);
+        assert_eq!(
+            split.follow(&view(&table, &[1], false), 0.2),
+            SplitOutcome::Waiting
+        );
+        assert_eq!(
+            split.follow(&view(&table, &[], false), 0.3),
+            SplitOutcome::Waiting
+        );
+        assert_eq!(
+            split.follow(&view(&table, &[], true), 0.4),
+            SplitOutcome::Arrived(3)
+        );
+    }
+
+    // A split never seen in flight, with nothing new, gives up in time.
+    #[test]
+    fn a_split_that_never_shows_is_given_up() {
+        let mut table = ClientObjectTable::new();
+        stack(&mut table, 1, 100);
+        let source = table.get(1).cloned().expect("the stack");
+        let (mut split, _, _) =
+            GuardedSplit::start(&source, 10, &view(&table, &[], true), 0.0).expect("asked");
+        assert_eq!(
+            split.follow(&view(&table, &[], true), 5.0),
+            SplitOutcome::Waiting
+        );
+        assert_eq!(
+            split.follow(&view(&table, &[], true), 10.5),
+            SplitOutcome::Failed
+        );
+    }
+}
