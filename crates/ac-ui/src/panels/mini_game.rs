@@ -116,9 +116,41 @@ pub struct MiniGameController {
     view: Option<ChessView>,
     selected: Option<ChessSquare>,
     drawn_revision: Option<u64>,
+    follow: MiniGameFollow,
+    confirming_resign: bool,
+}
+
+/// What the game window does as the games go, whichever interface shows
+/// it: a game that ended by resigning or with no result puts the window
+/// away, and the indicator follows whether a game is on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MiniGameFollow {
     games_ended: Option<u64>,
     indicator_active: bool,
-    confirming_resign: bool,
+}
+
+impl MiniGameFollow {
+    /// No game seen yet.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The game as the session last sent it: what the window does now.
+    pub fn follow(&mut self, view: &ChessView) -> MiniGameUpdate {
+        let mut out = MiniGameUpdate::default();
+        match self.games_ended {
+            Some(ended) if ended != view.games_ended => out.hide = true,
+            _ => {}
+        }
+        self.games_ended = Some(view.games_ended);
+        let active = view.board_guid != 0;
+        if active != self.indicator_active {
+            self.indicator_active = active;
+            out.indicator = Some(active);
+        }
+        out
+    }
 }
 
 impl MiniGameController {
@@ -145,8 +177,7 @@ impl MiniGameController {
             view: None,
             selected: None,
             drawn_revision: None,
-            games_ended: None,
-            indicator_active: false,
+            follow: MiniGameFollow::new(),
             confirming_resign: false,
         };
         if let Some(pass) = c.pass {
@@ -241,20 +272,10 @@ impl MiniGameController {
     /// game that ended by resigning or with no result hides the window,
     /// and whether the indicator-bar button changes.
     pub fn update(&mut self, ui: &mut UiRoot, view: Option<&ChessView>) -> MiniGameUpdate {
-        let mut out = MiniGameUpdate::default();
         let Some(view) = view else {
-            return out;
+            return MiniGameUpdate::default();
         };
-        match self.games_ended {
-            Some(ended) if ended != view.games_ended => out.hide = true,
-            _ => {}
-        }
-        self.games_ended = Some(view.games_ended);
-        let active = view.board_guid != 0;
-        if active != self.indicator_active {
-            self.indicator_active = active;
-            out.indicator = Some(active);
-        }
+        let out = self.follow.follow(view);
         if self.drawn_revision == Some(view.revision) {
             return out;
         }
