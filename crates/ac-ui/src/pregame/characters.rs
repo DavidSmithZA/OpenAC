@@ -310,23 +310,12 @@ impl CharacterScreen {
                 dialogs.close(ui, &mut self.operation_wait);
             }
         }
-        // The session entering its configured character keeps selection
-        // out of the way, until the world or an error.
-        let lifecycle = view.map_or(SelectionLifecycle::Inactive, |v| v.lifecycle);
-        let pending = direct_launch
-            && lifecycle != SelectionLifecycle::InWorld
-            && view.is_none_or(|v| v.error.is_none());
-        if self.suppressed || blocked || pending {
+        if self.suppressed || blocked {
             self.deactivate(ui, dialogs);
             self.built = None;
             return;
         }
-        let Some(view) = view.filter(|v| {
-            matches!(
-                v.lifecycle,
-                SelectionLifecycle::AwaitingSelection | SelectionLifecycle::EnteringWorld
-            )
-        }) else {
+        let Some(view) = view.filter(|_| selection_shows(view, direct_launch)) else {
             self.deactivate(ui, dialogs);
             self.built = None;
             return;
@@ -663,6 +652,24 @@ impl CharacterScreen {
         self.deactivate(ui, dialogs);
         ui.destroy(self.root);
     }
+}
+
+/// Whether character selection shows for `view`: while the session waits
+/// for a character or enters the world with one, unless the session enters
+/// its configured character by itself (`direct_launch`), which keeps
+/// selection out of the way until the world or an error. Any interface
+/// shows its selection screen by this rule.
+#[must_use]
+pub fn selection_shows(view: Option<&SelectionSnapshot>, direct_launch: bool) -> bool {
+    let lifecycle = view.map_or(SelectionLifecycle::Inactive, |v| v.lifecycle);
+    let pending = direct_launch
+        && lifecycle != SelectionLifecycle::InWorld
+        && view.is_none_or(|v| v.error.is_none());
+    !pending
+        && matches!(
+            lifecycle,
+            SelectionLifecycle::AwaitingSelection | SelectionLifecycle::EnteringWorld
+        )
 }
 
 fn row_color(entry: &SelectionEntry) -> Color {
