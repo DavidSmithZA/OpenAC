@@ -150,12 +150,13 @@ impl EffectsOnYou {
     }
 }
 
-/// Vitae as its chip says it: the share kept, a whole percentage (never
-/// rounded up to 100 while some is lost).
+/// Vitae as its chip says it, as the retail panel does: the share lost
+/// (5 for 0.95 kept), a whole percentage (never rounded down to 0 while
+/// some is lost).
 #[must_use]
-pub fn vitae_percent(kept: f32) -> u32 {
-    let percent = (kept.clamp(0.0, 1.0) * 100.0).round() as u32;
-    if kept < 1.0 { percent.min(99) } else { percent }
+pub fn vitae_penalty_percent(kept: f32) -> u32 {
+    let percent = ((1.0 - kept.clamp(0.0, 1.0)) * 100.0).round() as u32;
+    if kept < 1.0 { percent.max(1) } else { percent }
 }
 
 /// The burden chip's look, from the load (what is carried over what can
@@ -775,7 +776,7 @@ pub fn effect_chips(effects: &EffectsOnYou, show_times: bool, soon: f64) -> [Opt
     });
     let vitae = effects.vitae.map(|kept| ChipView {
         tone: Tone::Bad,
-        figure: format!("{}%", vitae_percent(kept)),
+        figure: format!("{}%", vitae_penalty_percent(kept)),
         words: "VITAE".to_owned(),
     });
     [helpful, harmful, vitae]
@@ -1127,7 +1128,7 @@ impl Widget for EffectsPane {
                 );
                 tx += text::measure(f, "VITAE", LABEL_TRACKING) + 8.0;
             }
-            let percent = vitae_percent(kept);
+            let percent = vitae_penalty_percent(kept);
             if let Some(f) = &figure {
                 let ty = y + ((VITAE_HEIGHT - f.line_height) * 0.5).round();
                 text::draw(
@@ -1140,13 +1141,13 @@ impl Widget for EffectsPane {
                 );
             }
             if let Some(f) = &caption {
-                let words = format!("health, mana, skills {}% lower", 100 - percent);
-                let tw = text::measure(f, &words, 0.0);
+                let words = "health, mana, skills lower";
+                let tw = text::measure(f, words, 0.0);
                 let ty = y + ((VITAE_HEIGHT - f.line_height) * 0.5).round();
                 text::draw(
                     rc,
                     f,
-                    &words,
+                    words,
                     x + w - 8.0 - tw,
                     ty,
                     TextStyle::plain(hex(0xE9_D3AE, 1.0)),
@@ -1336,7 +1337,7 @@ mod tests {
             (harmful.figure.as_str(), harmful.words.as_str()),
             ("1", "0:22")
         );
-        assert_eq!(vitae.unwrap().figure, "94%");
+        assert_eq!(vitae.unwrap().figure, "6%");
     }
 
     #[test]
@@ -1416,10 +1417,11 @@ mod tests {
     }
 
     #[test]
-    fn vitae_never_rounds_up_to_whole() {
-        assert_eq!(vitae_percent(0.94), 94);
-        assert_eq!(vitae_percent(0.996), 99);
-        assert_eq!(vitae_percent(1.0), 100);
+    fn vitae_shows_the_share_lost_never_rounded_to_none() {
+        assert_eq!(vitae_penalty_percent(0.95), 5);
+        assert_eq!(vitae_penalty_percent(0.94), 6);
+        assert_eq!(vitae_penalty_percent(0.996), 1);
+        assert_eq!(vitae_penalty_percent(1.0), 0);
     }
 
     #[test]

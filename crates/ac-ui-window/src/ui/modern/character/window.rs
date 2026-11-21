@@ -306,7 +306,10 @@ impl CharacterFrame {
             });
             list.push((
                 "Vitae",
-                format!("{}%", crate::ui::modern::hud::effects::vitae_percent(v)),
+                format!(
+                    "{}%",
+                    crate::ui::modern::hud::effects::vitae_penalty_percent(v)
+                ),
                 kit::HARM,
                 tip,
             ));

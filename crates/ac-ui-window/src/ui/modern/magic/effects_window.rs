@@ -18,7 +18,7 @@ use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
 
 use super::effects::{Effect, EffectKind, EffectsList, Group, Sort, Source, grouped};
-use crate::ui::modern::hud::effects::vitae_percent;
+use crate::ui::modern::hud::effects::vitae_penalty_percent;
 use crate::ui::modern::hud::lines::stroke;
 use crate::ui::modern::kit::{self, ButtonLook, Rect, Scroll, Tab, hot, inside};
 
@@ -671,7 +671,7 @@ impl EffectsWindow {
         let radius = CornerRadii::all(4.0);
         rc.fill_rounded_rect(x, y, w, VITAE_H, radius, hex(0x3C_0E10, 0.45));
         rc.stroke_rounded_rect(x, y, w, VITAE_H, radius, hex(0xFF_6B70, 0.6), 1.0);
-        let percent = vitae_percent(kept);
+        let percent = vitae_penalty_percent(kept);
         if let Some(f) = &self.fonts.label {
             let words = "VITAE";
             let tw = text::measure(f, words, kit::LABEL_TRACKING);
@@ -702,8 +702,7 @@ impl EffectsWindow {
             let mut lines = kit::wrap(
                 f,
                 &format!(
-                    "From your recent death: health, stamina, mana and skills are {}% lower.",
-                    100 - percent
+                    "From your recent death: health, stamina, mana and skills are {percent}% lower."
                 ),
                 width,
             );
