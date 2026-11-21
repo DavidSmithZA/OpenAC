@@ -760,6 +760,35 @@ pub fn meter(rc: &mut RenderContext<'_>, r: Rect, share: f32, color: Color) {
 /// between paragraphs kept).
 #[must_use]
 pub fn wrap(font: &UiFont, words: &str, width: f32) -> Vec<String> {
+    // The same words are wrapped frame after frame (descriptions, hints):
+    // the last few hundred are kept.
+    type Key = (usize, u32, u32, u32, String);
+    thread_local! {
+        static WRAPPED: std::cell::RefCell<std::collections::HashMap<Key, Vec<String>>> =
+            std::cell::RefCell::new(std::collections::HashMap::new());
+    }
+    let key: Key = (
+        std::ptr::from_ref(font) as usize,
+        font.id,
+        font.line_height.to_bits(),
+        width.to_bits(),
+        words.to_owned(),
+    );
+    if let Some(lines) = WRAPPED.with(|w| w.borrow().get(&key).cloned()) {
+        return lines;
+    }
+    let lines = wrap_uncached(font, words, width);
+    WRAPPED.with(|w| {
+        let mut w = w.borrow_mut();
+        if w.len() >= 512 {
+            w.clear();
+        }
+        w.insert(key, lines.clone());
+    });
+    lines
+}
+
+fn wrap_uncached(font: &UiFont, words: &str, width: f32) -> Vec<String> {
     let mut out = Vec::new();
     for (i, paragraph) in words.split('\n').enumerate() {
         if paragraph.trim().is_empty() {
