@@ -511,6 +511,14 @@ impl OptionsModel {
             .count()
     }
 
+    /// `key` was set to `value` and saved by something other than the
+    /// window (a button that changes and saves several options at once):
+    /// it is the value now and the one Revert goes back to.
+    pub fn set_saved(&mut self, key: OptionKey, value: &OptionValue) {
+        self.live.write(key, value);
+        self.saved.write(key, value);
+    }
+
     /// Every changed value back to the saved one: the stored sections
     /// changed, in order, without repeats.
     pub fn revert(&mut self) -> Vec<Stored> {

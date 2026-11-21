@@ -363,6 +363,11 @@ impl GameplayInput {
         self.dispatcher.begin_capture();
     }
 
+    /// Give up the capture (reported as a capture of nothing).
+    pub fn cancel_capture(&mut self) {
+        self.dispatcher.cancel_capture();
+    }
+
     /// A capture is open: keys go to it, not to the interface.
     #[must_use]
     pub fn is_capturing(&self) -> bool {

@@ -78,6 +78,8 @@ pub enum KeyboardRequest {
     Apply(KeyBindings),
     /// Report the next key as a capture.
     BeginCapture,
+    /// The capture asked for is no longer wanted (its window closed).
+    CancelCapture,
 }
 
 #[derive(Debug, Clone)]
@@ -415,6 +417,11 @@ impl WindowUi {
         self.keyboard.requests.push(KeyboardRequest::BeginCapture);
     }
 
+    /// The capture asked for is no longer wanted.
+    pub(in crate::ui) fn cancel_key_capture(&mut self) {
+        self.keyboard.requests.push(KeyboardRequest::CancelCapture);
+    }
+
     fn begin_capture(&mut self, action: &str) {
         let mut variables = HashMap::new();
         variables.insert(compute_hash("ACTION"), action.to_owned());
@@ -638,8 +645,14 @@ impl WindowUi {
                         .push(format!("keyboard config: JSON mirror save failed: {e}"));
                 }
                 let current = keymap_file::active_profile_name(storage);
+                // The modern Options window reverts what is not saved when
+                // it closes: the keys just written are saved.
+                let modern = self.modern.is_some();
                 self.with_key_config(|c, ui| {
                     c.set_filename(ui, &current);
+                    if modern {
+                        c.mark_saved(ui);
+                    }
                 });
             }
             KeymapSaveStatus::Exists => {

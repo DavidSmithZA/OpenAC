@@ -806,6 +806,9 @@ impl AttachedWindow {
                 crate::ui::keyboard_window::KeyboardRequest::BeginCapture => {
                     self.gameplay.begin_capture();
                 }
+                crate::ui::keyboard_window::KeyboardRequest::CancelCapture => {
+                    self.gameplay.cancel_capture();
+                }
             }
         }
     }
@@ -2833,6 +2836,7 @@ impl AttachedWindow {
         }
         ui.set_pixels_per_unit(scale.pixels_per_unit());
         ui.set_glass_possible(self.config.usage.contains(wgpu::TextureUsages::COPY_SRC));
+        ui.follow_key_capture(self.gameplay.is_capturing());
         let list = ui.frame(Instant::now(), size);
         // Drawn in framebuffer pixels, on the whole-pixel grid.
         let batch = UiBatch::build_scaled(&list, scale.pixels_per_unit());

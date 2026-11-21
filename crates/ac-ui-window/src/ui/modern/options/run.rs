@@ -13,7 +13,8 @@ use ac_ui::panels::items::emit;
 use ac_ui::panels::keyboard_config::{
     self, KeyConflict, KeyboardConfigController, KeyboardConfigOutput,
 };
-use ac_ui::panels::options::keys::LiveValues;
+use ac_ui::panels::options::OptionValue;
+use ac_ui::panels::options::keys::{LiveValues, OptionKey};
 use ac_ui::panels::{PanelOutput, panel_id};
 use ac_ui::strings::compute_hash;
 use ac_ui::tree::ElementId;
@@ -43,6 +44,8 @@ pub struct OptionsUi {
     /// A key pressed that others hold, waiting for the player: the
     /// keyboard row and slot, the key, and the rows it would come from.
     pending: Option<(usize, usize, KeyChord, Vec<usize>)>,
+    /// The key dispatcher was capturing, last frame.
+    dispatcher_capturing: bool,
 }
 
 /// A key as the modern windows name it ("Alt+D", "Shift"), the game's
@@ -141,6 +144,7 @@ impl WindowUi {
             search,
             was_open: false,
             pending: None,
+            dispatcher_capturing: false,
         });
         modern.replace(crate::ui::options::OPTIONS_WINDOW);
         modern.replace(KEYBOARD_WINDOW);
@@ -284,15 +288,51 @@ impl WindowUi {
             OptionsRequest::CharacterSelect => self.ask_end_character_session(),
             OptionsRequest::ExitGame => self.send_session(vec![SessionCommand::Shutdown]),
             OptionsRequest::Act(Action::EditBars) => {
+                // Editing the bars closes the window: what was changed is
+                // applied first rather than taken back by the close.
+                let changed = self
+                    .host
+                    .root
+                    .widget_mut::<OptionsFrame>(frame)
+                    .is_some_and(|f| {
+                        let changed = !f.model.changed().is_empty();
+                        f.model.applied();
+                        changed
+                    });
+                if changed {
+                    self.send_session(vec![SessionCommand::SaveCharacterOptions]);
+                }
+                self.with_key_config(|c, ui| {
+                    c.keep(ui);
+                });
                 self.panels
                     .set_visibility(&mut self.host.root, panel_id::OPTIONS, false);
                 self.modern_open_bar_edit();
             }
             OptionsRequest::Act(Action::MouseTurning) => {
+                // The button changes and saves the camera settings and the
+                // character's mouse turning at once: those are saved, not
+                // changes for Apply (or for closing to take back).
+                let before = self.live_option_values();
                 let mut commands = Vec::new();
                 self.use_mouse_turning_settings(&mut commands);
+                let mut after = self.live_option_values();
+                for c in &commands {
+                    if let SessionCommand::SetCharacterOption { option, value } = c {
+                        after.write(OptionKey::Character(*option), &OptionValue::Bool(*value));
+                    }
+                }
                 self.send_session(commands);
-                self.follow_modern_option_values(true);
+                if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+                    let keys: Vec<OptionKey> = f.model.rows.iter().flat_map(|r| r.keys()).collect();
+                    for key in keys {
+                        if let Some(v) = after.read(key)
+                            && before.read(key).as_ref() != Some(&v)
+                        {
+                            f.model.set_saved(key, &v);
+                        }
+                    }
+                }
             }
             OptionsRequest::Act(Action::LoadKeys) => {
                 self.keyboard_output(KeyboardConfigOutput::OpenLoad);
@@ -361,9 +401,16 @@ impl WindowUi {
             self.option_changed(&live, section, true, &mut commands);
         }
         self.send_session(commands);
-        if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
-            f.capture = None;
-            f.clash = None;
+        let capturing = self
+            .host
+            .root
+            .widget_mut::<OptionsFrame>(frame)
+            .is_some_and(|f| {
+                f.clash = None;
+                f.capture.take().is_some()
+            });
+        if capturing {
+            self.cancel_key_capture();
         }
         if let Some(o) = self.modern.as_mut().and_then(|m| m.options.as_mut()) {
             o.pending = None;
@@ -476,6 +523,21 @@ impl WindowUi {
             }
         }
         Some(false)
+    }
+
+    /// The key dispatcher's capture as it stands: one that ended without a
+    /// key reaching the window (the game lost the focus) leaves no slot
+    /// waiting for a key.
+    pub fn follow_key_capture(&mut self, capturing: bool) {
+        let Some(o) = self.modern.as_mut().and_then(|m| m.options.as_mut()) else {
+            return;
+        };
+        let dropped = o.dispatcher_capturing && !capturing;
+        o.dispatcher_capturing = capturing;
+        let frame = o.frame;
+        if dropped && let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+            f.capture = None;
+        }
     }
 
     fn send_session(&mut self, commands: Vec<SessionCommand>) {

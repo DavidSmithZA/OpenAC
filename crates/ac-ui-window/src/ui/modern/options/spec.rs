@@ -591,7 +591,7 @@ pub const GROUPS: &[Group] = &[
     },
     Group {
         section: Section::Chat,
-        title: "WHAT EACH TAB SHOWS",
+        title: "WHAT EACH TAB SHOWS (SAVED AT ONCE)",
         items: &[Item::ChatGrid],
     },
     Group {

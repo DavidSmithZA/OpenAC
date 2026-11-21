@@ -1505,7 +1505,14 @@ impl OptionsFrame {
                     rc.fill_rounded_rect(r.0, r.1, r.2, r.3, radius, fill);
                     rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, radius, edge, width);
                     if let Some(f) = &self.fonts.control {
-                        let words = kit::fit(f, &words, r.2 - 12.0);
+                        // While catching, say how to give up, room allowing.
+                        let room = r.2 - 12.0;
+                        let full = "Press a key \u{b7} Esc cancels";
+                        let words = if catching && text::measure(f, full, 0.0) <= room {
+                            full.to_owned()
+                        } else {
+                            kit::fit(f, &words, room)
+                        };
                         let w = text::measure(f, &words, 0.0);
                         text::draw(
                             rc,
