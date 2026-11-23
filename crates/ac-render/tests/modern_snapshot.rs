@@ -402,6 +402,12 @@ impl Shot {
     }
 }
 
+/// The quick-move key a new player has (Command on a Mac, Control
+/// elsewhere).
+fn quick_move() -> Modifiers {
+    ac_ui_window::ui::modern::quick_move_modifier(ac_host::settings::QuickMoveKey::default())
+}
+
 /// The Main bar's first slot's centre on a 1440 x 900 screen.
 const MAIN_SLOT: (i32, i32) = (484, 820);
 
@@ -420,9 +426,9 @@ fn the_modern_bars() {
         s.step();
     }
     s.save("bars-hover");
-    // Quick move's menu on the Main bar: Ctrl + right-click.
-    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
-    s.click(1, MAIN_SLOT.0, MAIN_SLOT.1, Modifiers::CTRL);
+    // Quick move's menu on the Main bar: its key + right-click.
+    s.ui.host_mut().set_modifiers(quick_move());
+    s.click(1, MAIN_SLOT.0, MAIN_SLOT.1, quick_move());
     s.ui.host_mut().set_modifiers(Modifiers::NONE);
     s.save("bars-quick-menu");
     // Its last row opens Edit layout (the menu is kept on the screen, so
@@ -571,27 +577,27 @@ fn the_m2_gaps() {
     let amount = s.ui.drag_amount(potion);
     assert!((4..=6).contains(&amount), "{amount}");
     // Quick move's menu on the radar.
-    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
-    s.click(1, 1440 - 80, 80, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(quick_move());
+    s.click(1, 1440 - 80, 80, quick_move());
     s.ui.host_mut().set_modifiers(Modifiers::NONE);
     s.save("gaps-radar-menu");
     // Hide it (the menu's second entry).
     s.click(0, 1210, 163, Modifiers::NONE);
     s.save("gaps-radar-hidden");
     // Lock the vitals: their menu's first entry.
-    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
-    s.click(1, 720, 22, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(quick_move());
+    s.click(1, 720, 22, quick_move());
     s.ui.host_mut().set_modifiers(Modifiers::NONE);
     s.save("gaps-vitals-menu");
     s.click(0, 760, 72, Modifiers::NONE);
-    // Locked: Ctrl + right-click on it opens nothing now.
-    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
-    s.click(1, 720, 22, Modifiers::CTRL);
+    // Locked: quick move's key + right-click on it opens nothing now.
+    s.ui.host_mut().set_modifiers(quick_move());
+    s.click(1, 720, 22, quick_move());
     s.ui.host_mut().set_modifiers(Modifiers::NONE);
     s.save("gaps-vitals-locked");
     // Edit layout from the Main bar's menu; its toolbar.
-    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
-    s.click(1, MAIN_SLOT.0, MAIN_SLOT.1, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(quick_move());
+    s.click(1, MAIN_SLOT.0, MAIN_SLOT.1, quick_move());
     s.ui.host_mut().set_modifiers(Modifiers::NONE);
     s.click(0, MAIN_SLOT.0 + 40, 900 - 6 - 20, Modifiers::NONE);
     s.save("gaps-edit");
