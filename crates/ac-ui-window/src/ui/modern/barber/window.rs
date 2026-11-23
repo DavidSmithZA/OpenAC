@@ -8,7 +8,7 @@
 use ac_ui::modern::tone;
 use std::sync::Arc;
 
-use ac_core::chargen::{ChargenGenderOptions, ChargenPalSetSource, ChargenSwatchRgb};
+use ac_core::chargen::{ChargenGenderOptions, ChargenSwatchRgb};
 use ac_runtime::gameplay::{BarberCommand, BarberView, GameplayCommand};
 use ac_runtime::session::SessionCommand;
 use ac_ui::bundled_font::Weight;
@@ -16,19 +16,20 @@ use ac_ui::draw::{Color, RenderContext};
 use ac_ui::event::{UiEvent, kind};
 use ac_ui::geometry::AnchorEdges;
 use ac_ui::modern::Horizon;
+use ac_ui::modern::picks::PickGrid;
 use ac_ui::modern::text::{self, TextStyle};
 use ac_ui::modern::theme::hex;
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::barber::{CAPTION_TABLE, TOGGLE_TABLE};
 use ac_ui::panels::barber_rules::{color_slot, shade_slot, style_on_pick, style_on_step};
 use ac_ui::panels::items::emit;
-use ac_ui::pregame::chargen::appearance::{Part, PreviewRequest, SwatchSourcesDyn};
+use ac_ui::pregame::chargen::appearance::{Part, PreviewRequest, SwatchSourcesDyn, shade_stops};
 use ac_ui::shapes::CornerRadii;
 use ac_ui::strings::compute_hash;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
 
-use super::model::{BarberFacts, BarberScreen, Before, barber_screen, shade_indices, shade_source};
+use super::model::{BarberFacts, BarberScreen, Before, barber_screen};
 use crate::scene::Scene;
 use crate::ui::barber_window::BARBER_WINDOW;
 use crate::ui::modern::hud;
@@ -50,7 +51,6 @@ const PREVIEW: Rect = (20.0, 72.0, 320.0, HEIGHT - 72.0 - 84.0);
 const COL_X: f32 = 356.0;
 const COL_W: f32 = WIDTH - 20.0 - COL_X;
 const TAB_H: f32 = 54.0;
-const PICK_H: f32 = 34.0;
 const SWATCH: f32 = 34.0;
 
 /// Scissors, the window's glyph.
@@ -396,15 +396,9 @@ impl BarberFrame {
             y += 26.0 + 8.0;
             let below = below_style(&s);
             let room = PREVIEW.1 + PREVIEW.3 - y - below;
-            let grid = PickGrid::fit(count, now, room);
+            let grid = PickGrid::fit(count, now, room, COL_W);
             for i in grid.first..grid.last {
-                let k = i - grid.first;
-                let r = (
-                    COL_X + (k % grid.cols) as f32 * (grid.width + 4.0),
-                    y + (k / grid.cols) as f32 * (grid.height + 4.0),
-                    grid.width,
-                    grid.height,
-                );
+                let r = grid.cell(i, COL_X, y);
                 let lit = h.add(r, Hit::Ask(BarberAsk::Style(i)));
                 kit::pick_row(rc, r, i + 1 == now, lit);
                 let ty = f
@@ -421,7 +415,7 @@ impl BarberFrame {
                     p.text,
                 );
             }
-            y += grid.rows as f32 * (grid.height + 4.0) - 4.0 + 14.0;
+            y += grid.height_used() + 14.0;
         }
         // The colours.
         if !s.swatches.is_empty() {
@@ -519,49 +513,6 @@ fn below_style(s: &BarberScreen) -> f32 {
         h += 36.0;
     }
     h
-}
-
-/// How the numbered style picks are laid out in the room they have: at
-/// least eight to a row, up to twelve, and paged round the picked one
-/// when even that is not enough (the stepper reaches the rest).
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct PickGrid {
-    /// Picks to a row.
-    pub cols: usize,
-    /// Rows shown.
-    pub rows: usize,
-    /// The first pick shown (from 0) and one past the last.
-    pub first: usize,
-    pub last: usize,
-    /// A pick's size.
-    pub width: f32,
-    pub height: f32,
-}
-
-impl PickGrid {
-    /// The grid for `count` picks, `now` picked (from 1; 0: none), in
-    /// `room` units of height.
-    #[must_use]
-    pub fn fit(count: usize, now: usize, room: f32) -> Self {
-        let height = if count > 16 { 28.0 } else { PICK_H };
-        let rows_fit = (((room + 4.0) / (height + 4.0)).floor() as usize).max(1);
-        let cols = count.div_ceil(rows_fit).clamp(8, 12);
-        let page = (rows_fit * cols).max(1);
-        // A pick past the last style (the view not caught up yet) pages
-        // as the last.
-        let now = now.clamp(1, count.max(1));
-        let first = (now - 1) / page * page;
-        let last = (first + page).min(count).max(first);
-        let rows = (last - first).div_ceil(cols).max(1);
-        Self {
-            cols,
-            rows,
-            first,
-            last,
-            width: (COL_W - (cols - 1) as f32 * 4.0) / cols as f32,
-            height,
-        }
-    }
 }
 
 /// `words` centred across a band from `x`, `w` wide, top at `y`.
@@ -903,19 +854,9 @@ impl WindowUi {
             _ => [None; 9],
         };
         let shade_stops: Vec<ChargenSwatchRgb> = match (gender, catalog) {
-            (Some(g), Some(c)) => shade_source(part, &view.appearance, g)
-                .and_then(|(set, sample)| {
-                    let palettes = c.pal_set(set)?.palette_ids.clone();
-                    Some(
-                        shade_indices(palettes.len(), 8)
-                            .into_iter()
-                            .filter_map(|i| {
-                                (c as &dyn SwatchSourcesDyn).direct(palettes[i], sample)
-                            })
-                            .collect(),
-                    )
-                })
-                .unwrap_or_default(),
+            (Some(g), Some(c)) => {
+                shade_stops(part, g, &view.appearance, c as &dyn SwatchSourcesDyn, 8)
+            }
             _ => Vec::new(),
         };
         BarberFacts {
@@ -1054,22 +995,5 @@ impl WindowUi {
             b.shown = Some(key);
             b.last_shade = last_shade;
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn many_styles_take_more_to_a_row_and_page_when_they_must() {
-        let g = PickGrid::fit(12, 4, 200.0);
-        assert_eq!((g.cols, g.rows, g.first, g.last), (8, 2, 0, 12));
-        let g = PickGrid::fit(50, 6, 170.0);
-        assert_eq!(g.cols, 10);
-        assert_eq!((g.first, g.last), (0, 50));
-        let g = PickGrid::fit(50, 40, 60.0);
-        assert_eq!(g.cols, 12);
-        assert_eq!((g.first, g.last), (24, 48), "the page holding 40");
     }
 }

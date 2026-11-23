@@ -3,7 +3,7 @@
 //! styles, colours and shade, the heritage's one option, and a line of
 //! what has changed since the barber opened.
 
-use ac_core::chargen::{ChargenGenderOptions, ChargenSwatchRgb, get_palette_index};
+use ac_core::chargen::{ChargenGenderOptions, ChargenSwatchRgb};
 use ac_runtime::gameplay::BarberView;
 use ac_runtime::session::creation::{CreationAppearance, UNSET};
 use ac_ui::draw::Color;
@@ -307,54 +307,6 @@ pub fn changed_line(view: &BarberView, before: &Before, facts: &BarberFacts<'_>)
     }
 }
 
-/// The palette set and sample a part's shade runs through: the picked
-/// hair colour's, or the skin's.
-#[must_use]
-pub fn shade_source(
-    part: Part,
-    a: &CreationAppearance,
-    g: &ChargenGenderOptions,
-) -> Option<(u32, i32)> {
-    use ac_core::chargen::{HAIR_SAMPLE_INDEX, SKIN_FAMILY_SAMPLE_INDEX};
-    match part {
-        Part::Hair => {
-            let i = if a.hair_color == UNSET {
-                0
-            } else {
-                a.hair_color as usize
-            };
-            g.hair_colors.get(i).map(|id| (*id, HAIR_SAMPLE_INDEX))
-        }
-        Part::Nose | Part::Mouth | Part::Skin => {
-            Some((g.skin_pal_set_id, SKIN_FAMILY_SAMPLE_INDEX))
-        }
-        _ => None,
-    }
-}
-
-/// Up to `stops` shades evenly along a palette set of `count` palettes:
-/// the palette index for each.
-#[must_use]
-pub fn shade_indices(count: usize, stops: usize) -> Vec<usize> {
-    let count_i = i32::try_from(count).unwrap_or(0);
-    if count_i <= 0 || stops == 0 {
-        return Vec::new();
-    }
-    let stops = stops.min(count).max(1);
-    let mut out: Vec<usize> = (0..stops)
-        .map(|k| {
-            let shade = if stops == 1 {
-                0.0
-            } else {
-                k as f64 / (stops - 1) as f64
-            };
-            usize::try_from(get_palette_index(count_i, shade)).unwrap_or(0)
-        })
-        .collect();
-    out.dedup();
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -444,12 +396,5 @@ mod tests {
         let labels: Vec<&str> = s.parts.iter().map(|p| p.label.as_str()).collect();
         assert_eq!(labels, ["Plating", "Optics", "Hull"]);
         assert_eq!(s.style, None, "no eye styles");
-    }
-
-    #[test]
-    fn shade_stops_run_along_the_palettes() {
-        assert_eq!(shade_indices(3, 8), vec![0, 1, 2]);
-        assert_eq!(shade_indices(20, 5), vec![0, 4, 9, 14, 19]);
-        assert!(shade_indices(0, 5).is_empty());
     }
 }
