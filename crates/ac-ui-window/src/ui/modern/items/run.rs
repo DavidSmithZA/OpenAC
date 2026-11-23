@@ -370,6 +370,47 @@ impl WindowUi {
         }
     }
 
+    /// Item `item` (`amount` of its stack, 0 for all) let go over the
+    /// see-through inventory it was dragged out of, with nothing in the
+    /// world under it: asks before it goes on the ground, as the menu's
+    /// Drop on the ground would put it.
+    pub fn ask_drop_on_ground(&mut self, item: u32, amount: u32) {
+        if !self.modern_questions_on() {
+            return;
+        }
+        let Some(o) = self.own_item(item) else {
+            return;
+        };
+        let stack = u32::try_from(o.stack_size.max(1)).unwrap_or(1);
+        let text = if amount > 0 && amount < stack {
+            format!(
+                "{} ({amount} of {stack}) goes on the ground at your feet.",
+                o.name
+            )
+        } else {
+            format!("{} goes on the ground at your feet.", o.name)
+        };
+        let look = crate::ui::modern::dialogs::look::Look::new(
+            "Drop it on the ground?",
+            crate::ui::modern::dialogs::look::Glyph::Question,
+            tone::gold(1.0),
+            "Drop",
+            "Keep it",
+        );
+        let drop = ItemCommand::Place {
+            item: ObjectRef::Guid(item),
+            target: None,
+            amount,
+        };
+        self.modern_ask_as(
+            look,
+            text,
+            crate::ui::window::DialogAction::Panel(PanelOutput::Session(SessionCommand::Item(
+                drop,
+            ))),
+        );
+    }
+
     /// The player's own item `id` (carried or worn).
     fn own_item(&self, id: u32) -> Option<&ClientObject> {
         let player = self.facts.state.player;
