@@ -1,16 +1,20 @@
 //! Where the viewport scenes are seen from.
 //!
-//! Every viewport camera looks straight down +Y (north) from its eye, with
-//! +Z up and no turn or tilt, through a 45 degree vertical field of view.
-//! Only the eye moves: the figure stands at the origin and the eye is
-//! placed in front of it (negative Y) and at about chest or face height.
-//! Distances are metres.
+//! Every viewport camera looks down +Y (north) from its eye, with +Z up and
+//! no turn, through a 45 degree vertical field of view; only the character
+//! selection's camera tilts, a little down. Only the eye moves: the figure
+//! stands at the origin and the eye is placed in front of it (negative Y)
+//! and at about chest or face height. Distances are metres.
 //!
 //! - The inventory figure's eye is fixed per heritage (larger bodies are
 //!   seen from further away).
 //! - The character-creation preview has a close eye (the face) and a far
 //!   eye (the whole body) per heritage, and slides between them in 0.6 s.
 //! - The examine portrait's eye is fitted to the creature's box.
+//! - The character selection's eye stands further back than creation's
+//!   far eye and higher, tilted down to the same point of the body, so the
+//!   whole figure shows from about chest height (creation's far eye, level
+//!   at the hip and close, looks up at a figure filling a tall frame).
 
 use ac_core::chargen::ChargenHeritageGroup as H;
 use glam::{Mat4, Vec3};
@@ -40,6 +44,8 @@ pub struct ViewportCamera {
     pub far: f32,
     /// Width over height of the viewport.
     pub aspect: f32,
+    /// How far it looks down from level, radians.
+    pub tilt: f32,
 }
 
 impl ViewportCamera {
@@ -52,13 +58,21 @@ impl ViewportCamera {
             near: NEAR,
             far,
             aspect: 1.0,
+            tilt: 0.0,
         }
     }
 
-    /// World to view: from the eye toward eye + Y, +Z up.
+    /// The camera looking `tilt` radians down from level.
+    #[must_use]
+    pub fn tilted(self, tilt: f32) -> Self {
+        Self { tilt, ..self }
+    }
+
+    /// World to view: from the eye toward +Y tilted down by `tilt`, +Z up.
     #[must_use]
     pub fn view(&self) -> Mat4 {
-        glam::camera::rh::view::look_at_mat4(self.eye, self.eye + Vec3::Y, Vec3::Z)
+        let ahead = Vec3::new(0.0, self.tilt.cos(), -self.tilt.sin());
+        glam::camera::rh::view::look_at_mat4(self.eye, self.eye + ahead, Vec3::Z)
     }
 
     /// View to clip (depth 0..1); an aspect that is not positive counts as
@@ -68,6 +82,23 @@ impl ViewportCamera {
         let aspect = if self.aspect > 0.0 { self.aspect } else { 1.0 };
         glam::camera::rh::proj::directx::perspective(self.fov, aspect, self.near, self.far)
     }
+}
+
+/// How much further back the character selection's eye stands than
+/// creation's far eye.
+const STAGE_BACK: f32 = 1.3;
+/// How much higher it stands, metres for each metre back from the figure.
+const STAGE_RISE: f32 = 0.18;
+
+/// The character selection's eye for a heritage and its tilt down
+/// (radians): creation's far eye moved back and up, looking at the same
+/// height of the body.
+#[must_use]
+pub fn stage_eye(heritage: u32) -> (Vec3, f32) {
+    let far = chargen_zoomed_out_eye(heritage);
+    let back = -far.y * STAGE_BACK;
+    let rise = back * STAGE_RISE;
+    (Vec3::new(far.x, -back, far.z + rise), (rise / back).atan())
 }
 
 /// The inventory figure's eye before the heritage is known.
@@ -156,6 +187,21 @@ mod tests {
     //! `ChargenPreviewCameraTests.cs`, `PaperdollHeritagePresentationTests.cs`
     //! and `CreatureAppraisalPresentationTests.cs` (the camera rows).
     use super::*;
+
+    #[test]
+    fn the_selection_eye_looks_down_at_the_height_the_far_eye_sees() {
+        for heritage in [0, 1, 7, 12] {
+            let far = chargen_zoomed_out_eye(heritage);
+            let (eye, tilt) = stage_eye(heritage);
+            assert!(eye.y < far.y && eye.z > far.z, "{heritage}: {eye}");
+            assert!(tilt > 0.0 && tilt < 0.25, "{heritage}: {tilt}");
+            // Down the tilt, the camera meets the figure's plane (y = 0) at
+            // the far eye's height.
+            let at = eye.z + eye.y * tilt.tan();
+            assert!((at - far.z).abs() < 1e-4, "{heritage}: {at}");
+        }
+        assert_eq!(ViewportCamera::new(Vec3::ZERO, 1.0).tilt, 0.0);
+    }
 
     fn close(a: f32, b: f32, places: i32) -> bool {
         (a - b).abs() < 0.5 * 10f32.powi(-places)

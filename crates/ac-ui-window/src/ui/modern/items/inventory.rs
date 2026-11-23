@@ -959,16 +959,24 @@ impl Widget for PackButton {
 /// Where a drag from the equipment says it came from.
 pub const EQUIPMENT: ItemDragSource = ItemDragSource::Equipment;
 
-/// Over the figure: a drag turns it, an item dropped on it is worn.
+/// Over the figure: a drag turns it, an item dropped on it is worn, and a
+/// click (a press let go without turning it) is a click on the player.
 #[derive(Debug, Default)]
 pub struct FigureTurn {
     /// How far it is turned, radians.
     pub turn: f32,
     /// Items dropped on it since the window last looked.
     pub dropped: Vec<u32>,
+    /// Clicked since the window last looked.
+    pub clicked: bool,
     held: Option<i32>,
+    /// How far the held press has moved across, pixels.
+    travelled: i32,
     over: bool,
 }
+
+/// How far a press may move and still be a click rather than a turn.
+const CLICK_SLOP: i32 = 4;
 
 impl Widget for FigureTurn {
     fn hit_test(&self, _element: &Element, _x: f32, _y: f32) -> bool {
@@ -986,17 +994,25 @@ impl Widget for FigureTurn {
         match e.kind {
             kind::MOUSE_DOWN => {
                 self.held = Some(e.data1);
+                self.travelled = 0;
                 ui.set_capture(me);
                 true
             }
             kind::MOUSE_MOVE => {
                 if let Some(x0) = self.held {
                     self.turn += (e.data1 - x0) as f32 * 0.012;
+                    self.travelled += (e.data1 - x0).abs();
                     self.held = Some(e.data1);
                 }
                 true
             }
-            kind::MOUSE_UP | kind::CAPTURE_CHANGED => {
+            kind::MOUSE_UP => {
+                if self.held.take().is_some() && self.travelled <= CLICK_SLOP {
+                    self.clicked = true;
+                }
+                true
+            }
+            kind::CAPTURE_CHANGED => {
                 self.held = None;
                 true
             }
@@ -1046,5 +1062,49 @@ impl Widget for FigureTurn {
         let r = CornerRadii::all(4.0);
         rc.fill_rounded_rect(0.0, 0.0, w, h, r, tone::gold(0.08));
         rc.stroke_rounded_rect(0.0, 0.0, w, h, r, tone::gold(0.8), 1.5);
+    }
+}
+
+#[cfg(test)]
+mod figure_tests {
+    use super::FigureTurn;
+    use ac_ui::UiRoot;
+    use ac_ui::event::{UiEvent, kind};
+    use ac_ui::tree::Element;
+
+    fn press(moves: &[i32]) -> (bool, f32) {
+        let mut ui = UiRoot::new();
+        let root = ui.root();
+        let me = ui.add(
+            root,
+            Element::at(0.0, 0.0, 200.0, 250.0),
+            FigureTurn::default(),
+        );
+        ui.send_event(
+            me,
+            &UiEvent::new(0, me, kind::MOUSE_DOWN).with_data(0, 100, 100),
+        );
+        for &x in moves {
+            ui.send_event(
+                me,
+                &UiEvent::new(0, me, kind::MOUSE_MOVE).with_data(0, x, 100),
+            );
+        }
+        let last = moves.last().copied().unwrap_or(100);
+        ui.send_event(
+            me,
+            &UiEvent::new(0, me, kind::MOUSE_UP).with_data(0, last, 100),
+        );
+        let t = ui.widget::<FigureTurn>(me).expect("it");
+        (t.clicked, t.turn)
+    }
+
+    #[test]
+    fn a_press_let_go_in_place_is_a_click_and_a_drag_turns() {
+        assert_eq!(press(&[]), (true, 0.0));
+        assert!(press(&[102]).0, "a twitch is still a click");
+        let (clicked, turn) = press(&[130, 160]);
+        assert!(!clicked);
+        assert!(turn > 0.5, "{turn}");
     }
 }

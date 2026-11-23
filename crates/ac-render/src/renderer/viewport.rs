@@ -58,7 +58,7 @@ impl Viewports {
                 ChargenPreviewState::new(false),
                 ChargenPreviewState::new(true),
                 ChargenPreviewState::barber(),
-                ChargenPreviewState::new(true),
+                ChargenPreviewState::stage(),
             ],
             poses: HashMap::new(),
             models: HashSet::new(),
@@ -89,7 +89,7 @@ impl Viewports {
             }
             self.chargen[0] = ChargenPreviewState::new(false);
             self.chargen[1] = ChargenPreviewState::new(true);
-            self.chargen[STAGE] = ChargenPreviewState::new(true);
+            self.chargen[STAGE] = ChargenPreviewState::stage();
         }
     }
 
@@ -448,7 +448,7 @@ impl WorldRenderer {
         let world = Mat4::from_quat(state.orientation());
         parts.extend(figure.parts().iter().map(|p| (*p, world)));
         Some(SceneDraw {
-            camera: ViewportCamera::new(state.eye, FIGURE_FAR),
+            camera: ViewportCamera::new(state.eye, FIGURE_FAR).tilted(state.tilt),
             parts,
             doll: false,
         })

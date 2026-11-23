@@ -1589,6 +1589,8 @@ impl WindowUi {
                 self.mount_modern_pregame();
                 if let Some(layouts) = self.status.layouts.as_mut() {
                     super::modern::ModernLayer::place_windows(layouts);
+                    // The map holds its own box on the screen.
+                    layouts.set_left_alone(&mut self.host, [super::modern::world::run::MAP]);
                 }
                 self.take_down_replaced();
                 self.mount_quick_move();
@@ -1657,7 +1659,7 @@ impl WindowUi {
                 outputs: self.host.take_outputs(),
             };
         }
-        // Escape closes the full-screen map next.
+        // Escape closes the map next.
         if pressed && key == Key::Escape && !self.pregame_active() && self.modern_map_escape() {
             return Routed {
                 world: None,

@@ -12,7 +12,7 @@ use glam::{Quat, Vec3};
 
 use super::camera::{
     ROTATION_SECONDS_PER_REVOLUTION, ZOOM_TWEEN_SECONDS, barber_eye, chargen_default_eye,
-    chargen_zoomed_out_eye,
+    chargen_zoomed_out_eye, stage_eye,
 };
 use super::pose::ChargenFigure;
 
@@ -180,8 +180,12 @@ struct Built {
 pub struct ChargenPreviewState {
     barber: bool,
     summary: bool,
+    /// The character selection's figure (its own eye, tilted down).
+    stage: bool,
     /// The camera's eye.
     pub eye: Vec3,
+    /// How far the camera looks down, radians.
+    pub tilt: f32,
     rotation: Rotation,
     /// Exists once a figure was built (nothing slides before).
     zoom: Option<ZoomTween>,
@@ -203,6 +207,8 @@ impl ChargenPreviewState {
         Self {
             barber: false,
             summary,
+            stage: false,
+            tilt: 0.0,
             eye: if summary {
                 chargen_zoomed_out_eye(0)
             } else {
@@ -227,6 +233,19 @@ impl ChargenPreviewState {
             eye: barber_eye(0),
             zoomed_in: true,
             ..Self::new(false)
+        }
+    }
+
+    /// The character selection's figure: the whole body idling, seen from
+    /// its own eye (see [`stage_eye`]), turned by a drag.
+    #[must_use]
+    pub fn stage() -> Self {
+        let (eye, tilt) = stage_eye(0);
+        Self {
+            stage: true,
+            eye,
+            tilt,
+            ..Self::new(true)
         }
     }
 
@@ -267,6 +286,9 @@ impl ChargenPreviewState {
             .is_none_or(|b| b.heritage != heritage || b.gender != gender);
         if body_changed && self.barber {
             self.eye = barber_eye(heritage);
+            self.zoom = None;
+        } else if body_changed && self.stage {
+            (self.eye, self.tilt) = stage_eye(heritage);
             self.zoom = None;
         } else if body_changed {
             self.eye = if self.summary {

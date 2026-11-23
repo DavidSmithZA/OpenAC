@@ -115,7 +115,7 @@ pub struct ModernLayer {
     pub book: Option<journal::book::BookUi>,
     /// The House window and the house sale window.
     pub house: Option<house::run::HouseUi>,
-    /// The full-screen map.
+    /// The map.
     pub map: Option<world::run::MapUi>,
     /// The Chess window.
     pub chess: Option<chess::window::ChessUi>,
@@ -529,6 +529,19 @@ impl WindowUi {
                 ac_ui::panels::items::offer_target(
                     &mut self.host.root,
                     ac_runtime::inventory::ObjectRef::Player,
+                );
+            } else if panel == Panel::Journal
+                && self
+                    .panels
+                    .is_visible(&self.host.root, ac_ui::panels::panel_id::JOURNAL)
+            {
+                // The strip's Journal closes it again, as the strip's other
+                // buttons do; the journal keys only ever open it, as in
+                // retail.
+                self.panels.set_visibility(
+                    &mut self.host.root,
+                    ac_ui::panels::panel_id::JOURNAL,
+                    false,
                 );
             } else {
                 self.handle_input_action(panel.action());

@@ -1,5 +1,5 @@
-//! The full-screen map: a bar across the top (the title, the player's
-//! three vitals, the side column's switch, Esc), the game's own map image
+//! The map, a box over most of the screen: a bar across the top (the
+//! title, the side column's switch, Esc), the game's own map image
 //! in a square that zooms and pans, with the towns, the player's arrow,
 //! their house, their pins and houses for sale on it; a card for a town or
 //! pin clicked, a card to name a new pin (right click); and the side
@@ -28,6 +28,8 @@ use crate::ui::modern::kit::{
 
 /// The top bar's height.
 pub const BAR: f32 = 56.0;
+/// The room kept under the map square, inside the box's rounded edge.
+const FOOT: f32 = 10.0;
 /// The side column's width and its margin.
 const SIDE_W: f32 = 340.0;
 const SIDE_GAP: f32 = 24.0;
@@ -131,8 +133,6 @@ pub struct MapScreen {
     pub pins: Vec<(String, f64, f64)>,
     /// Houses for sale: place and type.
     pub for_sale: Vec<(f64, f64, u32)>,
-    /// The three vitals: share and words.
-    pub vitals: [(f32, String); 3],
     /// The Dereth date and hour.
     pub date: String,
     pub hour: String,
@@ -206,7 +206,7 @@ enum Hit {
     Swallow,
 }
 
-/// The full-screen map.
+/// The map.
 #[derive(Debug)]
 pub struct MapView {
     fonts: MapFonts,
@@ -384,7 +384,7 @@ impl MapView {
         } else {
             w
         };
-        let s = (h - BAR).min(room).max(100.0);
+        let s = (h - BAR - FOOT).min(room).max(100.0);
         ((room - s) * 0.5, BAR, s, s)
     }
 
@@ -560,7 +560,15 @@ impl MapView {
         let p = Horizon::current().palette;
         let f = &self.fonts;
         let (w, _) = self.size;
-        rc.fill(0.0, 0.0, w, BAR, tone::ground(0.98));
+        let r = Horizon::current().metrics.window_radius;
+        rc.fill_rounded_rect(
+            0.0,
+            0.0,
+            w,
+            BAR,
+            CornerRadii::new(r, r, 0.0, 0.0),
+            tone::ground(0.98),
+        );
         rc.fill(0.0, BAR - 1.0, w, 1.0, bronze(0.45));
         stroke(
             rc,
@@ -585,41 +593,6 @@ impl MapView {
             BAR,
             tone::muted(1.0),
         );
-        // The vitals.
-        let vw = (w * 0.14).clamp(110.0, 180.0);
-        let total = vw * 3.0 + 16.0;
-        let colors = [
-            hex(0xC2_343C, 1.0),
-            hex(0xB8_8A1E, 1.0),
-            hex(0x2F_64C2, 1.0),
-        ];
-        let mut x = (w - total) * 0.5;
-        for (i, (share, words)) in self.screen.vitals.iter().enumerate() {
-            let r = (x, (BAR - 14.0) * 0.5, vw, 14.0);
-            rc.fill_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(3.0), hex(0, 0.5));
-            if *share > 0.0 {
-                rc.fill_rounded_rect(
-                    r.0,
-                    r.1,
-                    r.2 * share.clamp(0.0, 1.0),
-                    r.3,
-                    CornerRadii::all(3.0),
-                    colors[i],
-                );
-            }
-            rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(3.0), bronze(0.6), 1.0);
-            if let Some(l) = &f.label {
-                text::draw_centred(
-                    rc,
-                    l,
-                    words,
-                    r.0 + r.2 * 0.5,
-                    r.1 + ((14.0 - l.line_height) * 0.5).round(),
-                    TextStyle::plain(hex(0xFF_FFFF, 1.0)).shadowed(hex(0, 0.9)),
-                );
-            }
-            x += vw + 8.0;
-        }
         // Esc and the side column's switch.
         let ew = 66.0;
         let esc = (w - 16.0 - ew, (BAR - 32.0) * 0.5, ew, 32.0);
@@ -1473,7 +1446,16 @@ impl Widget for MapView {
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
         let mut h = Hits::new(self.hits.hover);
         let (w, hh) = self.size;
-        rc.fill(0.0, 0.0, w, hh, hex(0x11_181D, 1.0));
+        let theme = Horizon::current();
+        rc.soft_shadow(0.0, 0.0, w, hh, 6.0, 18.0, 50.0, hex(0, 0.55));
+        rc.fill_rounded_rect(
+            0.0,
+            0.0,
+            w,
+            hh,
+            CornerRadii::all(theme.metrics.window_radius),
+            hex(0x11_181D, 1.0),
+        );
         self.follow_screen();
         self.draw_map(rc, &mut h);
         if self.side {
@@ -1482,6 +1464,15 @@ impl Widget for MapView {
             self.draw_where(rc);
         }
         self.draw_bar(rc, &mut h);
+        rc.stroke_rounded_rect(
+            0.0,
+            0.0,
+            w,
+            hh,
+            CornerRadii::all(theme.metrics.window_radius),
+            bronze(0.8),
+            1.0,
+        );
         self.hits = h;
     }
 }
