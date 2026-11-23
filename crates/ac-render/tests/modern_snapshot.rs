@@ -978,6 +978,45 @@ fn the_modern_inventory() {
             .element(frame)
             .is_some_and(|e| e.see_through_when_dragged_out)
     );
+    // Let go over the see-through inventory with nothing behind it: it asks
+    // before the item goes on the ground.
+    {
+        use ac_runtime::inventory::{ItemCommand, ObjectRef};
+        use ac_runtime::session::SessionCommand;
+        use ac_ui_window::ui::modern::dialogs::card::QuestionCard;
+        let ground = |s: &Shot| {
+            s.sent.iter().any(|c| {
+                matches!(
+                    c,
+                    SessionCommand::Item(ItemCommand::Place {
+                        item: ObjectRef::Guid(0x8000_0101),
+                        target: None,
+                        amount: 5
+                    })
+                )
+            })
+        };
+        s.sent.clear();
+        s.ui.ask_drop_on_ground(0x8000_0101, 5);
+        s.step();
+        let card = shown::<QuestionCard>(&s).expect("the card asks");
+        let look =
+            s.ui.host()
+                .root
+                .widget::<QuestionCard>(card)
+                .and_then(|c| c.shown.as_ref().map(|v| v.look.yes.clone()));
+        assert_eq!(look.as_deref(), Some("Drop"));
+        s.save("inventory-drop-asks");
+        s.key(Key::Escape, Modifiers::NONE, true);
+        s.key(Key::Escape, Modifiers::NONE, false);
+        assert!(!ground(&s), "Keep it drops nothing: {:?}", s.sent);
+        s.ui.ask_drop_on_ground(0x8000_0101, 5);
+        s.step();
+        s.key(Key::Enter, Modifiers::NONE, true);
+        s.key(Key::Enter, Modifiers::NONE, false);
+        assert!(ground(&s), "Drop puts 5 on the ground: {:?}", s.sent);
+        s.step();
+    }
     // The figure is asked for, turned by a drag across it.
     let figure = |s: &mut Shot| {
         let (requests, _) = s.ui.viewport_requests(&s.scene, 1.0);

@@ -58,8 +58,8 @@ pub struct WorldDrop {
     pub x: i32,
     pub y: i32,
     /// Let go over the window it was dragged out of, which had gone
-    /// see-through: only an object in the world behind takes it, never the
-    /// ground.
+    /// see-through: an object in the world behind takes it, the ground
+    /// only once the player says so.
     pub through_window: bool,
 }
 

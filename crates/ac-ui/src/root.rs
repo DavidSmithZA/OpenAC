@@ -197,8 +197,9 @@ pub enum UiOutput {
         /// Canvas y.
         y: i32,
         /// Let go over the window the drag had left and that went see-through
-        /// ([`Element::see_through_when_dragged_out`]): only something in the
-        /// world behind it should take what was dragged, never the ground.
+        /// ([`Element::see_through_when_dragged_out`]): something in the
+        /// world behind it takes what was dragged, the ground only once the
+        /// player says so.
         through_window: bool,
     },
     /// The hover delay passed on an element: show its tooltip.

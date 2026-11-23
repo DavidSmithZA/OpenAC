@@ -2594,9 +2594,8 @@ impl AttachedWindow {
     }
 
     /// Place the items the UI saw let go over the world: on the object
-    /// under each, or on the ground (never the ground through the
-    /// see-through window the item was dragged out of: nothing there is
-    /// left as it was).
+    /// under each, or on the ground (through the see-through window the
+    /// item was dragged out of, only once the player says so).
     fn place_world_drops(&mut self) {
         let Some(ui) = self.ui.as_mut() else {
             return;
@@ -2604,14 +2603,19 @@ impl AttachedWindow {
         let drops = ui.take_world_drops();
         for drop in drops {
             let picked = self.pick_at_ui(drop.x, drop.y);
-            if drop.through_window && picked.is_none() {
-                continue;
-            }
             let payload = drop.item;
             let amount = self
                 .ui
                 .as_mut()
                 .map_or(0, |ui| ui.drag_amount(payload.obj_id));
+            if drop.through_window && picked.is_none() {
+                if !payload.source_kind.is_alias()
+                    && let Some(ui) = self.ui.as_mut()
+                {
+                    ui.ask_drop_on_ground(payload.obj_id, amount);
+                }
+                continue;
+            }
             let outcome = crate::world_click::WorldClicks::drop_item(
                 payload.obj_id,
                 payload.source_kind,
