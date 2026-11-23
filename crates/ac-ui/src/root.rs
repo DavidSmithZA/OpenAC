@@ -196,6 +196,10 @@ pub enum UiOutput {
         x: i32,
         /// Canvas y.
         y: i32,
+        /// Let go over the window the drag had left and that went see-through
+        /// ([`Element::see_through_when_dragged_out`]): only something in the
+        /// world behind it should take what was dragged, never the ground.
+        through_window: bool,
     },
     /// The hover delay passed on an element: show its tooltip.
     TooltipShow(ElementId),
@@ -289,6 +293,9 @@ pub struct UiRoot {
     drag_source: Option<ElementId>,
     drag_payload: Option<DragPayload>,
     drag_ghost: Option<DragGhost>,
+    /// The window the running drag left that went see-through, and its
+    /// opacity before.
+    drag_see_through: Option<(ElementId, f32)>,
     last_drag_hover: Option<ElementId>,
     press: (i32, i32),
     drag_candidate: bool,
@@ -384,6 +391,7 @@ impl UiRoot {
             drag_source: None,
             drag_payload: None,
             drag_ghost: None,
+            drag_see_through: None,
             last_drag_hover: None,
             press: (0, 0),
             drag_candidate: false,
@@ -1269,6 +1277,7 @@ impl UiRoot {
                 self.drag_payload = None;
                 self.drag_ghost = None;
                 self.drag_candidate = false;
+                self.end_drag_see_through();
             }
         }
         if self.is_within(self.hover, subtree) {
@@ -1276,6 +1285,9 @@ impl UiRoot {
         }
         if self.is_within(self.last_drag_hover, subtree) {
             self.last_drag_hover = None;
+        }
+        if self.is_within(self.drag_see_through.map(|(w, _)| w), subtree) {
+            self.drag_see_through = None;
         }
         if self.is_within(self.last_click.map(|c| c.0), subtree) {
             self.last_click = None;
@@ -1796,7 +1808,11 @@ impl UiRoot {
             return self.hit_test(modal, lx, ly).map(|h| (h, lx, ly));
         }
         let root = self.root;
+        let see_through = self.drag_see_through.map(|(w, _)| w);
         for child in self.front_to_back(root) {
+            if Some(child) == see_through {
+                continue;
+            }
             let (cx, cy) = self.screen_position(child);
             let (lx, ly) = (x as f32 - cx, y as f32 - cy);
             if let Some(hit) = self.hit_test(child, lx, ly) {
@@ -2944,6 +2960,7 @@ impl UiRoot {
     }
 
     fn update_drag_hover(&mut self, x: i32, y: i32) {
+        self.see_through_once_left(x, y);
         let hit = self.hit_test_top_down(x, y);
         let t = hit.map(|h| h.0);
         if t == self.last_drag_hover {
@@ -2985,7 +3002,12 @@ impl UiRoot {
                 w.set_drag_source_active(ui, s, false, payload.as_ref())
             });
         }
-        if let Some((t, lx, ly)) = self.hit_test_top_down(x, y) {
+        let through_window = self
+            .drag_see_through
+            .is_some_and(|(w, _)| self.contains_screen(w, x, y));
+        let hit = self.hit_test_top_down(x, y);
+        self.end_drag_see_through();
+        if let Some((t, lx, ly)) = hit {
             let source_id = source.map_or(0, |s| self.event_id(s));
             let ev = UiEvent {
                 source_id,
@@ -2998,14 +3020,69 @@ impl UiRoot {
             };
             self.send_event(t, &ev);
         } else if let Some(p) = payload {
-            self.emit(UiOutput::DragReleasedOutsideUi { payload: p, x, y });
+            self.emit(UiOutput::DragReleasedOutsideUi {
+                payload: p,
+                x,
+                y,
+                through_window,
+            });
         }
         self.drag_source = None;
         self.drag_payload = None;
         self.drag_ghost = None;
         self.last_drag_hover = None;
     }
+
+    /// The window the running drag left and that went see-through, if any.
+    #[must_use]
+    pub fn drag_see_through(&self) -> Option<ElementId> {
+        self.drag_see_through.map(|(w, _)| w)
+    }
+
+    /// The pointer at canvas (`x`, `y`) during a drag: once it is outside
+    /// the top-level window the drag started in, and that window asks for
+    /// it, the window fades and the pointer passes through it until the
+    /// drag ends.
+    fn see_through_once_left(&mut self, x: i32, y: i32) {
+        if self.drag_see_through.is_some() {
+            return;
+        }
+        let Some(source) = self.drag_source.filter(|s| *s != self.root) else {
+            return;
+        };
+        let window = self.top_level_of(source);
+        if !self
+            .element(window)
+            .is_some_and(|e| e.see_through_when_dragged_out)
+            || self.contains_screen(window, x, y)
+        {
+            return;
+        }
+        if let Some(e) = self.element_mut(window) {
+            let before = std::mem::replace(&mut e.opacity, DRAG_SEE_THROUGH_OPACITY);
+            self.drag_see_through = Some((window, before));
+        }
+    }
+
+    /// The drag is over: the see-through window, if any, as it was.
+    fn end_drag_see_through(&mut self) {
+        if let Some((window, opacity)) = self.drag_see_through.take()
+            && let Some(e) = self.element_mut(window)
+        {
+            e.opacity = opacity;
+        }
+    }
+
+    /// Whether canvas (`x`, `y`) lies inside element `id`'s rectangle.
+    fn contains_screen(&self, id: ElementId, x: i32, y: i32) -> bool {
+        let (sx, sy) = self.screen_position(id);
+        self.element(id)
+            .is_some_and(|e| e.contains_local(x as f32 - sx, y as f32 - sy))
+    }
 }
+
+/// How opaque a window is while a drag that left it passes through it.
+const DRAG_SEE_THROUGH_OPACITY: f32 = 0.2;
 
 fn within_border_band(w: &Element, x: i32, y: i32, band: i32) -> bool {
     let (l, t, r, b) = (w.left, w.top, w.left + w.width, w.top + w.height);

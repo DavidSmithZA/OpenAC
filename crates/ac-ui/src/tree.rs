@@ -182,6 +182,11 @@ pub struct Element {
     pub enabled: bool,
     /// Hit testing passes through to what is below.
     pub click_through: bool,
+    /// A top-level window that, once a drag started inside it has left it,
+    /// fades and lets the pointer through until the drag ends, so what is
+    /// dragged can be let go over the world behind it (see
+    /// [`UiRoot::drag_see_through`](crate::UiRoot::drag_see_through)).
+    pub see_through_when_dragged_out: bool,
     /// A modern piece: while the quick-move key is held it can be dragged
     /// (and snaps to the screen's edges and other such pieces) whatever the
     /// UI lock says (see [`UiRoot::set_quick_move_key`]).
@@ -269,6 +274,7 @@ impl Default for Element {
             held: false,
             enabled: true,
             click_through: false,
+            see_through_when_dragged_out: false,
             quick_move: false,
             accepts_focus: false,
             focus_on_mouse_click: true,

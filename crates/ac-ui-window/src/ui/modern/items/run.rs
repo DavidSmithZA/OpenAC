@@ -166,6 +166,9 @@ impl WindowUi {
         let ui = &mut self.host.root;
         if let Some(e) = ui.element_mut(frame) {
             e.draggable = true;
+            // An item dragged out of it can be given to what stands behind
+            // it: the window fades and lets the pointer through.
+            e.see_through_when_dragged_out = true;
         }
         // The search field.
         let mut e = Element::at(

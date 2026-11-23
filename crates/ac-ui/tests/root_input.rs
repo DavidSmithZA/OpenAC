@@ -16,7 +16,7 @@ use ac_ui::event::{Key, Modifiers, MouseButton};
 use ac_ui::geometry::{AnchorEdges, PixelRect, ResizeEdges};
 use ac_ui::layout_policy::LayoutPolicy;
 use ac_ui::root::{ElementMessage, UiOutput, UiRoot, hit_edges};
-use ac_ui::tree::{DragGhost, Element};
+use ac_ui::tree::{DragGhost, Element, ElementId};
 use ac_ui::widgets::{Button, Panel};
 use common::*;
 
@@ -1162,12 +1162,99 @@ fn a_drag_released_over_nothing_goes_to_the_world() {
     ui.on_mouse_up(Left, 200, 200, 0);
     let out = ui.drain_output();
     let released = out.iter().find_map(|o| match o {
-        UiOutput::DragReleasedOutsideUi { payload, x, y } => {
+        UiOutput::DragReleasedOutsideUi { payload, x, y, .. } => {
             Some((*payload.get::<u32>().unwrap(), *x, *y))
         }
         _ => None,
     });
     assert_eq!(released, Some((0x5000_0A01, 200, 200)));
+}
+
+/// A 400x400 window at the origin catching drops, with a drag source in
+/// its corner; `see_through` sets the window's see-through flag.
+fn window_with_source(see_through: bool) -> (UiRoot, ElementId) {
+    let mut ui = root(800.0, 600.0);
+    let r = ui.root();
+    let mut frame = at(0.0, 0.0, 400.0, 400.0);
+    frame.see_through_when_dragged_out = see_through;
+    let window = ui.add(r, frame, DropTarget::default());
+    ui.add(
+        window,
+        at(10.0, 10.0, 32.0, 32.0),
+        DragSource {
+            payload: Some(0x5000_0A02),
+            ..DragSource::default()
+        },
+    );
+    (ui, window)
+}
+
+fn released_outside(out: &[UiOutput]) -> Option<(i32, i32, bool)> {
+    out.iter().find_map(|o| match o {
+        UiOutput::DragReleasedOutsideUi {
+            x,
+            y,
+            through_window,
+            ..
+        } => Some((*x, *y, *through_window)),
+        _ => None,
+    })
+}
+
+#[test]
+fn a_window_a_drag_left_fades_and_lets_the_drop_through() {
+    let (mut ui, window) = window_with_source(true);
+    ui.on_mouse_down(Left, 15, 15, 0);
+    ui.on_mouse_move(100, 100);
+    // Still inside: nothing changes.
+    assert_eq!(ui.drag_see_through(), None);
+    assert_eq!(ui.element(window).unwrap().opacity, 1.0);
+    ui.on_mouse_move(500, 100);
+    assert_eq!(ui.drag_see_through(), Some(window));
+    assert!(ui.element(window).unwrap().opacity < 0.5);
+    // Back over it: it stays see-through, and the drop passes through.
+    ui.on_mouse_move(100, 100);
+    ui.drain_output();
+    ui.on_mouse_up(Left, 100, 100, 0);
+    let out = ui.drain_output();
+    assert_eq!(released_outside(&out), Some((100, 100, true)));
+    assert!(
+        ui.widget_mut::<DropTarget>(window)
+            .unwrap()
+            .dropped
+            .is_empty()
+    );
+    assert_eq!(ui.drag_see_through(), None);
+    assert_eq!(ui.element(window).unwrap().opacity, 1.0);
+}
+
+#[test]
+fn a_drop_beside_the_see_through_window_is_not_through_it() {
+    let (mut ui, window) = window_with_source(true);
+    ui.on_mouse_down(Left, 15, 15, 0);
+    ui.on_mouse_move(500, 100);
+    ui.drain_output();
+    ui.on_mouse_up(Left, 500, 100, 0);
+    let out = ui.drain_output();
+    assert_eq!(released_outside(&out), Some((500, 100, false)));
+    assert_eq!(ui.element(window).unwrap().opacity, 1.0);
+}
+
+#[test]
+fn a_window_without_the_flag_keeps_catching_a_drag_that_left_it() {
+    let (mut ui, window) = window_with_source(false);
+    ui.on_mouse_down(Left, 15, 15, 0);
+    ui.on_mouse_move(500, 100);
+    assert_eq!(ui.drag_see_through(), None);
+    ui.on_mouse_move(100, 100);
+    ui.drain_output();
+    ui.on_mouse_up(Left, 100, 100, 0);
+    let out = ui.drain_output();
+    assert_eq!(released_outside(&out), None);
+    assert_eq!(
+        ui.widget_mut::<DropTarget>(window).unwrap().dropped,
+        [(0x5000_0A02, 100, 100)]
+    );
 }
 
 #[test]
@@ -1521,7 +1608,7 @@ fn a_world_lift_released_on_the_world_goes_to_the_world() {
     ui.drain_output();
     ui.on_mouse_up(Left, 400, 400, 0);
     let released = ui.drain_output().iter().find_map(|o| match o {
-        UiOutput::DragReleasedOutsideUi { payload, x, y } => {
+        UiOutput::DragReleasedOutsideUi { payload, x, y, .. } => {
             Some((*payload.get::<u32>().unwrap(), *x, *y))
         }
         _ => None,

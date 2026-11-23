@@ -961,6 +961,23 @@ fn the_modern_inventory() {
     s.step();
     s.step();
     s.save("inventory-open");
+    // Retail's indicator bar and its link panel are not up beside it.
+    for gone in ["indicators", "link-status"] {
+        assert!(s.ui.host().root.window(gone).is_none(), "{gone} is up");
+    }
+    // An item dragged out of it can be given to what is behind it.
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-inventory")
+            .expect("inventory")
+            .frame;
+    assert!(
+        s.ui.host()
+            .root
+            .element(frame)
+            .is_some_and(|e| e.see_through_when_dragged_out)
+    );
     // The figure is asked for, turned by a drag across it.
     let figure = |s: &mut Shot| {
         let (requests, _) = s.ui.viewport_requests(&s.scene, 1.0);

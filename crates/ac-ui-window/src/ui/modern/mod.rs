@@ -423,8 +423,17 @@ impl WindowUi {
             Err(e) => self.notices.push(format!("ui: modern panel strip: {e}")),
         }
         match effects {
-            Ok(hud) => modern.effects = Some(hud),
+            Ok(hud) => {
+                modern.effects = Some(hud);
+                // Its chips stand in for retail's indicator bar (the
+                // effects, vitae, burden and the game indicators; the link
+                // is the status line's, ending the session is Options').
+                modern.replace(crate::ui::indicator_panels::INDICATORS_WINDOW);
+            }
             Err(e) => self.notices.push(format!("ui: modern effects: {e}")),
+        }
+        if card.is_some() {
+            modern.replace(crate::ui::indicator_panels::LINK_STATUS_WINDOW);
         }
         modern.connection_card = card;
         modern.recall_dialog = recall_dialog;

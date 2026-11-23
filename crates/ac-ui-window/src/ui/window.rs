@@ -1864,9 +1864,19 @@ impl WindowUi {
                 UiOutput::QuickMoveMenu { piece, x, y } => {
                     self.modern_quick_move_menu(piece, x, y);
                 }
-                UiOutput::DragReleasedOutsideUi { payload, x, y } => {
+                UiOutput::DragReleasedOutsideUi {
+                    payload,
+                    x,
+                    y,
+                    through_window,
+                } => {
                     if let Some(item) = payload.get::<ac_ui::event::ItemDragPayload>() {
-                        self.status.world_drops.push((item.clone(), x, y));
+                        self.status.world_drops.push(super::status::WorldDrop {
+                            item: item.clone(),
+                            x,
+                            y,
+                            through_window,
+                        });
                     }
                 }
                 _ => {}
