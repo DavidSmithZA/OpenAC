@@ -22,7 +22,7 @@ use crate::import::ImportedLayout;
 use crate::panels::PanelOutput;
 use crate::panels::external_container::apply_horizontal_bar_art;
 use crate::panels::items::{ItemsView, bind_click, emit, fill_slot};
-use crate::panels::salvage_list::SalvageList;
+use crate::panels::salvage_list::{SalvageList, drag_stages};
 use crate::root::{ElementMessage, UiRoot};
 use crate::tree::ElementId;
 use crate::widgets::item_slot::{
@@ -322,9 +322,7 @@ impl SalvageController {
         view: &ItemsView<'_>,
         allow_multiple: bool,
     ) -> DragAcceptance {
-        if p.source_kind == ItemDragSource::Inventory
-            && self.can_add(p.obj_id, view, allow_multiple)
-        {
+        if drag_stages(p) && self.can_add(p.obj_id, view, allow_multiple) {
             DragAcceptance::Accept
         } else {
             DragAcceptance::Reject

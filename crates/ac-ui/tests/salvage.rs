@@ -704,3 +704,63 @@ fn more_staged_items_than_fit_keep_a_cell_each_across_updates() {
     h.update();
     assert_eq!(cells(&h), first);
 }
+
+#[test]
+fn the_list_says_why_an_item_cannot_go_on_it() {
+    use ac_core::items::PublicWeenieFlags;
+    use ac_ui::panels::salvage_list::{SalvageList, SalvageRefusal, drag_stages};
+    let mut h = harness();
+    h.item(1, 60, 0, PLAYER);
+    h.item(2, 61, 0, PLAYER);
+    h.item(3, 0, 0, PLAYER);
+    h.item(4, 60, 0, 0x7000_0001);
+    h.item(5, 60, 0, PLAYER);
+    if let Some(o) = h.objects.t.get_mut(5) {
+        o.public_weenie_bitfield = Some(PublicWeenieFlags::RETAINED);
+    }
+    let view = ItemsView::new(&h.objects.t, PLAYER);
+    let mut list = SalvageList::default();
+    assert_eq!(list.refusal(1, &view, false), Some(SalvageRefusal::NoTool));
+    assert!(list.open(TOOL, &view));
+    assert_eq!(list.refusal(1, &view, false), None);
+    assert!(list.add(1, &view, false).is_some());
+    assert_eq!(
+        list.refusal(1, &view, false),
+        Some(SalvageRefusal::AlreadyListed)
+    );
+    assert_eq!(
+        list.refusal(TOOL, &view, false),
+        Some(SalvageRefusal::IsTheTool)
+    );
+    assert_eq!(
+        list.refusal(4, &view, false),
+        Some(SalvageRefusal::NotCarried)
+    );
+    assert_eq!(
+        list.refusal(5, &view, false),
+        Some(SalvageRefusal::Retained)
+    );
+    assert_eq!(
+        list.refusal(3, &view, false),
+        Some(SalvageRefusal::Unsuitable)
+    );
+    assert_eq!(
+        list.refusal(2, &view, false),
+        Some(SalvageRefusal::OtherMaterial {
+            item: 61,
+            listed: 60
+        })
+    );
+    assert_eq!(
+        list.refusal(2, &view, true),
+        None,
+        "several materials allowed"
+    );
+    assert!(drag_stages(&payload(1)));
+    assert!(!drag_stages(&ItemDragPayload::new(
+        1,
+        ItemDragSource::Equipment,
+        0
+    )));
+    assert!(!drag_stages(&payload(0)));
+}
