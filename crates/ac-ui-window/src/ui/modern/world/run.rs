@@ -1,4 +1,6 @@
-//! The full-screen map in the game window, in place of retail's map page:
+//! The map in the game window, in place of retail's map page: a box over
+//! the middle of the screen, four fifths of it each way, held there (the
+//! window layouts leave it alone).
 //! M, F10 and the panel strip's Map open and close it, Esc closes it, and
 //! the windows' Map buttons open it on their place. It reads the game's map
 //! art from retail's layout, the player from the radar's feed, the house,
@@ -48,9 +50,37 @@ pub struct MapUi {
     tiles: MapTiles,
 }
 
+/// The share of the screen the map's box takes each way.
+const SHARE: f32 = 0.8;
+
+/// The map's box on a screen `w` by `h`: four fifths of it each way, at
+/// least 640 by 480 where the screen has the room, centred.
+#[must_use]
+pub fn map_box(w: f32, h: f32) -> (f32, f32, f32, f32) {
+    let bw = (w * SHARE).max(640.0_f32.min(w)).round();
+    let bh = (h * SHARE).max(480.0_f32.min(h)).round();
+    (((w - bw) * 0.5).round(), ((h - bh) * 0.5).round(), bw, bh)
+}
+
 /// Whether `cell` is a cell inside (a dungeon or a building).
 fn indoors(cell: u32) -> bool {
     cell & 0xFFFF >= 0x0100
+}
+
+/// Puts the map's element on its box for the screen now; returns the box.
+fn hold_box(ui: &mut ac_ui::UiRoot, view: ElementId) -> (f32, f32, f32, f32) {
+    let (sw, sh) = ui.size();
+    let b = map_box(sw, sh);
+    if let Some(e) = ui.element_mut(view) {
+        let off = |a: f32, b: f32| (a - b).abs() > 0.5;
+        if off(e.left, b.0) || off(e.top, b.1) || off(e.width, b.2) || off(e.height, b.3) {
+            e.left = b.0;
+            e.top = b.1;
+            e.width = b.2;
+            e.height = b.3;
+        }
+    }
+    b
 }
 
 impl WindowUi {
@@ -74,13 +104,14 @@ impl WindowUi {
         )
         .and_then(|info| map_house::map_art(&info));
         let ui = &mut self.host.root;
-        let (w, h) = ui.size();
+        let (sw, sh) = ui.size();
+        let (x, y, w, h) = map_box(sw, sh);
         let mut view = MapView::new(fonts);
         view.set_size(w, h);
         if let Some(a) = art {
             view.set_art(a);
         }
-        let mut element = Element::at(0.0, 0.0, w, h).with_anchors(AnchorEdges::NONE);
+        let mut element = Element::at(x, y, w, h).with_anchors(AnchorEdges::NONE);
         element.name = Some(MAP.to_owned());
         let root = ui.root();
         let frame = ui.add(root, element, view);
@@ -158,11 +189,7 @@ impl WindowUi {
             return;
         };
         let ui = &mut self.host.root;
-        let (w, h) = ui.size();
-        if let Some(e) = ui.element_mut(view) {
-            e.width = w;
-            e.height = h;
-        }
+        hold_box(ui, view);
         ui.show_window(MAP);
         ui.bring_to_front(view);
     }
@@ -330,20 +357,6 @@ impl WindowUi {
             .into_iter()
             .map(|p| (p.name, p.x, p.y))
             .collect();
-        let vitals = self
-            .modern
-            .as_ref()
-            .and_then(|m| m.last_vitals)
-            .map_or_else(Default::default, |v| {
-                let one = |r: ac_ui::panels::vitals::VitalView| {
-                    let words = match (r.current, r.max) {
-                        (Some(c), Some(m)) => format!("{c} / {m}"),
-                        _ => String::new(),
-                    };
-                    (r.fill(), words)
-                };
-                [one(v.health), one(v.stamina), one(v.mana)]
-            });
         let (date, hour) = self.map_state.calendar.map_or_else(
             || (String::new(), String::new()),
             |c| {
@@ -359,18 +372,11 @@ impl WindowUi {
             house,
             pins,
             for_sale,
-            vitals,
             date,
             hour,
         };
         let ui = &mut self.host.root;
-        let (w, h) = ui.size();
-        if let Some(e) = ui.element_mut(view)
-            && ((e.width - w).abs() > 0.5 || (e.height - h).abs() > 0.5)
-        {
-            e.width = w;
-            e.height = h;
-        }
+        let (_, _, w, h) = hold_box(ui, view);
         let typed = kit::field_text(ui, search);
         let pin_typed = kit::field_text(ui, pin_name);
         let focus = ui.keyboard_focus();
@@ -498,5 +504,18 @@ impl WindowUi {
             };
             v.set_max_zoom(max);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::map_box;
+
+    #[test]
+    fn the_map_takes_four_fifths_of_the_screen_in_the_middle() {
+        assert_eq!(map_box(1440.0, 900.0), (144.0, 90.0, 1152.0, 720.0));
+        // A small screen keeps a usable map, never wider than the screen.
+        assert_eq!(map_box(680.0, 600.0), (20.0, 60.0, 640.0, 480.0));
+        assert_eq!(map_box(500.0, 400.0), (0.0, 0.0, 500.0, 400.0));
     }
 }
