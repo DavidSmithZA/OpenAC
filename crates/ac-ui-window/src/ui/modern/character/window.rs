@@ -1194,7 +1194,8 @@ impl CharacterFrame {
             Amount::Ten => "+10".to_owned(),
             Amount::Max => "Max".to_owned(),
         };
-        let sub = if xp == 0 && amount != Amount::Max {
+        let top = cost(s, row, Amount::One).1 == 0;
+        let sub = if top || (xp == 0 && amount != Amount::Max) {
             "at the top".to_owned()
         } else if amount == Amount::Max {
             if points == 0 {
