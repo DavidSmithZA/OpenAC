@@ -1,6 +1,8 @@
 //! The plugin dock: a tile that opens and closes it, one slot per plugin window
 //! that asked for one, a gear that opens and closes the Appearance window, and
-//! while windows are unlocked a grip that moves it. A slot opens or closes its
+//! while windows are unlocked a grip that moves it (in the modern interface,
+//! which has no lock, while the quick-move key is held or the layout is being
+//! edited: [`GripRule`]). A slot opens or closes its
 //! window and shows the first of these it can use: the window's own PNG, its
 //! plugin's `icon.png`, the window's render surface, a monogram. It floats
 //! running either way, or snaps to a screen edge as a rail. It draws the same
@@ -161,6 +163,23 @@ pub struct DockArt {
     pub bigger_letters: Option<Arc<UiFont>>,
 }
 
+/// When the grip and the length handle show.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum GripRule {
+    /// While windows are unlocked.
+    #[default]
+    Unlocked,
+    /// While the quick-move key is held or the layout is being edited
+    /// (`editing`), unless the dock is locked in place (`locked`): the
+    /// modern interface, which has no lock.
+    QuickMove {
+        /// The layout is being edited.
+        editing: bool,
+        /// The dock is locked in place.
+        locked: bool,
+    },
+}
+
 /// The dock on its way open or closed.
 #[derive(Debug, Clone, Copy)]
 struct Reveal {
@@ -197,6 +216,8 @@ pub struct PluginDock {
     peek_held_off: bool,
     /// The player hid it (Toggle Plugin Manager).
     hidden: bool,
+    /// When the grip and the length handle show.
+    grip_rule: GripRule,
     /// A screen that has no in-game windows covers it.
     covered: bool,
     font: Option<Arc<UiFont>>,
@@ -298,6 +319,9 @@ impl PluginDock {
         let forward = arrow("PluginDockForward", true);
         let mut h = Element::at(0.0, 0.0, 0.0, 0.0).with_anchors(AnchorEdges::NONE);
         h.name = Some("PluginDockLengthHandle".to_owned());
+        // Quick move leaves it its press, so it can be pulled with the key
+        // held.
+        h.quick_move_passes = true;
         let length_handle = ui.add(root, h, DockLengthHandle::default());
         let mut dock = Self {
             root,
@@ -316,6 +340,7 @@ impl PluginDock {
             peek_wait: 0.0,
             peek_held_off: false,
             hidden: false,
+            grip_rule: GripRule::default(),
             covered: false,
             font,
             modern,
@@ -385,6 +410,19 @@ impl PluginDock {
     #[must_use]
     pub fn is_shown(&self) -> bool {
         !self.entries.is_empty() && !self.hidden
+    }
+
+    /// When the grip and the length handle show from now on.
+    pub fn set_grip_rule(&mut self, rule: GripRule) {
+        self.grip_rule = rule;
+    }
+
+    /// The grip and the length handle show now.
+    fn grip_shown(&self, ui: &UiRoot) -> bool {
+        match self.grip_rule {
+            GripRule::Unlocked => !ui.ui_locked(),
+            GripRule::QuickMove { editing, locked } => !locked && (editing || ui.quick_move_held()),
+        }
     }
 
     /// The player hides (`true`) or shows the dock (OpenAC `Hide`, `Show`).
@@ -630,7 +668,7 @@ impl PluginDock {
         self.screen = ui.size();
         let owners: Vec<&str> = self.entries.iter().map(|e| e.owner.as_str()).collect();
         let closed = self.laid_out_closed();
-        let grip = !ui.ui_locked();
+        let grip = self.grip_shown(ui);
         let longest = layout::max_length(self.mode, self.screen.0, self.screen.1).min(
             layout::length_for_slots(self.mode, self.size, grip, &owners, self.slot_limit),
         );
@@ -1379,7 +1417,7 @@ impl PanelController for PluginDock {
         let size = ui.element(self.root).map(|e| (e.width, e.height));
         if self.screen != ui.size()
             || (self.reveal.is_none() && size != Some((self.layout.width, self.layout.height)))
-            || self.layout.grip.is_some() == ui.ui_locked()
+            || self.layout.grip.is_some() != self.grip_shown(ui)
         {
             self.reflow(ui);
         }

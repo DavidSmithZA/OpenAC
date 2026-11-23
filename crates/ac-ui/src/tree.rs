@@ -191,6 +191,9 @@ pub struct Element {
     /// (and snaps to the screen's edges and other such pieces) whatever the
     /// UI lock says (see [`UiRoot::set_quick_move_key`]).
     pub quick_move: bool,
+    /// A handle of its quick-move piece's own (a length handle): a press
+    /// here goes to it even while the quick-move key is held.
+    pub quick_move_passes: bool,
     /// A left press here takes keyboard focus.
     pub accepts_focus: bool,
     /// A left press takes keyboard focus when it accepts focus (a plugin's
@@ -276,6 +279,7 @@ impl Default for Element {
             click_through: false,
             see_through_when_dragged_out: false,
             quick_move: false,
+            quick_move_passes: false,
             accepts_focus: false,
             focus_on_mouse_click: true,
             tab_stop: false,

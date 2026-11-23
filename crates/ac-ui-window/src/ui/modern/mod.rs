@@ -1542,6 +1542,8 @@ impl WindowUi {
                 .map(ac_host::settings::SettingsStore::load_hud_pieces)
                 .unwrap_or_default()
         });
+        let outlines = modern.outlines;
+        let editing = modern.bars.as_ref().is_some_and(bars::run::BarsUi::editing);
         let ui = &mut self.host.root;
         for name in hud::PIECES {
             let Some(frame) = ui.window(name).map(|w| w.frame) else {
@@ -1553,10 +1555,30 @@ impl WindowUi {
             {
                 e.quick_move = movable;
             }
+            if let Some(o) = outlines
+                && let Some(l) = ui.widget_mut::<QuickMoveOutlines>(o)
+            {
+                l.set_name(frame, hud::piece_words(name));
+            }
+            if name == hud::DOCK {
+                // The dock shows itself while it has slots: it is told
+                // instead, below.
+                continue;
+            }
             if pieces.is_hidden(name) && ui.is_window_visible(name) {
                 ui.hide_window(name);
             }
         }
+        // Its grip follows quick move and Edit layout.
+        let (hidden, locked) = (pieces.is_hidden(hud::DOCK), pieces.is_locked(hud::DOCK));
+        let rule = ac_ui::plugin::dock::GripRule::QuickMove { editing, locked };
+        self.host
+            .with_controller::<ac_ui::plugin::dock::PluginDock, _>(hud::DOCK, |c, ui| {
+                c.set_grip_rule(rule);
+                if hidden && c.is_shown() {
+                    c.set_hidden(ui, true);
+                }
+            });
     }
 
     /// Hides HUD piece `name` (or shows it again) and saves that.
@@ -1566,7 +1588,12 @@ impl WindowUi {
             .as_mut()
             .and_then(|m| m.pieces.as_mut())
             .is_some_and(|p| p.set_hidden(name, on));
-        if !on {
+        if name == hud::DOCK {
+            self.host
+                .with_controller::<ac_ui::plugin::dock::PluginDock, _>(name, |c, ui| {
+                    c.set_hidden(ui, on);
+                });
+        } else if !on {
             self.host.root.show_window(name);
         }
         if changed {

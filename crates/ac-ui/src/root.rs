@@ -2338,12 +2338,17 @@ impl UiRoot {
     }
 
     /// The nearest element at or above `start` marked
-    /// [`Element::quick_move`].
+    /// [`Element::quick_move`]; none when a handle on the way keeps the
+    /// press ([`Element::quick_move_passes`]).
     fn find_quick_move_piece(&self, start: ElementId) -> Option<ElementId> {
         let mut cur = Some(start);
         while let Some(c) = cur {
-            if self.element(c)?.quick_move {
+            let e = self.element(c)?;
+            if e.quick_move {
                 return Some(c);
+            }
+            if e.quick_move_passes {
+                return None;
             }
             cur = self.parent(c);
         }

@@ -2185,6 +2185,10 @@ impl WindowUi {
         }
         self.host
             .with_controller::<PluginDock, _>(dock::WINDOW, |c, ui| c.set_hidden(ui, shown));
+        // On Modern the dock is a HUD piece: its hiding is kept with theirs.
+        if self.modern.is_some() {
+            self.set_modern_piece_hidden(super::modern::hud::DOCK, shown);
+        }
         if shown {
             let text = self.plugin_dock_hidden_message();
             self.client_line(&text);

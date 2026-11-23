@@ -1194,8 +1194,11 @@ impl WindowUi {
             if let Some(view) = view {
                 self.feed_modern_cast(view.last_cast);
             }
+            // Modern has no lock (its pieces move with quick move): a lock
+            // the character keeps from retail is left to retail.
             if let Some(view) = view {
-                self.host.root.set_ui_locked(view.ui_locked);
+                let locked = view.ui_locked && self.modern.is_none();
+                self.host.root.set_ui_locked(locked);
             }
         }
         self.follow_side_by_side_vitals();

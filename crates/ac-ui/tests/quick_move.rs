@@ -122,3 +122,23 @@ fn a_right_click_with_the_key_asks_for_the_quick_edits_and_nothing_else() {
         "{out:?}"
     );
 }
+
+#[test]
+fn a_handle_of_the_pieces_own_keeps_its_press_while_the_key_is_held() {
+    let mut ui = locked_root();
+    let id = piece(&mut ui, 200.0, 200.0);
+    let mut h = at(80.0, 10.0, 20.0, 20.0);
+    h.quick_move_passes = true;
+    let handle = ui.add(
+        id,
+        h,
+        ClickRecorder {
+            handles_click: true,
+            ..ClickRecorder::default()
+        },
+    );
+    ui.set_modifiers(Modifiers::CTRL);
+    drag(&mut ui, (285, 215), (285, 215));
+    assert_eq!(place(&ui, id), (200.0, 200.0), "the piece stays");
+    assert_eq!(ui.widget::<ClickRecorder>(handle).unwrap().clicks, 1);
+}

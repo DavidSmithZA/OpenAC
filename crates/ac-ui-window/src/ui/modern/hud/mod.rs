@@ -46,10 +46,13 @@ pub const FELLOWS: &str = "modern-fellows";
 /// The quests on screen's window name.
 pub const QUESTS: &str = "modern-quests";
 
+/// The plugin dock's window name: a piece like the others on Modern.
+pub const DOCK: &str = ac_ui::plugin::dock::WINDOW;
+
 /// Every HUD piece's window name (not the bars: they keep their own lock
 /// and hiding).
-pub const PIECES: [&str; 8] = [
-    VITALS, TARGET, EFFECTS, RADAR, COMBAT, PANELS, FELLOWS, QUESTS,
+pub const PIECES: [&str; 9] = [
+    VITALS, TARGET, EFFECTS, RADAR, COMBAT, PANELS, FELLOWS, QUESTS, DOCK,
 ];
 
 /// What the player calls piece `name` (its window name).
@@ -64,6 +67,7 @@ pub fn piece_words(name: &str) -> &str {
         PANELS => "Panel strip",
         FELLOWS => "Fellows",
         QUESTS => "Quests",
+        DOCK => "Plugin dock",
         other => other.strip_prefix("modern-").unwrap_or(other),
     }
 }
