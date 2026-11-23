@@ -383,12 +383,9 @@ impl WindowUi {
         };
         let stack = u32::try_from(o.stack_size.max(1)).unwrap_or(1);
         let text = if amount > 0 && amount < stack {
-            format!(
-                "{} ({amount} of {stack}) goes on the ground at your feet.",
-                o.name
-            )
+            format!("{} ({amount} of {stack}) goes on the ground.", o.name)
         } else {
-            format!("{} goes on the ground at your feet.", o.name)
+            format!("{} goes on the ground.", o.name)
         };
         let look = crate::ui::modern::dialogs::look::Look::new(
             "Drop it on the ground?",
