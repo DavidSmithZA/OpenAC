@@ -1,0 +1,24 @@
+[package]
+name = "ac-world-map"
+description = "The detailed world map (OPENAC): an optional download of the world drawn in 256 px WebP tiles at four levels of detail, its manifest and index, its parts kept on disk as they came, and (natively) the download, the store and a thread that reads and decodes tiles."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+# The download, the store on disk and the tile thread (not in the page).
+net = ["dep:ac-launcher-core", "dep:ac-launcher-net", "dep:sha2", "dep:image-webp"]
+
+[dependencies]
+# The JSON reader the client uses for its own documents.
+ac-host-core.workspace = true
+ac-launcher-core = { workspace = true, optional = true }
+ac-launcher-net = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+image-webp = { workspace = true, optional = true }
+
+[lints]
+workspace = true

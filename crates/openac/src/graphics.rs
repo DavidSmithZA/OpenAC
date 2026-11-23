@@ -166,6 +166,7 @@ impl GraphicsEnv {
             keymap_directory: None,
             ac_dir: self.ac_dir.clone(),
             screenshots_directory: None,
+            world_map_directory: None,
             no_block_compression: self.no_block_compression,
             ui_probe_script: self.ui_probe_script.clone(),
             ui_probe_dump: self.ui_probe_dump,
@@ -202,6 +203,8 @@ pub struct DisplayPrefs {
     /// The settings file; `None` when the configuration directory is
     /// unknown (nothing is saved).
     pub store: Option<SettingsStore>,
+    /// Where the detailed world map's tiers are kept.
+    pub world_map_directory: Option<std::path::PathBuf>,
 }
 
 impl DisplayPrefs {
@@ -223,6 +226,7 @@ impl DisplayPrefs {
             settings: player.display.clone(),
             player,
             store,
+            world_map_directory: paths.map(ac_host::PathSet::world_map_directory),
         }
     }
 
@@ -244,6 +248,10 @@ impl DisplayPrefs {
             .as_ref()
             .and_then(|s| s.path().parent())
             .map(|dir| dir.join("screenshots"));
+        options
+            .graphics
+            .world_map_directory
+            .clone_from(&self.world_map_directory);
         options.audio.settings = ac_render::audio::audio_settings_of(&self.player.audio);
         options.audio.mixer = ac_render::audio::mixer_options_of(&self.player.mixer);
     }

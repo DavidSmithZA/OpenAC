@@ -277,6 +277,7 @@ dependencies = [
  "ac-ui",
  "ac-ui-window",
  "ac-vfx",
+ "ac-world-map",
  "arboard",
  "bytemuck",
  "glam",
@@ -363,6 +364,7 @@ dependencies = [
  "ac-proto",
  "ac-runtime",
  "ac-ui",
+ "ac-world-map",
  "bytemuck",
  "glam",
  "image-webp",
@@ -377,6 +379,17 @@ dependencies = [
  "ac-dat",
  "glam",
  "rustc-hash 2.1.3",
+]
+
+[[package]]
+name = "ac-world-map"
+version = "0.2.15"
+dependencies = [
+ "ac-host-core",
+ "ac-launcher-core",
+ "ac-launcher-net",
+ "image-webp",
+ "sha2 0.11.1",
 ]
 
 [[package]]

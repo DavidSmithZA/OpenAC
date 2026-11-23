@@ -20,6 +20,7 @@ use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
 
 use super::model::{self, Town, away_short, away_words, coordinates_text};
+use super::tiles::{TileDraw, ViewMetres};
 use crate::ui::modern::hud::lines::stroke;
 use crate::ui::modern::kit::{
     self, ButtonLook, Hits, Rect, bronze, gold, inside, put, put_mid, put_right, spaced,
@@ -30,8 +31,12 @@ pub const BAR: f32 = 56.0;
 /// The side column's width and its margin.
 const SIDE_W: f32 = 340.0;
 const SIDE_GAP: f32 = 24.0;
-/// The zoom steps.
-const ZOOMS: [f32; 7] = [1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0];
+/// The zoom steps. Past [`ART_ZOOM`] only with a detailed map.
+const ZOOMS: [f32; 16] = [
+    1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 16.0, 24.0, 32.0, 48.0, 64.0, 96.0, 128.0, 192.0,
+];
+/// The furthest zoom on the game's map alone.
+pub const ART_ZOOM: f32 = 8.0;
 /// From this zoom every town is named.
 const NAME_ALL_ZOOM: f32 = 2.0;
 
@@ -235,6 +240,10 @@ pub struct MapView {
     dragged: bool,
     /// The coordinates under the pointer.
     cursor: Option<(f64, f64)>,
+    /// The detailed map's tiles to draw, bottom first.
+    pub tiles: Vec<TileDraw>,
+    /// The furthest zoom ([`ART_ZOOM`] on the game's map alone).
+    max_zoom: f32,
 }
 
 impl MapView {
@@ -268,7 +277,57 @@ impl MapView {
             held: None,
             dragged: false,
             cursor: None,
+            tiles: Vec::new(),
+            max_zoom: ART_ZOOM,
         }
+    }
+
+    /// The furthest zoom from now on; a zoom past it comes back to it.
+    pub fn set_max_zoom(&mut self, max: f32) {
+        self.max_zoom = max.max(ART_ZOOM);
+        let top = self.top_zoom();
+        if self.zoom > top {
+            self.zoom = top;
+            self.hold_centre();
+        }
+    }
+
+    /// The furthest zoom step allowed.
+    fn top_zoom(&self) -> usize {
+        ZOOMS
+            .iter()
+            .rposition(|z| *z <= self.max_zoom + 1e-3)
+            .unwrap_or(0)
+    }
+
+    /// What the map square shows, in world metres, and the screen's pixels
+    /// a metre (none without the game's map art to place it).
+    #[must_use]
+    pub fn view_metres(&self) -> Option<ViewMetres> {
+        let sq = self.square();
+        if sq.2 <= 0.0 || sq.3 <= 0.0 {
+            return None;
+        }
+        let corner = |sx: f32, sy: f32| {
+            let art = self.art?;
+            let region = self.region();
+            let k = region / sq.2;
+            let px = self.centre.0 - region * 0.5 + (sx - sq.0) * k;
+            let py = self.centre.1 - region * 0.5 + (sy - sq.1) * k;
+            let (x, y) = art.coordinates(f64::from(px), f64::from(py));
+            Some(ac_world_map::index::metres(x, y))
+        };
+        let (west, north) = corner(sq.0, sq.1)?;
+        let (east, south) = corner(sq.0 + sq.2, sq.1 + sq.3)?;
+        let across = (east - west).abs().max(1.0);
+        Some(((west, north, east, south), f64::from(sq.2) / across))
+    }
+
+    /// The screen pixels a metre at zoom `zoom`, the art and square as now.
+    #[must_use]
+    pub fn pixels_per_m_at(&self, zoom: f32) -> Option<f64> {
+        let (_, now) = self.view_metres()?;
+        Some(now * f64::from(zoom / ZOOMS[self.zoom]))
     }
 
     /// Gives the map its art.
@@ -290,7 +349,7 @@ impl MapView {
             let (px, py) = art.pixel(x, y);
             self.centre = (px as f32, py as f32);
         }
-        self.zoom = self.zoom.max(zoom).min(ZOOMS.len() - 1);
+        self.zoom = self.zoom.max(zoom).min(self.top_zoom());
         self.pick = name.map(|name| Pick {
             name,
             x,
@@ -406,7 +465,7 @@ impl MapView {
 
     fn zoom_by(&mut self, step: i32, at: Option<(f32, f32)>) {
         let before = at.and_then(|(x, y)| self.to_map(x, y));
-        let z = (self.zoom as i32 + step).clamp(0, ZOOMS.len() as i32 - 1);
+        let z = (self.zoom as i32 + step).clamp(0, self.top_zoom() as i32);
         self.zoom = usize::try_from(z).unwrap_or(0);
         self.hold_centre();
         // The place under the pointer stays under it.
@@ -644,6 +703,28 @@ impl MapView {
                 sq.2,
                 sq.3,
                 (u0, v0, u1, v1),
+                Color::WHITE,
+            );
+        }
+        // The detailed map over it, edges shared and each tile sampled half
+        // a pixel in from its edge, so no seam shows.
+        for t in &self.tiles {
+            let (Some((x0, y0)), Some((x1, y1))) = (
+                self.to_screen(t.west, t.north),
+                self.to_screen(t.east, t.south),
+            ) else {
+                continue;
+            };
+            if x1 < sq.0 || y1 < sq.1 || x0 > sq.0 + sq.2 || y0 > sq.1 + sq.3 {
+                continue;
+            }
+            rc.sprite(
+                t.texture,
+                x0,
+                y0,
+                x1 - x0,
+                y1 - y0,
+                (t.inset, t.inset, 1.0 - t.inset, 1.0 - t.inset),
                 Color::WHITE,
             );
         }

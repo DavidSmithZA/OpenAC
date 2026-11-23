@@ -184,6 +184,54 @@ pub struct ModernHudSettings {
     /// Windows and pop-ups show the world behind them blurred, as frosted
     /// glass (off: a plain see-through fill).
     pub glass_blur: bool,
+    /// The modern map's picture: the game's, or a detailed map tier
+    /// (drawn once downloaded).
+    pub map_detail: MapDetail,
+}
+
+/// The modern map's picture.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MapDetail {
+    /// The game's own map.
+    Game,
+    /// The detailed map, Standard tier.
+    #[default]
+    Standard,
+    /// HD tier.
+    Hd,
+    /// Ultra tier.
+    Ultra,
+    /// Extreme tier.
+    Extreme,
+}
+
+impl MapDetail {
+    /// Every choice, in the order offered.
+    pub const ALL: [Self; 5] = [
+        Self::Game,
+        Self::Standard,
+        Self::Hd,
+        Self::Ultra,
+        Self::Extreme,
+    ];
+
+    /// The name saved in the settings (a tier's own name).
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Game => "game",
+            Self::Standard => "standard",
+            Self::Hd => "hd",
+            Self::Ultra => "ultra",
+            Self::Extreme => "extreme",
+        }
+    }
+
+    /// The choice saved as `name`.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|k| k.name() == name)
+    }
 }
 
 /// The key held for quick move.
@@ -240,6 +288,7 @@ impl Default for ModernHudSettings {
             effect_warning_minutes: 5,
             quick_move_key: QuickMoveKey::default(),
             glass_blur: true,
+            map_detail: MapDetail::Standard,
         }
     }
 }
@@ -779,6 +828,12 @@ fn read_display(d: &[Member], version: i32) -> Result<DisplaySettings, Unreadabl
                 ))
                 .unwrap_or(m.quick_move_key),
                 glass_blur: read_bool(d, "modernGlassBlur", m.glass_blur),
+                map_detail: MapDetail::from_name(&read_string(
+                    d,
+                    "modernMapDetail",
+                    m.map_detail.name(),
+                ))
+                .unwrap_or(m.map_detail),
             }
         },
     })
@@ -883,6 +938,7 @@ fn display_object(d: &DisplaySettings) -> String {
             string(d.modern_hud.quick_move_key.name()),
         ),
         ("modernGlassBlur", boolean(d.modern_hud.glass_blur)),
+        ("modernMapDetail", string(d.modern_hud.map_detail.name())),
         (
             "modernLowHealthEdgeGlow",
             boolean(d.modern_hud.low_health_edge_glow),
@@ -1055,6 +1111,7 @@ mod tests {
                 effect_warning_minutes: 2,
                 quick_move_key: QuickMoveKey::Alt,
                 glass_blur: false,
+                map_detail: MapDetail::Extreme,
             },
         };
         t.store().save_display(&original).unwrap();

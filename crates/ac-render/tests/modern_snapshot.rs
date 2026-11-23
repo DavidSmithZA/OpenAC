@@ -3524,6 +3524,92 @@ fn the_modern_map() {
     assert!(!s.ui.host().root.is_window_visible("modern-map"));
 }
 
+/// The detailed map over the game's: the tier in `AC_WORLD_MAP_PACK` (a
+/// folder as the bake tool packs it, `<tier>-r1`), linked into a scratch
+/// map folder, drawn for the whole world, Holtburg and close in.
+#[test]
+#[ignore = "needs the retail dat files and a detailed map pack; writes pictures"]
+fn the_modern_map_detailed() {
+    use ac_core::combat::CombatMode;
+    use ac_ui::input::InputAction;
+    use ac_ui_window::ui::modern::world::map::MapView;
+    let Some(pack) = std::env::var_os("AC_WORLD_MAP_PACK").map(PathBuf::from) else {
+        return;
+    };
+    let name = pack
+        .file_name()
+        .and_then(|n| n.to_str())
+        .and_then(|n| n.split('-').next())
+        .expect("a pack folder named <tier>-r<release>")
+        .to_owned();
+    let root = std::env::temp_dir().join(format!("openac-world-map-{}", std::process::id()));
+    let dir = root.join(&name);
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&dir).unwrap();
+    for entry in std::fs::read_dir(&pack).unwrap() {
+        let path = entry.unwrap().path();
+        let file = path.file_name().unwrap().to_string_lossy().into_owned();
+        if file.ends_with(".bin") {
+            #[cfg(unix)]
+            std::os::unix::fs::symlink(&path, dir.join(&file)).unwrap();
+        } else if file == format!("atlas-map-{name}.json") {
+            std::fs::copy(&path, dir.join("manifest.json")).unwrap();
+        }
+    }
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let maps = ac_world_map::service::MapService::start(root.clone(), ac_world_map::DEFAULT_SOURCE)
+        .expect("the service");
+    s.ui.set_world_maps(Box::new(maps));
+    assert!(s.ui.handle_input_action(InputAction::ToggleMapPage));
+    let view = s.ui.host().root.window("modern-map").expect("it").frame;
+    // Steps until the tiles asked for have come (the tile threads decode
+    // them meanwhile).
+    let settle = |s: &mut Shot| {
+        let mut drawn = 0;
+        for _ in 0..200 {
+            s.step();
+            std::thread::sleep(Duration::from_millis(10));
+            let now =
+                s.ui.host_mut()
+                    .root
+                    .widget_mut::<MapView>(view)
+                    .map_or(0, |v| v.tiles.len());
+            if now == drawn && now > 0 {
+                break;
+            }
+            drawn = now;
+        }
+        drawn
+    };
+    assert!(settle(&mut s) > 0, "tiles are drawn");
+    s.save("map-detailed");
+    for (zoom, shot) in [(3, "map-detailed-holtburg"), (12, "map-detailed-close")] {
+        if let Some(v) = s.ui.host_mut().root.widget_mut::<MapView>(view) {
+            v.focus(33.9, 42.1, zoom, Some("Holtburg".to_owned()));
+        }
+        assert!(settle(&mut s) > 0);
+        s.save(shot);
+    }
+    // Options › Graphics › World map, found by the search: the tier chosen
+    // (Standard) is not here, the one that is shows meanwhile.
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    s.step();
+    s.ui.attach_key_bindings(&ac_ui::input::KeyBindings::retail_defaults());
+    assert!(s.ui.run_hotkey(ac_render::ui::window::Hotkey::Options));
+    s.step();
+    s.step();
+    let frame = s.ui.host().root.window("modern-options").expect("it").frame;
+    let field = shown_in::<ac_ui::widgets::Field>(&s, frame).expect("the search field");
+    s.ui.host_mut()
+        .root
+        .with::<ac_ui::widgets::Field, _>(field, |f, _| f.set_text("detailed"));
+    s.step();
+    s.step();
+    s.save("options-world-map");
+    let _ = std::fs::remove_dir_all(root);
+}
+
 #[test]
 #[ignore = "needs the retail dat files; writes pictures"]
 fn the_modern_chess() {

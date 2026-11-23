@@ -258,6 +258,9 @@ pub enum Item {
     ChatGrid,
     /// A button.
     Button(Action, Words, &'static str),
+    /// The detailed map's download: what is on disk and under way, with
+    /// Download, Update, Cancel and Remove.
+    MapDownload,
 }
 
 /// A group of a section.
@@ -808,6 +811,20 @@ pub const GROUPS: &[Group] = &[
                 ),
             ),
             Item::Atmospheric,
+        ],
+    },
+    Group {
+        section: Section::Graphics,
+        title: "WORLD MAP",
+        items: &[
+            disp(
+                DisplayField::ModernMapDetail,
+                w(
+                    "Map detail",
+                    "The map's picture: the game's own, or the world drawn from above in more detail, to zoom right into the towns. A detailed map is a download of its own (below); until it is on this computer, the map shows the most detailed one that is, or the game's.",
+                ),
+            ),
+            Item::MapDownload,
         ],
     },
     // Sound.

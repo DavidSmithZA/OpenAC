@@ -916,6 +916,16 @@ pub const THEME_CHOICES: &[ExplicitChoice] = &[
     choice("Parchment", "Parchment"),
 ];
 
+/// The modern map's picture: the game's, or a detailed map tier (drawn
+/// once downloaded, in the modern Options).
+pub const MAP_DETAIL_CHOICES: &[ExplicitChoice] = &[
+    choice("game", "The game's map"),
+    choice("standard", "Standard"),
+    choice("hd", "HD"),
+    choice("ultra", "Ultra"),
+    choice("extreme", "Extreme"),
+];
+
 /// OpenAC's modern interface: how its vitals and effects behave (Retail
 /// ignores these rows).
 fn modern_interface_rows() -> Vec<ConfigRow> {
@@ -976,6 +986,12 @@ fn modern_interface_rows() -> Vec<ConfigRow> {
             display(DisplayField::ModernGlassBlur),
             "Windows and pop-ups show what is behind them softly blurred, like frosted glass. Off, they are a plain see-through fill, a little lighter on the graphics card. Modern interface only.",
         ),
+        ConfigRow::ExplicitMenu {
+            label: "Map detail",
+            choices: MAP_DETAIL_CHOICES,
+            default: def.map_detail.name(),
+            target: display(DisplayField::ModernMapDetail),
+        },
         ConfigRow::Separator,
     ]
 }
@@ -1345,9 +1361,9 @@ mod tests {
             .expect("the modern interface section");
         assert_eq!(option_rows(&all[enhancements..modern]), 21);
         assert_eq!(modern - enhancements, 23);
-        // A header, eight rows (the theme first), a separator.
-        assert_eq!(option_rows(&all[modern..]), 8);
-        assert_eq!(all.len() - modern, 10);
+        // A header, nine rows (the theme first), a separator.
+        assert_eq!(option_rows(&all[modern..]), 9);
+        assert_eq!(all.len() - modern, 11);
     }
 
     #[test]

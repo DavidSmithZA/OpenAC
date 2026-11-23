@@ -20,6 +20,7 @@ use ac_ui::strings::compute_hash;
 use ac_ui::tree::ElementId;
 use ac_ui::widgets::Field;
 
+use super::map_row::MapVerb;
 use super::model::{OptionsModel, Sources, rows};
 use super::spec::Action;
 use super::window::{
@@ -235,6 +236,7 @@ impl WindowUi {
                 o.was_open = open;
             }
             if open {
+                self.world_maps.ask();
                 let live = self.live_option_values();
                 if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
                     f.model.live = live;
@@ -256,6 +258,7 @@ impl WindowUi {
             .map(|(name, filter)| GridTab { name, filter })
             .collect();
         let (keys, keys_changed) = self.modern_key_lines();
+        let map_row = super::map_row::map_row(&self.world_maps.status(), self.chosen_map_tier());
         let asks = {
             let ui = &mut self.host.root;
             let typed = kit::field_text(ui, search);
@@ -267,6 +270,7 @@ impl WindowUi {
                     f.tabs = tabs;
                     f.keys = keys;
                     f.keys_changed = keys_changed;
+                    f.set_map(map_row);
                     std::mem::take(&mut f.requests)
                 })
                 .unwrap_or_default()
@@ -356,6 +360,11 @@ impl WindowUi {
             OptionsRequest::Act(Action::SaveKeysAs) => {
                 self.keyboard_output(KeyboardConfigOutput::OpenSaveAs);
             }
+            OptionsRequest::Map(verb) => match verb {
+                MapVerb::Download(tier) => self.world_maps.download(tier),
+                MapVerb::Cancel => self.world_maps.cancel(),
+                MapVerb::Remove(tier) => self.world_maps.remove(tier),
+            },
             OptionsRequest::CaptureKey { .. } => self.request_key_capture(),
             OptionsRequest::EraseKey { row, slot } => {
                 self.with_key_config(|c, ui| {

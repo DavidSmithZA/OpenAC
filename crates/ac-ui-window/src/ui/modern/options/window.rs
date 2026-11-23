@@ -20,6 +20,7 @@ use ac_ui::shapes::CornerRadii;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
 
+use super::map_row::{MapRow, MapVerb};
 use super::model::{Control, OptionsModel, Row, Shown, number, slider_words};
 use super::spec::{self, Action, Section};
 use crate::ui::modern::hud::lines::stroke;
@@ -139,6 +140,8 @@ pub enum OptionsRequest {
     KeysRevert,
     /// The keys to the game's defaults.
     KeysDefaults,
+    /// A button of the detailed map's row.
+    Map(MapVerb),
 }
 
 /// A chat tab as the grid shows it.
@@ -207,6 +210,8 @@ enum Part {
     MenuChoice(usize),
     /// A row's button.
     Button(usize),
+    /// The detailed map's row's button: the row and which.
+    MapButton(usize, usize),
     /// The grid's box of tab and group.
     Cell(usize, usize),
     /// A key line's slot.
@@ -274,6 +279,8 @@ pub struct OptionsFrame {
     held: Option<usize>,
     /// What the held slider changed so far (saved when it is let go).
     slid: Option<Stored>,
+    /// The detailed map's row as it reads now.
+    map: MapRow,
 }
 
 /// The words of row group `g` and whether its settings are saved on the
@@ -310,7 +317,22 @@ impl OptionsFrame {
             keys_changed: 0,
             capture: None,
             clash: None,
+            map: MapRow::default(),
         }
+    }
+
+    /// The detailed map's row reads `row` from now on.
+    pub fn set_map(&mut self, row: MapRow) {
+        if self.map == row {
+            return;
+        }
+        for r in &mut self.model.rows {
+            if r.control == Control::MapDownload {
+                r.label.clone_from(&row.label);
+                r.desc.clone_from(&row.desc);
+            }
+        }
+        self.map = row;
     }
 
     /// The search box's place.
@@ -619,6 +641,25 @@ impl OptionsFrame {
                 let w = kit::button_width(verb, self.fonts.control.as_ref());
                 vec![(Part::Button(i), (right - w, cy - 15.0, w, 30.0))]
             }
+            Control::MapDownload => {
+                let mut x = right;
+                let mut out: Vec<(Part, Rect)> = self
+                    .map
+                    .buttons
+                    .iter()
+                    .enumerate()
+                    .rev()
+                    .map(|(k, (_, verb))| {
+                        let w = kit::button_width(verb, self.fonts.control.as_ref());
+                        x -= w;
+                        let r = (x, cy - 15.0, w, 30.0);
+                        x -= 8.0;
+                        (Part::MapButton(i, k), r)
+                    })
+                    .collect();
+                out.reverse();
+                out
+            }
             Control::ChatGrid => {
                 let x0 = Self::content_x();
                 let n = self.tabs.len().max(1) as f32;
@@ -880,6 +921,11 @@ impl OptionsFrame {
             Part::Button(i) => {
                 if let Control::Button(action, _) = self.model.rows[i].control {
                     self.requests.push(OptionsRequest::Act(action));
+                }
+            }
+            Part::MapButton(_, k) => {
+                if let Some((verb, _)) = self.map.buttons.get(k) {
+                    self.requests.push(OptionsRequest::Map(*verb));
                 }
             }
             Part::KeySlot(k, slot) => {
@@ -1441,8 +1487,58 @@ impl OptionsFrame {
                         );
                     }
                 }
+                Part::MapButton(_, k) => {
+                    if let Some((verb, words)) = self.map.buttons.get(k) {
+                        let look = if matches!(verb, MapVerb::Download(_)) {
+                            ButtonLook::Primary
+                        } else {
+                            ButtonLook::Plain
+                        };
+                        kit::button(
+                            rc,
+                            &self.theme,
+                            r,
+                            words,
+                            self.fonts.control.as_ref(),
+                            look,
+                            lit,
+                            true,
+                        );
+                    }
+                }
                 _ => {}
             }
+        }
+        // How far the map's download has come, left of its button.
+        if row.control == Control::MapDownload
+            && let Some(share) = self.map.progress
+        {
+            let left = self
+                .row_parts(i, top, h)
+                .first()
+                .map_or(right, |(_, r)| r.0);
+            let bar = (
+                left - 16.0 - 180.0,
+                top + (h * 0.5).round() - 3.0,
+                180.0,
+                6.0,
+            );
+            rc.fill_rounded_rect(
+                bar.0,
+                bar.1,
+                bar.2,
+                bar.3,
+                CornerRadii::all(3.0),
+                kit::bronze(0.18),
+            );
+            rc.fill_rounded_rect(
+                bar.0,
+                bar.1,
+                (bar.2 * share.clamp(0.0, 1.0)).max(6.0),
+                bar.3,
+                CornerRadii::all(3.0),
+                kit::gold(1.0),
+            );
         }
     }
 

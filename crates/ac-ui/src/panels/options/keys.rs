@@ -84,6 +84,9 @@ pub enum DisplayField {
     ModernQuickMoveKey,
     /// The modern interface: the world behind windows shows blurred.
     ModernGlassBlur,
+    /// The modern interface: the map's picture (the game's or a detailed
+    /// tier).
+    ModernMapDetail,
 }
 
 /// A chat setting.
@@ -301,6 +304,9 @@ impl LiveValues {
                         Text(d.modern_hud.quick_move_key.name().to_owned())
                     }
                     DisplayField::ModernGlassBlur => Bool(d.modern_hud.glass_blur),
+                    DisplayField::ModernMapDetail => {
+                        Text(d.modern_hud.map_detail.name().to_owned())
+                    }
                 }
             }
             OptionKey::Chat(f) => {
@@ -443,6 +449,9 @@ impl LiveValues {
                     }
                     (DisplayField::ModernGlassBlur, Bool(x)) => {
                         d.modern_hud.glass_blur = *x;
+                    }
+                    (DisplayField::ModernMapDetail, Text(x)) => {
+                        d.modern_hud.map_detail = ac_host::settings::MapDetail::from_name(x)?;
                     }
                     _ => return None,
                 }
