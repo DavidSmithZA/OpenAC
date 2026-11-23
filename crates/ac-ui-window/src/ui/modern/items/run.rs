@@ -473,9 +473,14 @@ impl WindowUi {
                 pack_asks.extend(button.requests.drain(..).map(|r| (face, id, r)));
             }
         }
-        let worn_drops = ui
+        let (worn_drops, figure_clicked) = ui
             .widget_mut::<inv::FigureTurn>(turner)
-            .map(|t| std::mem::take(&mut t.dropped))
+            .map(|t| {
+                (
+                    std::mem::take(&mut t.dropped),
+                    std::mem::take(&mut t.clicked),
+                )
+            })
             .unwrap_or_default();
         let sheet_asks = ui
             .widget_mut::<SheetView>(details)
@@ -503,6 +508,11 @@ impl WindowUi {
         }
         if clicked_away {
             self.close_inventory_card();
+        }
+        // In a use or examine mode the figure is the player, as retail's
+        // paperdoll is: a mana stone used on it fills what is worn.
+        if figure_clicked && self.facts.state.mode != ac_runtime::inventory::InteractionMode::None {
+            ac_ui::panels::items::offer_target(&mut self.host.root, ObjectRef::Player);
         }
         for id in worn_drops {
             let wearable = self
