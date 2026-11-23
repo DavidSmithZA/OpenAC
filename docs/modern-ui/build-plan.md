@@ -934,44 +934,99 @@ Built 2026-11-21, each on its own branch stacked on
   a focus point each (`FOCUS`, `cover`); accepted by the user. Masters and
   tools in `~/OpenAC-dev/modern-ui-backdrops` (`masters-2x/`,
   `manifest-v2.json`, `tools/render2.sh`, `finish4k.sh`).
-- Known: `the_m2_gaps` fails on these branches and their base (the bars
-  are not found in the saved settings file); not looked into yet.
+- `the_m2_gaps` failed on a Mac from 3ceba2b9 on (not on its base, as
+  first noted): the test held Control for quick move, which is no
+  longer the key a new player has there, so no quick-move menu opened
+  and the settings file had no `modernPieces`. The test's fault, not the
+  game's; fixed 2026-11-23 on `feat/modern-ui-sync` (the test holds
+  `QuickMoveKey::default()`'s modifier, as does `the_modern_bars`).
 
-### Upstream (on hold, user 2026-11-21)
+### Brought together, 2026-11-23
 
-How the modern interface goes to Erik (the PR's shape, and whether the
-backdrops and the detailed world map ship) waits until the feature is
-releasable.
+`feat/modern-ui-sync` is the whole feature on one branch: the stack's
+tip (`feat/modern-ui-backdrops-4k`), the detailed world map
+(`feat/modern-ui-map-tiles`, which had stood apart) and upstream 0.2.16
+(c2e9c025). The map's merge clashed with the glass blur only where both
+added a setting beside the quick-move key; three places upstream and the
+theme had moved under the stack were mended in one commit after the
+merges (the settings list's length, the Options map buttons' look, a
+trade test's stamp now a float). The play-install branch
+`test/modern-ui-m0` takes this branch, so everything built since M9 can
+be checked live.
+
+### To build, decided 2026-11-23
+
+- Backdrops as a download, not in the repository: the 15 pictures (9.8 MB
+  of WebP) leave the source tree (no `include_bytes`) and are fetched as
+  a pack like the map tiers (manifest, parts, SHA-256, `manifest.json`
+  written last), into the data folder. Unlike the map it happens by
+  itself: choosing Modern starts it, and so does starting Modern without
+  the pack, with no question asked. Until it is there the Stage and the
+  Studio draw what they draw today without pictures. Hosted beside the
+  map tiers for now; the same question to Erik covers both. To settle
+  when building: whether the launcher (where Modern is chosen) or the
+  client fetches it, and whether it shares `ac-world-map`'s download
+  code (likely, moved to a neutral name).
 
 ### Later, not blocking
 
-- Backdrop blur behind glass panels (needs the renderer to copy and blur
-  the scene for the UI pass). Translucent fills stand in until then.
-- Fewer texture switches between shapes and text in dense windows.
+Nothing left here: the frosted glass was built (`feat/modern-ui-blur`,
+Options › Graphics › Frosted glass), and fewer texture switches was
+measured and dropped (dense windows draw 150 to 250 runs a frame, the
+HUD included, which costs nothing worth the work).
 
 ## Upstream
 
-Erik's rule is one PR for work that builds on itself. Here each
-milestone stands on its own once M0 is in: it only adds modern screens
-behind a switch that is off by default. Plan: ask Erik before M0 whether
-he takes the modern UI as one PR per milestone. The usual rules hold
-(no client-internals names in comments, `scripts/check.sh` green, the
-PR says what retail does).
+Decided 2026-11-23: **one PR for the whole feature**, its history
+rewritten into a short series of foundational commits rather than the
+milestone branches as they were built (merges, review fixes and
+follow-ups folded into the commit they belong to). Each commit builds
+and passes `scripts/check.sh`, so the series can be read and bisected
+one step at a time. The order:
+
+1. Neutral moves: logic taken out of retail panels into shared modules,
+   the retail panels switched over with no change in behaviour (each
+   says what retail does).
+2. Toolkit and drawing: Horizon palette and theme following, Inter,
+   flex and hover, the drawing additions, the glass blur in the
+   renderer.
+3. The switch and the layer: launcher setting, `OPENAC_INTERFACE`, the
+   modern layer, quick move, places.
+4. The screens, in milestone order (HUD, bars, chat, items, character
+   and magic, options, dealing, social and world, the rest, pre-game),
+   each with its offscreen snapshot test.
+5. Plugin hooks (API 1.15).
+6. Last, so each can be left out without touching the rest: the
+   backdrops and the detailed world map, both downloads (no game-art
+   renders in the repository).
+
+The rewrite waits until the live checks pass, so no branch in use is
+cut from under a test. Upstream's rules hold: no client-internals names
+in comments, `check.sh` green.
+
+The detailed world map keeps downloading from the `atlas-map-v1`
+release on `DavidSmithZA/OpenAC-Aethrix` for now. The PR asks Erik
+whether he is happy for the map tiers to be attached as release assets
+on his repository, and the backdrop pack with them; if not, they stay
+hosted on ours and the addresses stay as they are.
 
 ## Open points
 
-- Quick move's key on a Mac: now a choice in Options › Controls (default
-  Control everywhere). Whether a Mac should default to Option is still
-  yours to say.
 - Server level cap: settled by the game itself. At the top of the
   experience table the Character window shows the game's own words for
   it ("Infinity!"), as retail does; no "Max level" text.
 - Officers and bans in Manage allegiance: the client is not told who the
   officers are, so Manage stays monarch-only.
-- Detailed world map, to discuss: whether it goes upstream at all (the
-  client would download renders of the game's art, so Erik's call, as
-  with the backdrops); where the tiers are hosted (now a fixed address on
-  the Aethrix release; a setting would need a non-Copy settings field);
-  the default (Standard, or the game's map until the player picks); the
-  Map detail row also showing in the retail options' modern section; a
-  live test of a download and of zooming into towns.
+- Detailed world map: the default (Standard, or the game's map until the
+  player picks); the Map detail row also showing in the retail options'
+  modern section; a live test of a download and of zooming into towns.
+  Hosting is settled above.
+- Review findings left for later (deeper refactors, none a bug a player
+  sees): character raise logic beside retail's raise request; options
+  key capture beside the keyboard configuration's own; salvage's drop
+  rule and the vendor's price copied rather than shared; `PickGrid` and
+  the shade indices belong in `ac-ui`; per-frame rebuilds in effects,
+  spellbook, options, social, map and house.
+- Quick move's key on a Mac was settled 2026-11-21: Command at first on
+  a Mac, Control elsewhere (3ceba2b9), still a choice in Options ›
+  Controls.
