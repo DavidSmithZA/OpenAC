@@ -6,9 +6,9 @@
 
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::character::{
-    ATTRIBUTE_ROWS, CharacterSheet, CharacterSkill, SkillAdvancement, VITAL_ROWS,
-    attribute_description, ordered_skills, raise_cost, skill_buff_delta, vital_buff_delta,
-    vital_description,
+    ATTRIBUTE_ROWS, CharacterSheet, CharacterSkill, RaiseAmount, RaiseRequest, RaiseTarget,
+    SkillAdvancement, VITAL_ROWS, attribute_description, experience_raise, ordered_skills,
+    raise_price, skill_buff_delta, train_request, vital_buff_delta, vital_description,
 };
 
 /// One row of the sheet.
@@ -168,12 +168,25 @@ pub fn vitae(sheet: &CharacterSheet, row: Row) -> i32 {
     }
 }
 
-/// The index of a row among the nine attribute and vital rows.
-fn sheet_index(row: Row) -> Option<usize> {
-    match row {
-        Row::Attribute(i) => Some(i),
-        Row::Vital(i) => Some(6 + i),
-        Row::Skill(_) => None,
+impl Row {
+    /// The row as the sheet's raises know it.
+    #[must_use]
+    pub fn target(self) -> RaiseTarget {
+        match self {
+            Self::Attribute(i) => RaiseTarget::Row(i),
+            Self::Vital(i) => RaiseTarget::Row(6 + i),
+            Self::Skill(id) => RaiseTarget::Skill(id),
+        }
+    }
+}
+
+impl From<Amount> for RaiseAmount {
+    fn from(a: Amount) -> Self {
+        match a {
+            Amount::One => Self::One,
+            Amount::Ten => Self::Ten,
+            Amount::Max => Self::Max,
+        }
     }
 }
 
@@ -190,63 +203,25 @@ pub fn raised_with_experience(sheet: &CharacterSheet, row: Row) -> bool {
 /// it cannot be raised so: at the top, or not enough for Max).
 #[must_use]
 pub fn cost(sheet: &CharacterSheet, row: Row, amount: Amount) -> (u32, u64) {
-    if let Some(i) = sheet_index(row) {
-        return match amount {
-            Amount::One => (1, raise_cost(sheet, i, 1)),
-            Amount::Ten => (10, raise_cost(sheet, i, 10)),
-            Amount::Max => sheet.attribute_max_raises.get(i).copied().unwrap_or((0, 0)),
-        };
-    }
-    let Row::Skill(id) = row else {
-        return (0, 0);
-    };
-    let Some(s) = sheet.skill(id).filter(|s| s.advancement.is_trained()) else {
-        return (0, 0);
-    };
-    match amount {
-        Amount::One => (1, s.raise_cost),
-        Amount::Ten => (10, s.raise10_cost),
-        Amount::Max => s.max_raise,
-    }
+    raise_price(sheet, row.target(), amount.into())
 }
 
 /// Whether `row` can be raised by `amount` now.
 #[must_use]
 pub fn affordable(sheet: &CharacterSheet, row: Row, amount: Amount) -> bool {
-    let (points, xp) = cost(sheet, row, amount);
-    points > 0 && xp > 0 && sheet.unassigned_xp >= xp
+    experience_raise(sheet, row.target(), amount.into()).is_some()
 }
 
 /// The raise to send for `row` by `amount`, when it can be afforded.
 #[must_use]
 pub fn raise(sheet: &CharacterSheet, row: Row, amount: Amount) -> Option<PanelOutput> {
-    if !affordable(sheet, row, amount) {
-        return None;
-    }
-    let (_, xp) = cost(sheet, row, amount);
-    Some(match row {
-        Row::Attribute(i) => PanelOutput::RaiseAttribute {
-            attribute: ATTRIBUTE_ROWS.get(i)?.2,
-            xp,
-        },
-        Row::Vital(i) => PanelOutput::RaiseVital {
-            vital: VITAL_ROWS.get(i)?.2,
-            xp,
-        },
-        Row::Skill(skill) => PanelOutput::RaiseSkill { skill, xp },
-    })
+    experience_raise(sheet, row.target(), amount.into()).map(RaiseRequest::output)
 }
 
 /// The credits training `skill` takes, when the player has them.
 #[must_use]
 pub fn train(sheet: &CharacterSheet, skill: u32) -> Option<PanelOutput> {
-    let s = sheet.skill(skill)?;
-    if s.advancement.is_trained() {
-        return None;
-    }
-    let credits = u32::try_from(s.trained_cost).ok().filter(|c| *c > 0)?;
-    (i64::from(sheet.skill_credits) >= i64::from(credits))
-        .then_some(PanelOutput::TrainSkill { skill, credits })
+    train_request(sheet, skill).map(RaiseRequest::output)
 }
 
 /// How a breakdown line is coloured.

@@ -1116,7 +1116,9 @@ pub enum RaiseRequest {
 }
 
 impl RaiseRequest {
-    fn output(self) -> PanelOutput {
+    /// What the window sends for it.
+    #[must_use]
+    pub fn output(self) -> PanelOutput {
         match self {
             Self::Attribute { id, cost } => PanelOutput::RaiseAttribute {
                 attribute: id,
@@ -1135,6 +1137,94 @@ impl RaiseRequest {
     }
 }
 
+/// What a raise with experience is of.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RaiseTarget {
+    /// An attribute or vital by its row of the sheet (the six attributes,
+    /// then the three vitals).
+    Row(usize),
+    /// A skill by its id.
+    Skill(u32),
+}
+
+/// By how much.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RaiseAmount {
+    /// One point.
+    One,
+    /// Ten points.
+    Ten,
+    /// As many points as the unassigned experience buys.
+    Max,
+}
+
+impl RaiseAmount {
+    /// The amount a raise button of `points` asks for (ten for 10, else
+    /// one).
+    #[must_use]
+    pub fn of_points(points: u32) -> Self {
+        if points == 10 { Self::Ten } else { Self::One }
+    }
+}
+
+/// What raising `target` by `amount` takes: the points and the
+/// experience, `(0, 0)` when it cannot be raised so (an untrained skill,
+/// the top of its curve, or not enough for a single point of Max).
+#[must_use]
+pub fn raise_price(sheet: &CharacterSheet, target: RaiseTarget, amount: RaiseAmount) -> (u32, u64) {
+    match target {
+        RaiseTarget::Row(i) => match amount {
+            RaiseAmount::One => (1, raise_cost(sheet, i, 1)),
+            RaiseAmount::Ten => (10, raise_cost(sheet, i, 10)),
+            RaiseAmount::Max => sheet.attribute_max_raises.get(i).copied().unwrap_or((0, 0)),
+        },
+        RaiseTarget::Skill(id) => {
+            let Some(s) = sheet.skill(id).filter(|s| s.advancement.is_trained()) else {
+                return (0, 0);
+            };
+            match amount {
+                RaiseAmount::One => (1, s.raise_cost),
+                RaiseAmount::Ten => (10, s.raise10_cost),
+                RaiseAmount::Max => s.max_raise,
+            }
+        }
+    }
+}
+
+/// The raise with experience of `target` by `amount`, when the unassigned
+/// experience pays for it.
+#[must_use]
+pub fn experience_raise(
+    sheet: &CharacterSheet,
+    target: RaiseTarget,
+    amount: RaiseAmount,
+) -> Option<RaiseRequest> {
+    let (points, cost) = raise_price(sheet, target, amount);
+    if points == 0 || cost == 0 || sheet.unassigned_xp < cost {
+        return None;
+    }
+    match target {
+        RaiseTarget::Skill(id) => Some(RaiseRequest::Skill { id, cost }),
+        RaiseTarget::Row(i) if i < 6 => Some(RaiseRequest::Attribute {
+            id: ATTRIBUTE_ROWS.get(i)?.2,
+            cost,
+        }),
+        RaiseTarget::Row(i) => VITAL_ROWS
+            .get(i - 6)
+            .map(|v| RaiseRequest::Vital { id: v.2, cost }),
+    }
+}
+
+/// Training the untrained skill `id` with credits, when the player has
+/// them.
+#[must_use]
+pub fn train_request(sheet: &CharacterSheet, id: u32) -> Option<RaiseRequest> {
+    let skill = sheet.skill(id).filter(|s| !s.advancement.is_trained())?;
+    let credits = u32::try_from(skill.trained_cost).ok().filter(|c| *c > 0)?;
+    (i64::from(sheet.skill_credits) >= i64::from(credits))
+        .then_some(RaiseRequest::Train { id, credits })
+}
+
 /// The raise a button asks for, when it is affordable.
 #[must_use]
 pub fn raise_request(
@@ -1143,41 +1233,17 @@ pub fn raise_request(
     sel: Selection,
     amount: u32,
 ) -> Option<RaiseRequest> {
+    let amount = RaiseAmount::of_points(amount);
     if tab == CharacterTab::Skills {
         let skill = sel.skill.and_then(|id| sheet.skill(id))?;
         if !skill.advancement.is_trained() {
-            let credits = u32::try_from(skill.trained_cost).ok()?;
-            return (amount == 1
-                && credits > 0
-                && i64::from(sheet.skill_credits) >= i64::from(credits))
-            .then_some(RaiseRequest::Train {
-                id: skill.id,
-                credits,
-            });
+            return (amount == RaiseAmount::One)
+                .then(|| train_request(sheet, skill.id))
+                .flatten();
         }
-        let cost = if amount == 10 {
-            skill.raise10_cost
-        } else {
-            skill.raise_cost
-        };
-        return (cost > 0 && sheet.unassigned_xp >= cost)
-            .then_some(RaiseRequest::Skill { id: skill.id, cost });
+        return experience_raise(sheet, RaiseTarget::Skill(skill.id), amount);
     }
-    let i = sel.attribute?;
-    let cost = raise_cost(sheet, i, amount);
-    if cost == 0 || sheet.unassigned_xp < cost {
-        return None;
-    }
-    if i < 6 {
-        Some(RaiseRequest::Attribute {
-            id: ATTRIBUTE_ROWS[i].2,
-            cost,
-        })
-    } else {
-        VITAL_ROWS
-            .get(i - 6)
-            .map(|v| RaiseRequest::Vital { id: v.2, cost })
-    }
+    experience_raise(sheet, RaiseTarget::Row(sel.attribute?), amount)
 }
 
 /// Whether the raise buttons can be pressed: (one, ten) and whether ten
@@ -1192,26 +1258,23 @@ pub fn raise_buttons(
     if tab == CharacterTab::Titles {
         return None;
     }
+    let pressable = |r: Option<RaiseRequest>| !awaiting && r.is_some();
     if tab == CharacterTab::Skills {
         let skill = sel.skill.and_then(|id| sheet.skill(id))?;
         let trained = skill.advancement.is_trained();
-        let one = !awaiting
-            && if trained {
-                skill.raise_cost > 0 && sheet.unassigned_xp >= skill.raise_cost
-            } else {
-                skill.trained_cost > 0 && sheet.skill_credits >= skill.trained_cost
-            };
-        let ten = !awaiting
-            && trained
-            && skill.raise10_cost > 0
-            && sheet.unassigned_xp >= skill.raise10_cost;
+        let target = RaiseTarget::Skill(skill.id);
+        let one = pressable(if trained {
+            experience_raise(sheet, target, RaiseAmount::One)
+        } else {
+            train_request(sheet, skill.id)
+        });
+        let ten = pressable(experience_raise(sheet, target, RaiseAmount::Ten));
         return Some((one, ten, trained));
     }
-    let i = sel.attribute?;
-    let affordable = |c: u64| !awaiting && c > 0 && sheet.unassigned_xp >= c;
+    let target = RaiseTarget::Row(sel.attribute?);
     Some((
-        affordable(raise_cost(sheet, i, 1)),
-        affordable(raise_cost(sheet, i, 10)),
+        pressable(experience_raise(sheet, target, RaiseAmount::One)),
+        pressable(experience_raise(sheet, target, RaiseAmount::Ten)),
         true,
     ))
 }
@@ -2184,6 +2247,130 @@ impl PanelController for CharacterStatController {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn raise_sheet() -> CharacterSheet {
+        let skill = |id, advancement| CharacterSkill {
+            id,
+            advancement,
+            trained_cost: 6,
+            raise_cost: 500,
+            raise10_cost: 6_000,
+            max_raise: (4, 2_400),
+            ..CharacterSkill::default()
+        };
+        CharacterSheet {
+            attribute_raise_costs: [1_000; 9],
+            attribute_raise10_costs: [12_000; 9],
+            attribute_max_raises: [(5, 5_500); 9],
+            unassigned_xp: 10_000,
+            skill_credits: 5,
+            skills: vec![
+                skill(6, SkillAdvancement::Trained),
+                skill(23, SkillAdvancement::Untrained),
+            ],
+            ..CharacterSheet::default()
+        }
+    }
+
+    #[test]
+    fn a_raise_goes_out_only_when_the_experience_pays_for_it() {
+        let sheet = raise_sheet();
+        let row = |i| RaiseTarget::Row(i);
+        assert_eq!(
+            experience_raise(&sheet, row(0), RaiseAmount::One),
+            Some(RaiseRequest::Attribute {
+                id: ATTRIBUTE_ROWS[0].2,
+                cost: 1_000
+            })
+        );
+        assert_eq!(
+            experience_raise(&sheet, row(0), RaiseAmount::Ten),
+            None,
+            "12,000 > 10,000"
+        );
+        assert_eq!(
+            experience_raise(&sheet, row(6), RaiseAmount::Max),
+            Some(RaiseRequest::Vital {
+                id: VITAL_ROWS[0].2,
+                cost: 5_500
+            })
+        );
+        assert_eq!(
+            experience_raise(&sheet, row(9), RaiseAmount::One),
+            None,
+            "no such row"
+        );
+        assert_eq!(
+            experience_raise(&sheet, RaiseTarget::Skill(6), RaiseAmount::Ten),
+            Some(RaiseRequest::Skill { id: 6, cost: 6_000 })
+        );
+        assert_eq!(
+            raise_price(&sheet, RaiseTarget::Skill(23), RaiseAmount::One),
+            (0, 0)
+        );
+        assert_eq!(
+            experience_raise(&sheet, RaiseTarget::Skill(23), RaiseAmount::One),
+            None
+        );
+    }
+
+    #[test]
+    fn training_takes_the_credits_it_costs() {
+        let mut sheet = raise_sheet();
+        assert_eq!(train_request(&sheet, 23), None, "6 credits > 5");
+        sheet.skill_credits = 6;
+        assert_eq!(
+            train_request(&sheet, 23),
+            Some(RaiseRequest::Train { id: 23, credits: 6 })
+        );
+        assert_eq!(train_request(&sheet, 6), None, "already trained");
+    }
+
+    #[test]
+    fn the_buttons_ask_for_one_or_ten() {
+        let mut sheet = raise_sheet();
+        sheet.skill_credits = 6;
+        let at = |attribute| Selection {
+            attribute: Some(attribute),
+            skill: None,
+        };
+        let skill = |id| Selection {
+            attribute: None,
+            skill: Some(id),
+        };
+        let attrs = CharacterTab::Attributes;
+        assert!(matches!(
+            raise_request(attrs, &sheet, at(1), 1),
+            Some(RaiseRequest::Attribute { cost: 1_000, .. })
+        ));
+        assert_eq!(raise_request(attrs, &sheet, at(1), 10), None);
+        let skills = CharacterTab::Skills;
+        assert_eq!(
+            raise_request(skills, &sheet, skill(23), 1),
+            Some(RaiseRequest::Train { id: 23, credits: 6 })
+        );
+        assert_eq!(
+            raise_request(skills, &sheet, skill(23), 10),
+            None,
+            "ten never trains"
+        );
+        assert_eq!(
+            raise_buttons(skills, &sheet, skill(23), false),
+            Some((true, false, false))
+        );
+        assert_eq!(
+            raise_buttons(skills, &sheet, skill(6), false),
+            Some((true, true, true))
+        );
+        assert_eq!(
+            raise_buttons(skills, &sheet, skill(6), true),
+            Some((false, false, true))
+        );
+        assert_eq!(
+            raise_buttons(attrs, &sheet, at(0), false),
+            Some((true, false, true))
+        );
+    }
 
     #[test]
     fn the_most_a_budget_raises_is_the_last_affordable_rank() {
