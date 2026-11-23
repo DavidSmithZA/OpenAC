@@ -80,7 +80,7 @@ impl WindowUi {
             &mut self.host.root,
             SPELLBOOK,
             (WIDTH, HEIGHT),
-            BookFrame::new(Horizon::BRONZE, fonts.clone()),
+            BookFrame::new(fonts.clone()),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -97,19 +97,19 @@ impl WindowUi {
             frame,
             BookFrame::search_rect(),
             field_font.clone(),
-            &Horizon::BRONZE,
+            &Horizon::current(),
         );
         let list = ui.add(
             frame,
             Element::at(LIST_X, LIST_TOP, LIST_W, LIST_H).with_anchors(AnchorEdges::NONE),
-            SpellList::new(Horizon::BRONZE, fonts.clone()),
+            SpellList::new(fonts.clone()),
         );
         let table = ui.add(
             frame,
             Element::at(TABLE_X, TABLE_TOP, TABLE_W, TABLE_H)
                 .with_anchors(AnchorEdges::NONE)
                 .with_visible(false),
-            ComponentTable::new(Horizon::BRONZE, fonts),
+            ComponentTable::new(fonts),
         );
         let mut e = Element::at(0.0, 0.0, 60.0, 22.0)
             .with_anchors(AnchorEdges::NONE)
@@ -126,7 +126,7 @@ impl WindowUi {
         f.select_all_on_focus = true;
         f.max_characters = 4;
         f.character_filter = Some(Box::new(|c: char| c.is_ascii_digit()));
-        f.text_color = Horizon::BRONZE.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
         f.selection_color = kit::gold(0.35);
         f.set_editable_detached(&mut e, true);
@@ -251,9 +251,8 @@ impl WindowUi {
                     regroup = true;
                 }
                 BookRequest::Cast(spell) => {
-                    if !self.modern_cast(spell) {
-                        self.notices
-                            .push("Go into Magic mode, or hold a caster, to cast.".to_owned());
+                    if let Err(words) = self.modern_cast(spell) {
+                        self.notices.push(words.to_owned());
                     }
                 }
                 BookRequest::AddToBar(spell) => {
@@ -414,6 +413,25 @@ impl WindowUi {
             .root
             .widget::<SpellList>(list)
             .and_then(|l| l.chosen);
+        // A spell no longer known (forgotten) is no longer chosen.
+        let known = |id: u32| {
+            self.facts
+                .numbers()
+                .and_then(|n| n.spellbook())
+                .is_some_and(|b| b.knows(id))
+        };
+        let chosen = match chosen {
+            Some(id) if !known(id) => {
+                if let Some(l) = self.host.root.widget_mut::<SpellList>(list) {
+                    l.chosen = None;
+                }
+                if let Some(f) = self.host.root.widget_mut::<BookFrame>(frame) {
+                    f.asking_forget = false;
+                }
+                None
+            }
+            other => other,
+        };
         let details = chosen.and_then(|id| {
             let numbers = self.facts.numbers()?;
             let spell = numbers.spellbook()?.try_get_metadata(id)?.clone();

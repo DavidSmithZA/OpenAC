@@ -15,7 +15,7 @@ use ac_ui::modern::Horizon;
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::items::emit;
 use ac_ui::panels::vendor::SPELL_COMPONENTS_MASK;
-use ac_ui::panels::vendor_rules::{PendingSplit, SplitOutcome, sell_check};
+use ac_ui::panels::vendor_rules::{GuardedSplit, SplitOutcome, sell_check};
 use ac_ui::tree::{Element, ElementId};
 use ac_ui::widgets::Field;
 
@@ -49,11 +49,11 @@ pub struct VendorUi {
     pub band: ElementId,
     /// What the player picked.
     pub choices: VendorChoices,
-    /// The shop as last shown (none: closed).
-    shown: Option<Box<VendorView>>,
+    /// The shop is showing (false: it closed).
+    shown: bool,
     /// A split asked for to sell part of a stack, and whether it is sold
     /// at once (else put on the list).
-    split: Option<(PendingSplit, bool)>,
+    split: Option<(GuardedSplit, bool)>,
     /// When the refusal showed.
     refused_at: Option<ac_clock::Instant>,
     /// The shop opened (or the vendor was used again) since the last
@@ -68,7 +68,7 @@ pub struct VendorUi {
 impl WindowUi {
     /// The Vendor window, hidden, in place of retail's vendor window.
     pub(in crate::ui) fn mount_modern_vendor(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = VendorFonts {
             title: self.modern_font(Weight::SemiBold, 14.0),
             strong: self.modern_font(Weight::SemiBold, 12.5),
@@ -101,10 +101,13 @@ impl WindowUi {
         let list = ui.add(
             frame,
             Element::at(r.0, r.1, r.2, r.3).with_anchors(AnchorEdges::NONE),
-            VendorList::new(theme, fonts),
+            VendorList::new(fonts),
         );
-        let search = kit::mount_search(ui, frame, VendorFrame::search_rect(), search_font, &theme);
-        let q = VendorFrame::quantity_rect();
+        let (search_rect, q) = ui
+            .widget::<VendorFrame>(frame)
+            .map(|f| (f.search_rect(), f.quantity_rect()))
+            .unwrap_or_default();
+        let search = kit::mount_search(ui, frame, search_rect, search_font, &theme);
         let mut e =
             Element::at(q.0 + 1.0, q.1 + 2.0, q.2 - 2.0, q.3 - 4.0).with_anchors(AnchorEdges::NONE);
         Field::configure(&mut e);
@@ -120,19 +123,20 @@ impl WindowUi {
         f.select_all_on_focus = true;
         f.max_characters = DIGITS;
         f.character_filter = Some(Box::new(|c: char| c.is_ascii_digit()));
-        f.text_color = theme.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
         f.selection_color = gold(0.35);
         f.set_editable_detached(&mut e, true);
         let quantity = ui.add(frame, e, f);
         let band_widget = crate::ui::modern::items::plugin_notes::FootBand::new(
-            theme,
             self.modern_font(Weight::SemiBold, 9.5),
             self.modern_font(Weight::Regular, 10.5),
             self.modern_font(Weight::SemiBold, 12.0),
         );
         let ui = &mut self.host.root;
-        let (band_x, band_w) = VendorFrame::band_span();
+        let (band_x, band_w) = ui
+            .widget::<VendorFrame>(frame)
+            .map_or((216.0, 440.0), VendorFrame::band_span);
         let band = ui.add(
             frame,
             Element::at(band_x, 0.0, band_w, 1.0)
@@ -151,7 +155,7 @@ impl WindowUi {
             quantity,
             band,
             choices: VendorChoices::default(),
-            shown: None,
+            shown: false,
             split: None,
             refused_at: None,
             opened: false,
@@ -196,21 +200,36 @@ impl WindowUi {
             return;
         };
         let (frame, list, search, quantity, band) = (v.frame, v.list, v.search, v.quantity, v.band);
-        let shop = self.facts.shop.clone();
         // The shop opened (or the vendor was used again), or closed.
-        let opened = v.opened || (shop.is_some() && v.shown.is_none());
+        let open = self.facts.shop.is_some();
+        let opened = v.opened || (open && !v.shown);
         let filled = v.filled;
-        if shop.is_none() && v.shown.is_some() {
+        if !open && v.shown {
             self.host.root.hide_window(VENDOR);
             if let Some(v) = self.vendor_mut() {
-                v.shown = None;
+                v.shown = false;
                 v.split = None;
             }
             return;
         }
-        let Some(shop) = shop else {
+        // Put away by the player while the shop stays open (it closes when
+        // the player walks off): nothing to show until it is used again.
+        if !opened && !self.host.root.is_window_visible(VENDOR) {
+            return;
+        }
+        let Some(shop) = self.facts.shop.clone() else {
             return;
         };
+        // While the leave card shows, only the card takes the pointer.
+        {
+            let ui = &mut self.host.root;
+            let leaving = ui.widget::<VendorFrame>(frame).is_some_and(|f| f.leaving);
+            for id in [list, search, quantity, band] {
+                if let Some(e) = ui.element_mut(id) {
+                    e.click_through = leaving;
+                }
+            }
+        }
         if opened {
             let ui = &mut self.host.root;
             ui.show_window(VENDOR);
@@ -239,7 +258,7 @@ impl WindowUi {
             v.choices.category = SPELL_COMPONENTS_MASK;
         }
         let expired = self.vendor_mut().is_some_and(|v| {
-            v.shown = Some(shop.clone());
+            v.shown = true;
             v.opened = false;
             v.filled = false;
             let done = v
@@ -296,12 +315,14 @@ impl WindowUi {
                         ObjectRef::Guid(id),
                     )));
                 }
+                ListAsk::Dropped(p) => self.vendor_drop(&shop, &p, frame),
             }
         }
         // A split for a sale: stage or sell the new stack once it is in.
-        let split = self.vendor_mut().and_then(|v| v.split);
+        let split = self.vendor_mut().and_then(|v| v.split.take());
         if let Some((mut pending, now)) = split {
-            let outcome = self.with_vendor_items(|items| pending.follow(items));
+            let clock = self.status.clock.elapsed().as_secs_f64();
+            let outcome = self.with_vendor_items(|items| pending.follow(items, clock));
             let keep = match outcome {
                 SplitOutcome::Arrived(g) => {
                     if now {
@@ -346,7 +367,11 @@ impl WindowUi {
             .root
             .widget::<VendorFrame>(frame)
             .map_or(0.0, VendorFrame::band_top);
-        let (_, band_w) = VendorFrame::band_span();
+        let (_, band_w) = self
+            .host
+            .root
+            .widget::<VendorFrame>(frame)
+            .map_or((216.0, 440.0), VendorFrame::band_span);
         crate::ui::modern::items::plugin_notes::FootBand::show(
             &mut self.host.root,
             band,
@@ -491,9 +516,14 @@ impl WindowUi {
                 VendorTab::Sell => VendorCommand::ClearSellList,
             }),
             VendorAsk::Remove(id) => self.vendor_list(match choices.tab {
+                // The whole row of a stacking kind, else one (retail).
                 VendorTab::Buy => VendorCommand::RemoveFromBuyList {
                     item: ObjectRef::Guid(id),
-                    amount: -1,
+                    amount: shop
+                        .items
+                        .iter()
+                        .find(|i| i.item_guid == id)
+                        .map_or(-1, ac_ui::panels::vendor_rules::removal_amount),
                 },
                 VendorTab::Sell => VendorCommand::RemoveFromSellList(ObjectRef::Guid(id)),
             }),
@@ -548,8 +578,8 @@ impl WindowUi {
         let stack = o.stack_size.max(1);
         let has_contents = !self.facts.objects.get_contents(id).is_empty();
         if quantity < stack && !has_contents {
-            let can = self.facts.state.can_make_request;
-            match PendingSplit::start(&o, quantity, can) {
+            let clock = self.status.clock.elapsed().as_secs_f64();
+            match self.with_vendor_items(|items| GuardedSplit::start(&o, quantity, items, clock)) {
                 Ok((pending, command, words)) => {
                     if let Some(v) = self.vendor_mut() {
                         v.split = Some((pending, now));
@@ -603,6 +633,18 @@ impl WindowUi {
             v.choices.tab = VendorTab::Sell;
             v.choices.chosen = Some(p.obj_id);
             v.choices.quantity = None;
+        }
+        // The split amount picked for the selected stack goes, as retail's
+        // drop does (the rest of the stack stays in the pack).
+        let amount = i32::try_from(self.drag_amount(p.obj_id)).unwrap_or(i32::MAX);
+        let stack = self
+            .facts
+            .objects
+            .get(p.obj_id)
+            .map_or(1, |o| o.stack_size.max(1));
+        if amount > 0 && amount < stack {
+            self.vendor_sell(p.obj_id, amount, false);
+            return;
         }
         self.vendor_list(VendorCommand::AddToSellList(ObjectRef::Guid(p.obj_id)));
     }
@@ -666,38 +708,80 @@ impl WindowUi {
         };
         let plugin_ui = &facts.plugin_ui;
         let mark = |id: u32| {
-            crate::ui::modern::items::plugin_notes::mark_on(plugin_ui, &Horizon::BRONZE, id)
+            crate::ui::modern::items::plugin_notes::mark_on(plugin_ui, &Horizon::current(), id)
         };
         let screen: VendorScreen =
             vendor_model::screen(&shop_facts, &choices, &mut icon, &resolve, &mark);
         let chosen = screen.chosen.as_ref().map(|c| (c.id, c.quantity));
         let rows = screen.rows.clone();
-        let list_rect = {
+        let Some((search, band)) = self.vendor_mut().map(|v| (v.search, v.band)) else {
+            return;
+        };
+        // A screen too small for it gets the narrow window.
+        let width = super::width_for(
+            self.host.root.size().0,
+            super::vendor_window::WIDTH,
+            super::vendor_window::NARROW_WIDTH,
+        );
+        let (list_rect, search_rect, quantity_rect, band_span, rail_open) = {
             let ui = &mut self.host.root;
             let Some(f) = ui.widget_mut::<VendorFrame>(frame) else {
                 return;
             };
+            if f.width != width {
+                f.width = width;
+                f.rail_open = false;
+            }
             f.screen = screen;
-            f.list_rect()
+            (
+                f.list_rect(),
+                f.search_rect(),
+                f.quantity_rect(),
+                VendorFrame::band_span(f),
+                f.rail_open,
+            )
         };
         let ui = &mut self.host.root;
+        if let Some(e) = ui.element_mut(frame)
+            && (e.width - width).abs() > 0.5
+        {
+            e.width = width;
+        }
         if let Some(l) = ui.widget_mut::<VendorList>(list) {
             l.rows = rows;
             l.chosen = chosen.map(|c| c.0);
         }
-        if let Some(e) = ui.element_mut(list)
-            && (e.top != list_rect.1 || e.height != list_rect.3)
-        {
+        // The open drop-down lies over the list: the list leaves it the
+        // pointer.
+        if let Some(e) = ui.element_mut(list) {
+            e.left = list_rect.0;
+            e.width = list_rect.2;
             e.top = list_rect.1;
             e.height = list_rect.3;
+            if rail_open {
+                e.click_through = true;
+            }
+        }
+        if let Some(e) = ui.element_mut(search) {
+            e.left = search_rect.0;
+            e.width = search_rect.2;
+        }
+        if let Some(e) = ui.element_mut(quantity) {
+            e.left = quantity_rect.0 + 1.0;
+        }
+        if let Some(e) = ui.element_mut(band) {
+            e.left = band_span.0;
+            e.width = band_span.1;
         }
         // The quantity field shows the chosen quantity unless it is being
         // typed in.
         let shown_quantity = chosen.map(|c| c.1);
         ui.set_visible(quantity, shown_quantity.is_some());
+        // (Compared with what the field holds: typing past the most leaves
+        // a number in it that is not the one used.)
         if !typing
             && let Some(n) = shown_quantity
-            && self.vendor_mut().is_some_and(|v| v.typed != Some(n))
+            && kit::field_text(&self.host.root, quantity) != n.to_string()
         {
             if let Some(f) = self.host.root.widget_mut::<Field>(quantity) {
                 f.set_text(&n.to_string());

@@ -4,6 +4,7 @@
 //! element of its own so drags find it; it notes what was asked and the
 //! window carries it out.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext, TextureRef};
@@ -115,6 +116,8 @@ pub enum CellRequest {
     Inspect(u32),
     /// A row's Loot button.
     Loot(u32),
+    /// A click on an empty slot.
+    Empty,
 }
 
 /// A list row's Inspect and Loot buttons in a row `w` by `h`.
@@ -263,6 +266,7 @@ impl Widget for ItemCell {
             }
             kind::CLICK => {
                 if self.view.id == 0 {
+                    self.requests.push(CellRequest::Empty);
                     return true;
                 }
                 if self.look == CellLook::List
@@ -342,7 +346,7 @@ impl Widget for ItemCell {
         let Some((w, h)) = _ui.element(me).map(|e| (e.width, e.height)) else {
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let v = &self.view;
         let round = CornerRadii::all(self.theme.metrics.slot_radius);
         let list = self.look == CellLook::List;
@@ -396,12 +400,12 @@ impl Widget for ItemCell {
         } else if self.hovered && filled {
             (p.accent, 1.0)
         } else if filled {
-            (hex(0xC9_A062, 0.3), 1.0)
+            (tone::bronze(0.3), 1.0)
         } else {
-            (hex(0xC9_A062, 0.14), 1.0)
+            (tone::bronze(0.14), 1.0)
         };
         if self.over == Some(true) || v.lit {
-            rc.soft_shadow(bx, ty, bw, side, 4.0, 0.0, 10.0, hex(0xE0_B068, 0.45));
+            rc.soft_shadow(bx, ty, bw, side, 4.0, 0.0, 10.0, tone::gold(0.45));
         }
         rc.stroke_rounded_rect(bx, ty, bw, side, round, edge, width);
         if self.pressed && self.hovered && filled {
@@ -420,7 +424,7 @@ impl Widget for ItemCell {
                     (bx + (bw - s) * 0.5).round(),
                     (ty + (side - s) * 0.5).round(),
                     s,
-                    hex(0xE9_D3AE, a),
+                    tone::warm(a),
                 );
             }
             return;
@@ -515,7 +519,7 @@ impl Widget for ItemCell {
                     inspect.2,
                     inspect.3,
                     r,
-                    hex(0xC9_A062, 0.6),
+                    tone::bronze(0.6),
                     1.0,
                 );
                 crate::ui::modern::hud::lines::stroke(
@@ -540,7 +544,7 @@ impl Widget for ItemCell {
                     p.icon,
                     1.6,
                 );
-                rc.fill_rounded_rect(loot.0, loot.1, loot.2, loot.3, r, hex(0xE0_B068, 0.9));
+                rc.fill_rounded_rect(loot.0, loot.1, loot.2, loot.3, r, tone::gold(0.9));
                 if let Some(f) = &self.name {
                     text::draw_centred(
                         rc,

@@ -4,7 +4,7 @@
 //! art from retail's layout, the player from the radar's feed, the house,
 //! the houses for sale and the pins (kept per character on this computer).
 
-use ac_host::settings::{MapPin, MapPins};
+use ac_host::settings::{MapDetail, MapPin, MapPins};
 use ac_runtime::session::SessionCommand;
 use ac_ui::bundled_font::Weight;
 use ac_ui::geometry::AnchorEdges;
@@ -15,9 +15,11 @@ use ac_ui::panels::items::emit;
 use ac_ui::panels::map_house::{self, hour_text};
 use ac_ui::radar::RadarCoordinates;
 use ac_ui::tree::{Element, ElementId};
+use ac_world_map::Tier;
 
-use super::map::{MapAsk, MapFonts, MapScreen, MapView, Me};
+use super::map::{ART_ZOOM, MapAsk, MapFonts, MapScreen, MapView, Me};
 use super::model::{heading_of_yaw, landblock_coordinates};
+use super::tiles::MapTiles;
 use crate::ui::map_window::MAP_HOUSE_WINDOW;
 use crate::ui::modern::kit;
 use crate::ui::window::WindowUi;
@@ -36,9 +38,14 @@ pub struct MapUi {
     /// The pins (read once).
     pins: Option<MapPins>,
     /// Where the player was last outside.
-    last_outside: Option<(f64, f64)>,
+    pub last_outside: Option<(f64, f64)>,
     /// The map has been centred on the player once.
     centred: bool,
+    /// The character `last_outside` and `centred` are about ("world/name");
+    /// another character starts them afresh.
+    about: Option<String>,
+    /// The detailed map's tiles held (none while the map is closed).
+    tiles: MapTiles,
 }
 
 /// Whether `cell` is a cell inside (a dungeon or a building).
@@ -50,7 +57,7 @@ impl WindowUi {
     /// The map, hidden, in place of retail's map and house panel (the house
     /// has its own window).
     pub(in crate::ui) fn mount_modern_map(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = MapFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             big: self.modern_font(Weight::SemiBold, 20.0),
@@ -68,7 +75,7 @@ impl WindowUi {
         .and_then(|info| map_house::map_art(&info));
         let ui = &mut self.host.root;
         let (w, h) = ui.size();
-        let mut view = MapView::new(theme, fonts);
+        let mut view = MapView::new(fonts);
         view.set_size(w, h);
         if let Some(a) = art {
             view.set_art(a);
@@ -109,7 +116,9 @@ impl WindowUi {
             pin_name,
             pins: None,
             last_outside: None,
+            about: None,
             centred: false,
+            tiles: MapTiles::new(),
         });
         modern.replace(MAP_HOUSE_WINDOW);
     }
@@ -251,6 +260,18 @@ impl WindowUi {
     /// placed and what it asked for done.
     #[allow(clippy::too_many_lines)]
     pub(in crate::ui) fn tick_modern_map(&mut self) {
+        if self.map_ui().is_none() {
+            return;
+        }
+        // Another character: where it was and the centring start afresh.
+        let character = self.map_character();
+        if let Some(m) = self.modern.as_mut().and_then(|m| m.map.as_mut())
+            && m.about != character
+        {
+            m.about = character;
+            m.last_outside = None;
+            m.centred = false;
+        }
         let Some(m) = self.map_ui() else {
             return;
         };
@@ -267,6 +288,9 @@ impl WindowUi {
             m.last_outside = Some(o);
         }
         if !self.host.root.is_window_visible(MAP) {
+            if let Some(m) = self.modern.as_mut().and_then(|m| m.map.as_mut()) {
+                m.tiles.close(&mut *self.world_maps, &self.images);
+            }
             return;
         }
         let last_outside = self.map_ui().and_then(|m| m.last_outside);
@@ -433,6 +457,46 @@ impl WindowUi {
                     PanelOutput::Session(SessionCommand::Chat("@hslist cottage".to_owned())),
                 ),
             }
+        }
+        self.tick_modern_map_tiles(view);
+    }
+
+    /// The tier the Map detail setting picks (none: the game's map).
+    pub(in crate::ui) fn chosen_map_tier(&self) -> Option<Tier> {
+        match self.settings().display.modern_hud.map_detail {
+            MapDetail::Game => None,
+            MapDetail::Standard => Some(Tier::Standard),
+            MapDetail::Hd => Some(Tier::Hd),
+            MapDetail::Ultra => Some(Tier::Ultra),
+            MapDetail::Extreme => Some(Tier::Extreme),
+        }
+    }
+
+    /// The detailed map's tiles for what the map shows now; the zoom goes
+    /// as far as twice the tier's finest detail.
+    fn tick_modern_map_tiles(&mut self, view: ElementId) {
+        let tier = self
+            .chosen_map_tier()
+            .and_then(|t| self.world_maps.status().drawn(t));
+        let shown = self
+            .host
+            .root
+            .widget_mut::<MapView>(view)
+            .and_then(|v| v.view_metres());
+        let Some(m) = self.modern.as_mut().and_then(|m| m.map.as_mut()) else {
+            return;
+        };
+        let draws = m
+            .tiles
+            .tick(&mut *self.world_maps, &self.images, tier, shown);
+        let finest = m.tiles.finest();
+        if let Some(v) = self.host.root.widget_mut::<MapView>(view) {
+            v.tiles = draws;
+            let max = match (finest, v.pixels_per_m_at(1.0)) {
+                (Some(f), Some(one)) if one > 0.0 => (2.0 * f / one) as f32,
+                _ => ART_ZOOM,
+            };
+            v.set_max_zoom(max);
         }
     }
 }

@@ -10,12 +10,10 @@ use ac_core::chat::LogTextType;
 use ac_proto::social::confirmation_type;
 use ac_runtime::character::CharacterCommand;
 use ac_runtime::communication::ClientConfirmation;
-use ac_runtime::inventory::InteractionMode;
 use ac_runtime::session::SessionCommand;
 use ac_ui::bundled_font::Weight;
 use ac_ui::modern::Horizon;
 use ac_ui::panels::PanelOutput;
-use ac_ui::panels::character::CharacterStatController;
 use ac_ui::panels::dialog_factory::{DialogData, DialogType, DialogValue, property};
 use ac_ui::panels::items::emit;
 use ac_ui::root::ElementMessage;
@@ -25,7 +23,7 @@ use super::card::{CardFonts, Form, Part, QuestionCard, Shown};
 use super::invites::{Invite, InviteCards, InviteFonts};
 use super::look::{self, Look};
 use crate::ui::keyboard_window::KeyboardDialog;
-use crate::ui::window::{CHARACTER_WINDOW, DialogAction, WindowUi};
+use crate::ui::window::{DialogAction, WindowUi};
 
 /// What an answer goes back to.
 #[derive(Debug, Clone)]
@@ -75,10 +73,6 @@ pub struct QuestionsUi {
     invitations: Vec<Invitation>,
     /// The last number given.
     last: u32,
-    /// The tool waiting to be used, and what it was last used on (the
-    /// crafting question shows both).
-    armed: Option<u32>,
-    combined: Option<(u32, u32)>,
 }
 
 impl QuestionsUi {
@@ -116,28 +110,32 @@ fn form_of(data: &DialogData) -> (Form, usize) {
 
 /// How a key-profile question looks.
 fn keyboard_look(tag: &KeyboardDialog) -> Look {
-    use look::{BLUE, GOLD, Glyph, RED};
+    use look::{BLUE, Glyph, RED};
     match tag {
         KeyboardDialog::Instructions => Look::new("Press a key", Glyph::Info, BLUE, "", ""),
         KeyboardDialog::Message => Look::message(),
         KeyboardDialog::Overwrite => Look::new(
             "Key already used",
             Glyph::Question,
-            GOLD,
+            ac_ui::modern::tone::gold(1.0),
             "Use it here",
             "Keep",
         ),
         KeyboardDialog::Load(_) => Look::new(
             "Load a key profile",
             Glyph::Question,
-            GOLD,
+            ac_ui::modern::tone::gold(1.0),
             "Load",
             "Cancel",
         ),
-        KeyboardDialog::SaveAs => {
-            Look::new("Save key profile", Glyph::Question, GOLD, "Save", "Cancel")
-                .typed("Profile name")
-        }
+        KeyboardDialog::SaveAs => Look::new(
+            "Save key profile",
+            Glyph::Question,
+            ac_ui::modern::tone::gold(1.0),
+            "Save",
+            "Cancel",
+        )
+        .typed("Profile name"),
         KeyboardDialog::ProfileOverwrite(_) => {
             Look::new("Replace a profile", Glyph::Warn, RED, "Replace", "Cancel").dangerous()
         }
@@ -147,7 +145,7 @@ fn keyboard_look(tag: &KeyboardDialog) -> Look {
 impl WindowUi {
     /// The question card and the invitation cards, hidden.
     pub(in crate::ui) fn mount_modern_questions(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = CardFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             body: self.modern_font(Weight::Regular, 13.0),
@@ -172,8 +170,6 @@ impl WindowUi {
             shown: 0,
             invitations: Vec::new(),
             last: 0,
-            armed: None,
-            combined: None,
         });
     }
 
@@ -299,28 +295,13 @@ impl WindowUi {
         before != q.queue.len()
     }
 
-    /// A tool is waiting to be used, or was just used on `target` (the
-    /// crafting question shows both).
-    pub(in crate::ui) fn note_modern_craft_target(&mut self, target: u32) {
-        let mode = self.facts.state.mode;
-        if let Some(q) = self.questions_mut()
-            && let InteractionMode::UseItemOnTarget(tool) = mode
-        {
-            q.combined = Some((tool, target));
-        }
-    }
-
     /// The session's open questions: new ones asked (invitations under the
     /// target, the rest on the card), ones it closed taken back.
     pub(in crate::ui) fn follow_modern_confirmations(&mut self) {
         let open = self.facts.state.confirmations.clone();
-        let mode = self.facts.state.mode;
         let Some(q) = self.questions_mut() else {
             return;
         };
-        if let InteractionMode::UseItemOnTarget(tool) = mode {
-            q.armed = Some(tool);
-        }
         q.queue.retain(
             |a| !matches!(&a.then, Then::Window(DialogAction::Session(c)) if !open.contains(c)),
         );
@@ -371,8 +352,8 @@ impl WindowUi {
         }
     }
 
-    /// What a crafting question combines, tool first, when the window saw
-    /// the tool used.
+    /// What a crafting question combines, tool first: the use with a
+    /// target the question answers.
     fn craft_parts(&mut self, question: &ClientConfirmation) -> Vec<Part> {
         let ClientConfirmation::Server {
             confirmation_type: confirmation_type::CRAFT_INTERACTION,
@@ -381,12 +362,7 @@ impl WindowUi {
         else {
             return Vec::new();
         };
-        let Some((tool, target)) = self
-            .modern
-            .as_ref()
-            .and_then(|m| m.questions.as_ref())
-            .and_then(|q| q.combined)
-        else {
+        let Some((tool, target)) = self.facts.state.targeted_use else {
             return Vec::new();
         };
         let names = crate::ui::facts::composed_names(&self.status.names);
@@ -586,14 +562,8 @@ impl WindowUi {
                     credits,
                 })),
             ),
-            DialogAction::Train { .. } => {
-                self.host.with_controller::<CharacterStatController, _>(
-                    CHARACTER_WINDOW,
-                    |c, ui| {
-                        c.release_raise(ui);
-                    },
-                );
-            }
+            // The modern Character window holds no raise for a training.
+            DialogAction::Train { .. } => {}
         }
     }
 

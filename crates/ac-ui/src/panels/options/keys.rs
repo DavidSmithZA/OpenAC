@@ -80,6 +80,13 @@ pub enum DisplayField {
     /// The modern interface: how long before a helpful effect ends its
     /// count warns.
     ModernEffectWarning,
+    /// The modern interface: the key held for quick move.
+    ModernQuickMoveKey,
+    /// The modern interface: the world behind windows shows blurred.
+    ModernGlassBlur,
+    /// The modern interface: the map's picture (the game's or a detailed
+    /// tier).
+    ModernMapDetail,
 }
 
 /// A chat setting.
@@ -115,6 +122,9 @@ pub enum OptionKey {
     Chat(ChatField),
     /// The renderer's atmospheric rendering.
     RenderPack(RenderPackField),
+    /// The theme: plugin windows' and the modern interface's colours (its
+    /// saved name).
+    Theme,
 }
 
 /// An atmospheric-rendering row: the quality (with "off"), or the setting
@@ -290,6 +300,13 @@ impl LiveValues {
                     DisplayField::ModernEffectWarning => {
                         Text(d.modern_hud.effect_warning_minutes.to_string())
                     }
+                    DisplayField::ModernQuickMoveKey => {
+                        Text(d.modern_hud.quick_move_key.name().to_owned())
+                    }
+                    DisplayField::ModernGlassBlur => Bool(d.modern_hud.glass_blur),
+                    DisplayField::ModernMapDetail => {
+                        Text(d.modern_hud.map_detail.name().to_owned())
+                    }
                 }
             }
             OptionKey::Chat(f) => {
@@ -303,6 +320,11 @@ impl LiveValues {
                 }
             }
             OptionKey::RenderPack(f) => read_render_pack(&s.display, f)?,
+            OptionKey::Theme => Text(
+                ac_plugin_ui::ThemeKind::from_saved(&s.plugin_ui.theme)
+                    .saved_name()
+                    .to_owned(),
+            ),
         })
     }
 
@@ -421,6 +443,16 @@ impl LiveValues {
                     (DisplayField::ModernEffectWarning, Text(x)) => {
                         d.modern_hud.effect_warning_minutes = x.parse().ok()?;
                     }
+                    (DisplayField::ModernQuickMoveKey, Text(x)) => {
+                        d.modern_hud.quick_move_key =
+                            ac_host::settings::QuickMoveKey::from_name(x)?;
+                    }
+                    (DisplayField::ModernGlassBlur, Bool(x)) => {
+                        d.modern_hud.glass_blur = *x;
+                    }
+                    (DisplayField::ModernMapDetail, Text(x)) => {
+                        d.modern_hud.map_detail = ac_host::settings::MapDetail::from_name(x)?;
+                    }
                     _ => return None,
                 }
                 Some(Section::Display)
@@ -443,6 +475,13 @@ impl LiveValues {
             (OptionKey::RenderPack(f), v) => {
                 write_render_pack(&mut s.display, f, v)?;
                 Some(Section::Display)
+            }
+            (OptionKey::Theme, Text(x)) => {
+                let kind = ac_plugin_ui::ThemeKind::ALL
+                    .into_iter()
+                    .find(|k| k.saved_name() == x)?;
+                kind.saved_name().clone_into(&mut s.plugin_ui.theme);
+                Some(Section::PluginUi)
             }
             _ => None,
         }

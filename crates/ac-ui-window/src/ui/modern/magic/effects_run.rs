@@ -53,7 +53,7 @@ impl WindowUi {
             big: self.modern_font(Weight::SemiBold, 20.0),
         };
         let field_font = self.modern_font(Weight::Regular, 12.5);
-        let window = EffectsWindow::new(Horizon::BRONZE, fonts);
+        let window = EffectsWindow::new(fonts);
         let frame =
             match hud::mount_piece(&mut self.host.root, EFFECTS_WINDOW, (WIDTH, HEIGHT), window) {
                 Ok(id) => id,
@@ -71,7 +71,7 @@ impl WindowUi {
             frame,
             EffectsWindow::search_rect(),
             field_font,
-            &Horizon::BRONZE,
+            &Horizon::current(),
         );
         ui.hide_window(EFFECTS_WINDOW);
         let Some(modern) = self.modern.as_mut() else {
@@ -164,9 +164,8 @@ impl WindowUi {
                     self.host.root.hide_window(EFFECTS_WINDOW);
                 }
                 EffectsRequest::CastAgain(spell) => {
-                    if !self.modern_cast(spell) {
-                        self.notices
-                            .push("Go into Magic mode, or hold a caster, to cast.".to_owned());
+                    if let Err(words) = self.modern_cast(spell) {
+                        self.notices.push(words.to_owned());
                     }
                 }
                 EffectsRequest::ShowItem(item) => {

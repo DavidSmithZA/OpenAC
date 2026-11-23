@@ -514,6 +514,9 @@ pub struct WindowUi {
     pub(super) clipboard: Box<dyn Clipboard>,
     /// The operating system's names of keys the dats do not name.
     pub(super) os_key_names: OsKeyNames,
+    /// The detailed world map: what is downloaded, and its tiles (none
+    /// until the host hands it in).
+    pub(super) world_maps: Box<dyn ac_world_map::WorldMaps>,
     pub(super) notices: Vec<String>,
     /// Plugins asked the window to minimize (`true`) or restore.
     pub(super) minimize_requests: Vec<bool>,
@@ -538,8 +541,11 @@ pub struct WindowUi {
     /// A character report's values the character sheet takes over the
     /// numbers (a window shown without a session).
     reported_sheet: Option<ReportedSheet>,
+    /// The character sheet as last built from the facts, for whichever
+    /// interface shows it.
+    pub(super) sheet: CharacterSheet,
     /// Panels shown since they were last fed.
-    stale: Vec<&'static str>,
+    pub(super) stale: Vec<&'static str>,
     /// Whether the character was in the world when the social panel was
     /// last fed (its declarations follow the world entries).
     pub(super) social_in_world: Option<bool>,
@@ -590,6 +596,8 @@ pub struct WindowUi {
     /// The modern interface, while the launcher asked for it
     /// (`super::modern`).
     pub(super) modern: Option<super::modern::ModernLayer>,
+    /// The saved theme the modern look was last made from, and that look.
+    pub(super) modern_theme: Option<(String, ac_ui::modern::Horizon)>,
     /// The resolutions the display offers (the options windows' menu).
     pub(super) resolutions: Vec<String>,
 }
@@ -653,6 +661,7 @@ impl WindowUi {
             player_view: None,
             clipboard: Box::new(NoClipboard),
             os_key_names: no_os_key_names,
+            world_maps: Box::new(ac_world_map::NoMaps),
             minimize_requests: Vec::new(),
             notices: Vec::new(),
             mounted: Vec::new(),
@@ -669,6 +678,7 @@ impl WindowUi {
             dialog_layout: None,
             fed_selection: None,
             reported_sheet: None,
+            sheet: CharacterSheet::default(),
             stale: Vec::new(),
             social_in_world: None,
             fed_social_selection: None,
@@ -689,6 +699,7 @@ impl WindowUi {
             barber: super::barber_window::BarberWindow::default(),
             miss_caches: MissCaches::default(),
             modern: None,
+            modern_theme: None,
             resolutions: resolution_choices.clone(),
         };
         let pregame_dats = dats.clone();
@@ -807,6 +818,12 @@ impl WindowUi {
         self.os_key_names = names;
     }
 
+    /// The detailed world map's service: its downloads and tiles, from now
+    /// on (the window has none until one is handed in).
+    pub fn set_world_maps(&mut self, maps: Box<dyn ac_world_map::WorldMaps>) {
+        self.world_maps = maps;
+    }
+
     /// The sections changed since the last call, each with whether to save
     /// it now. The window applies them; its host saves them.
     pub fn take_settings_changes(&mut self) -> Vec<(ac_ui::panels::options::Section, bool)> {
@@ -845,7 +862,7 @@ impl WindowUi {
 
     /// The options window's copy of the settings follows this window's.
     fn show_settings_in_options(&mut self) {
-        self.follow_modern_option_values();
+        self.follow_modern_option_values(true);
         let settings = self.settings.clone();
         self.host
             .with_controller::<ac_ui::panels::options::OptionsWindowController, _>(
@@ -1251,6 +1268,7 @@ impl WindowUi {
         self.tick_modern_map();
         self.update_salvage();
         self.update_book(dirty);
+        self.follow_modern_book(dirty);
         self.tick_modern_book();
         self.update_map_house(scene);
         self.update_barber(dirty, scene);
@@ -1295,6 +1313,7 @@ impl WindowUi {
             status,
             panels,
             reported_sheet,
+            sheet: kept_sheet,
             modern,
             ..
         } = self;
@@ -1307,11 +1326,20 @@ impl WindowUi {
         let selection_facts = super::status::selection_facts(state, selected, status);
         let player = state.player;
         let pending: Vec<u32> = state.pending_item.into_iter().collect();
-        let split = host.with_controller::<ToolbarWindowController, _>(TOOLBAR_WINDOW, |c, _| {
-            c.split.quantity().clone()
-        });
-        let numbers = facts.player.as_ref().map(|p| &p.numbers);
         let resolve = super::facts::composed_names(&status.names);
+        // The split quantity drags use: the modern target line's follows
+        // the selection here, the retail toolbar's inside its update.
+        let split = match modern.as_mut() {
+            Some(m) => {
+                m.split
+                    .follow(&facts.items_view(selected, &pending, None, &resolve));
+                Some(m.split.quantity().clone())
+            }
+            None => host.with_controller::<ToolbarWindowController, _>(TOOLBAR_WINDOW, |c, _| {
+                c.split.quantity().clone()
+            }),
+        };
+        let numbers = facts.player.as_ref().map(|p| &p.numbers);
         let view = facts.items_view(selected, &pending, split.as_ref(), &resolve);
         let shown =
             |host: &UiHost, name: &str| host.root.is_window_visible(name) || stale.contains(&name);
@@ -1373,6 +1401,7 @@ impl WindowUi {
             host.with_controller::<CharacterStatController, _>(CHARACTER_WINDOW, |c, ui| {
                 c.apply(ui, &sheet);
             });
+            *kept_sheet = sheet;
         }
         // The spellbook and the spell bars.
         if let Some(book) = numbers.and_then(|n| n.spellbook()) {
@@ -1517,6 +1546,7 @@ impl WindowUi {
             .map_or(0.0, |t| now.duration_since(t).as_secs_f64());
         let now_ms =
             i64::try_from(now.duration_since(self.started).as_millis()).unwrap_or(i64::MAX);
+        self.follow_modern_theme();
         self.tick_status(dt, size);
         self.report_window_layouts();
         self.tick_plugin_ui(now);
@@ -1534,9 +1564,6 @@ impl WindowUi {
         self.tick_modern_recalls();
         self.tick_modern_chat();
         self.follow_modern_pieces();
-        if let Some(modern) = &self.modern {
-            modern.hide_replaced(&mut self.host);
-        }
         let list = self
             .host
             .draw((size.0 as f32, size.1 as f32), &self.content);
@@ -1559,12 +1586,11 @@ impl WindowUi {
                 }
                 self.modern = Some(super::modern::ModernLayer::new());
                 self.mount_hud();
-                if let Some(modern) = self.modern.as_mut() {
-                    if let Some(layouts) = self.status.layouts.as_mut() {
-                        modern.leave_alone(&mut self.host, layouts);
-                    }
-                    modern.hide_replaced(&mut self.host);
+                self.mount_modern_pregame();
+                if let Some(layouts) = self.status.layouts.as_mut() {
+                    super::modern::ModernLayer::place_windows(layouts);
                 }
+                self.take_down_replaced();
                 self.mount_quick_move();
             }
         }
@@ -1584,6 +1610,14 @@ impl WindowUi {
     pub fn set_pixels_per_unit(&mut self, pixels: f32) {
         self.host.root.set_pixels_per_unit(pixels);
         self.follow_display_density(pixels);
+    }
+
+    /// Whether the renderer can blur the frame behind glass. The modern
+    /// interface's windows then show the world blurred, unless the player
+    /// turned it off (followed every frame, so the option shows at once).
+    pub fn set_glass_possible(&mut self, possible: bool) {
+        let on = possible && self.modern.is_some() && self.settings().display.modern_hud.glass_blur;
+        self.host.root.set_glass(on);
     }
 
     /// The textures the UI names: dat surfaces and composed icons.
@@ -1608,15 +1642,34 @@ impl WindowUi {
         modifiers: Modifiers,
         text: Option<&str>,
     ) -> Routed<K> {
-        // Escape closes the full-screen map first.
+        // The modern pre-game screens take their keys first.
+        if pressed && self.modern_pregame_key(key) {
+            return Routed {
+                world: None,
+                outputs: self.host.take_outputs(),
+            };
+        }
+        // The bars' key pop-up takes a key while it listens (Escape too,
+        // even with the map open over it).
+        if !self.pregame_active() && self.modern_bars_key_first(key, modifiers, pressed) {
+            return Routed {
+                world: None,
+                outputs: self.host.take_outputs(),
+            };
+        }
+        // Escape closes the full-screen map next.
         if pressed && key == Key::Escape && !self.pregame_active() && self.modern_map_escape() {
             return Routed {
                 world: None,
                 outputs: self.host.take_outputs(),
             };
         }
-        // The bars' key pop-up takes a key while it listens.
-        if !self.pregame_active() && self.modern_bars_key_first(key, modifiers, pressed) {
+        // Then it puts the inventory's details card away (a small screen).
+        if pressed
+            && key == Key::Escape
+            && !self.pregame_active()
+            && self.modern_inventory_card_escape()
+        {
             return Routed {
                 world: None,
                 outputs: self.host.take_outputs(),
@@ -1735,6 +1788,15 @@ impl WindowUi {
         true
     }
 
+    /// Main panel `panel` shows or goes, whichever interface shows it (the
+    /// modern Effects and Character windows take their pages' panels).
+    pub(super) fn toggle_panel(&mut self, panel: u32) {
+        if self.modern_effects_toggle(panel, false) || self.modern_character_toggle(panel, false) {
+            return;
+        }
+        self.panels.toggle(&mut self.host.root, panel);
+    }
+
     /// OpenAC `RetailUiRuntime.OpenCharacterPanel`.
     pub(super) fn open_character(&mut self, tab: CharacterTab) -> bool {
         if let Some(done) = self.modern_open_character(tab) {
@@ -1818,9 +1880,6 @@ impl WindowUi {
     }
 
     fn panel_output(&mut self, output: PanelOutput, commands: &mut Vec<SessionCommand>) {
-        if let PanelOutput::SelectObject(target) = &output {
-            self.note_modern_craft_target(*target);
-        }
         if let Some(command) = session_command(&output) {
             commands.push(command);
             return;
@@ -1829,11 +1888,7 @@ impl WindowUi {
             return;
         }
         match output {
-            PanelOutput::TogglePanel(panel) if self.modern_effects_toggle(panel, false) => {}
-            PanelOutput::TogglePanel(panel) if self.modern_character_toggle(panel, false) => {}
-            PanelOutput::TogglePanel(panel) => {
-                self.panels.toggle(&mut self.host.root, panel);
-            }
+            PanelOutput::TogglePanel(panel) => self.toggle_panel(panel),
             PanelOutput::ClosePanel(panel) if self.modern_effects_toggle(panel, true) => {}
             PanelOutput::ClosePanel(panel) if self.modern_character_toggle(panel, true) => {}
             PanelOutput::ClosePanel(panel) => {
@@ -1864,11 +1919,9 @@ impl WindowUi {
             } => self.ask(message, DialogAction::Either(*on_yes, *on_no)),
             PanelOutput::TrainSkill { skill, credits } => {
                 let name = self
-                    .host
-                    .with_controller::<CharacterStatController, _>(CHARACTER_WINDOW, |c, _| {
-                        c.sheet().skill(skill).map(|s| s.name.clone())
-                    })
-                    .flatten()
+                    .sheet
+                    .skill(skill)
+                    .map(|s| s.name.clone())
                     .unwrap_or_else(|| format!("skill {skill}"));
                 self.ask(
                     train_skill_message(credits, &name),

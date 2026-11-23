@@ -141,6 +141,18 @@ pub enum PreviewRequest {
     ZoomIn,
     /// Zoom out.
     ZoomOut,
+    /// Turn the figure by this many tenths of a degree (clockwise when
+    /// positive) and stop any turning (a drag across it).
+    TurnBy(i32),
+}
+
+/// How far a drag of `dx` units across a figure turns it, as a
+/// [`PreviewRequest::TurnBy`]: half a degree a unit, a drag to the right
+/// turning it clockwise; `None` for less than a tenth of a degree.
+#[must_use]
+pub fn drag_turn(dx: f32) -> Option<PreviewRequest> {
+    let tenths = (dx * 5.0).round();
+    (tenths.is_finite() && tenths != 0.0).then_some(PreviewRequest::TurnBy(tenths as i32))
 }
 
 /// The step a spin takes from `current` through `count` styles by
@@ -217,7 +229,9 @@ pub fn shade_slot(part: Part) -> Option<ShadeSlot> {
     })
 }
 
-fn style_count(part: Part, g: &ChargenGenderOptions) -> i32 {
+/// How many styles `part` offers.
+#[must_use]
+pub fn style_count(part: Part, g: &ChargenGenderOptions) -> i32 {
     let n = match part {
         Part::Hair => g.hair_styles.len(),
         Part::Eyes => g.eye_strips.len(),
@@ -232,7 +246,9 @@ fn style_count(part: Part, g: &ChargenGenderOptions) -> i32 {
     i32::try_from(n).unwrap_or(i32::MAX)
 }
 
-fn color_count(part: Part, g: &ChargenGenderOptions) -> usize {
+/// How many colours `part` offers.
+#[must_use]
+pub fn color_count(part: Part, g: &ChargenGenderOptions) -> usize {
     match part {
         Part::Hair => g.hair_colors.len(),
         Part::Eyes => g.eye_colors.len(),
@@ -241,7 +257,9 @@ fn color_count(part: Part, g: &ChargenGenderOptions) -> usize {
     }
 }
 
-fn shade_of(slot: ShadeSlot, a: &CreationAppearance) -> f64 {
+/// The look's shade on `slot`.
+#[must_use]
+pub fn shade_of(slot: ShadeSlot, a: &CreationAppearance) -> f64 {
     match slot {
         ShadeSlot::Skin => a.skin_shade,
         ShadeSlot::Hair => a.hair_shade,
@@ -252,10 +270,77 @@ fn shade_of(slot: ShadeSlot, a: &CreationAppearance) -> f64 {
     }
 }
 
+/// Stepping `part`'s style by `step` through the gender's styles: plain
+/// styles wrap round, headgear's ring has "none" after the last; `None`
+/// for a part without styles.
+#[must_use]
+pub fn step_command(
+    part: Part,
+    step: i32,
+    a: &CreationAppearance,
+    g: &ChargenGenderOptions,
+) -> Option<CreationCommand> {
+    let slot = style_slot(part)?;
+    let next = cycle_index(
+        a.get(slot),
+        step,
+        style_count(part, g),
+        part == Part::Headgear,
+    );
+    Some(CreationCommand::SetAppearance(slot, next))
+}
+
+/// Picking `part`: a style outside the gender's list (or none, for a part
+/// that needs one) is put back in range; headgear past the list goes back
+/// to none.
+#[must_use]
+pub fn pick_command(
+    part: Part,
+    a: &CreationAppearance,
+    g: &ChargenGenderOptions,
+) -> Option<CreationCommand> {
+    let slot = style_slot(part)?;
+    let count = style_count(part, g);
+    if count <= 0 {
+        return None;
+    }
+    let current = a.get(slot);
+    let normalized = if part == Part::Headgear {
+        (current != UNSET && current >= count as u32).then_some(UNSET)
+    } else if current != UNSET && current >= count as u32 {
+        Some(0)
+    } else if current == UNSET {
+        Some((count - 1) as u32)
+    } else {
+        None
+    };
+    normalized.map(|n| CreationCommand::SetAppearance(slot, n))
+}
+
 /// Gearknights and the Olthoi choose no clothes, nose or mouth.
 #[must_use]
 pub fn clothes_hidden(heritage: u32) -> bool {
     heritage == H::GEARKNIGHT.0 || heritage == H::OLTHOI.0 || heritage == H::OLTHOI_ACID.0
+}
+
+/// The string keys of the hair, eyes and skin captions of a heritage
+/// whose clothes are hidden (a Gearknight's or an Olthoi's own words);
+/// `None` for the others.
+#[must_use]
+pub fn three_part_caption_keys(heritage: u32) -> Option<[&'static str; 3]> {
+    match H(heritage) {
+        H::GEARKNIGHT => Some([
+            "ID_CharGen_GearText_HairButton",
+            "ID_CharGen_GearText_EyesButton",
+            "ID_CharGen_GearText_SkinButton",
+        ]),
+        H::OLTHOI | H::OLTHOI_ACID => Some([
+            "ID_CharGen_OlthoiText_HairButton",
+            "ID_CharGen_OlthoiText_EyesButton",
+            "ID_CharGen_OlthoiText_SkinButton",
+        ]),
+        _ => None,
+    }
 }
 
 /// The snapshot's gender options.
@@ -265,7 +350,8 @@ pub fn gender<'a>(ctx: &'a PageContext<'_>) -> Option<&'a ChargenGenderOptions> 
 }
 
 /// `s`'s gender options among `options`.
-fn gender_of<'a>(
+#[must_use]
+pub fn gender_of<'a>(
     s: &CreationSnapshot,
     options: &'a ChargenOptions,
 ) -> Option<&'a ChargenGenderOptions> {
@@ -951,38 +1037,23 @@ impl AppearancePage {
         let Some(g) = gender(ctx) else {
             return Vec::new();
         };
-        let Some(slot) = style_slot(part) else {
+        if style_slot(part).is_none() {
             return self.select_part(part, ctx);
-        };
-        let current = ctx.snapshot.appearance.get(slot);
-        let next = cycle_index(current, step, style_count(part, g), part == Part::Headgear);
+        }
         // The spin then picks its part (its index is set already).
         self.part = part;
-        vec![CreationCommand::SetAppearance(slot, next)]
+        step_command(part, step, &ctx.snapshot.appearance, g)
+            .into_iter()
+            .collect()
     }
 
     /// Pick `part`: a style outside the list (or none, for a part that
     /// needs one) is put back in range first.
     fn select_part(&mut self, part: Part, ctx: &PageContext<'_>) -> Vec<CreationCommand> {
-        let mut commands = Vec::new();
-        if let (Some(slot), Some(g)) = (style_slot(part), gender(ctx)) {
-            let count = style_count(part, g);
-            if count > 0 {
-                let current = ctx.snapshot.appearance.get(slot);
-                let normalized = if part == Part::Headgear {
-                    (current != UNSET && current >= count as u32).then_some(UNSET)
-                } else if current != UNSET && current >= count as u32 {
-                    Some(0)
-                } else if current == UNSET {
-                    Some((count - 1) as u32)
-                } else {
-                    None
-                };
-                if let Some(n) = normalized {
-                    commands.push(CreationCommand::SetAppearance(slot, n));
-                }
-            }
-        }
+        let commands = gender(ctx)
+            .and_then(|g| pick_command(part, &ctx.snapshot.appearance, g))
+            .into_iter()
+            .collect();
         self.part = part;
         commands
     }

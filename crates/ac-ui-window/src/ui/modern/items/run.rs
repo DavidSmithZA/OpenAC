@@ -4,6 +4,7 @@
 //! shows, and what is clicked, chosen or dropped in it carried out with
 //! retail's item requests and pack drop rules.
 
+use ac_ui::modern::tone;
 use std::collections::{HashMap, HashSet};
 
 use ac_core::items::{ClientObject, EquipMask};
@@ -16,7 +17,6 @@ use ac_ui::event::{ItemDragPayload, ItemDragSource};
 use ac_ui::geometry::AnchorEdges;
 use ac_ui::icons::IconSource;
 use ac_ui::modern::Horizon;
-use ac_ui::modern::theme::hex;
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::items::{emit, offer_target};
 use ac_ui::panels::pack_drops::{self, DropAnswer, DropSpot};
@@ -108,6 +108,11 @@ pub struct InventoryUi {
     merges: Vec<(u32, u32, u32)>,
     /// The window showed last frame.
     was_open: bool,
+    /// The item whose details card was put away (a small screen); it
+    /// shows again when another item is picked, or this one again.
+    card_closed: Option<u32>,
+    /// The details card showed last frame.
+    card_shown: bool,
     /// The rail's font.
     rail_font: Option<std::sync::Arc<ac_ui::UiFont>>,
 }
@@ -115,7 +120,7 @@ pub struct InventoryUi {
 impl WindowUi {
     /// The inventory, hidden, in place of retail's.
     pub(in crate::ui) fn mount_modern_inventory(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let label = self.modern_font(Weight::SemiBold, 10.5);
         let small = self.modern_font(Weight::Regular, 10.5);
         let body = self.modern_font(Weight::Regular, 12.0);
@@ -179,9 +184,9 @@ impl WindowUi {
         f.record_history = false;
         f.clear_on_submit = false;
         f.stay_focused_after_submit = true;
-        f.text_color = theme.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
-        f.selection_color = hex(0xE0_B068, 0.35);
+        f.selection_color = tone::gold(0.35);
         f.set_editable_detached(&mut e, true);
         let ui = &mut self.host.root;
         let search = ui.add(frame, e, f);
@@ -237,7 +242,7 @@ impl WindowUi {
             frame,
             Element::at(inv::GRID_X, inv::GRID_Y, inv::GRID_W, inv::GRID_H)
                 .with_anchors(AnchorEdges::NONE),
-            ItemGrid::new(theme, grid_fonts),
+            ItemGrid::new(grid_fonts),
         );
         let mut sheet = SheetView::new(theme, sheet_fonts);
         sheet.foot = Some(Foot::default());
@@ -256,7 +261,7 @@ impl WindowUi {
             body: self.modern_font(Weight::SemiBold, 12.0),
         };
         let ui = &mut self.host.root;
-        let split = super::split::SplitPopover::mount(ui, theme, split_fonts);
+        let split = super::split::SplitPopover::mount(ui, split_fonts);
         let band = ui.add(
             frame,
             Element::at(
@@ -267,7 +272,7 @@ impl WindowUi {
             )
             .with_anchors(AnchorEdges::NONE)
             .with_visible(false),
-            super::plugin_notes::FootBand::new(theme, label.clone(), small.clone(), strong.clone()),
+            super::plugin_notes::FootBand::new(label.clone(), small.clone(), strong.clone()),
         );
         ui.hide_window(INVENTORY);
         let Some(modern) = self.modern.as_mut() else {
@@ -297,6 +302,8 @@ impl WindowUi {
             lifted: None,
             merges: Vec::new(),
             was_open: false,
+            card_closed: None,
+            card_shown: false,
             rail_font,
         });
         modern.replace(crate::ui::window::INVENTORY_WINDOW);
@@ -474,6 +481,9 @@ impl WindowUi {
             .widget_mut::<SheetView>(details)
             .map(|s| std::mem::take(&mut s.requests))
             .unwrap_or_default();
+        let clicked_away = ui
+            .widget_mut::<ItemGrid>(grid)
+            .is_some_and(|g| std::mem::take(&mut g.clicked_away));
         let chosen = PopMenu::take(ui, menu);
         let pressed = super::plugin_notes::FootBand::take(ui, band);
         for (owner, id) in pressed {
@@ -490,6 +500,9 @@ impl WindowUi {
         }
         for ask in frame_asks {
             self.run_frame_request(ask);
+        }
+        if clicked_away {
+            self.close_inventory_card();
         }
         for id in worn_drops {
             let wearable = self
@@ -532,11 +545,20 @@ impl WindowUi {
         }
         for (slot, ask) in cell_asks {
             match ask {
-                CellRequest::Select(id) => self.select_item(id),
+                CellRequest::Select(id) => {
+                    if let Some(inv) = self.inventory_mut() {
+                        inv.card_closed = None;
+                    }
+                    self.select_item(id);
+                }
                 CellRequest::Use(id) => self.send_item(ItemCommand::Use(ObjectRef::Guid(id))),
                 CellRequest::Menu(id, at) => self.open_item_menu(id, at),
                 CellRequest::Inspect(id) => self.item_do(id, DO_INSPECT),
                 CellRequest::Loot(_) => {}
+                // A click on an empty slot is empty space.
+                CellRequest::Empty => {
+                    self.close_inventory_card();
+                }
                 CellRequest::Lifted(id) => {
                     if let Some(inv) = self.inventory_mut() {
                         inv.lifted = Some(id);
@@ -617,6 +639,27 @@ impl WindowUi {
         self.modern.as_mut().and_then(|m| m.inventory.as_mut())
     }
 
+    /// Puts the details card away (a small screen) until another item is
+    /// picked; false when none showed.
+    fn close_inventory_card(&mut self) -> bool {
+        let selected = self.player_view.and_then(|v| v.selected);
+        let Some(inv) = self.inventory_mut() else {
+            return false;
+        };
+        if !inv.card_shown {
+            return false;
+        }
+        inv.card_closed = selected;
+        inv.card_shown = false;
+        true
+    }
+
+    /// Escape puts the inventory's details card away first, while it
+    /// shows.
+    pub(in crate::ui) fn modern_inventory_card_escape(&mut self) -> bool {
+        self.host.root.is_window_visible(INVENTORY) && self.close_inventory_card()
+    }
+
     fn run_frame_request(&mut self, ask: FrameRequest) {
         let Some(inv) = self.modern.as_ref().and_then(|m| m.inventory.as_ref()) else {
             return;
@@ -624,6 +667,9 @@ impl WindowUi {
         let (menu, grid) = (inv.menu, inv.grid);
         let options = inv.options.clone();
         match ask {
+            FrameRequest::CloseCard => {
+                self.close_inventory_card();
+            }
             FrameRequest::Close => {
                 self.panels.set_visibility(
                     &mut self.host.root,
@@ -969,12 +1015,8 @@ impl WindowUi {
         &mut self,
         f: impl FnOnce(&ac_ui::panels::items::ItemsView<'_>, Option<u32>) -> R,
     ) -> R {
-        use ac_ui::panels::toolbar::ToolbarWindowController;
         let selected = self.player_view.and_then(|v| v.selected);
-        let split = self.host.with_controller::<ToolbarWindowController, _>(
-            crate::ui::window::TOOLBAR_WINDOW,
-            |c, _| c.split.quantity().clone(),
-        );
+        let split = self.split_quantity();
         let pending: Vec<u32> = self.facts.state.pending_item.into_iter().collect();
         let resolve = crate::ui::facts::composed_names(&self.status.names);
         let view = self
@@ -1121,7 +1163,11 @@ impl WindowUi {
             lit: false,
             actions: false,
             note: None,
-            mark: super::plugin_notes::mark_on(&facts.plugin_ui, &Horizon::BRONZE, o.object_id()),
+            mark: super::plugin_notes::mark_on(
+                &facts.plugin_ui,
+                &Horizon::current(),
+                o.object_id(),
+            ),
         };
         let groups: Vec<GridGroup> = grid_view
             .groups
@@ -1182,7 +1228,7 @@ impl WindowUi {
                 frame,
                 Element::at(inv::RAIL_X, 0.0, inv::RAIL_W, PackButton::height(face))
                     .with_anchors(AnchorEdges::NONE),
-                PackButton::new(Horizon::BRONZE, inv.rail_font.clone(), face),
+                PackButton::new(inv.rail_font.clone(), face),
             );
             inv.packs.push(b);
         }
@@ -1249,7 +1295,19 @@ impl WindowUi {
         let item = selected
             .filter(|&id| id != player && objects.is_owned_by_object(id, player))
             .and_then(|id| objects.get(id));
-        let docked = item.is_some();
+        // A screen too small for the wide window: the details are a card
+        // over the equipment column, which can be put away; it stands
+        // aside while something is dragged (to equip it).
+        let small =
+            crate::ui::modern::dealing::width_for(ui.size().0, inv::WIDE, inv::NARROW) < inv::WIDE;
+        if inv.card_closed.is_some() && inv.card_closed != item.map(ClientObject::object_id) {
+            inv.card_closed = None;
+        }
+        let docked = item.is_some() && !small;
+        let card = item.is_some_and(|o| inv.card_closed != Some(o.object_id()))
+            && small
+            && lifted.is_none();
+        inv.card_shown = card;
         if let Some(o) = item {
             let id = o.object_id();
             if !inv.appraisals.contains_key(&id) && inv.asked.insert(id) {
@@ -1269,7 +1327,23 @@ impl WindowUi {
         if let Some(e) = ui.element_mut(inv.search) {
             e.left = inv::search_x(width) + 30.0;
         }
-        ui.set_visible(inv.details, docked);
+        ui.set_visible(inv.details, docked || card);
+        let (dx, dy, dw, dh) = if card {
+            inv::card_sheet_rect()
+        } else {
+            (inv::DETAILS_X, inv::EQUIP_Y, inv::DETAILS_W, inv::DETAILS_H)
+        };
+        if let Some(e) = ui.element_mut(inv.details)
+            && (e.left != dx || e.top != dy || e.width != dw || e.height != dh)
+        {
+            e.left = dx;
+            e.top = dy;
+            e.width = dw;
+            e.height = dh;
+        }
+        for &id in inv.slots.iter().chain([&inv.figure, &inv.turner]) {
+            ui.set_visible(id, !card);
+        }
         if let Some(o) = item {
             let numbers = facts.numbers();
             let book = numbers.and_then(|n| n.spellbook());
@@ -1288,7 +1362,7 @@ impl WindowUi {
             );
             let sheet = super::plugin_notes::with_cards(
                 sheet,
-                super::plugin_notes::cards(&facts.plugin_ui, &Horizon::BRONZE, o.object_id()),
+                super::plugin_notes::cards(&facts.plugin_ui, &Horizon::current(), o.object_id()),
             );
             let worn = o.currently_equipped_location != EquipMask::NONE;
             let primary = if worn {
@@ -1340,7 +1414,7 @@ impl WindowUi {
             } else {
                 "Drop on a highlighted slot to equip \u{b7} Esc cancels".to_owned()
             }
-        } else if docked {
+        } else if docked || card {
             "Double-click to use \u{b7} right-click for more".to_owned()
         } else {
             "Select an item for details".to_owned()
@@ -1351,6 +1425,7 @@ impl WindowUi {
             f.view = inv::FrameView {
                 name: me,
                 details: docked,
+                card,
                 title: grid_view.title,
                 count: grid_view.count,
                 grouped: options.pack == PackChoice::All || searching,

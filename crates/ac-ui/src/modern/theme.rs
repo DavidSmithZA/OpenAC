@@ -2,8 +2,42 @@
 //! warm text, and the world left to show through. The values are the
 //! design's (`docs/modern-ui` on the design branch); a screen takes its
 //! colours and sizes from here, never from numbers of its own.
+//!
+//! The colours follow the player's theme: [`Horizon::current`] is the look
+//! being drawn (Bronze unless the window set another with
+//! [`Horizon::set_current`]), and [`Horizon::themed`] makes a look from a
+//! theme's seven colours.
 
-use crate::draw::Color;
+use std::cell::Cell;
+
+use crate::draw::{Color, RenderContext};
+use crate::shapes::CornerRadii;
+
+thread_local! {
+    /// The look being drawn on this thread.
+    static CURRENT: Cell<Horizon> = const { Cell::new(Horizon::BRONZE) };
+}
+
+/// The most of a glass fill's colour that stays over the blurred world:
+/// a fill more solid than this lets the blur show through it; a lighter
+/// one keeps its own.
+pub const GLASS_MOST: f32 = 0.8;
+
+/// A window's or pop-up's back as frosted glass: the world behind it
+/// blurred under `color` (no more solid than [`GLASS_MOST`]); where glass
+/// is off, `color` as it is.
+pub fn fill_glass(
+    rc: &mut RenderContext<'_>,
+    (x, y, w, h): (f32, f32, f32, f32),
+    radii: CornerRadii,
+    color: Color,
+) {
+    let tint = Color {
+        a: color.a.min(GLASS_MOST),
+        ..color
+    };
+    rc.fill_glass_rounded_rect(x, y, w, h, radii, tint, color);
+}
 
 /// A colour from `0xRRGGBB` and an alpha from 0 to 1.
 #[must_use]
@@ -19,6 +53,18 @@ pub const fn hex(packed: u32, alpha: f32) -> Color {
 /// The colours.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct HorizonPalette {
+    /// The trim's own colour, solid (the edges below are it, fainter).
+    pub bronze: Color,
+    /// A window's ground, solid.
+    pub ground: Color,
+    /// A raised ground: cards, pop-ups and panels over a window.
+    pub raised: Color,
+    /// Wells and buttons' faces.
+    pub field: Color,
+    /// The deepest shade: fades over pictures.
+    pub deep: Color,
+    /// The accent, lighter: lit names, attuned items.
+    pub accent_light: Color,
     /// Window and HUD edges: the bronze trim.
     pub trim: Color,
     /// Quieter edges: slots, fields, cards.
@@ -136,6 +182,12 @@ impl Horizon {
     /// Horizon with bronze trim, the chosen look.
     pub const BRONZE: Self = Self {
         palette: HorizonPalette {
+            bronze: hex(0xC9_A062, 1.0),
+            ground: hex(0x14_100C, 1.0),
+            raised: hex(0x18_130E, 1.0),
+            field: hex(0x2A_2116, 1.0),
+            deep: hex(0x0A_0806, 1.0),
+            accent_light: hex(0xF2_D29A, 1.0),
             trim: hex(0xC9_A062, 0.8),
             trim_soft: hex(0xC9_A062, 0.45),
             trim_faint: hex(0xC9_A062, 0.25),
@@ -187,6 +239,103 @@ impl Horizon {
             big: 16.0,
         },
     };
+}
+
+impl Horizon {
+    /// The look being drawn (Bronze until the window sets another).
+    #[must_use]
+    pub fn current() -> Self {
+        CURRENT.with(Cell::get)
+    }
+
+    /// Draws in `look` from now on (on this thread).
+    pub fn set_current(look: Self) {
+        CURRENT.with(|c| c.set(look));
+    }
+
+    /// Bronze recoloured by a theme's seven colours. The theme's accent is
+    /// the trim and the highlights, its background the glass, its text,
+    /// muted and selected colours the words and the chosen rows. The
+    /// colours that mean something (the vitals, good and bad, warnings,
+    /// enemies) stay as they are. A light theme keeps the dark glass, which
+    /// has to read over the world, and lends it only its accent.
+    #[must_use]
+    pub fn themed(t: &ThemeColours) -> Self {
+        let mut h = Self::BRONZE;
+        let p = &mut h.palette;
+        let solid = |c: Color| Color { a: 1.0, ..c };
+        let accent = solid(t.accent);
+        let light = luminance(t.background) > 0.5;
+        // The trim, a little quieter than the accent, as bronze is beside
+        // gold.
+        let edge = if light {
+            accent
+        } else {
+            accent.lerp(solid(t.border), 0.2)
+        };
+        p.bronze = edge;
+        p.trim = alpha(edge, 0.8);
+        p.trim_soft = alpha(edge, 0.45);
+        p.trim_faint = alpha(edge, 0.25);
+        p.accent = accent;
+        p.accent_fill = alpha(accent, 0.85);
+        p.accent_tint = alpha(accent, 0.14);
+        p.accent_light = accent.lerp(Color::WHITE, 0.4);
+        p.accent_ink = if luminance(accent) > 0.45 {
+            if light {
+                hex(0x1A_140D, 1.0)
+            } else {
+                solid(t.background).lerp(Color::BLACK, 0.5)
+            }
+        } else {
+            Color::WHITE
+        };
+        if light {
+            return h;
+        }
+        let ground = solid(t.background);
+        p.ground = ground;
+        p.raised = ground.lerp(solid(t.field), 0.35);
+        p.field = solid(t.field);
+        p.deep = ground.lerp(Color::BLACK, 0.55);
+        p.window = alpha(ground, 0.92);
+        p.popup = alpha(ground, 0.95);
+        p.text = solid(t.text);
+        p.text_soft = solid(t.text).lerp(solid(t.muted), 0.45);
+        p.muted = solid(t.muted);
+        p.icon = solid(t.text).lerp(accent, 0.25);
+        h
+    }
+}
+
+/// A theme's seven colours (the plugin windows' themes).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ThemeColours {
+    /// The window's face.
+    pub background: Color,
+    /// Inputs, lists and other sunken areas.
+    pub field: Color,
+    /// Window and control edges.
+    pub border: Color,
+    /// Body text.
+    pub text: Color,
+    /// Quiet text.
+    pub muted: Color,
+    /// Highlights.
+    pub accent: Color,
+    /// The chosen row.
+    pub selected: Color,
+}
+
+/// `c` at `a`.
+#[must_use]
+pub const fn alpha(c: Color, a: f32) -> Color {
+    Color::rgba(c.r, c.g, c.b, a)
+}
+
+/// How light `c` looks, 0 to 1.
+fn luminance(c: Color) -> f32 {
+    0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
 }
 
 impl Default for Horizon {

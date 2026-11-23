@@ -134,13 +134,8 @@ impl WindowUi {
         let player = self.facts.state.player;
         let object = self.facts.objects.get(player)?;
         let ints = object.properties.ints.clone();
-        let (attributes, base, innate) = self
-            .host
-            .with_controller::<CharacterStatController, _>(CHARACTER_WINDOW, |c, _| {
-                let s = c.sheet();
-                (s.attributes, s.attribute_base, s.attribute_innate)
-            })
-            .unwrap_or_default();
+        let s = &self.sheet;
+        let (attributes, base, innate) = (s.attributes, s.attribute_base, s.attribute_innate);
         let birth_text = ints.get(&CREATION_TIMESTAMP).map(|&born| {
             let offset = self
                 .character_pages

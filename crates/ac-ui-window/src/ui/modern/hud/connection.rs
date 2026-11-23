@@ -6,6 +6,7 @@
 //! card: the state, the round trip, packets lost and when the server was
 //! last heard (retail's link-status panel).
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_runtime::session::LinkStatus;
@@ -323,13 +324,13 @@ impl Widget for ConnectionCard {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let radius = CornerRadii::all(self.theme.metrics.window_radius);
         let (w, h) = (CARD_WIDTH, CARD_HEIGHT);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 12.0, 30.0, p.shadow);
         rc.fill_rounded_rect(0.0, 0.0, w, h, radius, p.popup);
         rc.stroke_rounded_rect(0.0, 0.0, w, h, radius, p.trim, 1.0);
-        rc.fill(0.0, HEAD, w, 1.0, hex(0xC9_A062, 0.35));
+        rc.fill(0.0, HEAD, w, 1.0, tone::bronze(0.35));
         // The head: a signal mark, the title, the close button.
         let (sx, sy) = (14.0, (HEAD - 16.0) * 0.5);
         for r in [7.5_f32, 5.0, 2.5] {
@@ -350,7 +351,7 @@ impl Widget for ConnectionCard {
         }
         let (cx, cy, cw, ch) = Self::close_rect();
         if self.on_close {
-            rc.fill_rounded_rect(cx, cy, cw, ch, CornerRadii::all(4.0), hex(0x2A_2116, 0.85));
+            rc.fill_rounded_rect(cx, cy, cw, ch, CornerRadii::all(4.0), tone::field(0.85));
         }
         let (mx, my) = (cx + cw * 0.5, cy + ch * 0.5);
         rc.smooth_line(mx - 5.0, my - 5.0, mx + 5.0, my + 5.0, p.icon, 1.6);

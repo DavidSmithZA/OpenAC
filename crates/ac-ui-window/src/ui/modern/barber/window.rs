@@ -5,6 +5,7 @@
 //! and eyes, a shade slider for hair and skin; the heritage's one option;
 //! a line of what changed; Cancel and Accept.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_core::chargen::{ChargenGenderOptions, ChargenPalSetSource, ChargenSwatchRgb};
@@ -32,7 +33,7 @@ use crate::scene::Scene;
 use crate::ui::barber_window::BARBER_WINDOW;
 use crate::ui::modern::hud;
 use crate::ui::modern::hud::lines::{circle, stroke};
-use crate::ui::modern::kit::{self, Hits, MUTED, Rect, SOFT, bronze, gold, put, put_mid};
+use crate::ui::modern::kit::{self, Hits, Rect, bronze, gold, put, put_mid};
 use crate::ui::window::WindowUi;
 
 /// The window's name.
@@ -138,7 +139,6 @@ enum Hit {
 /// The Barber window's frame.
 #[derive(Debug)]
 pub struct BarberFrame {
-    theme: Horizon,
     fonts: BarberFonts,
     /// What it shows.
     pub screen: BarberScreen,
@@ -151,14 +151,15 @@ pub struct BarberFrame {
     hits: Hits<Hit>,
     /// The shade slider is held.
     sliding: bool,
+    /// The figure is being dragged round: the pointer's last x.
+    turning_by_hand: Option<f32>,
 }
 
 impl BarberFrame {
     /// A frame in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: BarberFonts) -> Self {
+    pub fn new(fonts: BarberFonts) -> Self {
         Self {
-            theme,
             fonts,
             screen: BarberScreen::default(),
             holding: false,
@@ -166,6 +167,7 @@ impl BarberFrame {
             asks: Vec::new(),
             hits: Hits::default(),
             sliding: false,
+            turning_by_hand: None,
         }
     }
 
@@ -264,7 +266,7 @@ impl BarberFrame {
                 if on || lit { gold(1.0) } else { bronze(0.6) },
                 1.0,
             );
-            stroke(rc, b.0 + 9.5, b.1 + 9.5, 15.0, glyph, kit::WARM, 2.0);
+            stroke(rc, b.0 + 9.5, b.1 + 9.5, 15.0, glyph, tone::warm(1.0), 2.0);
         }
         let lit = h.add(hold, Hit::Hold);
         let pill = CornerRadii::all(17.0);
@@ -300,7 +302,7 @@ impl BarberFrame {
             hold.0 + 12.0,
             hold.1,
             hold.3,
-            self.theme.palette.text,
+            Horizon::current().palette.text,
         );
         let words = self
             .fonts
@@ -317,7 +319,7 @@ impl BarberFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_column(&mut self, rc: &mut RenderContext<'_>, h: &mut Hits<Hit>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         let s = self.screen.clone();
         let mut y = PREVIEW.1;
@@ -346,7 +348,15 @@ impl BarberFrame {
                 r.1 + 11.0,
                 p.text,
             );
-            centred(rc, f.small.as_ref(), &tab.sub, r.0, r.2, r.1 + 31.0, MUTED);
+            centred(
+                rc,
+                f.small.as_ref(),
+                &tab.sub,
+                r.0,
+                r.2,
+                r.1 + 31.0,
+                tone::muted(1.0),
+            );
         }
         y += TAB_H + 14.0;
         // The style.
@@ -364,7 +374,7 @@ impl BarberFrame {
                 let lit = h.add(b, Hit::Ask(BarberAsk::Step(step)));
                 kit::button(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     b,
                     "",
                     None,
@@ -372,7 +382,7 @@ impl BarberFrame {
                     lit,
                     true,
                 );
-                stroke(rc, b.0 + 6.0, b.1 + 6.0, 14.0, glyph, kit::WARM, 2.0);
+                stroke(rc, b.0 + 6.0, b.1 + 6.0, 14.0, glyph, tone::warm(1.0), 2.0);
             }
             centred(
                 rc,
@@ -468,13 +478,13 @@ impl BarberFrame {
                 y + 4.0 - size * 0.5,
                 size,
                 size,
-                hex(0x1A_140D, 0.8),
+                tone::ink(0.8),
                 1.5,
             );
             y += 8.0 + 18.0;
         }
         if let Some(note) = s.note {
-            put(rc, f.body.as_ref(), note, COL_X, y - 6.0, MUTED);
+            put(rc, f.body.as_ref(), note, COL_X, y - 6.0, tone::muted(1.0));
             y += 22.0;
         }
         // The heritage's option.
@@ -537,8 +547,11 @@ impl PickGrid {
         let rows_fit = (((room + 4.0) / (height + 4.0)).floor() as usize).max(1);
         let cols = count.div_ceil(rows_fit).clamp(8, 12);
         let page = (rows_fit * cols).max(1);
-        let first = (now.max(1) - 1) / page * page;
-        let last = (first + page).min(count);
+        // A pick past the last style (the view not caught up yet) pages
+        // as the last.
+        let now = now.clamp(1, count.max(1));
+        let first = (now - 1) / page * page;
+        let last = (first + page).min(count).max(first);
         let rows = (last - first).div_ceil(cols).max(1);
         Self {
             cols,
@@ -640,6 +653,13 @@ impl Widget for BarberFrame {
                         .push(BarberAsk::Shade(Self::shade_value(track(), x)));
                     return true;
                 }
+                if let Some(last) = self.turning_by_hand {
+                    if let Some(turn) = ac_ui::pregame::chargen::appearance::drag_turn(x - last) {
+                        self.asks.push(BarberAsk::Turn(turn));
+                        self.turning_by_hand = Some(x);
+                    }
+                    return true;
+                }
                 false
             }
             kind::HOVER_LEAVE => {
@@ -658,12 +678,20 @@ impl Widget for BarberFrame {
                         self.asks
                             .push(BarberAsk::Shade(Self::shade_value(track(), x)));
                     }
+                    // A drag across the figure turns it (and stops the
+                    // buttons' turning).
+                    None if kit::inside(Self::figure_rect(), x, y) => {
+                        self.turning_by_hand = Some(x);
+                        self.turning = None;
+                        ui.set_capture(me);
+                    }
                     _ => {}
                 }
                 true
             }
             kind::MOUSE_UP | kind::CAPTURE_CHANGED => {
                 self.holding = false;
+                self.turning_by_hand = None;
                 if self.sliding && e.kind == kind::MOUSE_UP {
                     self.asks
                         .push(BarberAsk::Shade(Self::shade_value(track(), x)));
@@ -691,8 +719,15 @@ impl Widget for BarberFrame {
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
         let f = self.fonts.clone();
         let mut h = Hits::new(self.hits.hover);
-        kit::window_back(rc, &self.theme, WIDTH, HEIGHT, HEADER, true);
-        let end = kit::title(rc, &self.theme, f.title.as_ref(), GLYPH, "Barber", HEADER);
+        kit::window_back(rc, &Horizon::current(), WIDTH, HEIGHT, HEADER, true);
+        let end = kit::title(
+            rc,
+            &Horizon::current(),
+            f.title.as_ref(),
+            GLYPH,
+            "Barber",
+            HEADER,
+        );
         let top = (HEADER - 18.0) * 0.5;
         for at in [(6.0, 6.0), (6.0, 18.0)] {
             circle(rc, 20.0, top, 18.0, at, 3.0, gold(1.0), 2.0);
@@ -704,11 +739,11 @@ impl Widget for BarberFrame {
             end + 12.0,
             0.0,
             HEADER,
-            MUTED,
+            tone::muted(1.0),
         );
         let close = kit::close_rect(WIDTH, HEADER);
         let lit = h.add(close, Hit::Ask(BarberAsk::Cancel));
-        kit::close(rc, &self.theme, close, lit);
+        kit::close(rc, &Horizon::current(), close, lit);
         self.draw_preview(rc, &mut h);
         self.draw_column(rc, &mut h);
         // The foot.
@@ -731,12 +766,12 @@ impl Widget for BarberFrame {
             20.0,
             fy,
             FOOT,
-            SOFT,
+            tone::soft(1.0),
         );
         let lit = h.add(cancel, Hit::Ask(BarberAsk::Cancel));
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             cancel,
             "Cancel",
             f.strong.as_ref(),
@@ -747,7 +782,7 @@ impl Widget for BarberFrame {
         let lit = h.add(accept, Hit::Ask(BarberAsk::Accept));
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             accept,
             "Accept",
             f.strong.as_ref(),
@@ -790,7 +825,6 @@ fn barber_command(ui: &mut UiRoot, command: BarberCommand) {
 impl WindowUi {
     /// The Barber window, hidden, in place of retail's.
     pub(in crate::ui) fn mount_modern_barber(&mut self) {
-        let theme = Horizon::BRONZE;
         let fonts = BarberFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             strong: self.modern_font(Weight::SemiBold, 12.0),
@@ -802,7 +836,7 @@ impl WindowUi {
             &mut self.host.root,
             BARBER,
             (WIDTH, HEIGHT),
-            BarberFrame::new(theme, fonts),
+            BarberFrame::new(fonts),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -820,6 +854,10 @@ impl WindowUi {
             Element::at(r.0, r.1, r.2, r.3).with_anchors(AnchorEdges::NONE),
             ac_ui::widgets::Viewport::default(),
         );
+        // The frame under it takes the drag that turns the figure.
+        if let Some(e) = ui.element_mut(figure) {
+            e.click_through = true;
+        }
         ui.hide_window(BARBER);
         let Some(modern) = self.modern.as_mut() else {
             return;
@@ -848,26 +886,13 @@ impl WindowUi {
     ) -> BarberFacts<'a> {
         let strings = self.content.strings();
         let text = |table: u32, key: &str| strings.resolve(table, compute_hash(key), 0);
-        let captions = if super::model::three_parts(view.heritage) {
-            let keys = match ac_core::chargen::ChargenHeritageGroup(view.heritage) {
-                ac_core::chargen::ChargenHeritageGroup::GEARKNIGHT => [
-                    "ID_CharGen_GearText_HairButton",
-                    "ID_CharGen_GearText_EyesButton",
-                    "ID_CharGen_GearText_SkinButton",
-                ],
-                _ => [
-                    "ID_CharGen_OlthoiText_HairButton",
-                    "ID_CharGen_OlthoiText_EyesButton",
-                    "ID_CharGen_OlthoiText_SkinButton",
-                ],
-            };
-            let words = keys.map(|k| text(CAPTION_TABLE, k).unwrap_or_default());
-            words.iter().all(|w| !w.is_empty()).then_some(words)
-        } else {
-            None
-        };
+        let captions = ac_ui::pregame::chargen::appearance::three_part_caption_keys(view.heritage)
+            .and_then(|keys| {
+                let words = keys.map(|k| text(CAPTION_TABLE, k).unwrap_or_default());
+                words.iter().all(|w| !w.is_empty()).then_some(words)
+            });
         let toggle_words = view.toggle.and_then(|t| text(TOGGLE_TABLE, t.string_key()));
-        let catalog = self.barber.catalog();
+        let catalog = Some(self.viewports.catalog());
         let colors = match (gender, catalog) {
             (Some(g), Some(c)) => ac_ui::pregame::chargen::appearance::swatch_colors(
                 part,
@@ -878,7 +903,7 @@ impl WindowUi {
             _ => [None; 9],
         };
         let shade_stops: Vec<ChargenSwatchRgb> = match (gender, catalog) {
-            (Some(g), Some(c)) => shade_source(part, view, g)
+            (Some(g), Some(c)) => shade_source(part, &view.appearance, g)
                 .and_then(|(set, sample)| {
                     let palettes = c.pal_set(set)?.palette_ids.clone();
                     Some(
@@ -968,6 +993,8 @@ impl WindowUi {
                         barber_command(ui, BarberCommand::SetAppearance(slot, n));
                     }
                     part = p;
+                    // Another part's slider starts afresh.
+                    last_shade = None;
                 }
                 BarberAsk::Step(step) => {
                     if let Some((slot, n)) =

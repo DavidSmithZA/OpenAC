@@ -207,6 +207,8 @@ struct Shot {
     textures: HashMap<(u32, u32), Held>,
     /// What the window sent the session.
     sent: Vec<ac_runtime::session::SessionCommand>,
+    /// The screen, units.
+    size: (u32, u32),
 }
 
 impl Shot {
@@ -228,6 +230,7 @@ impl Shot {
             now: Instant::now(),
             textures: HashMap::new(),
             sent: Vec::new(),
+            size: (W, H),
         };
         // Long enough for the fonts, the layout and the first bars.
         for _ in 0..10 {
@@ -239,7 +242,7 @@ impl Shot {
     fn step(&mut self) {
         self.ui.feed(&mut self.scene);
         self.now += Duration::from_millis(50);
-        let _ = self.ui.frame(self.now, (W, H));
+        let _ = self.ui.frame(self.now, self.size);
         let sent = self.ui.drain();
         self.sent.extend(sent);
     }
@@ -318,7 +321,7 @@ impl Shot {
 
     fn save(&mut self, name: &str) {
         self.now += Duration::from_millis(50);
-        let list = self.ui.frame(self.now, (W, H));
+        let list = self.ui.frame(self.now, self.size);
         let batch = UiBatch::build(&list);
         let mut surfaces = self.ui.surfaces();
         for run in &batch.runs {
@@ -366,12 +369,14 @@ impl Shot {
                 color: v.color,
             })
             .collect();
+        // No world here to blur: glass draws nothing, as on the web.
         let runs: Vec<[u32; 5]> = batch
             .runs
             .iter()
+            .filter(|r| r.key.texture != UiTexture::Backdrop)
             .map(|r| {
                 let (kind, id) = match r.key.texture {
-                    UiTexture::White => (0, 0),
+                    UiTexture::White | UiTexture::Backdrop => (0, 0),
                     UiTexture::Named(TextureRef::Surface(id)) => (1, id),
                     UiTexture::Named(TextureRef::Runtime(h)) => (2, h),
                 };
@@ -379,16 +384,28 @@ impl Shot {
                 [kind, id, filter, r.first, r.count]
             })
             .collect();
-        let rgba = raster::render(W, H, &corners, &runs, &self.textures);
+        let (w, h) = self.size;
+        let rgba = raster::render(w, h, &corners, &runs, &self.textures);
         let dir = out_dir();
         std::fs::create_dir_all(&dir).expect("the snapshot folder");
         let path = dir.join(format!("{name}.png"));
-        std::fs::write(&path, ac_bits::png::encode_rgba(W, H, &rgba)).expect("the PNG");
-        println!("saved {}", path.display());
+        std::fs::write(&path, ac_bits::png::encode_rgba(w, h, &rgba)).expect("the PNG");
+        println!(
+            "saved {} ({} runs, {} vertices)",
+            path.display(),
+            batch.runs.len(),
+            batch.vertices.len()
+        );
         for notice in self.ui.take_notices() {
             println!("notice: {notice}");
         }
     }
+}
+
+/// The quick-move key a new player has (Command on a Mac, Control
+/// elsewhere).
+fn quick_move() -> Modifiers {
+    ac_ui_window::ui::modern::quick_move_modifier(ac_host::settings::QuickMoveKey::default())
 }
 
 /// The Main bar's first slot's centre on a 1440 x 900 screen.
@@ -409,9 +426,9 @@ fn the_modern_bars() {
         s.step();
     }
     s.save("bars-hover");
-    // Quick move's menu on the Main bar: Ctrl + right-click.
-    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
-    s.click(1, MAIN_SLOT.0, MAIN_SLOT.1, Modifiers::CTRL);
+    // Quick move's menu on the Main bar: its key + right-click.
+    s.ui.host_mut().set_modifiers(quick_move());
+    s.click(1, MAIN_SLOT.0, MAIN_SLOT.1, quick_move());
     s.ui.host_mut().set_modifiers(Modifiers::NONE);
     s.save("bars-quick-menu");
     // Its last row opens Edit layout (the menu is kept on the screen, so
@@ -442,25 +459,22 @@ fn the_modern_bars() {
     s.set_mode(CombatMode::NON_COMBAT);
     // The spellbook open; its first spell carried to the Main bar's tenth
     // slot (empty), a picture on the way.
-    use ac_render::ui::window::{Hotkey, SPELLBOOK_WINDOW};
-    use ac_ui::panels::magic::{SpellbookPage, SpellbookWindowController};
+    use ac_render::ui::window::Hotkey;
+    use ac_ui::panels::magic::SpellbookPage;
+    use ac_ui_window::ui::modern::magic::spellbook_window::SpellList;
     assert!(s.ui.run_hotkey(Hotkey::Spellbook(SpellbookPage::Spells)));
     s.step();
     s.step();
-    let list =
-        s.ui.host_mut()
-            .with_controller::<SpellbookWindowController, _>(SPELLBOOK_WINDOW, |c, _| c.list())
-            .expect("the spellbook");
-    let row = {
-        let root = &s.ui.host().root;
-        let cell = root
-            .widget::<ac_ui::widgets::ItemList>(list)
-            .and_then(|l| l.item(0))
-            .expect("a spell row");
-        let (x, y) = root.screen_position(cell);
-        let e = root.element(cell).unwrap();
-        ((x + e.width * 0.3) as i32, (y + e.height * 0.5) as i32)
-    };
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-spellbook")
+            .expect("the spellbook")
+            .frame;
+    let list = shown_in::<SpellList>(&s, frame).expect("the list");
+    let (lx, ly, _, _) = rect_of(&s, list);
+    // The first spell's row (under its school's heading).
+    let row = (lx + 100, ly + 30 + 19);
     println!("spell row at {row:?}");
     s.save("spell-book-open");
     let to = (MAIN_SLOT.0 + 43 * 9, MAIN_SLOT.1);
@@ -563,27 +577,27 @@ fn the_m2_gaps() {
     let amount = s.ui.drag_amount(potion);
     assert!((4..=6).contains(&amount), "{amount}");
     // Quick move's menu on the radar.
-    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
-    s.click(1, 1440 - 80, 80, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(quick_move());
+    s.click(1, 1440 - 80, 80, quick_move());
     s.ui.host_mut().set_modifiers(Modifiers::NONE);
     s.save("gaps-radar-menu");
     // Hide it (the menu's second entry).
     s.click(0, 1210, 163, Modifiers::NONE);
     s.save("gaps-radar-hidden");
     // Lock the vitals: their menu's first entry.
-    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
-    s.click(1, 720, 22, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(quick_move());
+    s.click(1, 720, 22, quick_move());
     s.ui.host_mut().set_modifiers(Modifiers::NONE);
     s.save("gaps-vitals-menu");
     s.click(0, 760, 72, Modifiers::NONE);
-    // Locked: Ctrl + right-click on it opens nothing now.
-    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
-    s.click(1, 720, 22, Modifiers::CTRL);
+    // Locked: quick move's key + right-click on it opens nothing now.
+    s.ui.host_mut().set_modifiers(quick_move());
+    s.click(1, 720, 22, quick_move());
     s.ui.host_mut().set_modifiers(Modifiers::NONE);
     s.save("gaps-vitals-locked");
     // Edit layout from the Main bar's menu; its toolbar.
-    s.ui.host_mut().set_modifiers(Modifiers::CTRL);
-    s.click(1, MAIN_SLOT.0, MAIN_SLOT.1, Modifiers::CTRL);
+    s.ui.host_mut().set_modifiers(quick_move());
+    s.click(1, MAIN_SLOT.0, MAIN_SLOT.1, quick_move());
     s.ui.host_mut().set_modifiers(Modifiers::NONE);
     s.click(0, MAIN_SLOT.0 + 40, 900 - 6 - 20, Modifiers::NONE);
     s.save("gaps-edit");
@@ -2587,6 +2601,184 @@ fn the_modern_trade() {
     s.save("trade-card");
 }
 
+/// On small screens the Vendor and Trade windows narrow: on a 1024-wide
+/// screen the vendor's categories drop down from the list's title (what
+/// the vendor buys with them on Sell); on a 900-wide one Trade keeps its
+/// two columns and drops the hint lines.
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_small_screen() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::inventory::VendorViewReason;
+    use ac_ui_window::ui::modern::dealing::{trade_window, vendor_window};
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    s.size = (1024, 700);
+    s.step();
+    more_things(&mut s);
+    open_shop(&mut s, VendorViewReason::Opened);
+    s.step();
+    let frame = s.ui.host().root.window("modern-vendor").expect("it").frame;
+    let (fx, fy, fw, _) = rect_of(&s, frame);
+    assert_eq!(fw, vendor_window::NARROW_WIDTH as i32, "the vendor narrows");
+    s.save("small-vendor");
+    // The list's title opens the categories.
+    s.click(0, fx + 20 + 30, fy + 72 + 14, Modifiers::NONE);
+    let open = |s: &Shot| {
+        s.ui.host()
+            .root
+            .widget::<vendor_window::VendorFrame>(frame)
+            .is_some_and(|f| f.rail_open)
+    };
+    assert!(open(&s), "the drop-down opens");
+    s.save("small-vendor-categories");
+    // The second category: chosen, and the drop-down closes.
+    s.sent.clear();
+    s.click(
+        0,
+        fx + 20 + 60,
+        fy + 72 + 40 + 20 + 32 + 15,
+        Modifiers::NONE,
+    );
+    assert!(!open(&s), "it closes on a pick");
+    s.save("small-vendor-picked");
+    // Sell: the packs and what the vendor buys drop down together.
+    s.click(0, fx + 262, fy + 30, Modifiers::NONE);
+    s.click(0, fx + 20 + 30, fy + 72 + 14, Modifiers::NONE);
+    assert!(open(&s));
+    s.save("small-vendor-sell");
+    // Leave the shop. On a screen narrower still (900), Trade narrows
+    // too (900 wide, it fits 1024 with room to spare).
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Vendor(None)));
+    s.size = (900, 640);
+    s.step();
+    trade_with_osk(&mut s, false, false, true);
+    let trade = s.ui.host().root.window("modern-trade").expect("it").frame;
+    let (_, _, tw, _) = rect_of(&s, trade);
+    let fw =
+        s.ui.host()
+            .root
+            .widget::<trade_window::TradeFrame>(trade)
+            .map(|f| f.width);
+    assert_eq!(
+        tw,
+        trade_window::NARROW_WIDTH as i32,
+        "the trade narrows ({fw:?}, screen {:?})",
+        s.ui.host().root.size()
+    );
+    s.save("small-trade");
+    // The map: its side column a drawer, shut; where you are on the map.
+    s.scene
+        .apply(PresentationEvent::Interface(InterfaceEvent::Trade(
+            Box::default(),
+        )));
+    s.size = (680, 600);
+    s.step();
+    assert!(s.ui.handle_input_action(ac_ui::input::InputAction::ToggleMapPage));
+    s.step();
+    s.step();
+    let map = s.ui.host().root.window("modern-map").expect("it").frame;
+    let side =
+        s.ui.host()
+            .root
+            .widget::<ac_ui_window::ui::modern::world::map::MapView>(map)
+            .map(|v| (v.compact(), v.side));
+    assert_eq!(side, Some((true, false)), "the drawer starts shut");
+    s.save("small-map");
+}
+
+/// The inventory on a screen too small for the wide window: an item's
+/// details are a card over the equipment column, put away by its close
+/// button, Escape or a click on empty space, and back when an item is
+/// picked again.
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_small_inventory() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_ui_window::ui::modern::items::inventory as inv;
+    use ac_ui_window::ui::modern::items::sheet_view::SheetView;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    s.size = (1024, 700);
+    s.step();
+    more_things(&mut s);
+    assert!(s.ui.run_hotkey(Hotkey::Inventory));
+    s.step();
+    s.step();
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-inventory")
+            .expect("it")
+            .frame;
+    let (fx, fy, _, _) = rect_of(&s, frame);
+    let select = |s: &mut Shot| {
+        let first = (fx + inv::GRID_X as i32 + 20, fy + 158 + 20);
+        s.click(0, first.0, first.1, Modifiers::NONE);
+        s.scene.apply(PresentationEvent::Player(PlayerView {
+            selected: Some(0x8000_0101),
+            ..PlayerView::default()
+        }));
+        s.step();
+        s.step();
+    };
+    let card = |s: &Shot| {
+        let root = &s.ui.host().root;
+        let shown = root
+            .widget::<inv::InventoryFrame>(frame)
+            .is_some_and(|f| f.view.card);
+        let sheet = root.children(frame).into_iter().find(|&c| {
+            root.widget::<SheetView>(c).is_some() && root.element(c).is_some_and(|e| e.visible)
+        });
+        (shown, sheet.is_some())
+    };
+    select(&mut s);
+    let (_, _, fw, _) = rect_of(&s, frame);
+    assert_eq!(fw, inv::NARROW as i32, "the window stays narrow");
+    assert_eq!(card(&s), (true, true), "the details are a card");
+    s.save("small-inventory-card");
+    // Its close button.
+    s.click(
+        0,
+        fx + (inv::CARD_X + inv::CARD_W) as i32 - 6 - 13,
+        fy + inv::CARD_Y as i32 + 3 + 13,
+        Modifiers::NONE,
+    );
+    assert_eq!(card(&s), (false, false), "the close button puts it away");
+    s.save("small-inventory-closed");
+    // The same item again: back.
+    select(&mut s);
+    assert_eq!(card(&s), (true, true), "picking the item brings it back");
+    // Escape.
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    assert_eq!(card(&s), (false, false), "Escape puts it away");
+    assert!(
+        s.ui.host().root.is_window_visible("modern-inventory"),
+        "and leaves the window open"
+    );
+    // A click on the grid's empty space.
+    select(&mut s);
+    assert!(card(&s).0);
+    s.click(
+        0,
+        fx + inv::GRID_X as i32 + 150,
+        fy + inv::GRID_Y as i32 + inv::GRID_H as i32 - 30,
+        Modifiers::NONE,
+    );
+    assert_eq!(
+        card(&s),
+        (false, false),
+        "a click on empty space puts it away"
+    );
+    // On a screen with room, the details dock again.
+    s.size = (1440, 900);
+    select(&mut s);
+    let (_, _, fw, _) = rect_of(&s, frame);
+    assert_eq!(fw, inv::WIDE as i32, "the window widens");
+    assert!(!card(&s).0, "and the details dock");
+}
+
 /// An Ust and four things to salvage in the main pack.
 fn salvage_things(s: &mut Shot) -> u32 {
     const UST: u32 = 0x8000_0501;
@@ -3338,6 +3530,92 @@ fn the_modern_map() {
     assert!(!s.ui.host().root.is_window_visible("modern-map"));
 }
 
+/// The detailed map over the game's: the tier in `AC_WORLD_MAP_PACK` (a
+/// folder as the bake tool packs it, `<tier>-r1`), linked into a scratch
+/// map folder, drawn for the whole world, Holtburg and close in.
+#[test]
+#[ignore = "needs the retail dat files and a detailed map pack; writes pictures"]
+fn the_modern_map_detailed() {
+    use ac_core::combat::CombatMode;
+    use ac_ui::input::InputAction;
+    use ac_ui_window::ui::modern::world::map::MapView;
+    let Some(pack) = std::env::var_os("AC_WORLD_MAP_PACK").map(PathBuf::from) else {
+        return;
+    };
+    let name = pack
+        .file_name()
+        .and_then(|n| n.to_str())
+        .and_then(|n| n.split('-').next())
+        .expect("a pack folder named <tier>-r<release>")
+        .to_owned();
+    let root = std::env::temp_dir().join(format!("openac-world-map-{}", std::process::id()));
+    let dir = root.join(&name);
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&dir).unwrap();
+    for entry in std::fs::read_dir(&pack).unwrap() {
+        let path = entry.unwrap().path();
+        let file = path.file_name().unwrap().to_string_lossy().into_owned();
+        if file.ends_with(".bin") {
+            #[cfg(unix)]
+            std::os::unix::fs::symlink(&path, dir.join(&file)).unwrap();
+        } else if file == format!("atlas-map-{name}.json") {
+            std::fs::copy(&path, dir.join("manifest.json")).unwrap();
+        }
+    }
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let maps = ac_world_map::service::MapService::start(root.clone(), ac_world_map::DEFAULT_SOURCE)
+        .expect("the service");
+    s.ui.set_world_maps(Box::new(maps));
+    assert!(s.ui.handle_input_action(InputAction::ToggleMapPage));
+    let view = s.ui.host().root.window("modern-map").expect("it").frame;
+    // Steps until the tiles asked for have come (the tile threads decode
+    // them meanwhile).
+    let settle = |s: &mut Shot| {
+        let mut drawn = 0;
+        for _ in 0..200 {
+            s.step();
+            std::thread::sleep(Duration::from_millis(10));
+            let now =
+                s.ui.host_mut()
+                    .root
+                    .widget_mut::<MapView>(view)
+                    .map_or(0, |v| v.tiles.len());
+            if now == drawn && now > 0 {
+                break;
+            }
+            drawn = now;
+        }
+        drawn
+    };
+    assert!(settle(&mut s) > 0, "tiles are drawn");
+    s.save("map-detailed");
+    for (zoom, shot) in [(3, "map-detailed-holtburg"), (12, "map-detailed-close")] {
+        if let Some(v) = s.ui.host_mut().root.widget_mut::<MapView>(view) {
+            v.focus(33.9, 42.1, zoom, Some("Holtburg".to_owned()));
+        }
+        assert!(settle(&mut s) > 0);
+        s.save(shot);
+    }
+    // Options › Graphics › World map, found by the search: the tier chosen
+    // (Standard) is not here, the one that is shows meanwhile.
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.key(Key::Escape, Modifiers::NONE, false);
+    s.step();
+    s.ui.attach_key_bindings(&ac_ui::input::KeyBindings::retail_defaults());
+    assert!(s.ui.run_hotkey(ac_render::ui::window::Hotkey::Options));
+    s.step();
+    s.step();
+    let frame = s.ui.host().root.window("modern-options").expect("it").frame;
+    let field = shown_in::<ac_ui::widgets::Field>(&s, frame).expect("the search field");
+    s.ui.host_mut()
+        .root
+        .with::<ac_ui::widgets::Field, _>(field, |f, _| f.set_text("detailed"));
+    s.step();
+    s.step();
+    s.save("options-world-map");
+    let _ = std::fs::remove_dir_all(root);
+}
+
 #[test]
 #[ignore = "needs the retail dat files; writes pictures"]
 fn the_modern_chess() {
@@ -3535,6 +3813,23 @@ fn the_modern_barber() {
     );
     s.step();
     s.save("barber-skin");
+    // A drag to the right across the figure turns it clockwise.
+    let _ = s.ui.viewport_requests(&s.scene, 1.0);
+    let figure = BarberFrame::figure_rect();
+    let (cx, cy) = (
+        fx + (figure.0 + figure.2 * 0.5) as i32,
+        fy + (figure.1 + figure.3 * 0.5) as i32,
+    );
+    s.drag((cx - 40, cy), (cx + 40, cy));
+    let (_, controls) = s.ui.viewport_requests(&s.scene, 1.0);
+    let turned: i32 = controls
+        .iter()
+        .filter_map(|(_, c)| match c {
+            ac_ui::pregame::chargen::appearance::PreviewRequest::TurnBy(t) => Some(*t),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(turned, 400, "80 units at half a degree each: {controls:?}");
     // Accept.
     let (_, accept) =
         s.ui.host()
@@ -3558,4 +3853,386 @@ fn the_modern_barber() {
         "{:?}",
         s.sent
     );
+}
+
+fn roster(pending_delete: u32) -> ac_runtime::session::selection::SelectionSnapshot {
+    use ac_runtime::session::selection::{
+        SelectionButtons, SelectionEntry, SelectionLifecycle, SelectionSnapshot,
+    };
+    let names = [
+        (0x5000_0001, "Aerin Vale", 0),
+        (0x5000_0002, "Brannoch Stoneheart", 0),
+        (0x5000_0003, "Ki Sora", 0),
+        (0x5000_0004, "Quill", 0),
+        (0x5000_0005, "Old Mule", 2832),
+    ];
+    SelectionSnapshot {
+        lifecycle: SelectionLifecycle::AwaitingSelection,
+        revision: 1,
+        account_name: "ashfall".to_owned(),
+        slot_count: 11,
+        world_name: "Leafcull".to_owned(),
+        server_population: Some(312),
+        highlighted_character_id: 0x5000_0001,
+        pending_delete_character_id: pending_delete,
+        entries: names
+            .iter()
+            .enumerate()
+            .map(|(i, (id, name, grey))| SelectionEntry {
+                active_index: i,
+                character_id: *id,
+                name: (*name).to_owned(),
+                seconds_greyed_out: *grey,
+            })
+            .collect(),
+        buttons: SelectionButtons {
+            can_enter: true,
+            can_delete: true,
+            can_restore: false,
+            delete_visible: true,
+            restore_visible: false,
+            can_create: true,
+        },
+        ..SelectionSnapshot::default()
+    }
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_stage() {
+    use ac_core::combat::CombatMode;
+    use ac_host::settings::{RememberedCharacter, RememberedCharacters, SettingsStore};
+    use ac_runtime::session::pregame::{ConnectionStatus, ConnectionView, PreGameEvent};
+    use ac_runtime::session::{LifecycleCommand, SessionCommand};
+    let dir = out_dir().join("stage-settings");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("the settings folder");
+    let file = dir.join("settings.json");
+    let mut remembered = RememberedCharacters::default();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    for (name, level, heritage, place, days) in [
+        ("Aerin Vale", 4783, 1, "Ayan Baqur", 1),
+        ("Brannoch Stoneheart", 312, 8, "Mayoi", 3),
+        ("Ki Sora", 1026, 3, "Shoushi", 15),
+        ("Old Mule", 58, 2, "Yaraq", 150),
+    ] {
+        remembered.set(
+            &format!("Leafcull/{name}"),
+            RememberedCharacter {
+                level,
+                heritage,
+                gender: 2,
+                place: place.to_owned(),
+                played: now - days * 86_400,
+                look: None,
+            },
+        );
+    }
+    SettingsStore::new(file.clone())
+        .save_remembered_characters(&remembered)
+        .expect("the remembered characters");
+    let mut s = Shot::with_settings(CombatMode::NON_COMBAT, Some(file));
+    let tables = ac_runtime::gameplay::GameTables::load(&dats()).expect("the game tables");
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Options(
+            Arc::clone(tables.chargen()),
+        )));
+    let started = Instant::now();
+    let mut connection = ConnectionView {
+        status: ConnectionStatus::CheckingData,
+        connection_progress: 0.64,
+        update_progress: 0.22,
+        error: None,
+        started,
+        direct_launch: false,
+    };
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Connection(
+            connection.clone(),
+        )));
+    s.step();
+    s.step();
+    assert!(s.ui.pregame_active(), "connecting shows");
+    s.save("stage-connecting");
+    connection.status = ConnectionStatus::Failed;
+    connection.connection_progress = 0.38;
+    connection.update_progress = 0.0;
+    connection.error = Some("Could not connect to Leafcull. The server did not answer.".to_owned());
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Connection(
+            connection.clone(),
+        )));
+    s.step();
+    s.save("stage-failed");
+    // Ready long ago: the roster.
+    connection.status = ConnectionStatus::Ready;
+    connection.connection_progress = 1.0;
+    connection.update_progress = 1.0;
+    connection.error = None;
+    connection.started = started
+        .checked_sub(Duration::from_secs(10))
+        .unwrap_or(started);
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Connection(
+            connection.clone(),
+        )));
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(roster(0)),
+        )));
+    s.step();
+    s.step();
+    assert!(s.ui.pregame_active(), "selection shows");
+    s.save("stage");
+    // A character never played here.
+    let mut r = roster(0);
+    r.highlighted_character_id = 0x5000_0004;
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(r),
+        )));
+    s.step();
+    s.save("stage-unknown");
+    // A character pending deletion.
+    let mut r = roster(0);
+    r.highlighted_character_id = 0x5000_0005;
+    r.buttons.can_enter = false;
+    r.buttons.can_restore = true;
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(r),
+        )));
+    s.step();
+    s.save("stage-pending");
+    // Enter: the Enter key on the picked character.
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(roster(0)),
+        )));
+    s.step();
+    s.sent.clear();
+    s.key(Key::Enter, Modifiers::NONE, true);
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Lifecycle(LifecycleCommand::Enter(Some(_)))
+        )),
+        "{:?}",
+        s.sent
+    );
+    s.save("stage-entering");
+    // The delete card.
+    let mut r = roster(0x5000_0002);
+    r.revision = 2;
+    r.highlighted_character_id = 0x5000_0002;
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(r),
+        )));
+    s.step();
+    s.step();
+    s.save("stage-delete");
+    // An empty account.
+    let mut r = roster(0);
+    r.revision = 3;
+    r.entries.clear();
+    r.highlighted_character_id = 0;
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(r),
+        )));
+    s.step();
+    s.save("stage-empty");
+    // The credits.
+    let mut r = roster(0);
+    r.revision = 4;
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(r),
+        )));
+    s.step();
+    s.click(
+        0,
+        1440 - 32 - 64 - 4 - 40,
+        900 - 26 - 18 - 15,
+        Modifiers::NONE,
+    );
+    for _ in 0..40 {
+        s.step();
+    }
+    s.save("stage-credits");
+    s.key(Key::Escape, Modifiers::NONE, true);
+    s.step();
+    s.save("stage-back");
+    // The Theme button, left of Credits: its list, and Glacier picked from
+    // it (saved, and everything takes it).
+    s.click(
+        0,
+        1440 - 32 - 64 - 4 - 80 - 4 - 48,
+        900 - 26 - 18 - 15,
+        Modifiers::NONE,
+    );
+    s.step();
+    s.save("stage-themes");
+    let (panel_x, panel_y) = (
+        1440 - 32 - 64 - 4 - 80 - 4 - 220,
+        900 - 26 - 18 - 30 - 6 - (8 * 30 + 12),
+    );
+    s.click(0, panel_x + 110, panel_y + 6 + 6 * 30 + 15, Modifiers::NONE);
+    assert_eq!(s.ui.settings().plugin_ui.theme, "Glacier");
+    s.step();
+    assert_eq!(
+        ac_ui::modern::Horizon::current(),
+        ac_ui_window::ui::modern::look_for_theme("Glacier")
+    );
+    s.save("stage-glacier");
+}
+
+/// The modern windows in other themes: the HUD, the inventory with an
+/// item's details, and Options on the Theme row, in Classic, three dark
+/// themes and the light Parchment (which keeps the dark glass).
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_themes() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    for theme in ["Classic", "Moss", "Glacier", "Bloodmoon", "Parchment"] {
+        let mut settings = s.ui.settings().clone();
+        theme.clone_into(&mut settings.plugin_ui.theme);
+        s.ui.settings_changed_elsewhere(&settings);
+        s.step();
+        assert_eq!(
+            ac_ui::modern::Horizon::current(),
+            ac_ui_window::ui::modern::look_for_theme(theme),
+            "{theme} is drawn"
+        );
+        assert!(s.ui.run_hotkey(Hotkey::Inventory));
+        s.step();
+        let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
+        s.click(0, first.0, first.1, Modifiers::NONE);
+        s.scene.apply(PresentationEvent::Player(PlayerView {
+            selected: Some(0x8000_0101),
+            ..PlayerView::default()
+        }));
+        s.step();
+        s.save(&format!("theme-{theme}-inventory"));
+        assert!(s.ui.run_hotkey(Hotkey::Inventory));
+        s.step();
+        assert!(s.ui.run_hotkey(Hotkey::Options));
+        s.step();
+        s.step();
+        s.save(&format!("theme-{theme}-options"));
+        assert!(s.ui.run_hotkey(Hotkey::Options));
+        s.step();
+    }
+}
+
+/// The session's creation side for the Studio pictures: each creation
+/// request the window sent is carried out and the new state handed back.
+fn pump_creation(s: &mut Shot, creation: &mut ac_runtime::session::creation::CharacterCreation) {
+    use ac_runtime::session::pregame::PreGameEvent;
+    use ac_runtime::session::{LifecycleCommand, SessionCommand};
+    for _ in 0..3 {
+        let sent = std::mem::take(&mut s.sent);
+        for c in sent {
+            if let SessionCommand::Lifecycle(LifecycleCommand::Create(c)) = c {
+                let _ = creation.apply_command(&c);
+            }
+        }
+        s.scene
+            .apply(PresentationEvent::PreGame(PreGameEvent::Creation(
+                Box::new(creation.snapshot()),
+            )));
+        s.step();
+    }
+}
+
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_studio() {
+    use ac_core::combat::CombatMode;
+    use ac_runtime::session::Generation;
+    use ac_runtime::session::creation::{CharacterCreation, SeededRandom};
+    use ac_runtime::session::pregame::{ConnectionStatus, ConnectionView, PreGameEvent};
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    let tables = ac_runtime::gameplay::GameTables::load(&dats()).expect("the game tables");
+    let options = Arc::clone(tables.chargen());
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Options(
+            Arc::clone(&options),
+        )));
+    let now = Instant::now();
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Connection(
+            ConnectionView {
+                status: ConnectionStatus::Ready,
+                connection_progress: 1.0,
+                update_progress: 1.0,
+                error: None,
+                started: now.checked_sub(Duration::from_secs(10)).unwrap_or(now),
+                direct_launch: false,
+            },
+        )));
+    s.scene
+        .apply(PresentationEvent::PreGame(PreGameEvent::Selection(
+            Box::new(roster(0)),
+        )));
+    let mut creation = CharacterCreation::new(Arc::clone(&options), Box::new(SeededRandom::new(7)));
+    creation.begin(Generation(1));
+    pump_creation(&mut s, &mut creation);
+    // Create character, under the roster.
+    s.click(0, 200, 84 + 44 + 5 * 68 + 30, Modifiers::NONE);
+    pump_creation(&mut s, &mut creation);
+    pump_creation(&mut s, &mut creation);
+    assert!(s.ui.pregame_active());
+    s.save("studio-heritage");
+    for name in ["profession", "skills", "appearance"] {
+        s.key(Key::Enter, Modifiers::NONE, true);
+        pump_creation(&mut s, &mut creation);
+        s.save(&format!("studio-{name}"));
+    }
+    // The clothes.
+    s.sent.clear();
+    s.ui.host_mut();
+    let clothes_x = 24 + 18 + (384 / 4) * 3;
+    s.click(0, clothes_x, 84 + 100 + 17, Modifiers::NONE);
+    pump_creation(&mut s, &mut creation);
+    s.save("studio-clothes");
+    // A drag to the left across the figure turns it the other way.
+    let _ = s.ui.viewport_requests(&s.scene, 1.0);
+    let view = shown::<ac_ui_window::ui::modern::pregame::studio::view::StudioView>(&s)
+        .expect("the Studio shows");
+    let figure =
+        s.ui.host()
+            .root
+            .widget::<ac_ui_window::ui::modern::pregame::studio::view::StudioView>(view)
+            .expect("its view")
+            .figure_rect();
+    let (cx, cy) = (
+        (figure.0 + figure.2 * 0.5) as i32,
+        (figure.1 + figure.3 * 0.5) as i32,
+    );
+    s.drag((cx + 30, cy), (cx - 30, cy));
+    let (_, controls) = s.ui.viewport_requests(&s.scene, 1.0);
+    let turned: i32 = controls
+        .iter()
+        .filter_map(|(_, c)| match c {
+            ac_ui::pregame::chargen::appearance::PreviewRequest::TurnBy(t) => Some(*t),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(turned, -300, "{controls:?}");
+    for name in ["town", "name"] {
+        s.key(Key::Enter, Modifiers::NONE, true);
+        pump_creation(&mut s, &mut creation);
+        s.save(&format!("studio-{name}"));
+    }
+    // Exit asks first.
+    s.key(Key::Escape, Modifiers::NONE, true);
+    pump_creation(&mut s, &mut creation);
+    s.save("studio-exit");
 }

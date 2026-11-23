@@ -2,6 +2,7 @@
 //! types it shows, the channel it talks on, whether it opens as its own
 //! window and that window's background.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_runtime::communication::ChatChannelKind;
@@ -30,8 +31,6 @@ const TALK_TOP: f32 = SHOWS_TOP + 18.0 + 5.0 * CELL + 12.0;
 const WINDOW_TOP: f32 = TALK_TOP + 34.0;
 const OPACITY_TOP: f32 = WINDOW_TOP + 30.0;
 const FOOT_TOP: f32 = HEIGHT - 44.0;
-const GOLD: Color = hex(0xE0_B068, 1.0);
-const MUTED: Color = hex(0xC8_B89C, 1.0);
 
 /// The channels a tab can talk on, in the order the chip steps through
 /// them (none: the tab keeps the last channel used).
@@ -143,9 +142,9 @@ impl TabDialog {
         f.record_history = false;
         f.max_characters = 20;
         f.padding = 6.0;
-        f.text_color = theme.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
-        f.selection_color = hex(0xE0_B068, 0.35);
+        f.selection_color = tone::gold(0.35);
         f.set_editable_detached(&mut e, true);
         let field = ui.add(me, e, f);
         if let Some(d) = ui.widget_mut::<Self>(me) {
@@ -356,11 +355,11 @@ impl Widget for TabDialog {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, WIDTH, HEIGHT, 6.0, 14.0, 34.0, p.shadow);
-        rc.fill_rounded_rect(0.0, 0.0, WIDTH, HEIGHT, round, hex(0x18_130E, 0.98));
-        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, HEIGHT, round, hex(0xC9_A062, 0.8), 1.0);
+        rc.fill_rounded_rect(0.0, 0.0, WIDTH, HEIGHT, round, tone::raised(0.98));
+        rc.stroke_rounded_rect(0.0, 0.0, WIDTH, HEIGHT, round, tone::bronze(0.8), 1.0);
         let (Some(title), Some(body), Some(small)) = (
             self.fonts.title.clone(),
             self.fonts.body.clone(),
@@ -375,7 +374,7 @@ impl Widget for TabDialog {
                 words,
                 PAD,
                 y,
-                TextStyle::plain(MUTED).tracked(1.1),
+                TextStyle::plain(tone::soft(1.0)).tracked(1.1),
             );
         };
         let words = if self.editing.is_some() {
@@ -400,7 +399,7 @@ impl Widget for TabDialog {
             WIDTH - 2.0 * PAD,
             26.0,
             r4,
-            hex(0xC9_A062, 0.6),
+            tone::bronze(0.6),
             1.0,
         );
         heading(rc, "SHOWS", SHOWS_TOP);
@@ -412,13 +411,23 @@ impl Widget for TabDialog {
             let box_y = y + (CELL - 14.0) * 0.5;
             let r3 = CornerRadii::all(3.0);
             if on {
-                rc.fill_rounded_rect(x, box_y, 14.0, 14.0, r3, Color { a: 0.85, ..GOLD });
+                rc.fill_rounded_rect(
+                    x,
+                    box_y,
+                    14.0,
+                    14.0,
+                    r3,
+                    Color {
+                        a: 0.85,
+                        ..tone::gold(1.0)
+                    },
+                );
                 rc.smooth_line(
                     x + 3.5,
                     box_y + 7.0,
                     x + 6.0,
                     box_y + 10.0,
-                    hex(0x1A_140D, 1.0),
+                    tone::ink(1.0),
                     1.8,
                 );
                 rc.smooth_line(
@@ -426,11 +435,11 @@ impl Widget for TabDialog {
                     box_y + 10.0,
                     x + 10.5,
                     box_y + 4.0,
-                    hex(0x1A_140D, 1.0),
+                    tone::ink(1.0),
                     1.8,
                 );
             } else {
-                rc.stroke_rounded_rect(x, box_y, 14.0, 14.0, r3, hex(0xC9_A062, 0.45), 1.0);
+                rc.stroke_rounded_rect(x, box_y, 14.0, 14.0, r3, tone::bronze(0.45), 1.0);
             }
             let ty = (y + (CELL - small.line_height) * 0.5).round();
             text::draw(
@@ -439,12 +448,19 @@ impl Widget for TabDialog {
                 label,
                 x + 21.0,
                 ty,
-                TextStyle::plain(if on { p.text } else { MUTED }),
+                TextStyle::plain(if on { p.text } else { tone::soft(1.0) }),
             );
         }
         // Talks on: a chip that steps through the channels.
         let ty = (TALK_TOP + (26.0 - body.line_height) * 0.5).round();
-        text::draw(rc, &body, "Talks on", PAD, ty, TextStyle::plain(MUTED));
+        text::draw(
+            rc,
+            &body,
+            "Talks on",
+            PAD,
+            ty,
+            TextStyle::plain(tone::soft(1.0)),
+        );
         let talk = self.talk_words();
         let c = TALKS[self.talk].map_or(p.text, channel_color);
         let cx = PAD + 90.0;
@@ -458,13 +474,16 @@ impl Widget for TabDialog {
             "click to change",
             cx + w + 8.0,
             (TALK_TOP + (26.0 - small.line_height) * 0.5).round(),
-            TextStyle::plain(hex(0xA8_9A82, 1.0)),
+            TextStyle::plain(tone::muted(1.0)),
         );
         // Own window: a switch.
         rc.push_alpha(if self.main { 0.4 } else { 1.0 });
         let sy = WINDOW_TOP + 3.0;
         let fill = if self.window {
-            Color { a: 0.85, ..GOLD }
+            Color {
+                a: 0.85,
+                ..tone::gold(1.0)
+            }
         } else {
             hex(0, 0.45)
         };
@@ -475,7 +494,7 @@ impl Widget for TabDialog {
             30.0,
             16.0,
             CornerRadii::all(8.0),
-            hex(0xC9_A062, 0.6),
+            tone::bronze(0.6),
             1.0,
         );
         let knob = if self.window { PAD + 16.0 } else { PAD + 2.0 };
@@ -492,14 +511,21 @@ impl Widget for TabDialog {
         rc.pop_alpha();
         // The window's background.
         let ty = (OPACITY_TOP + (22.0 - small.line_height) * 0.5).round();
-        text::draw(rc, &small, "Background", PAD, ty, TextStyle::plain(MUTED));
+        text::draw(
+            rc,
+            &small,
+            "Background",
+            PAD,
+            ty,
+            TextStyle::plain(tone::soft(1.0)),
+        );
         let (left, right) = (PAD + 90.0, WIDTH - PAD - 40.0);
         let mid = OPACITY_TOP + 11.0;
         let r2 = CornerRadii::all(2.0);
         rc.fill_rounded_rect(left, mid - 2.0, right - left, 4.0, r2, hex(0xFF_FFFF, 0.12));
         let at = left + (right - left) * ((self.opacity - 0.1) / 0.9).clamp(0.0, 1.0);
-        rc.fill_rounded_rect(left, mid - 2.0, at - left, 4.0, r2, GOLD);
-        rc.fill_ellipse(at - 6.0, mid - 6.0, 12.0, 12.0, GOLD);
+        rc.fill_rounded_rect(left, mid - 2.0, at - left, 4.0, r2, tone::gold(1.0));
+        rc.fill_ellipse(at - 6.0, mid - 6.0, 12.0, 12.0, tone::gold(1.0));
         let pct = format!("{}%", (self.opacity * 100.0).round() as i32);
         text::draw(rc, &small, &pct, right + 8.0, ty, TextStyle::plain(p.text));
         // The foot.
@@ -507,12 +533,22 @@ impl Widget for TabDialog {
             let main = part == Part::Save;
             let hovered = self.hovered == Some(part);
             let (fill, ink) = match (main, part) {
-                (true, _) => (Color { a: 0.85, ..GOLD }, hex(0x1A_140D, 1.0)),
+                (true, _) => (
+                    Color {
+                        a: 0.85,
+                        ..tone::gold(1.0)
+                    },
+                    tone::ink(1.0),
+                ),
                 (false, Part::Delete) => (hex(0, 0.3), hex(0xFF_8A8E, 1.0)),
                 _ => (hex(0, 0.3), p.text),
             };
             rc.fill_rounded_rect(left, FOOT_TOP, w, 28.0, r4, fill);
-            let edge = if hovered { GOLD } else { hex(0xC9_A062, 0.5) };
+            let edge = if hovered {
+                tone::gold(1.0)
+            } else {
+                tone::bronze(0.5)
+            };
             rc.stroke_rounded_rect(left, FOOT_TOP, w, 28.0, r4, edge, 1.0);
             let ty = (FOOT_TOP + (28.0 - body.line_height) * 0.5).round();
             text::draw_centred(rc, &body, words, left + w * 0.5, ty, TextStyle::plain(ink));
@@ -527,7 +563,7 @@ mod tests {
     #[test]
     fn a_changed_tab_keeps_its_id_and_the_bits_no_group_names() {
         let mut ui = UiRoot::new();
-        let me = TabDialog::mount(&mut ui, Horizon::BRONZE, TabDialogFonts::default());
+        let me = TabDialog::mount(&mut ui, Horizon::current(), TabDialogFonts::default());
         let mut tab = ChatTab::defaults().remove(0);
         tab.filter |= 1 << 40;
         TabDialog::show(&mut ui, me, Some((0, &tab)));
@@ -549,7 +585,7 @@ mod tests {
     #[test]
     fn a_tab_needs_a_name() {
         let mut ui = UiRoot::new();
-        let me = TabDialog::mount(&mut ui, Horizon::BRONZE, TabDialogFonts::default());
+        let me = TabDialog::mount(&mut ui, Horizon::current(), TabDialogFonts::default());
         TabDialog::show(&mut ui, me, None);
         ui.with::<TabDialog, _>(me, |d, ui| d.finish(ui, me));
         assert!(ui.widget::<TabDialog>(me).unwrap().done.is_none());

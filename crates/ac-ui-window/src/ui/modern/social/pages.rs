@@ -1,6 +1,8 @@
 //! The Social window's allegiance page (with its Manage allegiance page)
 //! and fellowship page.
 
+use ac_ui::modern::theme::Horizon;
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::UiFont;
@@ -69,7 +71,6 @@ const VITAL_COLORS: [Color; 3] = [
 /// The office titles the game starts with.
 const OFFICES: [&str; 3] = ["Speaker", "Seneschal", "Castellan"];
 
-const MUTED: Color = hex(0xA8_9A82, 1.0);
 const CARD_W: f32 = 292.0;
 const ROW: f32 = 44.0;
 const SECTION_W: f32 = (WIDTH - 2.0 * PAD - 12.0) / 2.0;
@@ -137,7 +138,7 @@ pub(super) fn label(rc: &mut RenderContext<'_>, font: Font<'_>, words: &str, x: 
             words,
             x,
             y,
-            TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+            TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
         );
     }
 }
@@ -217,7 +218,7 @@ pub(super) fn switch_row(
     let w = font.map_or(120.0, |f| text::measure(f, words, 0.0));
     let lit = h.add((x, cy - 13.0, 48.0 + w, 26.0), hit);
     kit::switch(rc, r, on, lit);
-    put_mid(rc, font, words, x + 48.0, cy - 10.0, 20.0, kit::WARM);
+    put_mid(rc, font, words, x + 48.0, cy - 10.0, 20.0, tone::warm(1.0));
     x + 48.0 + w
 }
 
@@ -294,7 +295,7 @@ impl SocialFrame {
             self.draw_no_allegiance(rc, h);
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         // The band: the name, how many, the buttons.
         let mut right = WIDTH - PAD;
@@ -320,7 +321,14 @@ impl SocialFrame {
             let name = kit::fit(hf, &a.name, right - PAD - 16.0);
             text::draw(rc, hf, &name, PAD, BODY + 12.0, TextStyle::plain(p.text));
         }
-        put(rc, f.small.as_ref(), &a.sub, PAD, BODY + 36.0, kit::SOFT);
+        put(
+            rc,
+            f.small.as_ref(),
+            &a.sub,
+            PAD,
+            BODY + 36.0,
+            tone::soft(1.0),
+        );
         // The message of the day.
         let mut top = BODY + 66.0;
         if let Some((words, by)) = &a.motd {
@@ -329,7 +337,15 @@ impl SocialFrame {
             rc.fill_rounded_rect(r.0, r.1, r.2, r.3, round, bronze(0.08));
             rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, bronze(0.25), 1.0);
             label(rc, f.label.as_ref(), "MESSAGE", r.0 + 12.0, r.1 + 15.0);
-            let by_x = put_right(rc, f.small.as_ref(), by, r.0 + r.2 - 12.0, r.1, r.3, MUTED);
+            let by_x = put_right(
+                rc,
+                f.small.as_ref(),
+                by,
+                r.0 + r.2 - 12.0,
+                r.1,
+                r.3,
+                tone::muted(1.0),
+            );
             if let Some(b) = &f.body {
                 let w = by_x - (r.0 + 86.0) - 12.0;
                 let line = kit::fit(b, words, w);
@@ -373,7 +389,7 @@ impl SocialFrame {
             let lit = h.add(r, Hit::Manage(true));
             kit::button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 (r.0, r.1, r.2, r.3),
                 "",
                 None,
@@ -422,9 +438,26 @@ impl SocialFrame {
         let w = kit::button_width(words, f) + 20.0;
         let r = (right - w, y, w, 30.0);
         let lit = h.add(r, hit);
-        kit::button(rc, &self.theme, r, "", None, ButtonLook::Plain, lit, true);
-        stroke(rc, r.0 + 12.0, r.1 + 8.0, 14.0, glyph, kit::WARM, 1.6);
-        put_mid(rc, f, words, r.0 + 32.0, r.1, r.3, self.theme.palette.text);
+        kit::button(
+            rc,
+            &Horizon::current(),
+            r,
+            "",
+            None,
+            ButtonLook::Plain,
+            lit,
+            true,
+        );
+        stroke(rc, r.0 + 12.0, r.1 + 8.0, 14.0, glyph, tone::warm(1.0), 1.6);
+        put_mid(
+            rc,
+            f,
+            words,
+            r.0 + 32.0,
+            r.1,
+            r.3,
+            Horizon::current().palette.text,
+        );
         r.0
     }
 
@@ -441,7 +474,7 @@ impl SocialFrame {
     }
 
     fn draw_chain(&self, rc: &mut RenderContext<'_>, h: &mut Hits, a: &AllegianceScreen, top: f32) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let n = a.chain.len().max(1) as f32;
         let gap = 22.0;
@@ -464,7 +497,7 @@ impl SocialFrame {
                     x + w - 12.0,
                     top + 24.0,
                     22.0,
-                    kit::SOFT,
+                    tone::soft(1.0),
                 ) - 8.0
             };
             if let Some(st) = &f.strong {
@@ -485,13 +518,13 @@ impl SocialFrame {
         top: f32,
         bottom: f32,
     ) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         let w = WIDTH - 2.0 * PAD - CARD_W - 16.0;
         let count = format!("· {}", a.vassals.len());
         kit::group_heading(
             rc,
-            &self.theme,
+            &Horizon::current(),
             f.label.as_ref(),
             PAD,
             top,
@@ -499,7 +532,7 @@ impl SocialFrame {
             PAD + w - 80.0,
             "SWORN TO YOU",
             Some(&count),
-            kit::SOFT,
+            tone::soft(1.0),
         );
         if let Some(l) = &f.label {
             let words = "PASSED UP";
@@ -510,7 +543,7 @@ impl SocialFrame {
                 words,
                 PAD + w - lw - 4.0,
                 top + ((24.0 - l.line_height) * 0.5).round(),
-                TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
         let room = (PAD, top + 28.0, w, bottom - top - 28.0);
@@ -521,7 +554,7 @@ impl SocialFrame {
                 "Nobody is sworn to you yet.",
                 PAD,
                 room.1 + 8.0,
-                MUTED,
+                tone::muted(1.0),
             );
         }
         let total = a.vassals.len() as f32 * (ROW + 2.0);
@@ -550,12 +583,12 @@ impl SocialFrame {
             let room_w = passed_x - (r.0 + 28.0) - 10.0;
             if let Some(st) = &f.strong {
                 let name = kit::fit(st, &v.full, room_w);
-                let ink = if v.online { p.text } else { kit::SOFT };
+                let ink = if v.online { p.text } else { tone::soft(1.0) };
                 put(rc, Some(st), &name, r.0 + 28.0, y + 6.0, ink);
             }
             if let Some(sm) = &f.small {
                 let sub = kit::fit(sm, &v.sub, room_w);
-                put(rc, Some(sm), &sub, r.0 + 28.0, y + 25.0, MUTED);
+                put(rc, Some(sm), &sub, r.0 + 28.0, y + 25.0, tone::muted(1.0));
             }
         }
         rc.pop_clip();
@@ -571,7 +604,7 @@ impl SocialFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_member_card(&self, rc: &mut RenderContext<'_>, h: &mut Hits, c: &MemberCard, r: Rect) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let round = CornerRadii::all(4.0);
         rc.fill_rounded_rect(r.0, r.1, r.2, r.3, round, hex(0, 0.28));
@@ -580,7 +613,7 @@ impl SocialFrame {
         let status_color = if c.status == "You" || c.online {
             kit::GOOD
         } else {
-            MUTED
+            tone::muted(1.0)
         };
         let sx = put_right(
             rc,
@@ -597,7 +630,7 @@ impl SocialFrame {
         }
         let mut y = r.1 + 42.0;
         for (k, v) in &c.rows {
-            put_mid(rc, f.body.as_ref(), k, r.0 + 14.0, y, 22.0, kit::WARM);
+            put_mid(rc, f.body.as_ref(), k, r.0 + 14.0, y, 22.0, tone::warm(1.0));
             put_right(rc, f.strong.as_ref(), v, r.0 + r.2 - 14.0, y, 22.0, p.text);
             y += 22.0;
         }
@@ -654,7 +687,7 @@ impl SocialFrame {
     }
 
     fn draw_no_allegiance(&self, rc: &mut RenderContext<'_>, h: &mut Hits) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let cx = WIDTH * 0.5;
         let mut y = BODY + (HEIGHT - FOOT - BODY) * 0.5 - 90.0;
@@ -674,7 +707,7 @@ impl SocialFrame {
         if let Some(b) = &f.body {
             let words = "Swear to a patron and part of the experience you earn passes up to them. Anyone who swears to you becomes your vassal.";
             for line in kit::wrap(b, words, 420.0) {
-                text::draw_centred(rc, b, &line, cx, y, TextStyle::plain(kit::SOFT));
+                text::draw_centred(rc, b, &line, cx, y, TextStyle::plain(tone::soft(1.0)));
                 y += b.line_height + 4.0;
             }
         }
@@ -706,7 +739,7 @@ impl SocialFrame {
                 "Uses the player you have selected. They are asked to accept.",
                 cx,
                 y,
-                TextStyle::plain(MUTED),
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
         let fy = foot(rc);
@@ -726,7 +759,7 @@ impl SocialFrame {
     /// Manage allegiance (OPENAC), over the allegiance page.
     #[allow(clippy::too_many_lines)]
     pub(super) fn draw_manage(&self, rc: &mut RenderContext<'_>, h: &mut Hits) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let name = self
             .screen
@@ -750,7 +783,15 @@ impl SocialFrame {
                 hex(0xFF_FFFF, 0.05),
             );
         }
-        stroke(rc, back.0 + 4.0, back.1 + 7.0, 16.0, BACK, kit::WARM, 1.8);
+        stroke(
+            rc,
+            back.0 + 4.0,
+            back.1 + 7.0,
+            16.0,
+            BACK,
+            tone::warm(1.0),
+            1.8,
+        );
         put_mid(
             rc,
             f.strong.as_ref(),
@@ -758,7 +799,7 @@ impl SocialFrame {
             back.0 + 22.0,
             back.1,
             back.3,
-            kit::WARM,
+            tone::warm(1.0),
         );
         let mut x = back.0 + back.2 + 8.0;
         if let Some(nf) = &f.name {
@@ -775,7 +816,7 @@ impl SocialFrame {
             WIDTH - PAD,
             bar.1,
             bar.3,
-            MUTED,
+            tone::muted(1.0),
         );
         let xs = [PAD, PAD + SECTION_W + 12.0];
         let w = SECTION_W;
@@ -789,7 +830,7 @@ impl SocialFrame {
             "Allegiance name",
             sx + 12.0,
             sy + 32.0,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         input(rc, self, Slot::AllegianceName, "A new name");
         button(
@@ -808,7 +849,7 @@ impl SocialFrame {
             "Message of the day",
             sx + 12.0,
             sy + 88.0,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         input(rc, self, Slot::Motd, "What every member sees here");
         let by = sy + SECTION_H - 12.0 - 28.0;
@@ -853,7 +894,7 @@ impl SocialFrame {
             "Member, or an office's new title",
             sx + 12.0,
             sy + 32.0,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         input(rc, self, Slot::Officer, "Name");
         let ow = (w - 24.0 - 8.0) / 3.0;
@@ -903,7 +944,7 @@ impl SocialFrame {
                     &format!("Office {level}"),
                     r.0 + r.2 * 0.5,
                     r.1 + 22.0,
-                    TextStyle::plain(MUTED),
+                    TextStyle::plain(tone::muted(1.0)),
                 );
             }
         }
@@ -953,7 +994,7 @@ impl SocialFrame {
                 sx + 12.0,
                 sy + 172.0,
                 15.0,
-                MUTED,
+                tone::muted(1.0),
             );
         }
         // Joining.
@@ -979,7 +1020,7 @@ impl SocialFrame {
                 sx + 60.0,
                 sy + 50.0,
                 15.0,
-                MUTED,
+                tone::muted(1.0),
             );
         }
         put(
@@ -988,7 +1029,7 @@ impl SocialFrame {
             "Approved to swear in",
             sx + 12.0,
             sy + 88.0,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         input(rc, self, Slot::Approved, "Name");
         button(
@@ -1018,7 +1059,7 @@ impl SocialFrame {
             "Character",
             sx + 12.0,
             sy + 32.0,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         input(rc, self, Slot::Banned, "Name");
         let named = !self.is_empty(Slot::Banned);
@@ -1049,7 +1090,7 @@ impl SocialFrame {
                 sx + 12.0,
                 sy + 162.0,
                 15.0,
-                MUTED,
+                tone::muted(1.0),
             );
         }
     }
@@ -1088,7 +1129,7 @@ impl SocialFrame {
             self.draw_no_fellowship(rc, h);
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         // The band.
         let mut right = WIDTH - PAD;
@@ -1098,14 +1139,21 @@ impl SocialFrame {
         let (words, ink, edge) = if fel.open {
             ("Open", kit::GOOD, hex(0x7F_D08A, 0.5))
         } else {
-            ("Closed", kit::SOFT, bronze(0.4))
+            ("Closed", tone::soft(1.0), bronze(0.4))
         };
         right = chip(rc, &f, right, BODY + 22.0, words, ink, edge) - 12.0;
         if let Some(hf) = &f.heading {
             let name = kit::fit(hf, &fel.name, right - PAD);
             text::draw(rc, hf, &name, PAD, BODY + 12.0, TextStyle::plain(p.text));
         }
-        put(rc, f.small.as_ref(), &fel.sub, PAD, BODY + 36.0, kit::SOFT);
+        put(
+            rc,
+            f.small.as_ref(),
+            &fel.sub,
+            PAD,
+            BODY + 36.0,
+            tone::soft(1.0),
+        );
         // The roster.
         let top = BODY + 68.0;
         let cols = Columns::new();
@@ -1127,7 +1175,7 @@ impl SocialFrame {
                     words,
                     x,
                     top + ((24.0 - l.line_height) * 0.5).round(),
-                    TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                    TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
                 );
             }
         }
@@ -1154,10 +1202,10 @@ impl SocialFrame {
             kit::online_dot(rc, room.0 + 10.0, y + 11.0, 8.0, false);
             let mut x = room.0 + 28.0;
             if let Some(st) = &f.strong {
-                put_mid(rc, Some(st), name, x, y, 30.0, kit::WARM);
+                put_mid(rc, Some(st), name, x, y, 30.0, tone::warm(1.0));
                 x += text::measure(st, name, 0.0) + 5.0;
             }
-            put_mid(rc, f.body.as_ref(), words, x, y, 30.0, kit::SOFT);
+            put_mid(rc, f.body.as_ref(), words, x, y, 30.0, tone::soft(1.0));
             y += 30.0;
         }
         rc.pop_clip();
@@ -1277,7 +1325,7 @@ impl SocialFrame {
                 fel.leader
             );
             let hint = kit::fit(s, &hint, right - x);
-            put_right(rc, Some(s), &hint, right, by, 34.0, MUTED);
+            put_right(rc, Some(s), &hint, right, by, 34.0, tone::muted(1.0));
         }
     }
 
@@ -1290,7 +1338,7 @@ impl SocialFrame {
     }
 
     fn draw_fellow(&self, rc: &mut RenderContext<'_>, cols: &Columns, row: &FellowRow, y: f32) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let mut x = PAD + 10.0;
         if row.leader {
@@ -1314,7 +1362,7 @@ impl SocialFrame {
                 "YOU",
                 r.0 + r.2 * 0.5,
                 r.1 + ((16.0 - l.line_height) * 0.5).round(),
-                TextStyle::plain(kit::WARM),
+                TextStyle::plain(tone::warm(1.0)),
             );
         }
         put_right(
@@ -1333,7 +1381,7 @@ impl SocialFrame {
             cols.share + 56.0,
             y,
             ROW,
-            kit::WARM,
+            tone::warm(1.0),
         );
         for (i, (now, most)) in row.vitals.iter().enumerate() {
             let share = if *most > 0 {
@@ -1343,7 +1391,11 @@ impl SocialFrame {
             };
             let x = cols.vitals[i];
             kit::meter(rc, (x, y + 13.0, 110.0, 6.0), share, VITAL_COLORS[i]);
-            let ink = if share < 0.4 { kit::HARM } else { kit::SOFT };
+            let ink = if share < 0.4 {
+                kit::HARM
+            } else {
+                tone::soft(1.0)
+            };
             let words = format!(
                 "{} / {}",
                 ac_ui::modern::numbers::group_thousands(i64::from(*now)),
@@ -1354,7 +1406,7 @@ impl SocialFrame {
         let loot = if row.loot {
             gold(1.0)
         } else {
-            hex(0xA8_9A82, 0.35)
+            tone::muted(0.35)
         };
         stroke(rc, cols.loot + 2.0, y + 12.0, 20.0, SACK, loot, 1.5);
     }
@@ -1370,7 +1422,7 @@ impl SocialFrame {
         let s = &self.screen;
         kit::group_heading(
             rc,
-            &self.theme,
+            &Horizon::current(),
             self.fonts.label.as_ref(),
             PAD,
             top,
@@ -1378,7 +1430,7 @@ impl SocialFrame {
             WIDTH - PAD,
             "YOUR SETTINGS",
             None,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         let rows = [
             ("Share my loot", FellowSwitch::ShareLoot, s.share_loot),
@@ -1420,7 +1472,7 @@ impl SocialFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_no_fellowship(&mut self, rc: &mut RenderContext<'_>, h: &mut Hits) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         let top = 112.0;
         let w = 368.0;
@@ -1443,7 +1495,7 @@ impl SocialFrame {
             "Name",
             r.0 + 16.0,
             r.1 + 44.0,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         input(rc, self, Slot::FellowshipName, "Your fellowship's name");
         let cy = r.1 + 124.0;
@@ -1465,7 +1517,7 @@ impl SocialFrame {
             "Chosen now; it cannot be changed later.",
             r.0 + 66.0,
             cy + 3.0,
-            MUTED,
+            tone::muted(1.0),
         );
         let named = !self.is_empty(Slot::FellowshipName);
         button(
@@ -1496,7 +1548,15 @@ impl SocialFrame {
                 "A fellowship holds up to nine people.",
             ] {
                 let lines = kit::wrap(b, para, r.2 - 32.0);
-                y = kit::lines(rc, b, &lines, r.0 + 16.0, y, b.line_height + 5.0, kit::SOFT) + 8.0;
+                y = kit::lines(
+                    rc,
+                    b,
+                    &lines,
+                    r.0 + 16.0,
+                    y,
+                    b.line_height + 5.0,
+                    tone::soft(1.0),
+                ) + 8.0;
             }
         }
         self.draw_fellow_switches(rc, h, HEIGHT - 24.0 - 70.0, false);

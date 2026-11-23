@@ -328,7 +328,7 @@ pub fn breakdown(
         }
     }
     if let Some(kept) = vitae_share.filter(|v| *v < 1.0) {
-        let percent = crate::ui::modern::hud::effects::vitae_percent(kept);
+        let percent = crate::ui::modern::hud::effects::vitae_penalty_percent(kept);
         let lost = vitae(sheet, row);
         if matches!(row, Row::Attribute(_)) {
             out.push((

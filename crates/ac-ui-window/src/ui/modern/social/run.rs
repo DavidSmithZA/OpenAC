@@ -20,7 +20,7 @@ use super::model::{self, HIDEABLE, SocialInput, Tab};
 use super::window::{
     FellowSwitch, HEIGHT, ManageAsk, Slot, SocialAsk, SocialFonts, SocialFrame, WIDTH,
 };
-use crate::ui::modern::dialogs::look::{GOLD, Glyph, Look, RED};
+use crate::ui::modern::dialogs::look::{Glyph, Look, RED};
 use crate::ui::modern::hud::fellows::{FellowsFonts, FellowsHud};
 use crate::ui::modern::{hud, kit};
 use crate::ui::social_panels::{SOCIAL_WINDOW, SocialPage};
@@ -67,7 +67,7 @@ impl WindowUi {
     /// The Social window, hidden, in place of retail's social panel; and
     /// the fellows on screen.
     pub(in crate::ui) fn mount_modern_social(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = SocialFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             heading: self.modern_font(Weight::SemiBold, 16.0),
@@ -119,7 +119,7 @@ impl WindowUi {
             ui,
             hud::FELLOWS,
             (hud::fellows::WIDTH, 60.0),
-            FellowsHud::new(theme, fellows_fonts),
+            FellowsHud::new(fellows_fonts),
         ) {
             Ok(id) => {
                 ui.hide_window(hud::FELLOWS);
@@ -375,7 +375,7 @@ impl WindowUi {
                 let look = Look::new(
                     &format!("Swear allegiance to {name}?"),
                     Glyph::Question,
-                    GOLD,
+                    ac_ui::modern::tone::gold(1.0),
                     "Swear",
                     "Cancel",
                 );
@@ -566,19 +566,15 @@ impl WindowUi {
             .modern_pieces()
             .is_some_and(|p| p.is_hidden(hud::FELLOWS));
         let player = self.facts.state.player;
-        let fellowship = self
-            .facts
-            .social
-            .as_ref()
-            .map(|s| s.fellowship.clone())
-            .unwrap_or_default();
+        let selected = self.player_view.and_then(|v| v.selected);
+        let none = ac_runtime::gameplay::FellowshipView::default();
+        let fellowship = self.facts.social.as_ref().map_or(&none, |s| &s.fellowship);
         let others = fellowship
             .members
             .iter()
             .filter(|m| m.guid != player)
             .count();
         let show = !hidden && fellowship.in_fellowship && others > 0;
-        let selected = self.player_view.and_then(|v| v.selected);
         let ui = &mut self.host.root;
         let visible = ui.is_window_visible(hud::FELLOWS);
         if show != visible {
@@ -591,8 +587,13 @@ impl WindowUi {
         if !show {
             return;
         }
+        // Fed again only when the fellowship or the selection moved.
+        let from = (fellowship.revision, player, selected);
         let picked = ui.widget_mut::<FellowsHud>(id).and_then(|f| {
-            f.feed(&fellowship, player, selected);
+            if f.fed_from != Some(from) {
+                f.fed_from = Some(from);
+                f.feed(fellowship, player, selected);
+            }
             f.picked.take()
         });
         let height = ui.widget::<FellowsHud>(id).map_or(60.0, FellowsHud::height);

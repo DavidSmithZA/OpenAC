@@ -28,7 +28,7 @@ pub const PAGE_STATE: [(i32, u32); 4] = [
 ];
 
 /// The description per starting area.
-const TOWN_TEXT_KEY: [(i32, &str); 4] = [
+pub const TOWN_TEXT_KEY: [(i32, &str); 4] = [
     (0, "ID_CharGen_HoltText"),
     (1, "ID_CharGen_ShoushiText"),
     (2, "ID_CharGen_YaraqText"),

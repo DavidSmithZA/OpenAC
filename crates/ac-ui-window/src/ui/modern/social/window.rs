@@ -387,7 +387,7 @@ impl SocialFrame {
     }
 
     fn draw_frame(&self, rc: &mut RenderContext<'_>, h: &mut Hits) {
-        let theme = &self.theme;
+        let theme = &Horizon::current();
         let f = &self.fonts;
         kit::window_back(rc, theme, WIDTH, HEIGHT, HEADER, false);
         let right = kit::title(rc, theme, f.title.as_ref(), PEOPLE, "Social", HEADER);
@@ -398,7 +398,7 @@ impl SocialFrame {
                 "O",
                 right + 10.0,
                 ((HEADER - s.line_height) * 0.5).round(),
-                ac_ui::modern::text::TextStyle::plain(theme.palette.muted),
+                ac_ui::modern::text::TextStyle::plain(Horizon::current().palette.muted),
             );
         }
         let close = kit::close_rect(WIDTH, HEADER);

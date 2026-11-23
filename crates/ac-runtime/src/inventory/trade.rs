@@ -1,7 +1,10 @@
 //! The secure-trade window: who the partner is, what each side staged, who
 //! accepted. The server drives it; this keeps what it said.
 
-use ac_proto::trade::{AddToTrade, RegisterTrade, RemoveFromTrade, TradeFailure};
+use ac_proto::trade::{
+    AddToTrade, RegisterTrade, RemoveFromTrade, TRADE_STATUS_REGISTERED, TradeAcceptance,
+    TradeFailure,
+};
 
 /// Which side of the window an item was staged on (the wire's side word).
 pub const SIDE_SELF: u32 = 1;
@@ -27,6 +30,12 @@ pub struct TradeView {
     pub last_failure_item: u32,
     /// Why (an error code).
     pub last_failure_reason: u32,
+    /// How many refusals this trade has had (a repeat of the same one
+    /// still counts).
+    pub refusals: u32,
+    /// How many trades have opened this session (a new trade, even with
+    /// the same partner, counts).
+    pub trades: u32,
     /// Bumped by every change.
     pub revision: u64,
     /// The partner's name, when known (filled in for a host; the state
@@ -42,6 +51,11 @@ pub struct TradeView {
 #[derive(Debug, Default)]
 pub struct TradeState {
     view: TradeView,
+    /// The stamp the trade was registered with; an accept sends it back.
+    stamp: f64,
+    /// The player opened the trade (the registered initiator is the
+    /// player).
+    player_initiated: bool,
 }
 
 /// A trade-state mark to set on an item record: (guid, 1 staged / 0 not).
@@ -64,6 +78,8 @@ impl TradeState {
     /// two named players is not this one; staged items and acceptances
     /// from an earlier trade are dropped.
     pub fn apply_register(&mut self, update: &RegisterTrade, self_guid: u32) {
+        self.stamp = update.stamp;
+        self.player_initiated = update.initiator == self_guid;
         let v = &mut self.view;
         v.open = true;
         v.partner_guid = if update.initiator != self_guid && update.initiator != 0 {
@@ -77,7 +93,28 @@ impl TradeState {
         v.partner_accepted = false;
         v.last_failure_item = 0;
         v.last_failure_reason = 0;
+        v.refusals = 0;
+        v.trades = v.trades.wrapping_add(1);
         v.revision += 1;
+    }
+
+    /// The trade the player accepts, as an accept sends it: the partner,
+    /// the registered stamp and status, whether the player opened it, the
+    /// player's acceptance (accepting sets it), the partner's, and both
+    /// sides' items.
+    #[must_use]
+    pub fn acceptance(&self) -> TradeAcceptance {
+        let v = &self.view;
+        TradeAcceptance {
+            partner_guid: v.partner_guid,
+            trade_stamp: self.stamp,
+            trade_status: TRADE_STATUS_REGISTERED,
+            player_initiated: self.player_initiated,
+            self_accepts: true,
+            partner_accepts: v.partner_accepted,
+            self_items: v.self_items.clone(),
+            partner_items: v.partner_items.clone(),
+        }
     }
 
     /// Either side closed the window: everything goes.
@@ -182,6 +219,7 @@ impl TradeState {
         v.partner_items.retain(|&id| id != failure.item_guid);
         v.last_failure_item = failure.item_guid;
         v.last_failure_reason = failure.reason;
+        v.refusals = v.refusals.wrapping_add(1);
         v.revision += 1;
         vec![(failure.item_guid, 0)]
     }
@@ -209,8 +247,11 @@ impl TradeState {
         let revision = self.view.revision + u64::from(changed);
         self.view = TradeView {
             revision,
+            trades: self.view.trades,
             ..TradeView::default()
         };
+        self.stamp = 0.0;
+        self.player_initiated = false;
         marks
     }
 
@@ -237,7 +278,7 @@ mod tests {
             &RegisterTrade {
                 initiator: PARTNER,
                 partner: PARTNER,
-                stamp: 0,
+                stamp: 0.0,
             },
             SELF,
         );
@@ -317,6 +358,33 @@ mod tests {
             (v.last_failure_item, v.last_failure_reason),
             (ITEM_A, 0x426)
         );
+    }
+
+    // The same refusal twice counts twice; a new trade (even with the same
+    // partner) starts the count again and is counted itself, and closing
+    // keeps how many trades there were.
+    #[test]
+    fn refusals_and_trades_are_counted() {
+        let mut trade = registered();
+        assert_eq!((trade.view().trades, trade.view().refusals), (1, 0));
+        let refuse = TradeFailure {
+            item_guid: ITEM_A,
+            reason: 0x426,
+        };
+        trade.apply_failure(&refuse);
+        trade.apply_failure(&refuse);
+        assert_eq!(trade.view().refusals, 2);
+        trade.clear();
+        assert_eq!(trade.view().trades, 1);
+        trade.apply_register(
+            &RegisterTrade {
+                initiator: PARTNER,
+                partner: SELF,
+                stamp: 0.0,
+            },
+            SELF,
+        );
+        assert_eq!((trade.view().trades, trade.view().refusals), (2, 0));
     }
 
     #[test]

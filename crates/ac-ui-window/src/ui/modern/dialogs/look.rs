@@ -7,6 +7,7 @@ use ac_proto::social::confirmation_type as kind;
 use ac_runtime::communication::{ClientConfirmation, ItemUseConfirmation};
 use ac_ui::draw::Color;
 use ac_ui::modern::theme::hex;
+use ac_ui::modern::tone;
 
 /// The card's icon, drawn as lines.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,8 +30,6 @@ pub enum Glyph {
     Warn,
 }
 
-/// Gold: the usual question.
-pub const GOLD: Color = hex(0xE0_B068, 1.0);
 /// Blue: the character changes, messages.
 pub const BLUE: Color = hex(0x8F_B8FF, 1.0);
 /// Green: people asking to join up.
@@ -84,7 +83,7 @@ impl Look {
     /// The plain yes or no question.
     #[must_use]
     pub fn question() -> Self {
-        Self::new("Question", Glyph::Question, GOLD, "Yes", "No")
+        Self::new("Question", Glyph::Question, tone::gold(1.0), "Yes", "No")
     }
 
     /// A message read and closed with OK.
@@ -165,7 +164,7 @@ pub fn of_confirmation(question: &ClientConfirmation) -> Look {
         ClientConfirmation::ItemUse { kind, .. } => match kind {
             ItemUseConfirmation::PlayerKillerSwitch
             | ItemUseConfirmation::NonPlayerKillerSwitch => {
-                Look::new("Use the altar", Glyph::Warn, GOLD, "Use it", "Cancel")
+                Look::new("Use the altar", Glyph::Warn, tone::gold(1.0), "Use it", "Cancel")
             }
             ItemUseConfirmation::VolatileRare => {
                 Look::new("Use a rare", Glyph::Star, VIOLET, "Use it", "Cancel")
@@ -184,7 +183,7 @@ pub fn of_confirmation(question: &ClientConfirmation) -> Look {
             kind::SWEAR_ALLEGIANCE => Look::new(
                 "Allegiance request",
                 Glyph::Shield,
-                GOLD,
+                tone::gold(1.0),
                 "Accept",
                 "Decline",
             )
@@ -212,7 +211,7 @@ pub fn of_confirmation(question: &ClientConfirmation) -> Look {
                 "Cancel",
             ),
             kind::CRAFT_INTERACTION => {
-                Look::new("Crafting", Glyph::Hammer, GOLD, "Apply", "Cancel").dangerous()
+                Look::new("Crafting", Glyph::Hammer, tone::gold(1.0), "Apply", "Cancel").dangerous()
             }
             kind::AUGMENTATION => Look::new("Augmentation", Glyph::Star, VIOLET, "Augment", "Cancel")
                 .dangerous()

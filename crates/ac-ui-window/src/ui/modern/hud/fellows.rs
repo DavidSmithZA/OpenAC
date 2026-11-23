@@ -2,6 +2,7 @@
 //! under the effects counts, with their name, level and three vitals; a
 //! fellow low on health is edged red; a click selects them (for healing).
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_runtime::gameplay::FellowshipView;
@@ -61,7 +62,6 @@ struct Fellow {
 /// The fellows on screen.
 #[derive(Debug)]
 pub struct FellowsHud {
-    theme: Horizon,
     fonts: FellowsFonts,
     title: String,
     count: String,
@@ -70,6 +70,8 @@ pub struct FellowsHud {
     hover: Option<(f32, f32)>,
     /// The fellow clicked since the window last looked.
     pub picked: Option<u32>,
+    /// The fellowship revision, player and selection last fed from.
+    pub fed_from: Option<(u64, u32, Option<u32>)>,
 }
 
 fn share((now, most): (u32, u32)) -> f32 {
@@ -83,9 +85,8 @@ fn share((now, most): (u32, u32)) -> f32 {
 impl FellowsHud {
     /// The piece in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: FellowsFonts) -> Self {
+    pub fn new(fonts: FellowsFonts) -> Self {
         Self {
-            theme,
             fonts,
             title: String::new(),
             count: String::new(),
@@ -93,6 +94,7 @@ impl FellowsHud {
             selected: None,
             hover: None,
             picked: None,
+            fed_from: None,
         }
     }
 
@@ -169,11 +171,11 @@ impl Widget for FellowsHud {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let shadow = hex(0, 0.9);
         if let Some(l) = &f.label {
-            let style = TextStyle::plain(kit::WARM)
+            let style = TextStyle::plain(tone::warm(1.0))
                 .tracked(kit::LABEL_TRACKING)
                 .shadowed(shadow);
             let title = kit::fit(l, &self.title, WIDTH - 60.0);
@@ -220,7 +222,7 @@ impl Widget for FellowsHud {
                     &level,
                     r.0 + r.2 - 8.0 - level_w,
                     r.1 + 6.0,
-                    TextStyle::plain(kit::SOFT).shadowed(shadow),
+                    TextStyle::plain(tone::soft(1.0)).shadowed(shadow),
                 );
             }
             if let Some(n) = &f.name {

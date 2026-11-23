@@ -186,7 +186,7 @@ impl TextureLedger {
         }
         for run in &batch.runs {
             let draws = match run.key.texture {
-                UiTexture::White => true,
+                UiTexture::White | UiTexture::Backdrop => true,
                 UiTexture::Named(texture) => self.ensure(texture, source, &mut plan.uploads),
             };
             if draws {

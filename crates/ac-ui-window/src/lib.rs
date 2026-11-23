@@ -17,6 +17,8 @@
 //!   (`ac_ui::storage::UiStorage`);
 //! - the operating system's key names, where it has them
 //!   ([`ui::WindowUi::set_os_key_names`]);
+//! - the detailed world map's downloads and tiles
+//!   ([`ui::WindowUi::set_world_maps`]);
 //! - the time, through `ac_clock`.
 //!
 //! What the host draws for the world on the panels' behalf (plugin lines,

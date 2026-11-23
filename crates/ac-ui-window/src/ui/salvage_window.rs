@@ -117,6 +117,9 @@ pub(super) fn feed_salvage(
     selected: Option<u32>,
 ) {
     let opened = std::mem::take(&mut facts.salvage_opens);
+    // The salvage's bags are for the modern window (which takes them
+    // first); retail reads the chat line instead.
+    facts.salvaged.clear();
     let open = host
         .with_controller::<SalvageController, _>(SALVAGE_WINDOW, |c, _| c.tool() != 0)
         .unwrap_or(false);

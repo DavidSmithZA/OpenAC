@@ -13,12 +13,14 @@ use ac_ui::panels::items::emit;
 use ac_ui::panels::keyboard_config::{
     self, KeyConflict, KeyboardConfigController, KeyboardConfigOutput,
 };
-use ac_ui::panels::options::keys::LiveValues;
+use ac_ui::panels::options::OptionValue;
+use ac_ui::panels::options::keys::{LiveValues, OptionKey};
 use ac_ui::panels::{PanelOutput, panel_id};
 use ac_ui::strings::compute_hash;
 use ac_ui::tree::ElementId;
 use ac_ui::widgets::Field;
 
+use super::map_row::MapVerb;
 use super::model::{OptionsModel, Sources, rows};
 use super::spec::Action;
 use super::window::{
@@ -43,6 +45,8 @@ pub struct OptionsUi {
     /// A key pressed that others hold, waiting for the player: the
     /// keyboard row and slot, the key, and the rows it would come from.
     pending: Option<(usize, usize, KeyChord, Vec<usize>)>,
+    /// The key dispatcher was capturing, last frame.
+    dispatcher_capturing: bool,
 }
 
 /// A key as the modern windows name it ("Alt+D", "Shift"), the game's
@@ -113,7 +117,7 @@ impl WindowUi {
             &mut self.host.root,
             OPTIONS,
             (WIDTH, HEIGHT),
-            OptionsFrame::new(Horizon::BRONZE, fonts, model),
+            OptionsFrame::new(fonts, model),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -130,7 +134,7 @@ impl WindowUi {
             frame,
             OptionsFrame::search_rect(),
             field_font,
-            &Horizon::BRONZE,
+            &Horizon::current(),
         );
         ui.hide_window(OPTIONS);
         let Some(modern) = self.modern.as_mut() else {
@@ -141,32 +145,51 @@ impl WindowUi {
             search,
             was_open: false,
             pending: None,
+            dispatcher_capturing: false,
         });
         modern.replace(crate::ui::options::OPTIONS_WINDOW);
         modern.replace(KEYBOARD_WINDOW);
         self.panels.stand_in(panel_id::OPTIONS, OPTIONS);
     }
 
-    /// The Options window opens on `section`. Without it, retail's options
-    /// window opens instead.
+    /// The section the Options window shows, while it shows.
+    pub(in crate::ui) fn modern_options_showing(&self) -> Option<super::spec::Section> {
+        let frame = self.modern.as_ref()?.options.as_ref()?.frame;
+        if !self.host.root.is_window_visible(OPTIONS) {
+            return None;
+        }
+        let f = self.host.root.widget::<OptionsFrame>(frame)?;
+        f.search.trim().is_empty().then_some(f.section)
+    }
+
+    /// The Options window opens on `section` (a search typed is cleared,
+    /// so the section shows). Without it, retail's options window opens
+    /// instead.
     pub(in crate::ui) fn modern_options_on(&mut self, section: super::spec::Section) {
-        if let Some(frame) = self
+        if let Some((frame, search)) = self
             .modern
             .as_ref()
             .and_then(|m| m.options.as_ref())
-            .map(|o| o.frame)
-            && let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame)
+            .map(|o| (o.frame, o.search))
         {
-            f.show(section);
+            self.host
+                .root
+                .with::<Field, _>(search, |f, _| f.set_text(""));
+            if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+                f.search.clear();
+                f.show(section);
+            }
         }
         self.panels
             .set_visibility(&mut self.host.root, panel_id::OPTIONS, true);
     }
 
     /// The values changed outside the window (a console command, the
-    /// player's options words arriving): the window's copy follows. While
+    /// player's options words arriving): the window's copy of those
+    /// follows (`settings`: the client settings; else the character's
+    /// options words), the rest of it is left as the window has it. While
     /// it is closed the saved copy follows too.
-    pub(in crate::ui) fn follow_modern_option_values(&mut self) {
+    pub(in crate::ui) fn follow_modern_option_values(&mut self, settings: bool) {
         let Some(frame) = self
             .modern
             .as_ref()
@@ -175,11 +198,19 @@ impl WindowUi {
         else {
             return;
         };
-        let live = self.live_option_values();
+        let now = self.live_option_values();
         let open = self.host.root.is_window_visible(OPTIONS);
-        if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame)
-            && f.model.live != live
-        {
+        if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+            let mut live = f.model.live.clone();
+            if settings {
+                live.settings = now.settings;
+            } else {
+                live.options1 = now.options1;
+                live.options2 = now.options2;
+            }
+            if f.model.live == live {
+                return;
+            }
             f.model.live = live;
             if !open {
                 f.model.applied();
@@ -205,6 +236,7 @@ impl WindowUi {
                 o.was_open = open;
             }
             if open {
+                self.world_maps.ask();
                 let live = self.live_option_values();
                 if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
                     f.model.live = live;
@@ -226,6 +258,7 @@ impl WindowUi {
             .map(|(name, filter)| GridTab { name, filter })
             .collect();
         let (keys, keys_changed) = self.modern_key_lines();
+        let map_row = super::map_row::map_row(&self.world_maps.status(), self.chosen_map_tier());
         let asks = {
             let ui = &mut self.host.root;
             let typed = kit::field_text(ui, search);
@@ -237,6 +270,7 @@ impl WindowUi {
                     f.tabs = tabs;
                     f.keys = keys;
                     f.keys_changed = keys_changed;
+                    f.set_map(map_row);
                     std::mem::take(&mut f.requests)
                 })
                 .unwrap_or_default()
@@ -267,25 +301,58 @@ impl WindowUi {
             }
             OptionsRequest::Applied => {
                 self.send_session(vec![SessionCommand::SaveCharacterOptions]);
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.keep(ui);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.keep(ui);
+                });
             }
             OptionsRequest::CharacterSelect => self.ask_end_character_session(),
             OptionsRequest::ExitGame => self.send_session(vec![SessionCommand::Shutdown]),
             OptionsRequest::Act(Action::EditBars) => {
+                // Editing the bars closes the window: what was changed is
+                // applied first rather than taken back by the close.
+                let changed = self
+                    .host
+                    .root
+                    .widget_mut::<OptionsFrame>(frame)
+                    .is_some_and(|f| {
+                        let changed = !f.model.changed().is_empty();
+                        f.model.applied();
+                        changed
+                    });
+                if changed {
+                    self.send_session(vec![SessionCommand::SaveCharacterOptions]);
+                }
+                self.with_key_config(|c, ui| {
+                    c.keep(ui);
+                });
                 self.panels
                     .set_visibility(&mut self.host.root, panel_id::OPTIONS, false);
                 self.modern_open_bar_edit();
             }
             OptionsRequest::Act(Action::MouseTurning) => {
+                // The button changes and saves the camera settings and the
+                // character's mouse turning at once: those are saved, not
+                // changes for Apply (or for closing to take back).
+                let before = self.live_option_values();
                 let mut commands = Vec::new();
                 self.use_mouse_turning_settings(&mut commands);
+                let mut after = self.live_option_values();
+                for c in &commands {
+                    if let SessionCommand::SetCharacterOption { option, value } = c {
+                        after.write(OptionKey::Character(*option), &OptionValue::Bool(*value));
+                    }
+                }
                 self.send_session(commands);
-                self.follow_modern_option_values();
+                if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+                    let keys: Vec<OptionKey> = f.model.rows.iter().flat_map(|r| r.keys()).collect();
+                    for key in keys {
+                        if let Some(v) = after.read(key)
+                            && before.read(key).as_ref() != Some(&v)
+                        {
+                            f.model.set_saved(key, &v);
+                        }
+                    }
+                }
             }
             OptionsRequest::Act(Action::LoadKeys) => {
                 self.keyboard_output(KeyboardConfigOutput::OpenLoad);
@@ -293,14 +360,16 @@ impl WindowUi {
             OptionsRequest::Act(Action::SaveKeysAs) => {
                 self.keyboard_output(KeyboardConfigOutput::OpenSaveAs);
             }
+            OptionsRequest::Map(verb) => match verb {
+                MapVerb::Download(tier) => self.world_maps.download(tier),
+                MapVerb::Cancel => self.world_maps.cancel(),
+                MapVerb::Remove(tier) => self.world_maps.remove(tier),
+            },
             OptionsRequest::CaptureKey { .. } => self.request_key_capture(),
             OptionsRequest::EraseKey { row, slot } => {
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.erase(ui, row, slot);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.erase(ui, row, slot);
+                });
             }
             OptionsRequest::TakeKey => {
                 let pending = self
@@ -309,29 +378,20 @@ impl WindowUi {
                     .and_then(|m| m.options.as_mut())
                     .and_then(|o| o.pending.take());
                 if let Some((row, slot, chord, takes)) = pending {
-                    self.host.with_controller::<KeyboardConfigController, _>(
-                        KEYBOARD_WINDOW,
-                        |c, ui| {
-                            c.assign(ui, row, slot, chord, &takes);
-                        },
-                    );
+                    self.with_key_config(|c, ui| {
+                        c.assign(ui, row, slot, chord, &takes);
+                    });
                 }
             }
             OptionsRequest::KeysRevert => {
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.revert(ui);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.revert(ui);
+                });
             }
             OptionsRequest::KeysDefaults => {
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.defaults(ui);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.defaults(ui);
+                });
             }
             OptionsRequest::TabShows { tab, group, on } => {
                 let mask = crate::ui::modern::chat::model::group_mask(group);
@@ -366,19 +426,25 @@ impl WindowUi {
             self.option_changed(&live, section, true, &mut commands);
         }
         self.send_session(commands);
-        if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
-            f.capture = None;
-            f.clash = None;
+        let capturing = self
+            .host
+            .root
+            .widget_mut::<OptionsFrame>(frame)
+            .is_some_and(|f| {
+                f.clash = None;
+                f.capture.take().is_some()
+            });
+        if capturing {
+            self.cancel_key_capture();
         }
         if let Some(o) = self.modern.as_mut().and_then(|m| m.options.as_mut()) {
             o.pending = None;
         }
-        self.host
-            .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, ui| {
-                if c.changed() {
-                    c.revert(ui);
-                }
-            });
+        self.with_key_config(|c, ui| {
+            if c.changed() {
+                c.revert(ui);
+            }
+        });
         let (keys, keys_changed) = self.modern_key_lines();
         if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
             f.keys = keys;
@@ -389,27 +455,26 @@ impl WindowUi {
     /// Every key binding as the Controls section lists it, and how many
     /// differ from the saved keys.
     fn modern_key_lines(&mut self) -> (Vec<KeyLine>, usize) {
-        self.host
-            .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, _| {
-                let lines: Vec<KeyLine> = c
-                    .rows()
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(row, r)| {
-                        Some(KeyLine {
-                            row,
-                            label: r.label.clone()?,
-                            group: class_words(r.class),
-                            keys: r.current.iter().map(|k| key_words(c, *k)).collect(),
-                            changed: r.changed(),
-                            mapped: r.mapped.is_some(),
-                        })
+        self.with_key_config(|c, _| {
+            let lines: Vec<KeyLine> = c
+                .rows()
+                .iter()
+                .enumerate()
+                .filter_map(|(row, r)| {
+                    Some(KeyLine {
+                        row,
+                        label: r.label.clone()?,
+                        group: class_words(r.class),
+                        keys: r.current.iter().map(|k| key_words(c, *k)).collect(),
+                        changed: r.changed(),
+                        mapped: r.mapped.is_some(),
                     })
-                    .collect();
-                let changed = c.rows().iter().filter(|r| r.changed()).count();
-                (lines, changed)
-            })
-            .unwrap_or_default()
+                })
+                .collect();
+            let changed = c.rows().iter().filter(|r| r.changed()).count();
+            (lines, changed)
+        })
+        .unwrap_or_default()
     }
 
     /// The key caught for the Options window, when it asked for one:
@@ -430,30 +495,28 @@ impl WindowUi {
         let Some(chord) = chord else {
             return Some(false);
         };
-        let found =
-            self.host
-                .with_controller::<KeyboardConfigController, _>(KEYBOARD_WINDOW, |c, _| {
-                    let held = c
-                        .rows()
-                        .get(row)
-                        .is_some_and(|r| r.current.contains(&chord));
-                    let name = key_words(c, chord);
-                    let labels = |rows: &[usize]| {
-                        rows.iter()
-                            .filter_map(|r| c.rows().get(*r).and_then(|r| r.label.clone()))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    };
-                    let conflict = c.conflict(chord, row);
-                    let words = match &conflict {
-                        KeyConflict::Reserved => {
-                            format!("{name} is kept by the game for its own use.")
-                        }
-                        KeyConflict::Rows(rows) => format!("{name} is used by {}.", labels(rows)),
-                        KeyConflict::None => String::new(),
-                    };
-                    (held, conflict, words)
-                });
+        let found = self.with_key_config(|c, _| {
+            let held = c
+                .rows()
+                .get(row)
+                .is_some_and(|r| r.current.contains(&chord));
+            let name = key_words(c, chord);
+            let labels = |rows: &[usize]| {
+                rows.iter()
+                    .filter_map(|r| c.rows().get(*r).and_then(|r| r.label.clone()))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            };
+            let conflict = c.conflict(chord, row);
+            let words = match &conflict {
+                KeyConflict::Reserved => {
+                    format!("{name} is kept by the game for its own use.")
+                }
+                KeyConflict::Rows(rows) => format!("{name} is used by {}.", labels(rows)),
+                KeyConflict::None => String::new(),
+            };
+            (held, conflict, words)
+        });
         let Some((held, conflict, words)) = found else {
             return Some(false);
         };
@@ -462,12 +525,9 @@ impl WindowUi {
         }
         match conflict {
             KeyConflict::None => {
-                self.host.with_controller::<KeyboardConfigController, _>(
-                    KEYBOARD_WINDOW,
-                    |c, ui| {
-                        c.assign(ui, row, slot, chord, &[]);
-                    },
-                );
+                self.with_key_config(|c, ui| {
+                    c.assign(ui, row, slot, chord, &[]);
+                });
             }
             KeyConflict::Reserved | KeyConflict::Rows(_) => {
                 let takes = match conflict {
@@ -488,6 +548,21 @@ impl WindowUi {
             }
         }
         Some(false)
+    }
+
+    /// The key dispatcher's capture as it stands: one that ended without a
+    /// key reaching the window (the game lost the focus) leaves no slot
+    /// waiting for a key.
+    pub fn follow_key_capture(&mut self, capturing: bool) {
+        let Some(o) = self.modern.as_mut().and_then(|m| m.options.as_mut()) else {
+            return;
+        };
+        let dropped = o.dispatcher_capturing && !capturing;
+        o.dispatcher_capturing = capturing;
+        let frame = o.frame;
+        if dropped && let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+            f.capture = None;
+        }
     }
 
     fn send_session(&mut self, commands: Vec<SessionCommand>) {

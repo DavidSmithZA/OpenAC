@@ -12,6 +12,7 @@ use ac_ui::input::KeyChord;
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
 use ac_ui::modern::theme::hex;
+use ac_ui::modern::tone;
 use ac_ui::shapes::CornerRadii;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::widgets::Field;
@@ -48,23 +49,23 @@ pub(crate) fn button(
     let ink = match look {
         Look::Plain => {
             let fill = if hovered {
-                hex(0x2A_2116, 0.9)
+                tone::field(0.9)
             } else {
                 hex(0, 0.35)
             };
             rc.fill_rounded_rect(x, y, w, h, round, fill);
-            rc.stroke_rounded_rect(x, y, w, h, round, hex(0xC9_A062, 0.6), 1.0);
+            rc.stroke_rounded_rect(x, y, w, h, round, tone::bronze(0.6), 1.0);
             p.text
         }
         Look::Quiet => {
             if hovered {
-                rc.fill_rounded_rect(x, y, w, h, round, hex(0x2A_2116, 0.7));
+                rc.fill_rounded_rect(x, y, w, h, round, tone::field(0.7));
             }
             p.text_soft
         }
         Look::Main => {
             let fill = if hovered {
-                hex(0xE0_B068, 1.0)
+                tone::gold(1.0)
             } else {
                 p.accent_fill
             };
@@ -97,24 +98,7 @@ fn caret(rc: &mut RenderContext<'_>, cx: f32, cy: f32, color: Color) {
 /// Splits `words` into lines no wider than `width` in `font`.
 #[must_use]
 pub fn wrap(font: &UiFont, words: &str, width: f32) -> Vec<String> {
-    let mut lines = Vec::new();
-    let mut line = String::new();
-    for word in words.split_whitespace() {
-        let next = if line.is_empty() {
-            word.to_owned()
-        } else {
-            format!("{line} {word}")
-        };
-        if !line.is_empty() && text::measure(font, &next, 0.0) > width {
-            lines.push(std::mem::replace(&mut line, word.to_owned()));
-        } else {
-            line = next;
-        }
-    }
-    if !line.is_empty() {
-        lines.push(line);
-    }
-    lines
+    ac_ui::modern::kit::wrap_line(font, words, width)
 }
 
 /// The world dimmed while editing, with a guide down the middle. Clicks go
@@ -131,12 +115,12 @@ impl Widget for Dim {
         let Some((w, h)) = ui.element(me).map(|e| (e.width, e.height)) else {
             return;
         };
-        rc.fill(0.0, 0.0, w, h, hex(0x0A_0806, 0.45));
+        rc.fill(0.0, 0.0, w, h, tone::deep(0.45));
         // A dashed line down the middle, under the toolbar.
         let x = (w * 0.5).floor();
         let mut y = 120.0;
         while y < h {
-            rc.fill(x, y, 1.0, 6.0, hex(0xE0_B068, 0.55));
+            rc.fill(x, y, 1.0, 6.0, tone::gold(0.55));
             y += 10.0;
         }
     }
@@ -178,14 +162,14 @@ impl Widget for DragHint {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let Some((w, h)) = ui.element(me).map(|e| (e.width, e.height)) else {
             return;
         };
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 8.0, 24.0, p.shadow);
-        rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x18_130E, 0.92));
-        rc.stroke_rounded_rect(0.0, 0.0, w, h, round, hex(0xC9_A062, 0.8), 1.0);
+        rc.fill_rounded_rect(0.0, 0.0, w, h, round, tone::raised(0.92));
+        rc.stroke_rounded_rect(0.0, 0.0, w, h, round, tone::bronze(0.8), 1.0);
         if let Some(f) = &self.font {
             let ty = ((h - f.line_height) * 0.5).round();
             text::draw(rc, f, DRAG_WORDS, 14.0, ty, TextStyle::plain(p.text));
@@ -346,14 +330,14 @@ impl Widget for EditToolbar {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let Some((w, h)) = ui.element(me).map(|e| (e.width, e.height)) else {
             return;
         };
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 10.0, 30.0, p.shadow);
-        rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x18_130E, 0.96));
-        rc.stroke_rounded_rect(0.0, 0.0, w, h, round, hex(0xC9_A062, 0.8), 1.0);
+        rc.fill_rounded_rect(0.0, 0.0, w, h, round, tone::raised(0.96));
+        rc.stroke_rounded_rect(0.0, 0.0, w, h, round, tone::bronze(0.8), 1.0);
         let mut x = 16.0;
         if let Some(f) = &self.fonts.title {
             text::draw(
@@ -385,7 +369,7 @@ impl Widget for EditToolbar {
                 ToolbarPart::Layout => {
                     button(
                         rc,
-                        &self.theme,
+                        &Horizon::current(),
                         None,
                         (left, top, bw, 30.0),
                         "",
@@ -410,7 +394,7 @@ impl Widget for EditToolbar {
                 ToolbarPart::NewBar => {
                     button(
                         rc,
-                        &self.theme,
+                        &Horizon::current(),
                         body,
                         (left, top, bw, 30.0),
                         "+ New bar",
@@ -421,7 +405,7 @@ impl Widget for EditToolbar {
                 ToolbarPart::Pieces => {
                     button(
                         rc,
-                        &self.theme,
+                        &Horizon::current(),
                         body,
                         (left, top, bw, 30.0),
                         PIECES_WORDS,
@@ -431,7 +415,7 @@ impl Widget for EditToolbar {
                 }
                 ToolbarPart::Reset => button(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     body,
                     (left, top, bw, 30.0),
                     self.reset_words(),
@@ -445,7 +429,7 @@ impl Widget for EditToolbar {
                 ToolbarPart::Done => {
                     button(
                         rc,
-                        &self.theme,
+                        &Horizon::current(),
                         body,
                         (left, top, bw, 30.0),
                         "Done",
@@ -624,10 +608,10 @@ impl Widget for KeyPopover {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (w, h) = (POPOVER_WIDTH, POPOVER_HEIGHT);
-        let fill = hex(0x18_130E, 0.98);
-        let edge = hex(0xC9_A062, 0.9);
+        let fill = tone::raised(0.98);
+        let edge = tone::bronze(0.9);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 12.0, 30.0, p.shadow);
         // The pointer to the slot.
         let (ax, on_top) = self.arrow;
@@ -689,24 +673,16 @@ impl Widget for KeyPopover {
             let hovered = self.hovered == Some(PopPart::Key(mode));
             let round = CornerRadii::all(4.0);
             if listening {
-                rc.fill_rounded_rect(box_left, top, KEY_BOX, ROW, round, hex(0xE0_B068, 0.12));
+                rc.fill_rounded_rect(box_left, top, KEY_BOX, ROW, round, tone::gold(0.12));
                 rc.stroke_rounded_rect(box_left, top, KEY_BOX, ROW, round, p.accent, 2.0);
             } else {
                 let fill = if hovered {
-                    hex(0x2A_2116, 0.9)
+                    tone::field(0.9)
                 } else {
                     hex(0, 0.4)
                 };
                 rc.fill_rounded_rect(box_left, top, KEY_BOX, ROW, round, fill);
-                rc.stroke_rounded_rect(
-                    box_left,
-                    top,
-                    KEY_BOX,
-                    ROW,
-                    round,
-                    hex(0xC9_A062, 0.5),
-                    1.0,
-                );
+                rc.stroke_rounded_rect(box_left, top, KEY_BOX, ROW, round, tone::bronze(0.5), 1.0);
             }
             let Some(f) = &self.fonts.body else {
                 continue;
@@ -752,7 +728,7 @@ impl Widget for KeyPopover {
         for (part, left, bw, words, look) in self.buttons() {
             button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 body,
                 (left, top, bw, 28.0),
                 words,
@@ -1034,7 +1010,7 @@ impl Widget for Menu {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let h = ui.element(me).map_or(0.0, |e| e.height);
         let w = MENU_WIDTH;
         let round = CornerRadii::all(self.theme.metrics.window_radius);
@@ -1078,7 +1054,7 @@ impl Widget for Menu {
                             w - 2.0 * MENU_PAD,
                             rh,
                             CornerRadii::all(self.theme.metrics.radius),
-                            hex(0x2A_2116, 0.9),
+                            tone::field(0.9),
                         );
                     }
                     let ink = if *enabled { p.text } else { p.muted };
@@ -1160,9 +1136,9 @@ impl RenameBox {
         f.record_history = false;
         f.max_characters = 24;
         f.padding = 6.0;
-        f.text_color = theme.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
-        f.selection_color = hex(0xE0_B068, 0.35);
+        f.selection_color = tone::gold(0.35);
         f.set_editable_detached(&mut e, true);
         let field = ui.add(me, e, f);
         if let Some(r) = ui.widget_mut::<RenameBox>(me) {
@@ -1278,11 +1254,11 @@ impl Widget for RenameBox {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (w, h) = (RENAME_WIDTH, RENAME_HEIGHT);
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 12.0, 30.0, p.shadow);
-        rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x18_130E, 0.98));
+        rc.fill_rounded_rect(0.0, 0.0, w, h, round, tone::raised(0.98));
         rc.stroke_rounded_rect(0.0, 0.0, w, h, round, p.trim, 1.0);
         if let Some(f) = &self.fonts.body {
             text::draw(rc, f, "Rename bar", 13.0, 11.0, TextStyle::plain(p.text));
@@ -1301,7 +1277,7 @@ impl Widget for RenameBox {
             w - 24.0,
             28.0,
             CornerRadii::all(4.0),
-            hex(0xC9_A062, 0.5),
+            tone::bronze(0.5),
             1.0,
         );
         let body = self.fonts.body.as_deref();
@@ -1310,7 +1286,7 @@ impl Widget for RenameBox {
             let look = if done { Look::Main } else { Look::Quiet };
             button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 body,
                 (left, h - 34.0, bw, 26.0),
                 words,
@@ -1327,7 +1303,7 @@ mod tests {
 
     #[test]
     fn menu_rows_are_found_by_height() {
-        let mut menu = Menu::new(Horizon::BRONZE, BarFonts::default());
+        let mut menu = Menu::new(Horizon::current(), BarFonts::default());
         menu.rows = vec![
             MenuRow::Header("Main bar".to_owned()),
             MenuRow::entry(MenuAction::Turn, "Turn upright", None),
@@ -1347,7 +1323,7 @@ mod tests {
 
     #[test]
     fn the_popover_offers_emptying_only_a_filled_slot() {
-        let mut pop = KeyPopover::new(Horizon::BRONZE, BarFonts::default());
+        let mut pop = KeyPopover::new(Horizon::current(), BarFonts::default());
         assert_eq!(pop.buttons().len(), 2);
         pop.filled = true;
         assert_eq!(pop.buttons().len(), 3);

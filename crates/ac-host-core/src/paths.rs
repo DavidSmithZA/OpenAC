@@ -421,6 +421,11 @@ impl PathSet {
         self.data_directory.join("screenshots")
     }
 
+    /// The detailed world map's downloaded tiers, one folder each.
+    pub fn world_map_directory(&self) -> PathBuf {
+        self.data_directory.join("world-map")
+    }
+
     /// The player's quest journal notes.
     pub fn journal_directory(&self) -> PathBuf {
         self.data_directory.join("journal")

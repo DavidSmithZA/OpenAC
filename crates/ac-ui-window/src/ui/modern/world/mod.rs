@@ -3,3 +3,4 @@
 pub mod map;
 pub mod model;
 pub mod run;
+pub mod tiles;

@@ -7,6 +7,7 @@
 //! window closes the container itself when the player walks away (retail's
 //! window does that only while it shows).
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_core::items::placement::{is_pack, loose_contents};
@@ -20,7 +21,7 @@ use ac_ui::geometry::AnchorEdges;
 use ac_ui::icons::IconSource;
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
-use ac_ui::modern::theme::hex;
+use ac_ui::modern::theme::{fill_glass, hex};
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::items::emit;
 use ac_ui::panels::pack_drops::{self, DropSpot};
@@ -295,27 +296,27 @@ impl Widget for LootFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let (w, h) = (WIDTH, self.height());
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         let r = CornerRadii::all(4.0);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 18.0, 50.0, hex(0, 0.55));
-        rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x14_100C, 0.97));
+        fill_glass(rc, (0.0, 0.0, w, h), round, tone::ground(0.97));
         rc.fill_vertical_gradient(
             1.0,
             1.0,
             w - 2.0,
             HEADER - 1.0,
             CornerRadii::new(5.0, 5.0, 0.0, 0.0),
-            hex(0xC9_A062, 0.10),
-            hex(0xC9_A062, 0.0),
+            tone::bronze(0.10),
+            tone::bronze(0.0),
         );
-        rc.fill(0.0, HEADER - 1.0, w, 1.0, hex(0xC9_A062, 0.35));
+        rc.fill(0.0, HEADER - 1.0, w, 1.0, tone::bronze(0.35));
         // The container.
         let tile = (14.0, (HEADER - 34.0) * 0.5);
         rc.fill_rounded_rect(tile.0, tile.1, 34.0, 34.0, r, hex(0, 0.45));
-        rc.stroke_rounded_rect(tile.0, tile.1, 34.0, 34.0, r, hex(0xC9_A062, 0.6), 1.0);
+        rc.stroke_rounded_rect(tile.0, tile.1, 34.0, 34.0, r, tone::bronze(0.6), 1.0);
         if let Some(icon) = self.view.icon {
             rc.sprite(
                 icon,
@@ -373,13 +374,9 @@ impl Widget for LootFrame {
         if let Some(s) = &f.strong {
             for (id, (tx, ty, tw, th)) in self.tab_rects() {
                 let on = id == self.view.open;
-                let fill = if on {
-                    hex(0xE0_B068, 0.14)
-                } else {
-                    hex(0, 0.25)
-                };
+                let fill = if on { tone::gold(0.14) } else { hex(0, 0.25) };
                 rc.fill_rounded_rect(tx, ty, tw, th, r, fill);
-                let edge = if on { p.accent } else { hex(0xC9_A062, 0.3) };
+                let edge = if on { p.accent } else { tone::bronze(0.3) };
                 rc.stroke_rounded_rect(tx, ty, tw, th, r, edge, 1.0);
                 stroke(
                     rc,
@@ -410,9 +407,9 @@ impl Widget for LootFrame {
         if let (Some((dx, dy, dw, dh)), Some(b)) = (self.drop_rect(), &f.body) {
             let lit = self.over || self.view.drop_lit;
             if lit {
-                rc.fill_rounded_rect(dx, dy, dw, dh, r, hex(0xE0_B068, 0.10));
+                rc.fill_rounded_rect(dx, dy, dw, dh, r, tone::gold(0.10));
             }
-            let edge = if lit { p.accent } else { hex(0xC9_A062, 0.45) };
+            let edge = if lit { p.accent } else { tone::bronze(0.45) };
             // A dashed edge: short runs round the box.
             let dash: f32 = 6.0;
             let mut t = dx + 4.0;
@@ -440,12 +437,12 @@ impl Widget for LootFrame {
                 words,
                 dx + dw * 0.5,
                 dy + (dh - b.line_height) * 0.5,
-                TextStyle::plain(if lit { hex(0xF2_D29A, 1.0) } else { p.muted }),
+                TextStyle::plain(if lit { tone::gold_light(1.0) } else { p.muted }),
             );
         }
         // The foot.
         let fy = h - FOOT;
-        rc.fill(0.0, fy, w, 1.0, hex(0xC9_A062, 0.3));
+        rc.fill(0.0, fy, w, 1.0, tone::bronze(0.3));
         if let (Some(s), Some(strong)) = (&f.small, &f.strong) {
             let words = format!(
                 "Burden {}% \u{b7} {}% with everything",
@@ -484,7 +481,7 @@ impl Widget for LootFrame {
                 aw,
                 ah,
                 r,
-                if hot { p.accent } else { hex(0xC9_A062, 0.6) },
+                if hot { p.accent } else { tone::bronze(0.6) },
                 1.0,
             );
             let ty = ay + (ah - strong.line_height) * 0.5;
@@ -506,7 +503,7 @@ impl Widget for LootFrame {
                 tw,
                 16.0,
                 CornerRadii::all(8.0),
-                hex(0xC9_A062, 0.5),
+                tone::bronze(0.5),
                 1.0,
             );
             text::draw(
@@ -518,7 +515,7 @@ impl Widget for LootFrame {
                 TextStyle::plain(p.accent).tracked(0.6),
             );
         }
-        rc.stroke_rounded_rect(0.0, 0.0, w, h, round, hex(0xC9_A062, 0.8), 1.0);
+        rc.stroke_rounded_rect(0.0, 0.0, w, h, round, tone::bronze(0.8), 1.0);
     }
 }
 
@@ -551,7 +548,7 @@ impl WindowUi {
     /// The Loot window, hidden, in place of retail's outside-container
     /// window.
     pub(in crate::ui) fn mount_modern_loot(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = LootFonts {
             title: self.modern_font(Weight::SemiBold, 14.0),
             small: self.modern_font(Weight::Regular, 10.5),
@@ -590,13 +587,12 @@ impl WindowUi {
         let grid = ui.add(
             frame,
             Element::at(list.0, list.1, list.2, list.3).with_anchors(AnchorEdges::NONE),
-            ItemGrid::new(theme, grid_fonts),
+            ItemGrid::new(grid_fonts),
         );
         ItemGrid::set_look(ui, grid, CellLook::List);
         ItemGrid::set_source(ui, grid, ItemDragSource::Ground, true);
         let menu = PopMenu::mount(ui, theme, menu_fonts);
         let band_widget = super::plugin_notes::FootBand::new(
-            theme,
             self.modern_font(Weight::SemiBold, 9.5),
             self.modern_font(Weight::Regular, 10.5),
             self.modern_font(Weight::SemiBold, 12.0),
@@ -758,6 +754,7 @@ impl WindowUi {
                     emit(&mut self.host.root, PanelOutput::SelectObject(id));
                 }
                 CellRequest::Use(id) | CellRequest::Loot(id) => self.loot_into(id, player),
+                CellRequest::Empty => {}
                 CellRequest::Inspect(id) => {
                     self.send_loot(ItemCommand::Appraise(ObjectRef::Guid(id)));
                 }
@@ -963,7 +960,7 @@ impl WindowUi {
                     stamp: None,
                     name: names(o),
                     sub,
-                    name_color: o.attuned.then_some(hex(0xF2_D29A, 1.0)),
+                    name_color: o.attuned.then_some(tone::gold_light(1.0)),
                     selected: selected == Some(id),
                     waiting: moving,
                     cooldown: 0.0,
@@ -971,7 +968,7 @@ impl WindowUi {
                     lit: false,
                     actions: true,
                     note: moving.then(|| "Looting\u{2026}".to_owned()),
-                    mark: super::plugin_notes::mark_on(&facts.plugin_ui, &Horizon::BRONZE, id),
+                    mark: super::plugin_notes::mark_on(&facts.plugin_ui, &Horizon::current(), id),
                 }
             })
             .collect();

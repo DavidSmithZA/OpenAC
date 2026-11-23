@@ -272,15 +272,13 @@ pub fn screen(
         &new,
         icon,
     );
-    let (status, status_tone) = if memory.refused.is_some() {
-        ("Did not go through".to_owned(), -1)
-    } else {
-        match (view.self_accepted, view.partner_accepted) {
-            (true, true) => ("Both accepted".to_owned(), 1),
-            (true, false) => ("You accepted".to_owned(), 1),
-            (false, true) => (format!("{partner} accepted"), 1),
-            (false, false) => ("Offering".to_owned(), 0),
-        }
+    // An acceptance shows over a refusal (the banner tells of that).
+    let (status, status_tone) = match (view.self_accepted, view.partner_accepted) {
+        (true, true) => ("Both accepted".to_owned(), 1),
+        (true, false) => ("You accepted".to_owned(), 1),
+        (false, true) => (format!("{partner} accepted"), 1),
+        (false, false) if memory.refused.is_some() => ("Did not go through".to_owned(), -1),
+        (false, false) => ("Offering".to_owned(), 0),
     };
     let banner = if let Some((item, words)) = &memory.refused {
         Some(TradeBanner {

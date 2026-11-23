@@ -321,3 +321,78 @@ pub fn caption_of(ui: &UiRoot, id: Option<ElementId>) -> String {
         .and_then(|t| t.content_lines().first().map(|l| l.text.clone()))
         .unwrap_or_default()
 }
+
+/// The selected stack's split quantity, following the selection: a new
+/// selection of more than one starts at the whole stack (or 1 for an
+/// object the vendor's split rule exempts); anything else is 1 of 1. What
+/// a drag of the selected stack moves ([`ItemsView::split`]), whichever
+/// interface shows the controls.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct SelectionSplit {
+    quantity: StackSplitQuantity,
+    current: Option<u32>,
+}
+
+impl SelectionSplit {
+    /// Nothing selected yet: 1 of 1.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The split quantity.
+    #[must_use]
+    pub fn quantity(&self) -> &StackSplitQuantity {
+        &self.quantity
+    }
+
+    /// The selection the quantity follows.
+    #[must_use]
+    pub fn current(&self) -> Option<u32> {
+        self.current
+    }
+
+    /// Follows `view`'s selection. `None` when nothing changed; else
+    /// whether the controls show now (a stack of more than one).
+    pub fn follow(&mut self, view: &ItemsView<'_>) -> Option<bool> {
+        let stack = view
+            .selected
+            .and_then(|s| view.get(s))
+            .map_or(1, |o| o.stack_size.max(1).unsigned_abs());
+        if view.selected == self.current && stack == self.quantity.maximum() {
+            return None;
+        }
+        self.current = view.selected;
+        if stack > 1 {
+            let seed = if view.vendor_split_exempt { 1 } else { stack };
+            self.quantity.reset(stack, Some(seed));
+        } else {
+            self.quantity.reset(1, None);
+        }
+        Some(stack > 1)
+    }
+
+    /// The quantity set to `value`, kept within the stack; whether it
+    /// changed.
+    pub fn set_value(&mut self, value: u32) -> bool {
+        self.quantity.set_value(value)
+    }
+
+    /// The quantity back to the whole stack of `stack` units (a panel
+    /// refused part of a stack).
+    pub fn reset_to_whole(&mut self, stack: u32) {
+        self.quantity.reset(stack, None);
+    }
+
+    /// The quantity typed into a box (see
+    /// [`StackSplitQuantity::set_from_text`]).
+    pub fn set_from_text(&mut self, text: Option<&str>) -> bool {
+        self.quantity.set_from_text(text)
+    }
+
+    /// The quantity at a slider position (see
+    /// [`StackSplitQuantity::set_from_slider_ratio`]).
+    pub fn set_from_slider_ratio(&mut self, ratio: f32) -> bool {
+        self.quantity.set_from_slider_ratio(ratio)
+    }
+}

@@ -131,7 +131,7 @@ impl SelectionEntry {
 }
 
 /// Which selection-screen buttons are enabled and shown.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct SelectionButtons {
     /// Enter the world.
     pub can_enter: bool,
@@ -171,7 +171,7 @@ pub struct SelectionError {
 }
 
 /// The whole selection state as one value.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SelectionSnapshot {
     /// The generation.
     pub generation: Generation,

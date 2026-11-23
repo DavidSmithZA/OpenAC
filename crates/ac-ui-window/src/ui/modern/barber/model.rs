@@ -3,9 +3,7 @@
 //! styles, colours and shade, the heritage's one option, and a line of
 //! what has changed since the barber opened.
 
-use ac_core::chargen::{
-    ChargenGenderOptions, ChargenHeritageGroup as H, ChargenSwatchRgb, get_palette_index,
-};
+use ac_core::chargen::{ChargenGenderOptions, ChargenSwatchRgb, get_palette_index};
 use ac_runtime::gameplay::BarberView;
 use ac_runtime::session::creation::{CreationAppearance, UNSET};
 use ac_ui::draw::Color;
@@ -107,7 +105,7 @@ pub struct BarberFacts<'a> {
 /// A heritage without nose and mouth (its eyes have no styles either).
 #[must_use]
 pub fn three_parts(heritage: u32) -> bool {
-    matches!(H(heritage), H::GEARKNIGHT | H::OLTHOI | H::OLTHOI_ACID)
+    ac_ui::pregame::chargen::appearance::clothes_hidden(heritage)
 }
 
 /// The parts `heritage` offers, in order.
@@ -144,10 +142,8 @@ fn part_word(part: Part) -> &'static str {
 
 /// The part's shade (hair's own, the skin's for the rest), 0 to 1.
 fn shade_of(part: Part, a: &CreationAppearance) -> f64 {
-    match shade_slot(part) {
-        Some(ac_runtime::session::creation::ShadeSlot::Hair) => a.hair_shade,
-        _ => a.skin_shade,
-    }
+    let slot = shade_slot(part).unwrap_or(ac_runtime::session::creation::ShadeSlot::Skin);
+    ac_ui::pregame::chargen::appearance::shade_of(slot, a)
 }
 
 /// Whether the part has styles to step through.
@@ -314,14 +310,18 @@ pub fn changed_line(view: &BarberView, before: &Before, facts: &BarberFacts<'_>)
 /// The palette set and sample a part's shade runs through: the picked
 /// hair colour's, or the skin's.
 #[must_use]
-pub fn shade_source(part: Part, view: &BarberView, g: &ChargenGenderOptions) -> Option<(u32, i32)> {
+pub fn shade_source(
+    part: Part,
+    a: &CreationAppearance,
+    g: &ChargenGenderOptions,
+) -> Option<(u32, i32)> {
     use ac_core::chargen::{HAIR_SAMPLE_INDEX, SKIN_FAMILY_SAMPLE_INDEX};
     match part {
         Part::Hair => {
-            let i = if view.appearance.hair_color == UNSET {
+            let i = if a.hair_color == UNSET {
                 0
             } else {
-                view.appearance.hair_color as usize
+                a.hair_color as usize
             };
             g.hair_colors.get(i).map(|id| (*id, HAIR_SAMPLE_INDEX))
         }
@@ -358,7 +358,7 @@ pub fn shade_indices(count: usize, stops: usize) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ac_core::chargen::ChargenHairStyle;
+    use ac_core::chargen::{ChargenHairStyle, ChargenHeritageGroup as H};
 
     fn gender() -> ChargenGenderOptions {
         ChargenGenderOptions {

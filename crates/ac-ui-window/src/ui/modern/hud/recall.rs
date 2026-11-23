@@ -5,6 +5,7 @@
 //! recall spells the player knows, greyed outside Magic mode as spells on
 //! a bar are. A click goes and closes the list; a press outside closes it.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_host::settings::CustomRecall;
@@ -616,7 +617,7 @@ impl Widget for RecallList {
 
     fn draw(&mut self, _ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
         let _ = me;
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (w, h) = (WIDTH, self.height());
         let radius = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 12.0, 30.0, p.shadow);
@@ -657,7 +658,7 @@ impl RecallList {
         hovered: bool,
         armed: bool,
     ) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let w = WIDTH;
         match row {
             Row::Section(title) => {
@@ -792,7 +793,7 @@ impl RecallList {
                             *bw,
                             bh,
                             CornerRadii::all(3.0),
-                            hex(0x14_100C, 0.9),
+                            tone::ground(0.9),
                         );
                         rc.stroke_rounded_rect(
                             *left,
@@ -959,7 +960,7 @@ mod tests {
 
     #[test]
     fn your_own_follow_the_spells_with_the_server_named() {
-        let mut list = RecallList::new(Horizon::BRONZE, RecallFonts::default());
+        let mut list = RecallList::new(Horizon::current(), RecallFonts::default());
         let facts = RecallFacts {
             server: Some("Dreamweave".to_owned()),
             own: vec![(
@@ -986,7 +987,7 @@ mod tests {
 
     #[test]
     fn spells_need_magic_mode() {
-        let mut list = RecallList::new(Horizon::BRONZE, RecallFonts::default());
+        let mut list = RecallList::new(Horizon::current(), RecallFonts::default());
         let spell = Row::Spell {
             id: 2645,
             name: "Portal Recall".to_owned(),

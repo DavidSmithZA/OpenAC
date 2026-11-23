@@ -83,6 +83,17 @@ impl Rotation {
         self.rotating = true;
     }
 
+    /// Turned by hand by `degrees` (clockwise when positive): any turning
+    /// stops.
+    pub fn turn_by(&mut self, degrees: f32) {
+        if !degrees.is_finite() {
+            return;
+        }
+        self.rotating = false;
+        self.last = None;
+        self.heading = (self.heading + degrees).rem_euclid(360.0);
+    }
+
     /// Turn for the time since the last tick (`now`, seconds).
     pub fn tick(&mut self, now: f64) {
         if !self.rotating {
@@ -310,6 +321,11 @@ impl ChargenPreviewState {
         self.rotation.toggle(direction);
     }
 
+    /// The figure was dragged round by `degrees`.
+    pub fn turn_by(&mut self, degrees: f32) {
+        self.rotation.turn_by(degrees);
+    }
+
     /// Advance the idle loop, the turn and the slide to `now` (seconds).
     pub fn tick(&mut self, now: f64) {
         let elapsed = self.last_tick.map_or(now, |t| (now - t).max(0.0));
@@ -416,6 +432,18 @@ mod tests {
 
     fn near(a: Vec3, b: Vec3) -> bool {
         a.abs_diff_eq(b, 1e-3)
+    }
+
+    // A drag turns the figure by hand and stops a turn under way.
+    #[test]
+    fn a_drag_turns_by_hand_and_stops_the_turning() {
+        let mut r = Rotation::new(350.0);
+        r.toggle(RotateDirection::Clockwise);
+        r.turn_by(20.0);
+        assert!(!r.is_rotating());
+        assert!((r.heading - 10.0).abs() < 1e-4);
+        r.turn_by(-30.0);
+        assert!((r.heading - 340.0).abs() < 1e-4);
     }
 
     #[test]

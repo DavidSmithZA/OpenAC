@@ -3,13 +3,13 @@
 //! and lines. Each entry carries a number the window gives meaning to; the
 //! menu only notes which was chosen.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::RenderContext;
 use ac_ui::event::{UiEvent, kind};
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
-use ac_ui::modern::theme::hex;
 use ac_ui::shapes::CornerRadii;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
@@ -277,12 +277,12 @@ impl Widget for PopMenu {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let h = ui.element(me).map_or(0.0, |e| e.height);
         let w = self.width;
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 12.0, 30.0, p.shadow);
-        rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x18_130E, 0.98));
+        rc.fill_rounded_rect(0.0, 0.0, w, h, round, tone::raised(0.98));
         rc.stroke_rounded_rect(0.0, 0.0, w, h, round, p.trim, 1.0);
         let mut top = PAD;
         for (i, row) in self.rows.iter().enumerate() {
@@ -313,7 +313,7 @@ impl Widget for PopMenu {
                     if *ticked {
                         rc.fill_rounded_rect(PAD, top, w - 2.0 * PAD, rh, r, p.accent_tint);
                     } else if self.hovered == Some(i) && *on {
-                        rc.fill_rounded_rect(PAD, top, w - 2.0 * PAD, rh, r, hex(0x2A_2116, 0.9));
+                        rc.fill_rounded_rect(PAD, top, w - 2.0 * PAD, rh, r, tone::field(0.9));
                     }
                     let ink = if *on { p.text } else { p.muted };
                     if *ticked {

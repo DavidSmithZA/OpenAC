@@ -1,12 +1,12 @@
 //! OpenAC's modern interface, mounted over the retail one while the
 //! launcher asks for it.
 //!
-//! The modern interface is built a screen at a time. Each modern piece
-//! names the retail windows it stands in for ([`ModernLayer::replaced`]);
-//! those stay hidden, and the window layout persistence leaves them alone
-//! so the player's retail layout is kept for when Retail is picked again.
-//! Every retail window nothing stands in for yet shows as before, so the
-//! game is fully playable whatever has been built.
+//! Each modern piece names the retail windows it stands in for
+//! ([`ModernLayer::replace`]); once the layer is mounted those are taken
+//! down ([`ModernLayer::take_down`]): unregistered, their controllers
+//! dropped and their elements freed, so nothing retail is mounted in game.
+//! The window layout persistence only follows registered windows, so the
+//! player's saved retail layout is kept for when Retail is picked again.
 //!
 //! Modern windows have names of their own, so their layout is saved apart
 //! from the retail windows'; where each one first appears is in
@@ -28,6 +28,7 @@ pub mod kit;
 pub mod magic;
 pub mod options;
 pub mod places;
+pub mod pregame;
 pub mod social;
 pub mod world;
 
@@ -120,6 +121,8 @@ pub struct ModernLayer {
     pub chess: Option<chess::window::ChessUi>,
     /// The Barber window.
     pub barber: Option<barber::window::BarberUi>,
+    /// The pre-game screens (connecting, selection, credits, creation).
+    pub pregame: Option<pregame::PreGameUi>,
     /// The player as the radar last read them (the map's arrow).
     pub last_player: Option<ac_ui::panels::radar::RadarPlayer>,
     /// The player's vitals as last fed (the map's bar).
@@ -128,6 +131,12 @@ pub struct ModernLayer {
     pub questions: Option<dialogs::run::QuestionsUi>,
     /// Packs used anywhere since the inventory last looked.
     pub opened_packs: Vec<u32>,
+    /// The selected stack's split quantity (the target line shows it;
+    /// drags move that many).
+    pub split: ac_ui::panels::items::SelectionSplit,
+    /// The games as the Chess window follows them (a game ended by
+    /// resigning or with no result puts it away).
+    pub chess_follow: ac_ui::panels::mini_game::MiniGameFollow,
 }
 
 /// The effects counts and status chips, and the pane their counts open.
@@ -185,10 +194,8 @@ impl ModernLayer {
         }
     }
 
-    /// Tells the window layout persistence to leave the replaced windows
-    /// alone, and where the modern windows first go.
-    pub fn leave_alone(&self, host: &mut UiHost, layouts: &mut LayoutPersistence) {
-        layouts.set_left_alone(host, self.replaced.iter().copied());
+    /// Where the modern windows first go.
+    pub fn place_windows(layouts: &mut LayoutPersistence) {
         layouts.set_default_places(Box::new(|name, (w, h)| {
             places::default_place(name).map(|place| {
                 let rect = place.rect((w as f32, h as f32));
@@ -197,15 +204,14 @@ impl ModernLayer {
         }));
     }
 
-    /// Hides every replaced retail window something showed (a key, a
-    /// toolbar button, the game itself); called before each frame is drawn,
-    /// so none is ever seen.
-    pub fn hide_replaced(&self, host: &mut UiHost) {
-        for name in &self.replaced {
-            if host.root.is_window_visible(name) {
-                host.root.hide_window(name);
-            }
-        }
+    /// Takes every replaced retail window down for good; returns the names
+    /// taken down. Called once, after the modern pieces are mounted.
+    pub fn take_down(&self, host: &mut UiHost) -> Vec<&'static str> {
+        self.replaced
+            .iter()
+            .copied()
+            .filter(|name| host.remove_window(name))
+            .collect()
     }
 }
 
@@ -259,8 +265,16 @@ const ITEM_MAX_MANA: u32 = 108;
 /// have enough Mana to cast this spell.").
 pub const NOT_ENOUGH_MANA: u32 = 0x401;
 
-/// The key that, held, lets modern pieces be moved whatever the lock says.
-pub const QUICK_MOVE_KEY: Modifiers = Modifiers::CTRL;
+/// The key that, held, lets modern pieces be moved whatever the lock says
+/// (Options › Controls picks it).
+#[must_use]
+pub fn quick_move_modifier(key: ac_host::settings::QuickMoveKey) -> Modifiers {
+    match key {
+        ac_host::settings::QuickMoveKey::Ctrl => Modifiers::CTRL,
+        ac_host::settings::QuickMoveKey::Alt => Modifiers::ALT,
+        ac_host::settings::QuickMoveKey::Cmd => Modifiers::WIN,
+    }
+}
 
 /// The hover labels' words, pixels to the em.
 const TIP_SIZE: f32 = 12.0;
@@ -269,6 +283,17 @@ const TIP_SIZE: f32 = 12.0;
 const QUICK_MOVE_NAME_SIZE: f32 = 11.0;
 
 impl WindowUi {
+    /// Takes down the retail windows the modern pieces stand in for: they
+    /// are no longer mounted, fed or shown.
+    pub(super) fn take_down_replaced(&mut self) {
+        let Some(modern) = self.modern.as_ref() else {
+            return;
+        };
+        let gone = modern.take_down(&mut self.host);
+        self.mounted.retain(|name| !gone.contains(name));
+        self.stale.retain(|name| !gone.contains(name));
+    }
+
     /// The HUD pieces built so far, each standing in for its retail
     /// windows.
     pub(super) fn mount_hud(&mut self) {
@@ -279,7 +304,7 @@ impl WindowUi {
             &mut self.host.root,
             hud::VITALS,
             (hud::vitals::WIDTH, hud::vitals::BAR_HEIGHT),
-            hud::vitals::VitalsHud::new(Horizon::BRONZE, label, number),
+            hud::vitals::VitalsHud::new(Horizon::current(), label, number),
         );
         let fonts = (
             self.modern_font(Weight::SemiBold, TARGET_NAME_SIZE),
@@ -290,7 +315,7 @@ impl WindowUi {
             &mut self.host.root,
             hud::TARGET,
             (hud::target::WIDTH, hud::target::HEIGHT),
-            hud::target::TargetLine::new(Horizon::BRONZE, fonts.0, fonts.1, fonts.2.clone()),
+            hud::target::TargetLine::new(Horizon::current(), fonts.0, fonts.1, fonts.2.clone()),
         );
         if let Ok(id) = &target {
             hud::target::TargetLine::mount_split_field(&mut self.host.root, *id, fonts.2.clone());
@@ -310,7 +335,7 @@ impl WindowUi {
             &mut self.host.root,
             hud::RADAR,
             (hud::radar::WIDTH, hud::radar::HEIGHT),
-            hud::radar::RadarRing::new(Horizon::BRONZE, radar_fonts),
+            hud::radar::RadarRing::new(radar_fonts),
         );
         let recall_fonts = hud::recall::RecallFonts {
             name: self.modern_font(Weight::SemiBold, RECALL_NAME_SIZE),
@@ -331,7 +356,7 @@ impl WindowUi {
             let list = ui.add(
                 *radar,
                 element,
-                hud::recall::RecallList::new(Horizon::BRONZE, recall_fonts),
+                hud::recall::RecallList::new(Horizon::current(), recall_fonts),
             );
             if let Some(r) = ui.widget_mut::<hud::radar::RadarRing>(*radar) {
                 r.recall_list = Some(list);
@@ -339,7 +364,7 @@ impl WindowUi {
             recall_dialog = Some(hud::recall_dialog::RecallDialog::mount(
                 ui,
                 *radar,
-                Horizon::BRONZE,
+                Horizon::current(),
                 dialog_fonts,
             ));
         }
@@ -357,7 +382,7 @@ impl WindowUi {
             Some(ui.add(
                 root,
                 element,
-                hud::connection::ConnectionCard::new(Horizon::BRONZE, card_fonts),
+                hud::connection::ConnectionCard::new(Horizon::current(), card_fonts),
             ))
         };
         let combat = self.mount_modern_combat();
@@ -433,7 +458,7 @@ impl WindowUi {
             ui,
             hud::PANELS,
             (hud::panels::WIDTH, hud::panels::HEIGHT),
-            PanelStrip::new(Horizon::BRONZE),
+            PanelStrip::new(),
         )?;
         let top = (hud::panels::HEIGHT - BUTTON) * 0.5;
         let mut index = 0;
@@ -444,7 +469,7 @@ impl WindowUi {
             ui.add(
                 strip,
                 element,
-                PanelButton::new(Horizon::BRONZE, font.clone(), panel),
+                PanelButton::new(Horizon::current(), font.clone(), panel),
             )
         });
         Ok((strip, buttons))
@@ -532,18 +557,6 @@ impl WindowUi {
             let held = ac_ui::panels::inventory::count_loose_contents(&view, player);
             drop_note(held, capacity)
         });
-        let world_open = self
-            .host
-            .root
-            .is_window_visible(super::map_window::MAP_HOUSE_WINDOW);
-        let on_house = world_open
-            && self
-                .host
-                .with_controller::<ac_ui::panels::map_house::MapHousePanelController, _>(
-                    super::map_window::MAP_HOUSE_WINDOW,
-                    |c, ui| c.is_showing_house(ui),
-                )
-                .unwrap_or(false);
         let due = self.facts.house.as_ref().is_some_and(|h| {
             h.owns_house
                 && h.lines
@@ -570,8 +583,8 @@ impl WindowUi {
                 Panel::Inventory => inventory,
                 Panel::Spellbook => spellbook,
                 Panel::Journal => journal,
-                Panel::Map => world_open && !on_house || map_open,
-                Panel::House => on_house || house_open,
+                Panel::Map => map_open,
+                Panel::House => house_open,
                 Panel::Social => social,
                 Panel::Options => options,
             };
@@ -600,7 +613,7 @@ impl WindowUi {
             &mut self.host.root,
             hud::COMBAT,
             (hud::combat::WIDTH, hud::combat::HEIGHT),
-            hud::combat::CombatStrip::new(Horizon::BRONZE, fonts),
+            hud::combat::CombatStrip::new(fonts),
         )
     }
 
@@ -938,7 +951,7 @@ impl WindowUi {
             ui,
             hud::EFFECTS,
             (CHIP_HEIGHT, CHIP_HEIGHT),
-            ChipRow::new(Horizon::BRONZE, chip_fonts.small.clone()),
+            ChipRow::new(chip_fonts.small.clone()),
         )?;
         let chips = ChipKind::ALL.map(|kind| {
             let element = Element::at(0.0, 0.0, 0.0, CHIP_HEIGHT)
@@ -947,14 +960,14 @@ impl WindowUi {
             ui.add(
                 row,
                 element,
-                Chip::new(Horizon::BRONZE, chip_fonts.clone(), kind),
+                Chip::new(Horizon::current(), chip_fonts.clone(), kind),
             )
         });
-        let hover = HoverPane::mount(ui, Horizon::BRONZE, PANE_WIDTH, 100.0);
+        let hover = HoverPane::mount(ui, Horizon::current(), PANE_WIDTH, 100.0);
         let list = ui.add(
             hover.element(),
             Element::at(0.0, 0.0, PANE_WIDTH, 100.0).with_anchors(AnchorEdges::NONE),
-            EffectsPane::new(Horizon::BRONZE, pane_fonts),
+            EffectsPane::new(pane_fonts),
         );
         Ok(EffectsHud {
             row,
@@ -1223,11 +1236,13 @@ impl WindowUi {
         self.feed_modern_split();
     }
 
-    /// The target line's split amount and the one drags use (the retail
-    /// toolbar's, kept while it is hidden) follow each other.
+    /// The target line's split amount follows the split quantity drags
+    /// use, and sets it when the player moves it.
     fn feed_modern_split(&mut self) {
-        use ac_ui::panels::toolbar::ToolbarWindowController;
-        let Some(id) = self.modern.as_ref().and_then(|m| m.target) else {
+        let Some(modern) = self.modern.as_mut() else {
+            return;
+        };
+        let Some(id) = modern.target else {
             return;
         };
         let chosen = self
@@ -1235,25 +1250,31 @@ impl WindowUi {
             .root
             .widget_mut::<hud::target::TargetLine>(id)
             .and_then(|line| line.split_chosen.take());
+        if let Some(value) = chosen {
+            modern.split.set_value(value);
+        }
         let selected = self.player_view.and_then(|v| v.selected);
-        let quantity = self.host.with_controller::<ToolbarWindowController, _>(
-            super::window::TOOLBAR_WINDOW,
-            |c, ui| {
-                if let Some(value) = chosen {
-                    c.split.set_value(ui, value);
-                }
-                c.split.quantity().clone()
-            },
-        );
-        let split = quantity
-            .filter(|q| selected.is_some() && q.maximum() > 1)
-            .map(|q| hud::target::SplitView {
-                value: q.value(),
-                stack: q.maximum(),
-            });
+        let q = modern.split.quantity();
+        let split = (selected.is_some() && q.maximum() > 1).then(|| hud::target::SplitView {
+            value: q.value(),
+            stack: q.maximum(),
+        });
         self.host
             .root
             .with::<hud::target::TargetLine, _>(id, |line, ui| line.show_split(ui, split));
+    }
+
+    /// The selected stack's split quantity drags use: the modern target
+    /// line's on Modern, else the retail toolbar's.
+    pub(super) fn split_quantity(&mut self) -> Option<ac_core::items::StackSplitQuantity> {
+        if let Some(modern) = self.modern.as_ref() {
+            return Some(modern.split.quantity().clone());
+        }
+        self.host
+            .with_controller::<ac_ui::panels::toolbar::ToolbarWindowController, _>(
+                super::window::TOOLBAR_WINDOW,
+                |c, _| c.split.quantity().clone(),
+            )
     }
 
     /// The split key: the target line's amount takes the keyboard. False
@@ -1290,6 +1311,13 @@ impl WindowUi {
         };
         let (bars, glow) = (modern.vitals, modern.edge_glow);
         let s = self.settings().display.modern_hud;
+        // The quick-move key follows Options at once.
+        if modern.outlines.is_some() {
+            let key = quick_move_modifier(s.quick_move_key);
+            if self.host.root.quick_move_key() != Some(key) {
+                self.host.root.set_quick_move_key(Some(key));
+            }
+        }
         let threshold = if s.vital_numbers_percent > 0 {
             s.vital_numbers_percent as f32 / 100.0
         } else {
@@ -1389,13 +1417,14 @@ impl WindowUi {
     /// Quick move on: its key, and the layer that outlines and names every
     /// modern piece while the key is held; and the pieces' hover labels.
     pub(super) fn mount_quick_move(&mut self) {
-        self.host.root.set_quick_move_key(Some(QUICK_MOVE_KEY));
+        let key = quick_move_modifier(self.settings().display.modern_hud.quick_move_key);
+        self.host.root.set_quick_move_key(Some(key));
         let font = self.modern_font(Weight::SemiBold, QUICK_MOVE_NAME_SIZE);
-        let outlines = QuickMoveOutlines::mount(&mut self.host.root, Horizon::BRONZE, font);
+        let outlines = QuickMoveOutlines::mount(&mut self.host.root, font);
         // The modern pieces' hover labels (the retail tooltip needs a dat
         // layout the pieces do not name).
         let tip_font = self.modern_font(Weight::Medium, TIP_SIZE);
-        ac_ui::modern::tip::TipLayer::mount(&mut self.host.root, Horizon::BRONZE, tip_font);
+        ac_ui::modern::tip::TipLayer::mount(&mut self.host.root, Horizon::current(), tip_font);
         if let Some(modern) = self.modern.as_mut() {
             modern.outlines = Some(outlines);
         }
@@ -1425,6 +1454,45 @@ impl WindowUi {
     }
 }
 
+/// The modern look for the saved plugin theme `saved`: Bronze under
+/// Classic, otherwise Bronze recoloured by the theme's seven colours.
+#[must_use]
+pub fn look_for_theme(saved: &str) -> Horizon {
+    let Some(t) = ac_plugin_ui::ThemeKind::from_saved(saved).palette() else {
+        return Horizon::BRONZE;
+    };
+    let c = |c: ac_plugin_ui::Color8| {
+        let c = c.to_rgba();
+        ac_ui::draw::Color::rgba(c.r, c.g, c.b, c.a)
+    };
+    Horizon::themed(&ac_ui::modern::theme::ThemeColours {
+        background: c(t.background),
+        field: c(t.field),
+        border: c(t.border),
+        text: c(t.text),
+        muted: c(t.muted),
+        accent: c(t.accent),
+        selected: c(t.selected),
+    })
+}
+
+impl WindowUi {
+    /// The modern look follows the saved theme (the plugin dock's): made
+    /// again when the setting changes, and set for this frame's drawing.
+    pub(in crate::ui) fn follow_modern_theme(&mut self) {
+        let saved = &self.settings().plugin_ui.theme;
+        let look = match &self.modern_theme {
+            Some((name, look)) if name == saved => *look,
+            _ => {
+                let look = look_for_theme(saved);
+                self.modern_theme = Some((saved.clone(), look));
+                look
+            }
+        };
+        Horizon::set_current(look);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use ac_ui::widgets::Panel;
@@ -1447,25 +1515,23 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_layer_hides_nothing() {
+    fn an_empty_layer_takes_nothing_down() {
         let mut host = host_with(&["radar", "chat"]);
-        ModernLayer::new().hide_replaced(&mut host);
+        assert!(ModernLayer::new().take_down(&mut host).is_empty());
         assert!(host.root.is_window_visible("radar"));
         assert!(host.root.is_window_visible("chat"));
     }
 
     #[test]
-    fn a_replaced_window_stays_hidden_whoever_shows_it() {
+    fn a_replaced_window_is_taken_down() {
         let mut host = host_with(&["radar", "chat"]);
         let mut layer = ModernLayer::new();
         layer.replace("radar");
         layer.replace("radar");
         assert_eq!(layer.replaced(), ["radar"]);
-        layer.hide_replaced(&mut host);
-        assert!(!host.root.is_window_visible("radar"));
-        host.root.show_window("radar");
-        layer.hide_replaced(&mut host);
-        assert!(!host.root.is_window_visible("radar"));
+        assert_eq!(layer.take_down(&mut host), ["radar"]);
+        assert!(host.root.window("radar").is_none());
+        assert!(!host.root.show_window("radar"));
         assert!(host.root.is_window_visible("chat"));
     }
 }

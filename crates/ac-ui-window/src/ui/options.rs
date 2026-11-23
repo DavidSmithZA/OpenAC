@@ -240,7 +240,7 @@ impl WindowUi {
             return;
         };
         let (options1, options2) = (view.options1, view.options2);
-        self.follow_modern_option_values();
+        self.follow_modern_option_values(false);
         self.host
             .with_controller::<OptionsWindowController, _>(OPTIONS_WINDOW, |c, ui| {
                 let mut live = c.live().clone();
@@ -393,6 +393,9 @@ impl WindowUi {
         });
         if section == Section::Chat {
             self.apply_chat_settings();
+        }
+        if section == Section::PluginUi {
+            self.follow_plugin_theme_setting();
         }
     }
 

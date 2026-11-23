@@ -33,7 +33,7 @@ use crate::icons::IconSource;
 use crate::import::ImportedLayout;
 use crate::panels::PanelOutput;
 use crate::panels::inventory::{PLAYER_PACK_BASE_ICON, SelectionEcho, capacity_fill};
-use crate::panels::items::{ItemsView, emit, offer_target};
+use crate::panels::items::{ItemsView, SelectionSplit, emit, offer_target};
 use crate::root::{ElementMessage, UiRoot};
 use crate::states;
 use crate::tree::ElementId;
@@ -812,8 +812,7 @@ impl PanelController for ToolbarController {
 pub struct StackSplitController {
     entry: Option<ElementId>,
     slider: Option<ElementId>,
-    quantity: StackSplitQuantity,
-    current: Option<u32>,
+    split: SelectionSplit,
     entry_focused: bool,
 }
 
@@ -846,8 +845,7 @@ impl StackSplitController {
         let c = Self {
             entry,
             slider,
-            quantity: StackSplitQuantity::new(),
-            current: None,
+            split: SelectionSplit::new(),
             entry_focused: false,
         };
         c.show(ui, false);
@@ -857,7 +855,7 @@ impl StackSplitController {
     /// The split quantity.
     #[must_use]
     pub fn quantity(&self) -> &StackSplitQuantity {
-        &self.quantity
+        self.split.quantity()
     }
 
     fn show(&self, ui: &mut UiRoot, visible: bool) {
@@ -870,13 +868,13 @@ impl StackSplitController {
         if let Some(e) = self.entry
             && let Some(f) = ui.widget_mut::<Field>(e)
         {
-            f.set_text(&self.quantity.value().to_string());
+            f.set_text(&self.split.quantity().value().to_string());
         }
         if move_slider
             && let Some(s) = self.slider
             && let Some(w) = ui.widget_mut::<Scrollbar>(s)
         {
-            w.set_scalar_position(self.quantity.ratio());
+            w.set_scalar_position(self.split.quantity().ratio());
         }
     }
 
@@ -884,29 +882,17 @@ impl StackSplitController {
     /// starting at the whole stack (or 1 for an object the vendor's split
     /// rule exempts); anything else hides them.
     pub fn update(&mut self, ui: &mut UiRoot, view: &ItemsView<'_>) {
-        let stack = view
-            .selected
-            .and_then(|s| view.get(s))
-            .map_or(1, |o| o.stack_size.max(1).unsigned_abs());
-        if view.selected == self.current && stack == self.quantity.maximum() {
+        let Some(shows) = self.split.follow(view) else {
             return;
-        }
-        self.current = view.selected;
-        if stack > 1 {
-            let seed = if view.vendor_split_exempt { 1 } else { stack };
-            self.quantity.reset(stack, Some(seed));
-            self.show(ui, true);
-        } else {
-            self.quantity.reset(1, None);
-            self.show(ui, false);
-        }
+        };
+        self.show(ui, shows);
         self.reflect(ui, true);
     }
 
     /// The quantity set to `value` (kept within the stack) from elsewhere,
     /// such as another interface's split control.
     pub fn set_value(&mut self, ui: &mut UiRoot, value: u32) {
-        if self.quantity.set_value(value) {
+        if self.split.set_value(value) {
             self.reflect(ui, true);
         }
     }
@@ -914,7 +900,7 @@ impl StackSplitController {
     /// The quantity back to the whole stack of `stack` units (a panel
     /// refused part of a stack).
     pub fn reset_to_whole(&mut self, ui: &mut UiRoot, stack: u32) {
-        self.quantity.reset(stack, None);
+        self.split.reset_to_whole(stack);
         self.reflect(ui, true);
     }
 
@@ -924,8 +910,8 @@ impl StackSplitController {
         let Some(e) = self.entry else {
             return false;
         };
-        if self.current != Some(object)
-            || self.quantity.maximum() <= 1
+        if self.split.current() != Some(object)
+            || self.split.quantity().maximum() <= 1
             || !ui.element(e).is_some_and(|e| e.visible)
         {
             return false;
@@ -942,7 +928,7 @@ impl StackSplitController {
             .entry
             .and_then(|e| ui.widget::<Field>(e))
             .map(Field::text);
-        self.quantity.set_from_text(text.as_deref());
+        self.split.set_from_text(text.as_deref());
         self.reflect(ui, true);
     }
 }
@@ -956,7 +942,7 @@ impl PanelController for StackSplitController {
     ) -> bool {
         if Some(element) == self.slider {
             if let ElementMessage::ScalarChanged(p) = message {
-                self.quantity.set_from_slider_ratio(*p);
+                self.split.set_from_slider_ratio(*p);
                 // The slider keeps where the player put it.
                 self.reflect(ui, false);
             }

@@ -5,6 +5,7 @@
 //! both sides, and Accept trade or Withdraw acceptance), the Add from packs
 //! list, and a card for the item clicked.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext, TextureRef};
@@ -22,12 +23,13 @@ use crate::ui::modern::kit::{self, ButtonLook, Rect, Scroll, bronze, gold, hot, 
 
 /// The window's size.
 pub const WIDTH: f32 = 900.0;
+/// Its width on a small screen: the same two columns, the hint lines go.
+pub const NARROW_WIDTH: f32 = 792.0;
 pub const HEIGHT: f32 = 560.0;
 const HEADER: f32 = 52.0;
 const FOOT: f32 = 72.0;
 const PAD: f32 = 20.0;
 const GAP: f32 = 24.0;
-const COL_W: f32 = (WIDTH - 2.0 * PAD - GAP) / 2.0;
 const HEAD: f32 = 48.0;
 const SIDE_FOOT: f32 = 36.0;
 const ROW: f32 = 46.0;
@@ -107,8 +109,9 @@ pub struct TradeCard {
 /// The Trade window's frame.
 #[derive(Debug)]
 pub struct TradeFrame {
-    theme: Horizon,
     fonts: TradeFonts,
+    /// Its width: [`WIDTH`], or [`NARROW_WIDTH`] on a small screen.
+    pub width: f32,
     /// What it shows.
     pub screen: TradeScreen,
     /// Add from packs shows, with these rows.
@@ -131,10 +134,10 @@ pub struct TradeFrame {
 impl TradeFrame {
     /// A frame in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: TradeFonts) -> Self {
+    pub fn new(fonts: TradeFonts) -> Self {
         Self {
-            theme,
             fonts,
+            width: WIDTH,
             screen: TradeScreen::default(),
             picking: false,
             pick: Vec::new(),
@@ -149,8 +152,16 @@ impl TradeFrame {
         }
     }
 
-    fn close_rect() -> Rect {
-        kit::close_rect(WIDTH, HEADER)
+    fn close_rect(&self) -> Rect {
+        kit::close_rect(self.width, HEADER)
+    }
+
+    fn col_w(&self) -> f32 {
+        (self.width - 2.0 * PAD - GAP) / 2.0
+    }
+
+    fn narrow(&self) -> bool {
+        self.width < WIDTH
     }
 
     fn columns(&self) -> [Rect; 2] {
@@ -168,8 +179,8 @@ impl TradeFrame {
                 0.0
             };
         [
-            (PAD, top, COL_W, bottom - top),
-            (PAD + COL_W + GAP, top, COL_W, bottom - top),
+            (PAD, top, self.col_w(), bottom - top),
+            (PAD + self.col_w() + GAP, top, self.col_w(), bottom - top),
         ]
     }
 
@@ -247,7 +258,7 @@ impl TradeFrame {
             150.0
         };
         (
-            WIDTH - PAD - w,
+            self.width - PAD - w,
             HEIGHT - FOOT + (FOOT - 40.0) * 0.5,
             w,
             40.0,
@@ -317,7 +328,7 @@ impl TradeFrame {
 
     #[allow(clippy::too_many_lines)]
     fn click(&mut self, x: f32, y: f32, right: bool) {
-        if inside(Self::close_rect(), x, y) {
+        if inside(self.close_rect(), x, y) {
             self.asks.push(TradeAsk::Close);
             return;
         }
@@ -394,7 +405,7 @@ impl TradeFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_side(&self, rc: &mut RenderContext<'_>, side: usize, icons: &[Option<TextureRef>]) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let col = self.columns()[side];
         let s: &TradeSide = if side == 0 {
@@ -442,7 +453,7 @@ impl TradeFrame {
         let (words, ink, fill) = if s.accepted {
             ("Accepted", kit::GOOD, hex(0x7F_D08A, 0.14))
         } else {
-            ("Not yet", kit::SOFT, hex(0xFF_FFFF, 0.06))
+            ("Not yet", tone::soft(1.0), hex(0xFF_FFFF, 0.06))
         };
         let mut right = col.0 + col.2 - 12.0;
         if let Some(t) = &f.tiny {
@@ -500,7 +511,7 @@ impl TradeFrame {
                     "Drag items here from your packs",
                     d.0 + d.2 * 0.5,
                     d.1 + 8.0,
-                    TextStyle::plain(kit::SOFT),
+                    TextStyle::plain(tone::soft(1.0)),
                 );
             }
             let a = self.add_button();
@@ -536,7 +547,7 @@ impl TradeFrame {
                 &w,
                 room.0 + room.2 * 0.5,
                 room.1 + room.3 * 0.4,
-                TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
         rc.pop_clip();
@@ -559,7 +570,7 @@ impl TradeFrame {
                 &s.count,
                 col.0 + 12.0,
                 ty,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
             let w = text::measure(st, &s.total, 0.0);
             let ty = fy + ((SIDE_FOOT - st.line_height) * 0.5).round();
@@ -605,7 +616,7 @@ impl TradeFrame {
         r: Rect,
         icon: Option<TextureRef>,
     ) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let on = self.card.as_ref().is_some_and(|c| c.id == row.id);
         let round = CornerRadii::all(4.0);
@@ -647,7 +658,14 @@ impl TradeFrame {
         }
         if let Some(sm) = &f.small {
             let sub = kit::fit(sm, &row.sub, right - x);
-            text::draw(rc, sm, &sub, x, r.1 + 26.0, TextStyle::plain(kit::SOFT));
+            text::draw(
+                rc,
+                sm,
+                &sub,
+                x,
+                r.1 + 26.0,
+                TextStyle::plain(tone::soft(1.0)),
+            );
         }
         if row.new
             && let Some(t) = &f.tiny
@@ -661,7 +679,7 @@ impl TradeFrame {
                 "NEW",
                 nx + 18.0,
                 ny + ((18.0 - t.line_height) * 0.5).round(),
-                TextStyle::plain(hex(0x1A_140D, 1.0)),
+                TextStyle::plain(tone::ink(1.0)),
             );
         }
         if let Some(st) = &f.strong {
@@ -683,13 +701,13 @@ impl TradeFrame {
                 row.value_sub,
                 r.0 + r.2 - 10.0 - w,
                 r.1 + 27.0,
-                TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
     }
 
     fn draw_pick(&self, rc: &mut RenderContext<'_>, icons: &[Option<TextureRef>]) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let b = self.pick_box();
         rc.soft_shadow(b.0, b.1, b.2, b.3, 6.0, 16.0, 40.0, hex(0, 0.6));
@@ -699,7 +717,7 @@ impl TradeFrame {
             b.2,
             b.3,
             CornerRadii::all(6.0),
-            hex(0x18_130E, 0.98),
+            tone::raised(0.98),
         );
         rc.stroke_rounded_rect(b.0, b.1, b.2, b.3, CornerRadii::all(6.0), bronze(0.8), 1.0);
         if let Some(st) = &f.title {
@@ -715,13 +733,13 @@ impl TradeFrame {
         let c = self.pick_close();
         kit::close(
             rc,
-            &self.theme,
+            &Horizon::current(),
             (c.0 - 3.0, c.1 - 3.0, 30.0, 30.0),
             hot(self.hover, c),
         );
         kit::search_box(
             rc,
-            &self.theme,
+            &Horizon::current(),
             Self::pick_search_rect(),
             "Search your packs",
             self.pick_empty,
@@ -739,7 +757,7 @@ impl TradeFrame {
                 "Nothing to add.",
                 room.0 + 4.0,
                 room.1 + 10.0,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
         for ((_, row, add), (r, icon)) in self
@@ -796,7 +814,7 @@ impl TradeFrame {
                 let ink = if r.refused {
                     hex(0xFF_B3B6, 1.0)
                 } else {
-                    kit::SOFT
+                    tone::soft(1.0)
                 };
                 text::draw(rc, sm, &sub, x, row.1 + 23.0, TextStyle::plain(ink));
             }
@@ -804,7 +822,7 @@ impl TradeFrame {
                 let words = if r.stack > 1 { "Add\u{2026}" } else { "Add" };
                 kit::button(
                     rc,
-                    &self.theme,
+                    &Horizon::current(),
                     add,
                     words,
                     f.strong.as_ref(),
@@ -830,7 +848,7 @@ impl TradeFrame {
         let (Some(c), Some(b)) = (&self.card, self.card_box()) else {
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         rc.soft_shadow(b.0, b.1, b.2, b.3, 6.0, 16.0, 40.0, hex(0, 0.6));
         rc.fill_rounded_rect(
@@ -839,7 +857,7 @@ impl TradeFrame {
             b.2,
             b.3,
             CornerRadii::all(6.0),
-            hex(0x18_130E, 0.98),
+            tone::raised(0.98),
         );
         rc.stroke_rounded_rect(b.0, b.1, b.2, b.3, CornerRadii::all(6.0), bronze(0.8), 1.0);
         let tile = (b.0 + 14.0, b.1 + 14.0, 40.0, 40.0);
@@ -869,10 +887,17 @@ impl TradeFrame {
         }
         if let Some(sm) = &f.small {
             let s = kit::fit(sm, &c.sub, b.0 + b.2 - 14.0 - x);
-            text::draw(rc, sm, &s, x, tile.1 + 22.0, TextStyle::plain(kit::SOFT));
+            text::draw(
+                rc,
+                sm,
+                &s,
+                x,
+                tile.1 + 22.0,
+                TextStyle::plain(tone::soft(1.0)),
+            );
             let mut y = tile.1 + tile.3 + 12.0;
             for (k, v) in &c.facts {
-                text::draw(rc, sm, k, b.0 + 14.0, y, TextStyle::plain(kit::SOFT));
+                text::draw(rc, sm, k, b.0 + 14.0, y, TextStyle::plain(tone::soft(1.0)));
                 let w = text::measure(sm, v, 0.0);
                 text::draw(rc, sm, v, b.0 + b.2 - 14.0 - w, y, TextStyle::plain(p.text));
                 y += sm.line_height + 6.0;
@@ -881,7 +906,7 @@ impl TradeFrame {
         if let Some((details, close)) = self.card_buttons() {
             kit::button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 details,
                 "Full details",
                 f.strong.as_ref(),
@@ -891,7 +916,7 @@ impl TradeFrame {
             );
             kit::button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 close,
                 "Close",
                 f.strong.as_ref(),
@@ -905,10 +930,10 @@ impl TradeFrame {
     #[allow(clippy::too_many_lines)]
     fn draw_frame(&self, rc: &mut RenderContext<'_>) {
         let f = &self.fonts;
-        kit::window_back(rc, &self.theme, WIDTH, HEIGHT, HEADER, true);
+        kit::window_back(rc, &Horizon::current(), self.width, HEIGHT, HEADER, true);
         let mut x = kit::title(
             rc,
-            &self.theme,
+            &Horizon::current(),
             f.title.as_ref(),
             SWAP,
             &format!("Trade with {}", self.screen.partner),
@@ -936,28 +961,28 @@ impl TradeFrame {
                 TextStyle::plain(ink),
             );
         }
-        if let Some(sm) = &f.small {
+        if let Some(sm) = f.small.as_ref().filter(|_| !self.narrow()) {
             let hint = "Click any item to look at it";
             let w = text::measure(sm, hint, 0.0);
-            let c = Self::close_rect();
+            let c = self.close_rect();
             text::draw(
                 rc,
                 sm,
                 hint,
                 c.0 - 12.0 - w,
                 ((HEADER - sm.line_height) * 0.5).round(),
-                TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
         kit::close(
             rc,
-            &self.theme,
-            Self::close_rect(),
-            hot(self.hover, Self::close_rect()),
+            &Horizon::current(),
+            self.close_rect(),
+            hot(self.hover, self.close_rect()),
         );
         // The banner.
         if let Some(b) = &self.screen.banner {
-            let r = (PAD, 64.0, WIDTH - 2.0 * PAD, 44.0);
+            let r = (PAD, 64.0, self.width - 2.0 * PAD, 44.0);
             let (fill, edge) = if b.bad {
                 (hex(0xFF_6B70, 0.10), hex(0xFF_8A8E, 0.6))
             } else {
@@ -984,17 +1009,17 @@ impl TradeFrame {
                     &t,
                     r.0 + 14.0,
                     r.1 + 24.0,
-                    TextStyle::plain(kit::WARM),
+                    TextStyle::plain(tone::warm(1.0)),
                 );
             }
         }
         // The foot.
         let fy = HEIGHT - FOOT;
-        rc.fill(0.0, fy, WIDTH, 1.0, bronze(0.35));
+        rc.fill(0.0, fy, self.width, 1.0, bronze(0.35));
         rc.fill_rounded_rect(
             1.0,
             fy + 1.0,
-            WIDTH - 2.0,
+            self.width - 2.0,
             FOOT - 2.0,
             CornerRadii::new(0.0, 0.0, 5.0, 5.0),
             hex(0, 0.2),
@@ -1002,7 +1027,7 @@ impl TradeFrame {
         let clear = Self::clear_rect();
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             clear,
             "Clear both sides",
             f.strong.as_ref(),
@@ -1024,7 +1049,7 @@ impl TradeFrame {
                 clear.0 + clear.2 + 12.0,
                 top,
                 sm.line_height + 3.0,
-                hex(0xA8_9A82, 1.0),
+                tone::muted(1.0),
             );
         }
         let accept = self.accept_rect();
@@ -1036,7 +1061,7 @@ impl TradeFrame {
         };
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             accept,
             words,
             f.strong.as_ref(),
@@ -1044,11 +1069,11 @@ impl TradeFrame {
             hot(self.hover, accept),
             true,
         );
-        if let Some(sm) = &f.body {
+        if let Some(sm) = f.body.as_ref().filter(|_| !self.narrow()) {
             let (hint, ink) = if mine && !self.screen.theirs.accepted {
                 (
                     format!("Waiting for {} to accept\u{2026}", self.screen.partner),
-                    kit::SOFT,
+                    tone::soft(1.0),
                 )
             } else if mine {
                 ("Both accepted.".to_owned(), kit::GOOD)
@@ -1058,7 +1083,7 @@ impl TradeFrame {
                     if self.screen.hint_good {
                         kit::GOOD
                     } else {
-                        kit::SOFT
+                        tone::soft(1.0)
                     },
                 )
             };
@@ -1096,8 +1121,10 @@ fn dashed(rc: &mut RenderContext<'_>, r: Rect, color: Color) {
 }
 
 /// Whether `p` comes from the player's packs.
+/// Only what is carried in the packs comes in (as retail: worn gear and
+/// things on the ground do not).
 fn from_packs(p: &ItemDragPayload) -> bool {
-    !p.source_kind.is_alias() && p.source_kind != ItemDragSource::Ground && p.obj_id != 0
+    p.source_kind == ItemDragSource::Inventory && p.obj_id != 0
 }
 
 impl Widget for TradeFrame {

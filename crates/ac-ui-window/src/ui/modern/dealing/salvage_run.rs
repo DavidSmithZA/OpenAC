@@ -9,7 +9,6 @@ use ac_runtime::session::SessionCommand;
 use ac_ui::bundled_font::Weight;
 use ac_ui::event::ItemDragPayload;
 use ac_ui::icons::IconSource;
-use ac_ui::modern::Horizon;
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::items::{ItemsView, emit};
 use ac_ui::panels::salvage_list::SalvageList;
@@ -32,8 +31,9 @@ pub struct SalvageUi {
     pub staging: SalvageList,
     /// Add from packs' material (0: all).
     chip: u32,
-    /// How many of each material the last salvage sent, until its answer.
-    sent: Option<Vec<(u32, usize)>>,
+    /// What each salvage sent and not yet answered held, oldest first:
+    /// each item and its material.
+    sent: std::collections::VecDeque<Vec<(u32, u32)>>,
     /// What the last salvage produced (shown in place of the staging).
     done: Option<SalvageDone>,
 }
@@ -41,7 +41,6 @@ pub struct SalvageUi {
 impl WindowUi {
     /// The Salvage window, hidden, in place of retail's salvage window.
     pub(in crate::ui) fn mount_modern_salvage(&mut self) {
-        let theme = Horizon::BRONZE;
         let fonts = SalvageFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             strong: self.modern_font(Weight::SemiBold, 12.5),
@@ -53,7 +52,7 @@ impl WindowUi {
             &mut self.host.root,
             SALVAGE,
             (super::salvage_window::WIDTH, super::salvage_window::HEIGHT),
-            SalvageFrame::new(theme, fonts),
+            SalvageFrame::new(fonts),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -73,7 +72,7 @@ impl WindowUi {
             frame,
             staging: SalvageList::default(),
             chip: 0,
-            sent: None,
+            sent: std::collections::VecDeque::new(),
             done: None,
         });
         modern.replace(crate::ui::salvage_window::SALVAGE_WINDOW);
@@ -122,7 +121,8 @@ impl WindowUi {
                 s.staging = staging;
                 if ok {
                     s.done = None;
-                    s.sent = None;
+                    s.sent.clear();
+                    s.chip = 0;
                 }
             }
             if ok {
@@ -137,8 +137,19 @@ impl WindowUi {
         }
         // A salvage's answer.
         for outcome in outcomes {
-            let sent = self.salvage_mut().and_then(|s| s.sent.take());
-            if let Some(from) = sent {
+            let sent = self.salvage_mut().and_then(|s| s.sent.pop_front());
+            if let Some(items) = sent {
+                // What the game refused is not counted as salvaged.
+                let mut from: Vec<(u32, usize)> = Vec::new();
+                for (id, m) in items {
+                    if outcome.unsuitable.contains(&id) {
+                        continue;
+                    }
+                    match from.iter_mut().find(|(k, _)| *k == m) {
+                        Some((_, n)) => *n += 1,
+                        None => from.push((m, 1)),
+                    }
+                }
                 let names = crate::ui::facts::composed_names(&self.status.names);
                 let refused: Vec<String> = outcome
                     .unsuitable
@@ -160,6 +171,11 @@ impl WindowUi {
             return;
         };
         if staging.tool() == 0 {
+            // No tool in use: nothing asked of the closed window is kept
+            // for the next salvage.
+            if let Some(f) = self.host.root.widget_mut::<SalvageFrame>(frame) {
+                f.asks.clear();
+            }
             self.salvage_finish(staging, frame);
             return;
         }
@@ -205,24 +221,24 @@ impl WindowUi {
                 ),
                 SalvageAsk::Clear => staging.clear(),
                 SalvageAsk::Salvage => {
-                    let mut from: Vec<(u32, usize)> = Vec::new();
-                    for id in staging.items() {
-                        let m = self
-                            .facts
-                            .objects
-                            .get(*id)
-                            .and_then(|o| o.material_type)
-                            .unwrap_or(0);
-                        match from.iter_mut().find(|(k, _)| *k == m) {
-                            Some((_, n)) => *n += 1,
-                            None => from.push((m, 1)),
-                        }
-                    }
+                    let from: Vec<(u32, u32)> = staging
+                        .items()
+                        .iter()
+                        .map(|&id| {
+                            let m = self
+                                .facts
+                                .objects
+                                .get(id)
+                                .and_then(|o| o.material_type)
+                                .unwrap_or(0);
+                            (id, m)
+                        })
+                        .collect();
                     match self.with_salvage_items(|view| staging.salvage(view)) {
                         Ok(Some(command)) => {
                             emit(&mut self.host.root, PanelOutput::Session(command));
                             if let Some(s) = self.salvage_mut() {
-                                s.sent = Some(from);
+                                s.sent.push_back(from);
                             }
                         }
                         Ok(None) => {}
@@ -379,6 +395,15 @@ impl WindowUi {
         } else {
             (Vec::new(), Vec::new())
         };
+        // A chip whose material is all gone (salvaged) gives way to All.
+        let chip = if picking && !chips.iter().any(|c| c.material == chip) {
+            0
+        } else {
+            chip
+        };
+        if let Some(s) = self.salvage_mut() {
+            s.chip = chip;
+        }
         if let Some(f) = self.host.root.widget_mut::<SalvageFrame>(frame) {
             f.screen = screen;
             f.chips = chips;

@@ -886,6 +886,46 @@ pub const EFFECT_WARNING_CHOICES: &[ExplicitChoice] = &[
     choice("15", "15 minutes"),
 ];
 
+/// The key held for the modern interface's quick move, as each system
+/// names it.
+#[cfg(target_os = "macos")]
+pub const QUICK_MOVE_KEY_CHOICES: &[ExplicitChoice] = &[
+    choice("ctrl", "Control"),
+    choice("alt", "Option"),
+    choice("cmd", "Command"),
+];
+
+/// The key held for the modern interface's quick move, as each system
+/// names it.
+#[cfg(not(target_os = "macos"))]
+pub const QUICK_MOVE_KEY_CHOICES: &[ExplicitChoice] = &[
+    choice("ctrl", "Ctrl"),
+    choice("alt", "Alt"),
+    choice("cmd", "Windows key"),
+];
+
+/// The themes, by their saved names, as the Appearance picker calls them.
+pub const THEME_CHOICES: &[ExplicitChoice] = &[
+    choice("Classic", "Classic"),
+    choice("Moss", "Charcoal + moss"),
+    choice("Brass", "Warm graphite + brass"),
+    choice("LavenderDusk", "Lavender Dusk"),
+    choice("Ember", "Ember"),
+    choice("Bloodmoon", "Bloodmoon"),
+    choice("Glacier", "Glacier"),
+    choice("Parchment", "Parchment"),
+];
+
+/// The modern map's picture: the game's, or a detailed map tier (drawn
+/// once downloaded, in the modern Options).
+pub const MAP_DETAIL_CHOICES: &[ExplicitChoice] = &[
+    choice("game", "The game's map"),
+    choice("standard", "Standard"),
+    choice("hd", "HD"),
+    choice("ultra", "Ultra"),
+    choice("extreme", "Extreme"),
+];
+
 /// OpenAC's modern interface: how its vitals and effects behave (Retail
 /// ignores these rows).
 fn modern_interface_rows() -> Vec<ConfigRow> {
@@ -898,6 +938,12 @@ fn modern_interface_rows() -> Vec<ConfigRow> {
     };
     vec![
         ConfigRow::ExplicitHeader(MODERN_INTERFACE_HEADER),
+        ConfigRow::ExplicitMenu {
+            label: "Theme",
+            choices: THEME_CHOICES,
+            default: "Classic",
+            target: OptionKey::Theme,
+        },
         explicit_toggle(
             "Animate the vital bars",
             def.animate_vitals,
@@ -927,6 +973,24 @@ fn modern_interface_rows() -> Vec<ConfigRow> {
             choices: EFFECT_WARNING_CHOICES,
             default: menu_default(EFFECT_WARNING_CHOICES, def.effect_warning_minutes),
             target: display(DisplayField::ModernEffectWarning),
+        },
+        ConfigRow::ExplicitMenu {
+            label: "Quick move key",
+            choices: QUICK_MOVE_KEY_CHOICES,
+            default: def.quick_move_key.name(),
+            target: display(DisplayField::ModernQuickMoveKey),
+        },
+        explicit_toggle(
+            "Blur the world behind windows",
+            def.glass_blur,
+            display(DisplayField::ModernGlassBlur),
+            "Windows and pop-ups show what is behind them softly blurred, like frosted glass. Off, they are a plain see-through fill, a little lighter on the graphics card. Modern interface only.",
+        ),
+        ConfigRow::ExplicitMenu {
+            label: "Map detail",
+            choices: MAP_DETAIL_CHOICES,
+            default: def.map_detail.name(),
+            target: display(DisplayField::ModernMapDetail),
         },
         ConfigRow::Separator,
     ]
@@ -1297,9 +1361,9 @@ mod tests {
             .expect("the modern interface section");
         assert_eq!(option_rows(&all[enhancements..modern]), 21);
         assert_eq!(modern - enhancements, 23);
-        // A header, five rows, a separator.
-        assert_eq!(option_rows(&all[modern..]), 5);
-        assert_eq!(all.len() - modern, 7);
+        // A header, nine rows (the theme first), a separator.
+        assert_eq!(option_rows(&all[modern..]), 9);
+        assert_eq!(all.len() - modern, 11);
     }
 
     #[test]

@@ -117,9 +117,16 @@ impl InterfaceState {
             external_container,
             external_container_in_range: external_container == 0
                 || state.within_use_range(external_container),
+            targeted_use: targeted_use(state),
             account: state.gameplay.account().to_owned(),
         }
     }
+}
+
+/// The tool and target of the last use with a target, while it is awaited.
+fn targeted_use(state: &SessionState) -> Option<(u32, u32)> {
+    let (source, target, awaited) = state.inventory.interaction().last_use();
+    (awaited && source != 0 && target != 0 && source != target).then_some((source, target))
 }
 
 /// OpenAC `RuntimeItemInteraction.BusyCount` + `AppraisalCount`, the

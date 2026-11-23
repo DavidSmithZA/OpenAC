@@ -5,6 +5,7 @@
 //! game to take the question back), and chat notes each one as it comes.
 //! Retail asks these in the middle of the screen and stops play.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext};
@@ -237,12 +238,12 @@ impl Widget for InviteCards {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let rects = self.rects();
         for (i, (invite, (card, no, yes))) in self.invites.iter().zip(&rects).enumerate() {
             let round = CornerRadii::all(self.theme.metrics.window_radius);
             rc.soft_shadow(card.0, card.1, card.2, card.3, 6.0, 10.0, 30.0, hex(0, 0.5));
-            rc.fill_rounded_rect(card.0, card.1, card.2, card.3, round, hex(0x18_130E, 0.94));
+            rc.fill_rounded_rect(card.0, card.1, card.2, card.3, round, tone::raised(0.94));
             rc.stroke_rounded_rect(card.0, card.1, card.2, card.3, round, bronze(0.8), 1.0);
             let iy = card.1 + (card.3 - 30.0) * 0.5;
             rc.fill_ellipse(
@@ -273,7 +274,7 @@ impl Widget for InviteCards {
             }
             if let Some(f) = &self.fonts.body {
                 let lines = kit::wrap(f, &invite.text, room);
-                kit::lines(rc, f, &lines, tx, ty, f.line_height + 3.0, kit::WARM);
+                kit::lines(rc, f, &lines, tx, ty, f.line_height + 3.0, tone::warm(1.0));
             }
             let radius = CornerRadii::all(4.0);
             let no_lit = self.hovered == Some(Hit::No(i));
@@ -303,7 +304,7 @@ impl Widget for InviteCards {
             if let Some(f) = &self.fonts.strong {
                 for (r, words, ink) in [
                     (no, &invite.look.no, p.text),
-                    (yes, &invite.look.yes, hex(0x1A_140D, 1.0)),
+                    (yes, &invite.look.yes, tone::ink(1.0)),
                 ] {
                     text::draw_centred(
                         rc,
@@ -324,7 +325,7 @@ impl Widget for InviteCards {
                 HINT,
                 WIDTH * 0.5,
                 y,
-                TextStyle::plain(kit::WARM).shadowed(hex(0, 0.9)),
+                TextStyle::plain(tone::warm(1.0)).shadowed(hex(0, 0.9)),
             );
         }
     }

@@ -103,6 +103,9 @@ pub struct GraphicsOptions {
     /// Where the screenshot key saves (`screenshots` beside the settings
     /// file; `None`: the key does nothing).
     pub screenshots_directory: Option<PathBuf>,
+    /// Where the detailed world map's tiers are kept (`None`: no detailed
+    /// map, nothing downloaded).
+    pub world_map_directory: Option<PathBuf>,
     /// Decode block-compressed textures to RGBA even when the GPU samples
     /// them (`OPENAC_NO_BLOCK_COMPRESSION`), to compare.
     pub no_block_compression: bool,
@@ -539,6 +542,15 @@ impl AttachedWindow {
                 Ok(mut ui) => {
                     ui.set_clipboard(Box::new(crate::ui::clipboard::SystemClipboard::new()));
                     ui.set_os_key_names(crate::platform::key_name_provider);
+                    if let Some(dir) = &options.world_map_directory {
+                        match ac_world_map::service::MapService::start(
+                            dir.clone(),
+                            ac_world_map::DEFAULT_SOURCE,
+                        ) {
+                            Ok(maps) => ui.set_world_maps(Box::new(maps)),
+                            Err(e) => notices.push(format!("ui: no detailed map: {e}")),
+                        }
+                    }
                     // The interface the launcher asked for, read once.
                     let interface = ac_host::Interface::requested(|name| std::env::var(name).ok());
                     ui.set_interface(interface);
@@ -805,6 +817,9 @@ impl AttachedWindow {
                 }
                 crate::ui::keyboard_window::KeyboardRequest::BeginCapture => {
                     self.gameplay.begin_capture();
+                }
+                crate::ui::keyboard_window::KeyboardRequest::CancelCapture => {
+                    self.gameplay.cancel_capture();
                 }
             }
         }
@@ -1255,7 +1270,7 @@ impl AttachedWindow {
             });
         self.encode_world(&mut encoder, &view, None);
         if let Some(ui) = self.ui_renderer.as_ref() {
-            ui.draw(&mut encoder, &view);
+            ui.draw(&mut encoder, &view, Some(&texture));
         }
 
         // Rows of a buffer copy are padded to 256 bytes.
@@ -1490,7 +1505,13 @@ impl FramePhases for AttachedWindow {
             return Ok(());
         };
         if let Some(renderer) = self.ui_renderer.as_ref() {
-            renderer.draw(encoder, &frame.view);
+            // Glass blurs a copy of the frame, when the frame can be copied.
+            let source = self
+                .config
+                .usage
+                .contains(wgpu::TextureUsages::COPY_SRC)
+                .then_some(&frame.texture.texture);
+            renderer.draw(encoder, &frame.view, source);
         }
         // The brightness ramp acts on the whole picture, and only in
         // exclusive fullscreen (a window's ramp has no effect).
@@ -2826,6 +2847,8 @@ impl AttachedWindow {
             ui.set_level_of_detail(fps, multiplier);
         }
         ui.set_pixels_per_unit(scale.pixels_per_unit());
+        ui.set_glass_possible(self.config.usage.contains(wgpu::TextureUsages::COPY_SRC));
+        ui.follow_key_capture(self.gameplay.is_capturing());
         let list = ui.frame(Instant::now(), size);
         // Drawn in framebuffer pixels, on the whole-pixel grid.
         let batch = UiBatch::build_scaled(&list, scale.pixels_per_unit());

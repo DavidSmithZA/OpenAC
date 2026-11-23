@@ -8,6 +8,7 @@
 //! range is the game's 25 m. Under the disc, the coordinates while the
 //! "show coordinates on the radar" option is on.
 
+use ac_ui::modern::tone;
 use std::f32::consts::{PI, TAU};
 use std::sync::Arc;
 
@@ -105,7 +106,6 @@ pub struct RadarFonts {
 /// The radar piece.
 #[derive(Debug)]
 pub struct RadarRing {
-    theme: Horizon,
     fonts: RadarFonts,
     /// The scene, as last fed.
     scene: RadarScene,
@@ -138,9 +138,8 @@ pub struct RadarRing {
 impl RadarRing {
     /// An empty radar.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: RadarFonts) -> Self {
+    pub fn new(fonts: RadarFonts) -> Self {
         Self {
-            theme,
             fonts,
             scene: RadarScene::default(),
             blips: Vec::new(),
@@ -257,11 +256,11 @@ impl RadarRing {
     }
 
     fn draw_recall(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let c = Self::recall_centre();
         let r = RECALL * 0.5;
         let fill = if self.on_recall {
-            hex(0x2A_2116, 0.9)
+            tone::field(0.9)
         } else {
             hex(0, 0.62)
         };
@@ -269,7 +268,7 @@ impl RadarRing {
         let edge = if self.on_recall {
             p.accent
         } else {
-            hex(0xC9_A062, 0.8)
+            tone::bronze(0.8)
         };
         rc.stroke_ellipse(c.x - r, c.y - r, RECALL, RECALL, edge, 1.0);
         super::recall::recall_mark(rc, c.x - 7.0, c.y - 7.0, p.accent);
@@ -304,7 +303,7 @@ impl RadarRing {
     }
 
     fn draw_ring(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let c = centre();
         rc.fill_ellipse(
             c.x - OUTER,
@@ -318,7 +317,7 @@ impl RadarRing {
             c.y - OUTER,
             2.0 * OUTER,
             2.0 * OUTER,
-            hex(0xC9_A062, 0.8),
+            tone::bronze(0.8),
             1.5,
         );
         rc.fill_ellipse(
@@ -392,7 +391,7 @@ impl RadarRing {
                     &format!("{}", meters as i32),
                     c.x + 3.0,
                     c.y - r - f.line_height + 3.0,
-                    TextStyle::plain(hex(0xF4_EBDC, 0.45)),
+                    TextStyle::plain(tone::words(0.45)),
                 );
             }
         }
@@ -476,7 +475,7 @@ impl RadarRing {
     }
 
     fn draw_pill(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let Some(f) = &self.fonts.bold else {
             return;
         };
@@ -487,15 +486,7 @@ impl RadarRing {
         let x = (centre().x - w * 0.5).round();
         let radius = CornerRadii::all(PILL_HEIGHT * 0.5);
         rc.fill_rounded_rect(x, PILL_TOP, w, PILL_HEIGHT, radius, hex(0, 0.55));
-        rc.stroke_rounded_rect(
-            x,
-            PILL_TOP,
-            w,
-            PILL_HEIGHT,
-            radius,
-            hex(0xC9_A062, 0.8),
-            1.0,
-        );
+        rc.stroke_rounded_rect(x, PILL_TOP, w, PILL_HEIGHT, radius, tone::bronze(0.8), 1.0);
         let ty = (PILL_TOP + (PILL_HEIGHT - f.line_height) * 0.5).round();
         text::draw(rc, f, word, x + 10.0, ty, TextStyle::plain(p.accent));
         text::draw(
@@ -518,14 +509,14 @@ impl RadarRing {
     }
 
     fn draw_chip(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let Some(f) = &self.fonts.bold else {
             return;
         };
         let (x, y, w, h) = self.chip_rect();
         let radius = CornerRadii::all(h * 0.5);
         let fill = if self.on_chip && self.outdoors {
-            hex(0x2A_2116, 0.85)
+            tone::field(0.85)
         } else {
             hex(0, 0.62)
         };
@@ -533,7 +524,7 @@ impl RadarRing {
         let edge = if self.on_chip && self.outdoors {
             p.accent
         } else {
-            hex(0xC9_A062, 0.8)
+            tone::bronze(0.8)
         };
         rc.stroke_rounded_rect(x, y, w, h, radius, edge, 1.0);
         let words = self.chip_words();
@@ -542,7 +533,7 @@ impl RadarRing {
     }
 
     fn draw_hovered(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (Some(id), Some(f)) = (self.hovered, &self.fonts.small) else {
             return;
         };
@@ -569,8 +560,8 @@ impl RadarRing {
         }
         let y = blip.pixel_y - h - 4.0;
         rc.soft_shadow(x, y, w, h, 4.0, 6.0, 16.0, hex(0, 0.5));
-        rc.fill_rounded_rect(x, y, w, h, CornerRadii::all(4.0), hex(0x14_100C, 0.94));
-        rc.stroke_rounded_rect(x, y, w, h, CornerRadii::all(4.0), hex(0xC9_A062, 0.8), 1.0);
+        rc.fill_rounded_rect(x, y, w, h, CornerRadii::all(4.0), tone::ground(0.94));
+        rc.stroke_rounded_rect(x, y, w, h, CornerRadii::all(4.0), tone::bronze(0.8), 1.0);
         text::draw(
             rc,
             f,
@@ -678,9 +669,9 @@ impl Widget for RadarRing {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         if let Some(f) = self.fonts.small.clone() {
-            self.status.draw(rc, &self.theme, &f, WIDTH);
+            self.status.draw(rc, &Horizon::current(), &f, WIDTH);
         }
         self.draw_pill(rc);
         self.draw_ring(rc);
@@ -736,7 +727,7 @@ mod tests {
 
     #[test]
     fn the_chip_steps_the_range_in_outdoors_only() {
-        let mut radar = RadarRing::new(Horizon::BRONZE, RadarFonts::default());
+        let mut radar = RadarRing::new(RadarFonts::default());
         assert_eq!(radar.range(), 75.0);
         radar.step_range();
         assert_eq!(radar.range(), 40.0);
@@ -750,7 +741,7 @@ mod tests {
 
     #[test]
     fn north_is_at_the_top_when_facing_north() {
-        let radar = RadarRing::new(Horizon::BRONZE, RadarFonts::default());
+        let radar = RadarRing::new(RadarFonts::default());
         let a = radar.screen_angle(0.0);
         assert!((a - (-PI / 2.0)).abs() < 1e-5);
     }

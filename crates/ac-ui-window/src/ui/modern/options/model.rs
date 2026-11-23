@@ -64,6 +64,9 @@ pub enum Control {
     Button(Action, &'static str),
     /// The chat tabs against the message types.
     ChatGrid,
+    /// The detailed map's download (its words and buttons follow the
+    /// download, see the frame's `set_map`).
+    MapDownload,
 }
 
 /// One row of the window.
@@ -417,6 +420,20 @@ fn push_item(
             Control::ChatGrid,
             None,
         )),
+        Item::MapDownload => {
+            let mut r = base(
+                None,
+                Words {
+                    label: "Detailed map",
+                    desc: "",
+                    invert: false,
+                },
+                Control::MapDownload,
+                None,
+            );
+            r.openac = true;
+            out.push(r);
+        }
         Item::Button(action, words, verb) => {
             let mut r = base(None, words, Control::Button(action, verb), None);
             r.openac = action == Action::EditBars;
@@ -434,6 +451,7 @@ fn is_openac(key: OptionKey) -> bool {
             CameraField::ModernMouseTurning | CameraField::BothMouseButtonsRunForward
         ) | OptionKey::Mixer(_)
             | OptionKey::RenderPack(_)
+            | OptionKey::Theme
     )
 }
 
@@ -511,6 +529,14 @@ impl OptionsModel {
             .count()
     }
 
+    /// `key` was set to `value` and saved by something other than the
+    /// window (a button that changes and saves several options at once):
+    /// it is the value now and the one Revert goes back to.
+    pub fn set_saved(&mut self, key: OptionKey, value: &OptionValue) {
+        self.live.write(key, value);
+        self.saved.write(key, value);
+    }
+
     /// Every changed value back to the saved one: the stored sections
     /// changed, in order, without repeats.
     pub fn revert(&mut self) -> Vec<Stored> {
@@ -532,11 +558,17 @@ impl OptionsModel {
     /// stored sections changed. The atmospheric quality goes first, so
     /// its own settings land on the preset it picks.
     pub fn defaults(&mut self, section: Option<Section>) -> Vec<Stored> {
+        let all: Vec<usize> = (0..self.rows.len())
+            .filter(|&i| section.is_none_or(|s| s == self.rows[i].section))
+            .collect();
+        self.defaults_of(&all)
+    }
+
+    /// The rows `rows` (indices) back to their defaults, as
+    /// [`Self::defaults`].
+    pub fn defaults_of(&mut self, rows: &[usize]) -> Vec<Stored> {
         let mut pairs: Vec<(OptionKey, OptionValue)> = Vec::new();
-        for r in &self.rows {
-            if section.is_some_and(|s| s != r.section) {
-                continue;
-            }
+        for r in rows.iter().filter_map(|&i| self.rows.get(i)) {
             if let (Some(k), Some(v)) = (r.key, &r.default) {
                 pairs.push((k, v.clone()));
             }

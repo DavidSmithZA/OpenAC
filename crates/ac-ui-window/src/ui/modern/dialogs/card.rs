@@ -9,6 +9,7 @@
 //! The card is the whole screen (the part outside the card dims the world
 //! and takes no clicks); while it shows, the window makes it modal.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext, TextureRef};
@@ -174,7 +175,7 @@ impl QuestionCard {
         f.stay_focused_after_submit = true;
         f.max_characters = MAX_CHARACTERS;
         f.padding = 8.0;
-        f.text_color = theme.palette.text;
+        f.text_color = Horizon::current().palette.text;
         f.background_color = Color::TRANSPARENT;
         f.selection_color = gold(0.35);
         f.set_editable_detached(&mut fe, true);
@@ -447,11 +448,11 @@ impl QuestionCard {
         let Some(s) = &self.shown else {
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (x, y, w, h) = r.card;
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(x, y, w, h, 6.0, 18.0, 50.0, hex(0, 0.6));
-        rc.fill_rounded_rect(x, y, w, h, round, hex(0x18_130E, 0.97));
+        rc.fill_rounded_rect(x, y, w, h, round, tone::raised(0.97));
         let edge = if s.look.danger {
             hex(0xE5_484D, 0.7)
         } else {
@@ -504,7 +505,14 @@ impl QuestionCard {
                 1.0,
             );
             let ty = cy + ((22.0 - f.line_height) * 0.5).round();
-            text::draw(rc, f, &words, pill.0 + 9.0, ty, TextStyle::plain(kit::WARM));
+            text::draw(
+                rc,
+                f,
+                &words,
+                pill.0 + 9.0,
+                ty,
+                TextStyle::plain(tone::warm(1.0)),
+            );
             right = pill.0 - 8.0;
         }
         if let Some(f) = &self.fonts.title {
@@ -598,13 +606,13 @@ impl QuestionCard {
                 tx += 32.0;
             }
             let lines = kit::wrap(f, &s.text, inner - (tx - x - PAD));
-            kit::lines(rc, f, &lines, tx, r.text_top, step, kit::WARM);
+            kit::lines(rc, f, &lines, tx, r.text_top, step, tone::warm(1.0));
         }
         if let (Some(note), Some(f)) = (&s.look.note, &self.fonts.small) {
             let color = if s.look.note_red {
                 kit::HARM
             } else {
-                hex(0xA8_9A82, 1.0)
+                tone::muted(1.0)
             };
             let lines = kit::wrap(f, note, inner);
             kit::lines(
@@ -626,7 +634,7 @@ impl QuestionCard {
                     label,
                     x + PAD,
                     r.label_top,
-                    TextStyle::plain(kit::SOFT),
+                    TextStyle::plain(tone::soft(1.0)),
                 );
             }
             let round = CornerRadii::all(4.0);
@@ -680,7 +688,7 @@ impl QuestionCard {
                     &words,
                     x + PAD,
                     ty,
-                    TextStyle::plain(hex(0xA8_9A82, 1.0)),
+                    TextStyle::plain(tone::muted(1.0)),
                 );
             }
             if let Some(no) = r.no {
@@ -699,7 +707,7 @@ impl QuestionCard {
         yes: bool,
         danger: bool,
     ) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let lit = self.hovered == Some(if yes { Hit::Yes } else { Hit::No });
         let round = CornerRadii::all(4.0);
         let (fill, edge, ink) = if !yes {
@@ -719,11 +727,7 @@ impl QuestionCard {
                 hex(0xFF_FFFF, 1.0),
             )
         } else {
-            (
-                gold(if lit { 1.0 } else { 0.9 }),
-                gold(1.0),
-                hex(0x1A_140D, 1.0),
-            )
+            (gold(if lit { 1.0 } else { 0.9 }), gold(1.0), tone::ink(1.0))
         };
         rc.fill_rounded_rect(r.0, r.1, r.2, r.3, round, fill);
         rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, edge, 1.0);
@@ -739,7 +743,7 @@ impl QuestionCard {
         let key_ink = if yes {
             Color { a: 0.7, ..ink }
         } else {
-            hex(0xA8_9A82, 1.0)
+            tone::muted(1.0)
         };
         text::draw(rc, k, key, x + ww + 8.0, ky, TextStyle::plain(key_ink));
     }
@@ -1028,7 +1032,7 @@ mod tests {
     fn card(form: Form) -> QuestionCard {
         let ui = UiRoot::new();
         QuestionCard {
-            theme: Horizon::BRONZE,
+            theme: Horizon::current(),
             fonts: CardFonts::default(),
             field: ui.root(),
             shown: Some(Shown {

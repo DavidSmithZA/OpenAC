@@ -262,6 +262,8 @@ impl HouseState {
         self.owns_house = false;
         self.revision += 1;
         self.data = None;
+        // No house: its guest list went with it.
+        self.access = None;
         self.recompute(clock);
     }
 

@@ -280,6 +280,7 @@ record! {
         selected_mana: Option<SelectedMana>,
         external_container: u32,
         external_container_in_range: bool,
+        targeted_use: Option<(u32, u32)>,
         account: String,
     }
     PropertyTables {
@@ -375,6 +376,8 @@ record! {
         partner_items: Vec<u32>,
         last_failure_item: u32,
         last_failure_reason: u32,
+        refusals: u32,
+        trades: u32,
         revision: u64,
         partner_name: Option<String>,
         item_names: BTreeMap<u32, String>,

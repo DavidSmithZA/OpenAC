@@ -2,18 +2,23 @@
 //! ([`theme`]), easing motion ([`tween`]), short numbers ([`numbers`]),
 //! flex layout over elements ([`flex`]), a pane that opens on hover
 //! ([`hover`]), the outlines quick move shows ([`quick_move`]), hover
-//! labels for pieces made in code ([`tip`]) and text with spacing and
-//! shadows ([`text`]).
+//! labels for pieces made in code ([`tip`]), text with spacing and
+//! shadows ([`text`]), the pieces windows draw alike ([`kit`]: backs,
+//! tabs, buttons, chips, search boxes, scrollbars, wrapped text) and icons
+//! drawn as lines ([`lines`]).
 //! The modern screens themselves live with the game window
 //! (`ac-ui-window`); what is here knows nothing of the game.
 
 pub mod flex;
 pub mod hover;
+pub mod kit;
+pub mod lines;
 pub mod numbers;
 pub mod quick_move;
 pub mod text;
 pub mod theme;
 pub mod tip;
+pub mod tone;
 pub mod tween;
 
 pub use theme::Horizon;

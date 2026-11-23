@@ -45,6 +45,22 @@ pub struct JournalUi {
     focused: Option<Slot>,
     /// It showed last frame.
     was_open: bool,
+    /// What the lists were last built from (rebuilt only when it changes).
+    built: Option<ScreensKey>,
+}
+
+/// What the Journal's lists are built from: the contracts' and the
+/// journal's revisions, the pick, the searches, the quests shown, and the
+/// second (the countdowns).
+#[derive(Debug, Clone, PartialEq)]
+struct ScreensKey {
+    contracts: Option<u64>,
+    journal: Option<u64>,
+    picked: u32,
+    quest_search: String,
+    note_search: String,
+    shown: Vec<u32>,
+    second: i64,
 }
 
 fn journal(command: JournalCommand) -> PanelOutput {
@@ -55,7 +71,7 @@ impl WindowUi {
     /// The Journal, hidden, in place of retail's journal; and the quests on
     /// screen.
     pub(in crate::ui) fn mount_modern_journal(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = JournalFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             heading: self.modern_font(Weight::SemiBold, 16.0),
@@ -75,7 +91,7 @@ impl WindowUi {
             &mut self.host.root,
             JOURNAL,
             (WIDTH, HEIGHT),
-            JournalFrame::new(theme, fonts),
+            JournalFrame::new(fonts),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -107,7 +123,7 @@ impl WindowUi {
             ui,
             hud::QUESTS,
             (super::quests_hud::WIDTH, 60.0),
-            QuestsHud::new(theme, hud_fonts),
+            QuestsHud::new(hud_fonts),
         ) {
             Ok(id) => {
                 ui.hide_window(hud::QUESTS);
@@ -129,6 +145,7 @@ impl WindowUi {
             rendered: None,
             focused: None,
             was_open: false,
+            built: None,
         });
         modern.replace(JOURNAL_WINDOW);
         self.panels.stand_in(panel_id::JOURNAL, JOURNAL);
@@ -273,6 +290,20 @@ impl WindowUi {
             .map_or(0, |f| f.picked);
         let quest_search = self.journal_text(fields, Slot::QuestSearch);
         let note_search = self.journal_text(fields, Slot::NoteSearch);
+        let key = ScreensKey {
+            contracts: self.facts.contracts.as_ref().map(|c| c.revision),
+            journal: self.facts.journal.as_ref().map(|v| v.revision),
+            picked,
+            quest_search: quest_search.clone(),
+            note_search: note_search.clone(),
+            shown: shown.to_vec(),
+            second: now.div_euclid(1000),
+        };
+        match self.modern.as_mut().and_then(|m| m.journal.as_mut()) {
+            Some(j) if j.built.as_ref() == Some(&key) => return,
+            Some(j) => j.built = Some(key),
+            None => return,
+        }
         let quests = self.facts.contracts.as_ref().map(|c| {
             model::quests(&QuestsInput {
                 contracts: &c.contracts,
@@ -305,15 +336,24 @@ impl WindowUi {
     /// The page read goes into the page's fields when the journal or the
     /// page changed (not while the player types).
     fn fill_journal_page(&mut self, fields: &[(Slot, ElementId)]) {
-        let Some(view) = self.facts.journal.clone() else {
+        let Some(now) = self
+            .facts
+            .journal
+            .as_ref()
+            .map(|v| (v.revision, v.current_page))
+        else {
             return;
         };
-        let now = (view.revision, view.current_page);
         let rendered = self.journal_ui().and_then(|j| j.rendered);
         if rendered == Some(now) {
             return;
         }
-        let page = view.current();
+        // The field being typed in keeps its words unless the page turned.
+        let same_page = rendered.is_some_and(|(_, page)| page == now.1);
+        let focus = self.host.root.keyboard_focus();
+        let Some(page) = self.facts.journal.as_ref().map(|v| v.current().clone()) else {
+            return;
+        };
         for (slot, words) in [
             (Slot::Label, page.label.clone()),
             (Slot::Title, page.title.clone()),
@@ -322,7 +362,9 @@ impl WindowUi {
             (Slot::Hours, timer_field_text(page.timer_hours)),
             (Slot::Minutes, timer_field_text(page.timer_minutes)),
         ] {
-            if let Some(id) = self.journal_field(fields, slot) {
+            if let Some(id) = self.journal_field(fields, slot)
+                && !(same_page && focus == Some(id))
+            {
                 kit::set_field_text(&mut self.host.root, id, &words);
             }
         }
@@ -559,6 +601,8 @@ impl WindowUi {
                 return;
             }
             JournalAsk::Record => {
+                // What was typed goes first, so the page read back keeps it.
+                self.commit_journal_page(fields);
                 let player = self.facts.state.player;
                 let cell = scene
                     .object_by_guid(player)
@@ -583,7 +627,10 @@ impl WindowUi {
                 self.commit_journal_page(fields);
                 journal(JournalCommand::StartTimer)
             }
-            JournalAsk::Stop => journal(JournalCommand::ResetTimer),
+            JournalAsk::Stop => {
+                self.commit_journal_page(fields);
+                journal(JournalCommand::ResetTimer)
+            }
         };
         emit(&mut self.host.root, out);
     }
@@ -595,10 +642,12 @@ impl WindowUi {
             .modern_pieces()
             .is_some_and(|p| p.is_hidden(hud::QUESTS));
         let in_world = self.player_view.is_some();
+        // Worked out only when it could show.
         let list = self
             .facts
             .contracts
             .as_ref()
+            .filter(|_| !hidden && in_world && !shown.is_empty())
             .map(|c| {
                 model::shown_quests(&QuestsInput {
                     contracts: &c.contracts,

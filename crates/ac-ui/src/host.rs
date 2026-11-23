@@ -251,6 +251,19 @@ impl UiHost {
         Ok(())
     }
 
+    /// Take window `name` down for good: hidden, unregistered (its
+    /// controller hears it and is dropped) and its elements freed. False
+    /// for an unknown name.
+    pub fn remove_window(&mut self, name: &str) -> bool {
+        let Some(frame) = self.root.window(name).map(|w| w.frame) else {
+            return false;
+        };
+        self.root.unregister_window(name);
+        self.pump();
+        self.root.destroy(frame);
+        true
+    }
+
     /// True when window `name` has a controller.
     #[must_use]
     pub fn has_controller(&self, name: &str) -> bool {

@@ -7,6 +7,7 @@
 //! The spell list and the components table are children of their own, so
 //! they scroll by themselves and a spell can be dragged out onto a bar.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_core::spells::MagicSchool;
@@ -175,7 +176,6 @@ pub enum BookRequest {
 /// The Spellbook's frame.
 #[derive(Debug)]
 pub struct BookFrame {
-    theme: Horizon,
     fonts: BookFonts,
     /// The page shown.
     pub page: BookPage,
@@ -204,9 +204,8 @@ pub struct BookFrame {
 impl BookFrame {
     /// An empty book in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: BookFonts) -> Self {
+    pub fn new(fonts: BookFonts) -> Self {
         Self {
-            theme,
             fonts,
             page: BookPage::Spells,
             spells: Vec::new(),
@@ -402,7 +401,7 @@ fn category_color(category: u32) -> Color {
         3 => hex(0x6E_A8FF, 1.0),
         4 => kit::gold(1.0),
         5 => kit::HARM,
-        _ => kit::SOFT,
+        _ => tone::soft(1.0),
     }
 }
 
@@ -557,7 +556,7 @@ impl BookFrame {
     }
 
     fn draw_frame(&self, rc: &mut RenderContext<'_>) {
-        let theme = &self.theme;
+        let theme = &Horizon::current();
         kit::window_back(rc, theme, WIDTH, HEIGHT, HEADER, true);
         kit::title(
             rc,
@@ -597,7 +596,7 @@ impl BookFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_nav(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let title = match self.page {
             BookPage::Spells => "SCHOOL",
             BookPage::Components => "TYPE",
@@ -609,7 +608,7 @@ impl BookFrame {
                 title,
                 NAV_X,
                 TOP,
-                TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
         let chosen_school = chosen_school(self.filter.bits).map(|s| s.0);
@@ -640,7 +639,7 @@ impl BookFrame {
                 let w = text::measure(f, &count, 0.0);
                 right -= w;
                 let y = r.1 + ((r.3 - f.line_height) * 0.5).round();
-                text::draw(rc, f, &count, right, y, TextStyle::plain(kit::SOFT));
+                text::draw(rc, f, &count, right, y, TextStyle::plain(tone::soft(1.0)));
             }
             if let Some(f) = &self.fonts.nav {
                 let y = r.1 + ((r.3 - f.line_height) * 0.5).round();
@@ -665,9 +664,9 @@ impl BookFrame {
                     "Restock amounts",
                     x + 10.0,
                     y + 10.0,
-                    TextStyle::plain(kit::WARM),
+                    TextStyle::plain(tone::warm(1.0)),
                 );
-                kit::lines(rc, s, &lines, x + 10.0, y + 28.0, 15.0, kit::SOFT);
+                kit::lines(rc, s, &lines, x + 10.0, y + 28.0, 15.0, tone::soft(1.0));
             }
             return;
         }
@@ -679,7 +678,7 @@ impl BookFrame {
                 "LEVEL",
                 NAV_X,
                 Self::levels_top(),
-                TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
         for (level, r) in Self::level_rects() {
@@ -722,7 +721,7 @@ impl BookFrame {
         };
         rc.fill_rounded_rect(sx, sy, 30.0, 16.0, CornerRadii::all(8.0), track);
         let knob_x = if on { sx + 16.0 } else { sx + 2.0 };
-        let knob = if on { hex(0x1A_140D, 1.0) } else { p.text };
+        let knob = if on { tone::ink(1.0) } else { p.text };
         rc.fill_rounded_rect(knob_x, sy + 2.0, 12.0, 12.0, CornerRadii::all(6.0), knob);
         if let Some(f) = &self.fonts.body {
             let y = r.1 + ((r.3 - f.line_height) * 0.5).round();
@@ -741,12 +740,12 @@ impl BookFrame {
                 "Hides lower levels of spells you know at a higher level.",
                 NAV_W,
             );
-            kit::lines(rc, f, &lines, NAV_X, r.1 + r.3 + 6.0, 15.0, kit::SOFT);
+            kit::lines(rc, f, &lines, NAV_X, r.1 + r.3 + 6.0, 15.0, tone::soft(1.0));
         }
     }
 
     fn draw_list_heading(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let title = chosen_school(self.filter.bits).map_or("All schools", school_name);
         let shown_count: usize = shown(&self.spells, &self.filter)
             .iter()
@@ -761,7 +760,7 @@ impl BookFrame {
         if let Some(f) = &self.fonts.small {
             let words = format!("{shown_count} shown of {} learned", self.spells.len());
             let y = TOP + ((26.0 - f.line_height) * 0.5).round();
-            text::draw(rc, f, &words, x, y, TextStyle::plain(kit::SOFT));
+            text::draw(rc, f, &words, x, y, TextStyle::plain(tone::soft(1.0)));
         }
         let r = self.sort_rect();
         let lit = hot(self.hover, r);
@@ -778,7 +777,14 @@ impl BookFrame {
         );
         if let Some(f) = &self.fonts.small {
             let y = r.1 + ((r.3 - f.line_height) * 0.5).round();
-            text::draw(rc, f, "Sort", r.0 + 8.0, y, TextStyle::plain(kit::SOFT));
+            text::draw(
+                rc,
+                f,
+                "Sort",
+                r.0 + 8.0,
+                y,
+                TextStyle::plain(tone::soft(1.0)),
+            );
             let sx = r.0 + 8.0 + text::measure(f, "Sort", 0.0) + 6.0;
             text::draw(
                 rc,
@@ -795,13 +801,13 @@ impl BookFrame {
             r.1 + 7.0,
             12.0,
             &[&[(7.0, 10.0), (12.0, 15.0), (17.0, 10.0)]],
-            kit::SOFT,
+            tone::soft(1.0),
             1.5,
         );
     }
 
     fn draw_table_heading(&self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let title = self
             .category
             .and_then(|c| CATEGORIES.get(c as usize).copied())
@@ -815,12 +821,12 @@ impl BookFrame {
         if let Some(f) = &self.fonts.small {
             let words = super::spellbook::components_summary(&self.components);
             let y = TOP + ((26.0 - f.line_height) * 0.5).round();
-            text::draw(rc, f, &words, x, y, TextStyle::plain(kit::SOFT));
+            text::draw(rc, f, &words, x, y, TextStyle::plain(tone::soft(1.0)));
         }
         if let Some(f) = &self.fonts.label {
             let y = TOP + 34.0 + 4.0;
             let cols = table_columns();
-            let style = TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING);
+            let style = TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING);
             text::draw(rc, f, "COMPONENT", TABLE_X + cols[0], y, style);
             text::draw(rc, f, "TYPE", TABLE_X + cols[1], y, style);
             let w = text::measure(f, "CARRIED", kit::LABEL_TRACKING);
@@ -834,7 +840,7 @@ impl BookFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw_details(&mut self, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (x, y, w, h) = (DETAIL_X, TOP, DETAIL_W, BOTTOM - TOP);
         let radius = CornerRadii::all(4.0);
         rc.fill_rounded_rect(x, y, w, h, radius, hex(0, 0.28));
@@ -890,7 +896,7 @@ impl BookFrame {
                 &kit::fit(f, &d.line, room),
                 tx,
                 ty + 2.0,
-                TextStyle::plain(kit::SOFT),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
         // The three facts.
@@ -910,7 +916,14 @@ impl BookFrame {
             let fx = x + 14.0 + i as f32 * (fw + 6.0);
             rc.fill_rounded_rect(fx, fy, fw, 40.0, radius, hex(0xFF_FFFF, 0.04));
             if let Some(f) = &self.fonts.small {
-                text::draw(rc, f, k, fx + 8.0, fy + 5.0, TextStyle::plain(kit::SOFT));
+                text::draw(
+                    rc,
+                    f,
+                    k,
+                    fx + 8.0,
+                    fy + 5.0,
+                    TextStyle::plain(tone::soft(1.0)),
+                );
             }
             if let Some(f) = &self.fonts.strong {
                 text::draw(rc, f, v, fx + 8.0, fy + 20.0, TextStyle::plain(*c));
@@ -927,7 +940,7 @@ impl BookFrame {
         let right = x + w - 14.0 - 8.0;
         let mut by = body_top + 10.0 - self.detail_scroll.at;
         if let Some(f) = &self.fonts.body {
-            by = kit::lines(rc, f, &desc, left, by, 18.0, kit::WARM);
+            by = kit::lines(rc, f, &desc, left, by, 18.0, tone::warm(1.0));
         }
         by += 12.0;
         let label = |rc: &mut RenderContext<'_>, words: &str, at: f32| {
@@ -938,7 +951,7 @@ impl BookFrame {
                     words,
                     left,
                     at,
-                    TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                    TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
                 );
             }
         };
@@ -969,7 +982,7 @@ impl BookFrame {
                 let uses = format!("\u{d7}{}", c.uses);
                 let uw = text::measure(f, &uses, 0.0);
                 let ux = right - 62.0 - uw;
-                text::draw(rc, f, &uses, ux, by, TextStyle::plain(kit::SOFT));
+                text::draw(rc, f, &uses, ux, by, TextStyle::plain(tone::soft(1.0)));
                 let name = kit::fit(f, &c.name, ux - 8.0 - (left + 14.0));
                 text::draw(rc, f, &name, left + 14.0, by, TextStyle::plain(p.text));
             }
@@ -1011,7 +1024,7 @@ impl BookFrame {
         let (cast, add, forget) = Self::foot_rects();
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             cast,
             "Cast",
             self.fonts.strong.as_ref(),
@@ -1021,7 +1034,7 @@ impl BookFrame {
         );
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             add,
             "",
             None,
@@ -1068,11 +1081,11 @@ impl BookFrame {
     }
 
     fn draw_forget(&self, rc: &mut RenderContext<'_>, d: &SpellDetails) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (x, y, w, h) = Self::forget_box();
         rc.soft_shadow(x, y, w, h, 6.0, 12.0, 30.0, hex(0, 0.6));
         let r = CornerRadii::all(6.0);
-        rc.fill_rounded_rect(x, y, w, h, r, hex(0x18_130E, 0.98));
+        rc.fill_rounded_rect(x, y, w, h, r, tone::raised(0.98));
         rc.stroke_rounded_rect(x, y, w, h, r, kit::HARM, 1.0);
         let mut ty = y + 14.0;
         if let Some(f) = &self.fonts.strong {
@@ -1089,7 +1102,7 @@ impl BookFrame {
             let words =
                 format!("It leaves {slots}. To cast it again you need to learn it from a scroll.");
             let lines = kit::wrap(f, &words, w - 28.0);
-            kit::lines(rc, f, &lines, x + 14.0, ty, 16.0, kit::WARM);
+            kit::lines(rc, f, &lines, x + 14.0, ty, 16.0, tone::warm(1.0));
         }
         let (keep, forget) = Self::forget_buttons();
         if let Some(f) = &self.fonts.strong {
@@ -1098,7 +1111,7 @@ impl BookFrame {
             let color = if hot(self.hover, keep) {
                 p.text
             } else {
-                kit::SOFT
+                tone::soft(1.0)
             };
             text::draw(
                 rc,
@@ -1111,7 +1124,7 @@ impl BookFrame {
         }
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             forget,
             "Forget spell",
             self.fonts.strong.as_ref(),
@@ -1156,7 +1169,6 @@ pub enum ListRequest {
 /// dragged out carries the spell to the bars.
 #[derive(Debug)]
 pub struct SpellList {
-    theme: Horizon,
     fonts: BookFonts,
     /// The spells shown, by school.
     pub groups: Vec<(MagicSchool, Vec<SpellRow>)>,
@@ -1174,9 +1186,8 @@ pub struct SpellList {
 impl SpellList {
     /// An empty list.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: BookFonts) -> Self {
+    pub fn new(fonts: BookFonts) -> Self {
         Self {
-            theme,
             fonts,
             groups: Vec::new(),
             chosen: None,
@@ -1331,7 +1342,7 @@ impl Widget for SpellList {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (w, h) = ui
             .element(me)
             .map_or((LIST_W, LIST_H), |e| (e.width, e.height));
@@ -1381,7 +1392,7 @@ impl Widget for SpellList {
                         kit::bronze(0.25),
                     );
                     if let Some(s) = &self.fonts.small {
-                        text::draw(rc, s, &n, right - nw, ty, TextStyle::plain(kit::SOFT));
+                        text::draw(rc, s, &n, right - nw, ty, TextStyle::plain(tone::soft(1.0)));
                     }
                 }
             }
@@ -1400,7 +1411,7 @@ impl Widget for SpellList {
 
 impl SpellList {
     fn draw_row(&self, rc: &mut RenderContext<'_>, r: &SpellRow, y: f32, right: f32) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let on = self.chosen == Some(r.id);
         let lit = hot(self.hover, (0.0, y, right, ROW_H));
         let radius = CornerRadii::all(4.0);
@@ -1484,7 +1495,7 @@ impl SpellList {
                 y + 21.0,
                 TextStyle::plain(Color {
                     a: fade,
-                    ..kit::SOFT
+                    ..tone::soft(1.0)
                 }),
             );
         }
@@ -1508,7 +1519,6 @@ pub enum TableRequest {
 /// The components table, scrolled by itself.
 #[derive(Debug)]
 pub struct ComponentTable {
-    theme: Horizon,
     fonts: BookFonts,
     /// The rows shown.
     pub rows: Vec<ComponentRow>,
@@ -1525,9 +1535,8 @@ pub struct ComponentTable {
 impl ComponentTable {
     /// An empty table.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: BookFonts) -> Self {
+    pub fn new(fonts: BookFonts) -> Self {
         Self {
-            theme,
             fonts,
             rows: Vec::new(),
             chosen: None,
@@ -1616,7 +1625,7 @@ impl Widget for ComponentTable {
 
     #[allow(clippy::too_many_lines)]
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (w, h) = ui
             .element(me)
             .map_or((TABLE_W, TABLE_H), |e| (e.width, e.height));
@@ -1707,7 +1716,7 @@ impl Widget for ComponentTable {
                     category_one(r.category),
                     cols[1],
                     ty,
-                    TextStyle::plain(kit::SOFT),
+                    TextStyle::plain(tone::soft(1.0)),
                 );
             }
             // The restock box (the window's field covers it while editing).
@@ -1809,7 +1818,7 @@ mod tests {
 
     #[test]
     fn a_click_in_the_list_chooses_the_spell_under_it() {
-        let mut list = SpellList::new(Horizon::BRONZE, BookFonts::default());
+        let mut list = SpellList::new(BookFonts::default());
         list.groups = vec![(
             MagicSchool::WAR_MAGIC,
             vec![
@@ -1824,7 +1833,7 @@ mod tests {
 
     #[test]
     fn forgetting_asks_first() {
-        let mut f = BookFrame::new(Horizon::BRONZE, BookFonts::default());
+        let mut f = BookFrame::new(BookFonts::default());
         f.details = Some(SpellDetails {
             id: 9,
             ..SpellDetails::default()
@@ -1841,7 +1850,7 @@ mod tests {
 
     #[test]
     fn cast_waits_for_magic() {
-        let mut f = BookFrame::new(Horizon::BRONZE, BookFonts::default());
+        let mut f = BookFrame::new(BookFonts::default());
         f.details = Some(SpellDetails {
             id: 9,
             ..SpellDetails::default()

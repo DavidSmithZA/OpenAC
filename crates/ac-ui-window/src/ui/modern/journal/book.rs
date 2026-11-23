@@ -4,6 +4,7 @@
 //! page is read only; a blank page or the player's own takes typing, saved
 //! when the page is turned or the book closed.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_runtime::gameplay::{BookCommand, BookView, GameplayCommand};
@@ -24,7 +25,7 @@ use ac_ui::{UiFont, UiRoot};
 use crate::ui::book_window::BOOK_WINDOW;
 use crate::ui::modern::hud;
 use crate::ui::modern::hud::lines::stroke;
-use crate::ui::modern::kit::{self, Hits, MUTED, Rect, bronze, gold, put_mid};
+use crate::ui::modern::kit::{self, Hits, Rect, bronze, gold, put_mid};
 use crate::ui::window::WindowUi;
 
 /// The window's name.
@@ -118,7 +119,6 @@ enum Hit {
 /// The book reader's frame.
 #[derive(Debug)]
 pub struct BookFrame {
-    theme: Horizon,
     fonts: BookFonts,
     /// What it shows.
     pub screen: BookScreen,
@@ -132,9 +132,8 @@ pub struct BookFrame {
 impl BookFrame {
     /// A frame in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: BookFonts) -> Self {
+    pub fn new(fonts: BookFonts) -> Self {
         Self {
-            theme,
             fonts,
             screen: BookScreen::default(),
             menu: false,
@@ -198,11 +197,11 @@ impl Widget for BookFrame {
 
     #[allow(clippy::too_many_lines)]
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         let s = self.screen.clone();
         let mut h = Hits::new(self.hits.hover);
-        kit::window_back(rc, &self.theme, WIDTH, HEIGHT, HEADER, true);
+        kit::window_back(rc, &Horizon::current(), WIDTH, HEIGHT, HEADER, true);
         let close = kit::close_rect(WIDTH, HEADER);
         stroke(rc, 20.0, (HEADER - 18.0) * 0.5, 18.0, GLYPH, gold(1.0), 2.0);
         if let Some(t) = &f.title {
@@ -210,7 +209,7 @@ impl Widget for BookFrame {
             put_mid(rc, Some(t), &title, 46.0, 0.0, HEADER, p.text);
         }
         let lit = h.add(close, Hit::Ask(BookAsk::Close));
-        kit::close(rc, &self.theme, close, lit);
+        kit::close(rc, &Horizon::current(), close, lit);
         // The page bar.
         let y = HEADER + (BAR - 30.0) * 0.5;
         let last = s.pages.len().saturating_sub(1);
@@ -224,7 +223,7 @@ impl Widget for BookFrame {
             let lit = on && h.add(r, Hit::Ask(BookAsk::Turn(to)));
             kit::button(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 r,
                 "",
                 None,
@@ -232,7 +231,7 @@ impl Widget for BookFrame {
                 lit,
                 on,
             );
-            stroke(rc, r.0 + 7.0, r.1 + 7.0, 16.0, glyph, kit::WARM, 1.8);
+            stroke(rc, r.0 + 7.0, r.1 + 7.0, 16.0, glyph, tone::warm(1.0), 1.8);
         };
         arrow(
             rc,
@@ -288,7 +287,7 @@ impl Widget for BookFrame {
                 mb.0 + 18.0 + w,
                 mb.1,
                 mb.3,
-                kit::SOFT,
+                tone::soft(1.0),
             );
         }
         let of = format!("of {}", s.pages.len());
@@ -299,7 +298,7 @@ impl Widget for BookFrame {
             mb.0 + mb.2 - 30.0,
             mb.1,
             mb.3,
-            MUTED,
+            tone::muted(1.0),
         );
         stroke(
             rc,
@@ -307,12 +306,12 @@ impl Widget for BookFrame {
             mb.1 + 8.0,
             14.0,
             DOWN,
-            kit::WARM,
+            tone::warm(1.0),
             1.6,
         );
         // The page.
         let pr = Self::page_rect();
-        rc.fill_rounded_rect(pr.0, pr.1, pr.2, pr.3, round, hex(0xF4_EBDC, 0.05));
+        rc.fill_rounded_rect(pr.0, pr.1, pr.2, pr.3, round, tone::words(0.05));
         rc.stroke_rounded_rect(
             pr.0,
             pr.1,
@@ -329,7 +328,7 @@ impl Widget for BookFrame {
             HEIGHT - FOOT + (FOOT - 14.0) * 0.5,
             14.0,
             PEN,
-            MUTED,
+            tone::muted(1.0),
             1.4,
         );
         put_mid(
@@ -339,7 +338,7 @@ impl Widget for BookFrame {
             PAD + 22.0,
             HEIGHT - FOOT,
             FOOT,
-            MUTED,
+            tone::muted(1.0),
         );
         self.hits = h;
     }
@@ -349,7 +348,6 @@ impl Widget for BookFrame {
 /// field).
 #[derive(Debug)]
 pub struct BookMenu {
-    theme: Horizon,
     fonts: BookFonts,
     /// The pages and the one read.
     pub pages: Vec<BookPageRow>,
@@ -363,9 +361,8 @@ pub struct BookMenu {
 impl BookMenu {
     /// The list in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: BookFonts) -> Self {
+    pub fn new(fonts: BookFonts) -> Self {
         Self {
-            theme,
             fonts,
             pages: Vec::new(),
             current: 0,
@@ -428,11 +425,11 @@ impl Widget for BookMenu {
     }
 
     fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (w, h) = ui.element(me).map_or((0.0, 0.0), |e| (e.width, e.height));
         let round = CornerRadii::all(6.0);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 16.0, 40.0, hex(0, 0.6));
-        rc.fill_rounded_rect(0.0, 0.0, w, h, round, hex(0x18_130E, 0.99));
+        rc.fill_rounded_rect(0.0, 0.0, w, h, round, tone::raised(0.99));
         rc.stroke_rounded_rect(0.0, 0.0, w, h, round, bronze(0.8), 1.0);
         let total = self.pages.len() as f32 * MENU_ROW + 8.0;
         self.scroll.hold(total, h);
@@ -464,7 +461,11 @@ impl Widget for BookMenu {
                 r.3,
                 p.text,
             );
-            let ink = if row.by == "Blank" { MUTED } else { kit::SOFT };
+            let ink = if row.by == "Blank" {
+                tone::muted(1.0)
+            } else {
+                tone::soft(1.0)
+            };
             put_mid(
                 rc,
                 self.fonts.small.as_ref(),
@@ -493,6 +494,9 @@ pub struct BookUi {
     rendered: Option<u64>,
     /// The book shown last frame (0: none).
     was_open: u32,
+    /// A book was open when the game last said (a book opening shows the
+    /// reader, a book closing hides it).
+    told_open: bool,
 }
 
 /// The reader's screen for `view`.
@@ -548,7 +552,7 @@ pub fn book_screen(view: &BookView, player: u32, book_name: &str) -> BookScreen 
 impl WindowUi {
     /// The book reader, hidden, in place of retail's.
     pub(in crate::ui) fn mount_modern_book(&mut self) {
-        let theme = Horizon::BRONZE;
+        let theme = Horizon::current();
         let fonts = BookFonts {
             title: self.modern_font(Weight::SemiBold, 15.0),
             strong: self.modern_font(Weight::SemiBold, 12.5),
@@ -559,7 +563,7 @@ impl WindowUi {
             &mut self.host.root,
             BOOK,
             (WIDTH, HEIGHT),
-            BookFrame::new(theme, fonts.clone()),
+            BookFrame::new(fonts.clone()),
         ) {
             Ok(id) => id,
             Err(e) => {
@@ -586,7 +590,7 @@ impl WindowUi {
             Element::at(mr.0, mr.1, mr.2, mr.3)
                 .with_anchors(AnchorEdges::NONE)
                 .with_visible(false),
-            BookMenu::new(theme, fonts),
+            BookMenu::new(fonts),
         );
         ui.hide_window(BOOK);
         let Some(modern) = self.modern.as_mut() else {
@@ -598,6 +602,7 @@ impl WindowUi {
             menu,
             rendered: None,
             was_open: 0,
+            told_open: false,
         });
         modern.replace(BOOK_WINDOW);
         self.panels.stand_in(panel_id::BOOK, BOOK);
@@ -610,6 +615,23 @@ impl WindowUi {
             .widget::<Field>(page)
             .filter(|f| f.editable())
             .map(Field::text)
+    }
+
+    /// The game opened or closed a book: the reader shows or goes.
+    pub(in crate::ui) fn follow_modern_book(&mut self, dirty: crate::ui::facts::Dirty) {
+        if !dirty.book {
+            return;
+        }
+        let open = self.facts.book.as_ref().is_some_and(|v| v.book_guid != 0);
+        let Some(b) = self.modern.as_mut().and_then(|m| m.book.as_mut()) else {
+            return;
+        };
+        if b.told_open == open {
+            return;
+        }
+        b.told_open = open;
+        self.panels
+            .set_visibility(&mut self.host.root, panel_id::BOOK, open);
     }
 
     /// Each frame: the reader follows the open book; turning a page or

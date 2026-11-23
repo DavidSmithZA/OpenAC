@@ -10,6 +10,7 @@
 //! lists every effect of that kind, soonest to end first, with a
 //! scrollbar. Clicking a chip opens the window behind it.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_core::spells::Spellbook;
@@ -52,8 +53,6 @@ const WHEEL_STEP: f32 = 2.0 * ROW_HEIGHT;
 
 /// Ending soon.
 const SOON: Color = hex(0xFF_B547, 1.0);
-/// A group heading, quietly.
-const HEADING: Color = hex(0xC8_B89C, 1.0);
 /// Words on the vitae chip.
 const VITAE_TEXT: Color = hex(0xFF_D6D7, 1.0);
 
@@ -150,12 +149,13 @@ impl EffectsOnYou {
     }
 }
 
-/// Vitae as its chip says it: the share kept, a whole percentage (never
-/// rounded up to 100 while some is lost).
+/// Vitae as its chip says it, as the retail panel does: the share lost
+/// (5 for 0.95 kept), a whole percentage (never rounded down to 0 while
+/// some is lost).
 #[must_use]
-pub fn vitae_percent(kept: f32) -> u32 {
-    let percent = (kept.clamp(0.0, 1.0) * 100.0).round() as u32;
-    if kept < 1.0 { percent.min(99) } else { percent }
+pub fn vitae_penalty_percent(kept: f32) -> u32 {
+    let percent = ((1.0 - kept.clamp(0.0, 1.0)) * 100.0).round() as u32;
+    if kept < 1.0 { percent.max(1) } else { percent }
 }
 
 /// The burden chip's look, from the load (what is carried over what can
@@ -247,17 +247,17 @@ impl Tone {
         match (self, open) {
             (Self::Good | Self::Soon, true) => Look {
                 edge: accent,
-                fill: hex(0x14_100C, 0.85),
+                fill: tone::ground(0.85),
                 ink: if self == Self::Soon {
                     SOON
                 } else {
-                    hex(0xE9_D3AE, 1.0)
+                    tone::warm(1.0)
                 },
             },
             (Self::Good, false) => Look {
                 edge: hex(0x7F_D08A, 0.55),
                 fill: hex(0x0A_1E0E, 0.45),
-                ink: hex(0xE9_D3AE, 1.0),
+                ink: tone::warm(1.0),
             },
             (Self::Soon, false) => Look {
                 edge: hex(0xFF_B547, 0.75),
@@ -284,9 +284,9 @@ impl Tone {
                 ink: hex(0xFF_C2C4, 1.0),
             },
             (Self::Calm, _) => Look {
-                edge: hex(0xC9_A062, 0.7),
-                fill: hex(0x14_100C, 0.6),
-                ink: hex(0xE9_D3AE, 1.0),
+                edge: tone::bronze(0.7),
+                fill: tone::ground(0.6),
+                ink: tone::warm(1.0),
             },
         }
     }
@@ -398,7 +398,7 @@ impl Chip {
             ChipKind::Burden => panel_id::INVENTORY,
             ChipKind::Chess => {
                 // Brings the board back; it never puts it away.
-                if ui.is_window_visible(crate::ui::indicator_panels::MINI_GAME_WINDOW) {
+                if ui.is_window_visible(crate::ui::modern::chess::window::CHESS) {
                     return;
                 }
                 panel_id::MINI_GAME
@@ -447,7 +447,7 @@ impl Widget for Chip {
             return;
         };
         let _ = me;
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let width = self.width();
         let look = view.tone.look(self.open, p.accent);
         let radius = CornerRadii::all(self.theme.metrics.radius);
@@ -551,15 +551,13 @@ pub struct ChipRow {
     pub font: Option<Arc<UiFont>>,
     /// The frame rate line, when shown.
     pub frame_rate: Option<String>,
-    theme: Horizon,
 }
 
 impl ChipRow {
     /// A row in `theme`, its frame rate in `font`.
     #[must_use]
-    pub fn new(theme: Horizon, font: Option<Arc<UiFont>>) -> Self {
+    pub fn new(font: Option<Arc<UiFont>>) -> Self {
         Self {
-            theme,
             font,
             ..Self::default()
         }
@@ -594,7 +592,7 @@ impl Widget for ChipRow {
         let (Some(words), Some(font)) = (&self.frame_rate, &self.font) else {
             return;
         };
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let y = if self.any_chip {
             CHIP_HEIGHT + CHIP_GAP
         } else {
@@ -775,7 +773,7 @@ pub fn effect_chips(effects: &EffectsOnYou, show_times: bool, soon: f64) -> [Opt
     });
     let vitae = effects.vitae.map(|kept| ChipView {
         tone: Tone::Bad,
-        figure: format!("{}%", vitae_percent(kept)),
+        figure: format!("{}%", vitae_penalty_percent(kept)),
         words: "VITAE".to_owned(),
     });
     [helpful, harmful, vitae]
@@ -971,7 +969,6 @@ const LABEL_TRACKING: f32 = 1.14;
 /// The list of every effect of one kind, inside the hover pane.
 #[derive(Debug)]
 pub struct EffectsPane {
-    theme: Horizon,
     fonts: PaneFonts,
     /// What it shows.
     view: PaneView,
@@ -982,9 +979,8 @@ pub struct EffectsPane {
 impl EffectsPane {
     /// An empty list in `fonts`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: PaneFonts) -> Self {
+    pub fn new(fonts: PaneFonts) -> Self {
         Self {
-            theme,
             fonts,
             view: PaneView::default(),
             scroll: 0.0,
@@ -1051,7 +1047,7 @@ impl Widget for EffectsPane {
     }
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let right = PANE_WIDTH - PAD_RIGHT;
         let (label, name, figure, caption) = (
             self.fonts.label.clone(),
@@ -1071,7 +1067,11 @@ impl Widget for EffectsPane {
                 },
                 self.view.count
             );
-            let color = if self.view.harmful { bad } else { HEADING };
+            let color = if self.view.harmful {
+                bad
+            } else {
+                tone::soft(1.0)
+            };
             text::draw(
                 rc,
                 f,
@@ -1127,7 +1127,7 @@ impl Widget for EffectsPane {
                 );
                 tx += text::measure(f, "VITAE", LABEL_TRACKING) + 8.0;
             }
-            let percent = vitae_percent(kept);
+            let percent = vitae_penalty_percent(kept);
             if let Some(f) = &figure {
                 let ty = y + ((VITAE_HEIGHT - f.line_height) * 0.5).round();
                 text::draw(
@@ -1140,16 +1140,16 @@ impl Widget for EffectsPane {
                 );
             }
             if let Some(f) = &caption {
-                let words = format!("health, mana, skills {}% lower", 100 - percent);
-                let tw = text::measure(f, &words, 0.0);
+                let words = "health, mana, skills lower";
+                let tw = text::measure(f, words, 0.0);
                 let ty = y + ((VITAE_HEIGHT - f.line_height) * 0.5).round();
                 text::draw(
                     rc,
                     f,
-                    &words,
+                    words,
                     x + w - 8.0 - tw,
                     ty,
-                    TextStyle::plain(hex(0xE9_D3AE, 1.0)),
+                    TextStyle::plain(tone::warm(1.0)),
                 );
             }
         }
@@ -1173,7 +1173,7 @@ impl Widget for EffectsPane {
         for group in &self.view.groups {
             if y + GROUP_HEIGHT > top && y < top + room {
                 let heading = if group.tone == TimeTone::Plain {
-                    HEADING
+                    tone::soft(1.0)
                 } else {
                     tone_color(group.tone)
                 };
@@ -1336,7 +1336,7 @@ mod tests {
             (harmful.figure.as_str(), harmful.words.as_str()),
             ("1", "0:22")
         );
-        assert_eq!(vitae.unwrap().figure, "94%");
+        assert_eq!(vitae.unwrap().figure, "6%");
     }
 
     #[test]
@@ -1395,7 +1395,7 @@ mod tests {
                 .collect(),
             ..EffectsOnYou::default()
         };
-        let mut pane = EffectsPane::new(Horizon::BRONZE, PaneFonts::default());
+        let mut pane = EffectsPane::new(PaneFonts::default());
         pane.show(PaneView::of(&e, false, true, DEFAULT_SOON_SECONDS, |_| {
             None
         }));
@@ -1416,10 +1416,11 @@ mod tests {
     }
 
     #[test]
-    fn vitae_never_rounds_up_to_whole() {
-        assert_eq!(vitae_percent(0.94), 94);
-        assert_eq!(vitae_percent(0.996), 99);
-        assert_eq!(vitae_percent(1.0), 100);
+    fn vitae_shows_the_share_lost_never_rounded_to_none() {
+        assert_eq!(vitae_penalty_percent(0.95), 5);
+        assert_eq!(vitae_penalty_percent(0.94), 6);
+        assert_eq!(vitae_penalty_percent(0.996), 1);
+        assert_eq!(vitae_penalty_percent(1.0), 0);
     }
 
     #[test]

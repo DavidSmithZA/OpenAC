@@ -5,7 +5,7 @@ exclude = ["vendor"]
 resolver = "3"
 
 [workspace.package]
-version = "0.2.15"
+version = "0.2.16"
 edition = "2024"
 rust-version = "1.95"
 publish = false
@@ -29,6 +29,7 @@ ac-host-core = { path = "crates/ac-host-core" }
 ac-host = { path = "crates/ac-host" }
 ac-launcher-core = { path = "crates/ac-launcher-core" }
 ac-launcher-net = { path = "crates/ac-launcher-net" }
+ac-world-map = { path = "crates/ac-world-map" }
 ac-proxy = { path = "crates/ac-proxy" }
 ac-physics = { path = "crates/ac-physics" }
 ac-motion = { path = "crates/ac-motion" }

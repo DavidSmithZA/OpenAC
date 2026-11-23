@@ -335,7 +335,7 @@ impl PreGameScreens {
             Err(e) => notices.push(format!("pre-game: character creation: {e}")),
         }
 
-        match credits_screen(ui, content, &strings) {
+        match credits_screen(ui, content) {
             Ok(s) => screens.credits = Some(s),
             Err(e) => notices.push(format!("pre-game: credits: {e}")),
         }
@@ -695,13 +695,14 @@ pub fn creation_strings(dats: &Arc<DatCollection>) -> Option<CreationStrings> {
     })
 }
 
-/// The credits' text and pictures, read from the two roots and the
-/// string tables.
-fn credits_screen(
-    ui: &mut UiRoot,
-    content: &DatContent,
-    strings: &StringResolver,
-) -> Result<CreditsScreen, String> {
+/// What the credits show (their text, pictures and pace), read from the
+/// two authored roots' properties and the string tables without building
+/// anything.
+///
+/// # Errors
+/// The layout, a root, a property, the text or the wait text is missing.
+pub fn credits_resources(content: &DatContent) -> Result<(u32, CreditsResources), String> {
+    let strings = owned_strings(content.dats());
     let id = resolve_data_id(content.dats(), credits::ROOT_ENUM, SCREEN_ENUM_CATEGORY);
     if id == 0 {
         return Err("the enumeration names no layout".to_owned());
@@ -727,18 +728,27 @@ fn credits_screen(
     let please_wait = strings
         .resolve(GENERAL_STRING_TABLE, compute_hash("ID_Wait_PleaseWait"), 0)
         .ok_or("the wait text is missing")?;
+    Ok((
+        id,
+        CreditsResources {
+            text_fragments: fragments,
+            picture_ids: pictures,
+            section_seconds: seconds,
+            please_wait,
+        },
+    ))
+}
+
+/// The credits' text and pictures, read from the two roots and the
+/// string tables.
+fn credits_screen(ui: &mut UiRoot, content: &DatContent) -> Result<CreditsScreen, String> {
+    let (id, resources) = credits_resources(content)?;
     let font = content.font(DEFAULT_FONT_ID);
     let picture = import_rooted(ui, content, id, credits::PICTURE_ROOT_ID, font.clone())
         .ok_or("the picture root does not build")?;
     let Some(text) = import_rooted(ui, content, id, credits::TEXT_ROOT_ID, font) else {
         ui.destroy(picture.root);
         return Err("the text root does not build".to_owned());
-    };
-    let resources = CreditsResources {
-        text_fragments: fragments,
-        picture_ids: pictures,
-        section_seconds: seconds,
-        please_wait,
     };
     CreditsScreen::bind(ui, &picture, &text, resources).ok_or_else(|| {
         ui.destroy(picture.root);

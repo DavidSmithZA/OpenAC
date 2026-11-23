@@ -5,6 +5,10 @@
 //! world with what the frame's batch holds. A texture whose owner lets go
 //! of it is dropped, and its memory with it.
 //!
+//! Glass (the modern interface's windows) samples the frame drawn so far,
+//! blurred ([`super::backdrop`]): the pass stops at a glass, the frame is
+//! copied and blurred, and the pass goes on.
+//!
 //! OpenAC's `TextRenderer` and the UI half of `TextureCache`
 //! (`GetOrUploadRenderSurface`, `UploadUiTexture`): a surface the dats do
 //! not hold draws as the 1 x 1 magenta placeholder (named once); a runtime
@@ -17,6 +21,7 @@ use ac_ui::draw::{Filter, TextureRef};
 use ac_ui_window::ui::textures::TextureLedger;
 pub use ac_ui_window::ui::textures::{UiPixels, UiTextureSource};
 
+use super::backdrop::BackdropBlur;
 use super::batch::{UiBatch, UiTexture, UiTextureKey};
 
 /// The texture format `pixels` upload as: one byte a texel for coverage,
@@ -55,6 +60,39 @@ struct PreparedRun {
     key: UiTextureKey,
     first: u32,
     count: u32,
+    /// What it covers on the screen, pixels.
+    bounds: Bounds,
+}
+
+/// A box on the screen: left, top, right, bottom.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Bounds([f32; 4]);
+
+impl Bounds {
+    const EMPTY: Self = Self([f32::MAX, f32::MAX, f32::MIN, f32::MIN]);
+
+    fn of(vertices: &[super::batch::UiVertex]) -> Self {
+        vertices.iter().fold(Self::EMPTY, |b, v| {
+            let [x, y] = v.position;
+            Self([b.0[0].min(x), b.0[1].min(y), b.0[2].max(x), b.0[3].max(y)])
+        })
+    }
+
+    fn union(self, other: Self) -> Self {
+        Self([
+            self.0[0].min(other.0[0]),
+            self.0[1].min(other.0[1]),
+            self.0[2].max(other.0[2]),
+            self.0[3].max(other.0[3]),
+        ])
+    }
+
+    fn overlaps(self, other: Self) -> bool {
+        self.0[0] < other.0[2]
+            && other.0[0] < self.0[2]
+            && self.0[1] < other.0[3]
+            && other.0[1] < self.0[3]
+    }
 }
 
 /// The UI's GPU objects. Built with the window, dropped with it.
@@ -62,6 +100,14 @@ pub struct UiRenderer {
     pipeline: wgpu::RenderPipeline,
     /// The pipeline of one-byte coverage textures.
     coverage_pipeline: wgpu::RenderPipeline,
+    /// The pipeline of glass: the blurred frame where each pixel lies.
+    backdrop_pipeline: wgpu::RenderPipeline,
+    /// The blur, made when glass is first drawn.
+    blur: Option<BackdropBlur>,
+    /// The blurred frame, bound as a texture.
+    backdrop: Option<wgpu::BindGroup>,
+    /// The target's format, for the blur's copy.
+    format: wgpu::TextureFormat,
     texture_layout: wgpu::BindGroupLayout,
     screen_buffer: wgpu::Buffer,
     screen_group: wgpu::BindGroup,
@@ -165,7 +211,10 @@ impl UiRenderer {
         });
         let screen_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("ui screen"),
-            entries: &[uniform_entry(0, wgpu::ShaderStages::VERTEX)],
+            entries: &[uniform_entry(
+                0,
+                wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+            )],
         });
         let texture_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("ui texture"),
@@ -229,6 +278,7 @@ impl UiRenderer {
         };
         let pipeline = pipeline_for("ui", "fs_main");
         let coverage_pipeline = pipeline_for("ui coverage", "fs_coverage");
+        let backdrop_pipeline = pipeline_for("ui glass", "fs_backdrop");
         let screen_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("ui screen"),
             size: 16,
@@ -265,6 +315,10 @@ impl UiRenderer {
         Self {
             pipeline,
             coverage_pipeline,
+            backdrop_pipeline,
+            blur: None,
+            backdrop: None,
+            format,
             texture_layout,
             screen_buffer,
             screen_group,
@@ -314,12 +368,33 @@ impl UiRenderer {
         for (texture, pixels) in plan.uploads {
             self.upload_texture(device, queue, texture, &pixels);
         }
-        self.prepared
-            .extend(plan.runs.iter().map(|run| PreparedRun {
+        if batch.has_backdrop() {
+            let format = self.format;
+            let blur = self
+                .blur
+                .get_or_insert_with(|| BackdropBlur::new(device, format));
+            if blur.ensure(device, size) || self.backdrop.is_none() {
+                self.backdrop = blur.result().map(|view| {
+                    bind(
+                        device,
+                        &self.texture_layout,
+                        (&self.samplers.clamp_linear, &self.samplers.clamp_nearest),
+                        "ui glass",
+                        view,
+                    )
+                    .linear
+                });
+            }
+        }
+        self.prepared.extend(plan.runs.iter().map(|run| {
+            let span = run.first as usize..(run.first + run.count) as usize;
+            PreparedRun {
                 key: run.key,
                 first: run.first,
                 count: run.count,
-            }));
+                bounds: batch.vertices.get(span).map_or(Bounds::EMPTY, Bounds::of),
+            }
+        }));
     }
 
     /// Draw `texture` from `view`, a texture the renderer draws into (a 3-D
@@ -389,46 +464,106 @@ impl UiRenderer {
         self.textures.len()
     }
 
-    /// Record the prepared UI over what `target` holds.
-    pub fn draw(&self, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView) {
+    /// Record the prepared UI over what `target` holds. Glass shows
+    /// `frame` (the texture behind `target`, which can be copied from)
+    /// blurred; without it glass draws nothing.
+    pub fn draw(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+        target: &wgpu::TextureView,
+        frame: Option<&wgpu::Texture>,
+    ) {
         if self.prepared.is_empty() {
             return;
         }
-        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("ui"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: target,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            ..Default::default()
-        });
-        pass.set_pipeline(&self.pipeline);
-        let mut coverage = false;
-        pass.set_bind_group(0, &self.screen_group, &[]);
-        pass.set_vertex_buffer(0, self.vertices.slice(..));
+        let begin = |encoder: &mut wgpu::CommandEncoder| {
+            let mut pass = encoder
+                .begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("ui"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: target,
+                        depth_slice: None,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Load,
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    ..Default::default()
+                })
+                .forget_lifetime();
+            pass.set_bind_group(0, &self.screen_group, &[]);
+            pass.set_vertex_buffer(0, self.vertices.slice(..));
+            pass
+        };
+        let mut pass = Some(begin(encoder));
+        // The pipeline bound: None until the first run.
+        let mut bound: Option<Pipeline> = None;
+        // Whether the frame has been blurred for glass (None: not yet tried),
+        // how often, and whether more has been drawn since.
+        let mut blurred: Option<bool> = None;
+        let mut blurs = 0;
+        let mut drawn_since = Bounds::EMPTY;
         for run in &self.prepared {
-            let texture = match run.key.texture {
-                UiTexture::White => &self.white,
+            let (wanted, group) = match run.key.texture {
+                UiTexture::Backdrop => {
+                    let Some(group) = self.backdrop.as_ref() else {
+                        continue;
+                    };
+                    let again = blurred == Some(true)
+                        && blurs < MAX_BLURS
+                        && drawn_since.overlaps(run.bounds);
+                    if blurred.is_none() || again {
+                        // The frame so far is copied once the pass ends.
+                        let done = match (frame, self.blur.as_ref()) {
+                            (Some(frame), Some(blur)) => {
+                                pass = None;
+                                blur.run(encoder, frame)
+                            }
+                            _ => false,
+                        };
+                        blurs += 1;
+                        drawn_since = Bounds::EMPTY;
+                        blurred = Some(blurred == Some(true) || done);
+                    }
+                    if blurred != Some(true) {
+                        continue;
+                    }
+                    (Pipeline::Backdrop, group)
+                }
+                UiTexture::White => (Pipeline::Plain, self.white.bind_group(run.key.filter)),
                 UiTexture::Named(t) => match self.textures.get(&t) {
-                    Some(texture) => texture,
+                    Some(texture) => (
+                        if texture.coverage {
+                            Pipeline::Coverage
+                        } else {
+                            Pipeline::Plain
+                        },
+                        texture.bind_group(run.key.filter),
+                    ),
                     None => continue,
                 },
             };
-            if texture.coverage != coverage {
-                coverage = texture.coverage;
-                pass.set_pipeline(if coverage {
-                    &self.coverage_pipeline
-                } else {
-                    &self.pipeline
+            let pass = match &mut pass {
+                Some(pass) => pass,
+                None => {
+                    bound = None;
+                    pass.insert(begin(encoder))
+                }
+            };
+            if bound != Some(wanted) {
+                bound = Some(wanted);
+                pass.set_pipeline(match wanted {
+                    Pipeline::Plain => &self.pipeline,
+                    Pipeline::Coverage => &self.coverage_pipeline,
+                    Pipeline::Backdrop => &self.backdrop_pipeline,
                 });
             }
-            pass.set_bind_group(1, texture.bind_group(run.key.filter), &[]);
+            pass.set_bind_group(1, group, &[]);
             pass.draw(run.first..run.first + run.count, 0..1);
+            if wanted != Pipeline::Backdrop {
+                drawn_since = drawn_since.union(run.bounds);
+            }
         }
     }
 
@@ -455,6 +590,20 @@ impl UiRenderer {
         self.texture_bytes += gpu.bytes;
         self.textures.insert(texture, gpu);
     }
+}
+
+/// How often a frame is blurred for glass at most: again at a glass that
+/// what was drawn since the last blur reaches under (a window over a
+/// window, glass over the full-screen map); past this the last blur
+/// serves.
+const MAX_BLURS: u32 = 3;
+
+/// Which of the UI's pipelines a run draws with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Pipeline {
+    Plain,
+    Coverage,
+    Backdrop,
 }
 
 /// Put `pixels` on the GPU, every level, with a linear and a nearest
@@ -770,7 +919,7 @@ mod tests {
             mapped_at_creation: false,
         });
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
-        renderer.draw(&mut encoder, &view);
+        renderer.draw(&mut encoder, &view, Some(&target));
         encoder.copy_texture_to_buffer(
             target.as_image_copy(),
             wgpu::TexelCopyBufferInfo {
@@ -793,6 +942,110 @@ mod tests {
             .chunks(row as usize)
             .flat_map(|bytes| bytes[..(w * 4) as usize].to_vec())
             .collect()
+    }
+
+    /// What `paint` draws with glass on over black, a UI of `w` x `h`
+    /// pixels, read back as RGBA.
+    fn glass_pixels(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        (w, h): (u32, u32),
+        paint: impl FnOnce(&mut ac_ui::draw::RenderContext<'_>),
+    ) -> Vec<u8> {
+        let mut list = ac_ui::draw::DrawList {
+            canvas_scale: (1.0, 1.0),
+            ..Default::default()
+        };
+        let mut context = ac_ui::draw::RenderContext::new(
+            &mut list,
+            (w as f32, h as f32),
+            &ac_ui::draw::NoSprites,
+        )
+        .with_glass(true);
+        paint(&mut context);
+        draw_batch(
+            device,
+            queue,
+            &UiBatch::build(&list),
+            &mut Source(HashMap::new()),
+            (w, h),
+            (w, h),
+            [0, 0, 0, 255],
+        )
+    }
+
+    // Clear glass over red beside blue: far from the seam each side keeps
+    // its colour, at the seam the two run together (the blur reaches
+    // across it).
+    #[test]
+    #[ignore = "needs a GPU"]
+    fn glass_shows_what_is_behind_it_blurred() {
+        let (device, queue) = crate::test_gpu::device().expect("a GPU device");
+        let (w, h) = (128, 32);
+        let clear = Color::rgba(0.0, 0.0, 0.0, 0.0);
+        let square = ac_ui::shapes::CornerRadii::default();
+        let picture = glass_pixels(&device, &queue, (w, h), |c| {
+            c.fill(0.0, 0.0, 64.0, 32.0, Color::rgba(1.0, 0.0, 0.0, 1.0));
+            c.fill(64.0, 0.0, 64.0, 32.0, Color::rgba(0.0, 0.0, 1.0, 1.0));
+            c.fill_glass_rounded_rect(0.0, 0.0, 128.0, 32.0, square, clear, clear);
+        });
+        let at = |x: u32| {
+            let i = ((h / 2 * w + x) * 4) as usize;
+            (picture[i], picture[i + 2])
+        };
+        let (r, b) = at(2);
+        assert!(r > 200 && b < 40, "the far left stays red: {r} {b}");
+        let (r, b) = at(125);
+        assert!(b > 200 && r < 40, "the far right stays blue: {r} {b}");
+        let (r, b) = at(64);
+        assert!(r > 60 && b > 60, "the seam runs together: {r} {b}");
+    }
+
+    // A window drawn over glass, then glass over that window: the second
+    // glass is blurred again and shows the window, not the red under it.
+    // Glass beside what was drawn since keeps the first blur.
+    #[test]
+    #[ignore = "needs a GPU"]
+    fn glass_over_what_was_drawn_since_the_blur_blurs_again() {
+        let (device, queue) = crate::test_gpu::device().expect("a GPU device");
+        let (w, h) = (128, 32);
+        let clear = Color::rgba(0.0, 0.0, 0.0, 0.0);
+        let square = ac_ui::shapes::CornerRadii::default();
+        let picture = glass_pixels(&device, &queue, (w, h), |c| {
+            c.fill(0.0, 0.0, 128.0, 32.0, Color::rgba(1.0, 0.0, 0.0, 1.0));
+            c.fill_glass_rounded_rect(0.0, 0.0, 40.0, 32.0, square, clear, clear);
+            c.fill(64.0, 0.0, 64.0, 32.0, Color::rgba(0.0, 1.0, 0.0, 1.0));
+            c.fill_glass_rounded_rect(80.0, 0.0, 48.0, 32.0, square, clear, clear);
+        });
+        let at = |x: u32| {
+            let i = ((h / 2 * w + x) * 4) as usize;
+            (picture[i], picture[i + 1])
+        };
+        let (r, g) = at(110);
+        assert!(
+            g > 200 && r < 40,
+            "the second glass shows the green: {r} {g}"
+        );
+        let (r, g) = at(10);
+        assert!(r > 200 && g < 40, "the first glass shows the red: {r} {g}");
+    }
+
+    #[test]
+    fn bounds_overlap_only_when_they_share_area() {
+        let a = Bounds([0.0, 0.0, 10.0, 10.0]);
+        assert!(a.overlaps(Bounds([5.0, 5.0, 15.0, 15.0])));
+        assert!(
+            !a.overlaps(Bounds([10.0, 0.0, 20.0, 10.0])),
+            "touching edges"
+        );
+        assert!(!a.overlaps(Bounds::EMPTY));
+        assert!(!Bounds::EMPTY.overlaps(a));
+        assert_eq!(
+            Bounds::EMPTY
+                .union(a)
+                .union(Bounds([20.0, -5.0, 30.0, 1.0])),
+            Bounds([0.0, -5.0, 30.0, 10.0])
+        );
     }
 
     /// What `paint` draws in white over black: a UI of `ui` units, `pixels`

@@ -244,6 +244,13 @@ pub enum DrawCmd {
         /// One quad per glyph.
         quads: Vec<Quad>,
     },
+    /// Triangles that show the world behind the interface blurred (frosted
+    /// glass), times the colour at each corner. A renderer that cannot blur
+    /// draws nothing for them; what is painted over them still shows.
+    Backdrop {
+        /// The corners (opacity applied).
+        vertices: Vec<ColorVertex>,
+    },
 }
 
 /// One frame of UI drawing.
@@ -506,6 +513,7 @@ pub struct RenderContext<'a> {
     media_seconds: f64,
     device_pixel: f32,
     sharp_fonts: Option<Arc<SharpFonts>>,
+    glass: bool,
 }
 
 /// Pixel sizes of render surfaces, so widgets can tile UI art. `None` for an
@@ -551,7 +559,22 @@ impl<'a> RenderContext<'a> {
             media_seconds: 0.0,
             device_pixel: 1.0,
             sharp_fonts: None,
+            glass: false,
         }
+    }
+
+    /// With the world behind the interface blurred under glass
+    /// ([`Self::fill_glass_rounded_rect`]); off, glass is a plain fill.
+    #[must_use]
+    pub fn with_glass(mut self, on: bool) -> Self {
+        self.glass = on;
+        self
+    }
+
+    /// Whether glass shows the world behind it blurred.
+    #[must_use]
+    pub fn glass(&self) -> bool {
+        self.glass
     }
 
     /// With how many framebuffer pixels one unit of this context covers, for
@@ -912,8 +935,48 @@ impl<'a> RenderContext<'a> {
     /// triangle with anything but finite numbers in it is dropped, so what
     /// reaches the GPU is always something it can draw.
     pub fn triangles(&mut self, triangles: &[ColorVertex]) {
-        if self.current_clip_is_empty() {
+        if let Some(vertices) = self.placed(triangles) {
+            self.emit(DrawCmd::Triangles { vertices });
+        }
+    }
+
+    /// Frosted glass: a rounded rectangle that shows the world behind it
+    /// blurred, tinted `color`. With glass off it is `opaque`, a plain fill
+    /// solid enough to read on without the blur.
+    #[allow(clippy::too_many_arguments)]
+    pub fn fill_glass_rounded_rect(
+        &mut self,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        radii: CornerRadii,
+        color: Color,
+        opaque: Color,
+    ) {
+        if !self.glass {
+            self.fill_rounded_rect(x, y, w, h, radii, opaque);
             return;
+        }
+        let mut shape = Vec::new();
+        shapes::fill_rounded_rect(
+            (x, y, w, h),
+            radii,
+            Color::WHITE,
+            self.device_pixel,
+            &mut shape,
+        );
+        if let Some(vertices) = self.placed(&shape) {
+            self.emit(DrawCmd::Backdrop { vertices });
+        }
+        self.fill_rounded_rect(x, y, w, h, radii, color);
+    }
+
+    /// `triangles` moved, faded and clipped as this context draws; `None`
+    /// when nothing is left.
+    fn placed(&self, triangles: &[ColorVertex]) -> Option<Vec<ColorVertex>> {
+        if self.current_clip_is_empty() {
+            return None;
         }
         let mut vertices = Vec::with_capacity(triangles.len());
         for t in triangles.chunks_exact(3) {
@@ -926,9 +989,7 @@ impl<'a> RenderContext<'a> {
                 None => vertices.extend_from_slice(&placed),
             }
         }
-        if !vertices.is_empty() {
-            self.emit(DrawCmd::Triangles { vertices });
-        }
+        (!vertices.is_empty()).then_some(vertices)
     }
 
     fn place(&self, v: ColorVertex) -> ColorVertex {
@@ -2321,6 +2382,44 @@ mod tests {
             DrawCmd::Triangles { vertices } => vertices,
             other => panic!("not triangles: {other:?}"),
         }
+    }
+
+    // Glass on: the blurred world under the shape, then the lighter tint
+    // over it, both moved and faded as the context draws. Glass off: one
+    // plain fill in the solid colour.
+    #[test]
+    fn glass_is_the_blurred_world_under_its_tint_or_a_plain_fill_when_off() {
+        let tint = Color::rgba(0.1, 0.1, 0.1, 0.8);
+        let solid = Color::rgba(0.1, 0.1, 0.1, 0.95);
+        let draw = |on: bool| {
+            let mut list = DrawList::default();
+            let mut rc = RenderContext::new(&mut list, (800.0, 600.0), &NoSprites).with_glass(on);
+            rc.push_transform(10.0, 20.0);
+            rc.push_alpha(0.5);
+            rc.fill_glass_rounded_rect(0.0, 0.0, 100.0, 50.0, CornerRadii::all(6.0), tint, solid);
+            list
+        };
+        let on = draw(true);
+        assert_eq!(on.main.len(), 2);
+        let DrawCmd::Backdrop { vertices } = &on.main[0] else {
+            panic!("glass first: {:?}", on.main[0]);
+        };
+        let xs = vertices.iter().map(|v| v.x);
+        let (lo, hi) = xs.fold((f32::MAX, f32::MIN), |(a, b), x| (a.min(x), b.max(x)));
+        assert!((9.0..=10.5).contains(&lo) && (109.5..=111.0).contains(&hi));
+        assert!(vertices.iter().all(|v| v.color.a <= 0.5 + 1e-6));
+        assert!(vertices.iter().any(|v| (v.color.a - 0.5).abs() < 1e-6));
+        let DrawCmd::Triangles { vertices } = &on.main[1] else {
+            panic!("then the tint: {:?}", on.main[1]);
+        };
+        assert!(vertices.iter().any(|v| (v.color.a - 0.4).abs() < 1e-6));
+
+        let off = draw(false);
+        assert_eq!(off.main.len(), 1);
+        let DrawCmd::Triangles { vertices } = &off.main[0] else {
+            panic!("a plain fill: {:?}", off.main[0]);
+        };
+        assert!(vertices.iter().any(|v| (v.color.a - 0.475).abs() < 1e-6));
     }
 
     #[test]

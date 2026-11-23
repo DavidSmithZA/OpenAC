@@ -4,6 +4,7 @@
 //! in a window's foot. The screens only show these; a chosen entry or a
 //! pressed button goes back to its plugin.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_plugin_ui::{ItemNoteEntry, ItemWindow, NoteTone, PluginUiView, WindowFootEntry};
@@ -11,7 +12,6 @@ use ac_ui::draw::{Color, RenderContext};
 use ac_ui::event::{UiEvent, kind};
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
-use ac_ui::modern::theme::hex;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
 
@@ -141,7 +141,6 @@ pub fn band_height(rows: usize) -> f32 {
 /// The band of plugins' summaries and buttons over a window's own foot.
 #[derive(Debug)]
 pub struct FootBand {
-    theme: Horizon,
     /// The plugin's name, small capitals.
     label: Option<Arc<UiFont>>,
     /// The summary.
@@ -159,13 +158,11 @@ impl FootBand {
     /// A band in `theme`.
     #[must_use]
     pub fn new(
-        theme: Horizon,
         label: Option<Arc<UiFont>>,
         small: Option<Arc<UiFont>>,
         body: Option<Arc<UiFont>>,
     ) -> Self {
         Self {
-            theme,
             label,
             small,
             body,
@@ -271,8 +268,8 @@ impl Widget for FootBand {
         let Some(w) = ui.element(me).map(|e| e.width) else {
             return;
         };
-        let p = self.theme.palette;
-        rc.fill(12.0, 0.0, w - 24.0, 1.0, hex(0xC9_A062, 0.18));
+        let p = Horizon::current().palette;
+        rc.fill(12.0, 0.0, w - 24.0, 1.0, tone::bronze(0.18));
         let rects = self.button_rects(w);
         for (r, row) in self.rows.iter().enumerate() {
             let top = 2.0 + r as f32 * BAND_ROW;
@@ -313,7 +310,7 @@ impl Widget for FootBand {
                 if fb.enabled {
                     button(
                         rc,
-                        &self.theme,
+                        &Horizon::current(),
                         self.body.as_deref(),
                         *rect,
                         &fb.label,
@@ -329,7 +326,7 @@ impl Widget for FootBand {
                         rect.2,
                         rect.3,
                         r4,
-                        hex(0xC9_A062, 0.2),
+                        tone::bronze(0.2),
                         1.0,
                     );
                     text::draw_centred(

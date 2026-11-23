@@ -1,9 +1,11 @@
 //! The Social window's friends and ignored pages, and the menu of what to
 //! hide from someone.
 
-use ac_ui::draw::{Color, RenderContext};
+use ac_ui::draw::RenderContext;
 use ac_ui::modern::text::{self, TextStyle};
+use ac_ui::modern::theme::Horizon;
 use ac_ui::modern::theme::hex;
+use ac_ui::modern::tone;
 use ac_ui::shapes::CornerRadii;
 
 use super::model::{FriendRow, HIDEABLE, MOST_LISTED};
@@ -12,7 +14,6 @@ use super::window::{BODY, HEIGHT, Hit, Hits, PAD, Slot, SocialAsk, SocialFrame, 
 use crate::ui::modern::hud::lines::stroke;
 use crate::ui::modern::kit::{self, ButtonLook, bronze, gold};
 
-const MUTED: Color = hex(0xA8_9A82, 1.0);
 const FRIEND_ROW: f32 = 40.0;
 const IGNORED_ROW: f32 = 46.0;
 const MENU_W: f32 = 260.0;
@@ -65,7 +66,7 @@ impl SocialFrame {
             x + 74.0,
             field.1,
             field.3,
-            MUTED,
+            tone::muted(1.0),
         );
         let on = self.screen.appear_offline;
         let note = if on {
@@ -96,9 +97,16 @@ impl SocialFrame {
             "Appear offline",
             sx + 48.0,
             field.1 + 1.0,
-            kit::WARM,
+            tone::warm(1.0),
         );
-        put(rc, f.small.as_ref(), note, sx + 48.0, field.1 + 18.0, MUTED);
+        put(
+            rc,
+            f.small.as_ref(),
+            note,
+            sx + 48.0,
+            field.1 + 18.0,
+            tone::muted(1.0),
+        );
         // The list.
         let room = (
             PAD,
@@ -127,7 +135,7 @@ impl SocialFrame {
                 "No friends yet. Type a name above, or click a name in chat to add one.",
                 room.0,
                 room.1 + 8.0,
-                MUTED,
+                tone::muted(1.0),
             );
         }
         rc.push_clip(room.0, room.1, room.2, room.3);
@@ -138,7 +146,7 @@ impl SocialFrame {
             }
             kit::group_heading(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 f.label.as_ref(),
                 room.0,
                 y,
@@ -146,7 +154,7 @@ impl SocialFrame {
                 room.0 + room.2 - 8.0,
                 &heading,
                 None,
-                kit::SOFT,
+                tone::soft(1.0),
             );
             y += 28.0;
             for row in rows {
@@ -173,7 +181,7 @@ impl SocialFrame {
         r: (f32, f32, f32, f32),
         room: (f32, f32, f32, f32),
     ) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let on = self.friend == row.id;
         let lit = h.add(r, Hit::Friend(row.id)) && kit::hot(h.hover, room);
@@ -181,7 +189,7 @@ impl SocialFrame {
         kit::online_dot(rc, r.0 + 10.0, r.1 + 16.0, 8.0, row.online);
         let mut x = r.0 + 28.0;
         if let Some(st) = &f.strong {
-            let ink = if row.online { p.text } else { kit::SOFT };
+            let ink = if row.online { p.text } else { tone::soft(1.0) };
             put_mid(rc, Some(st), &row.name, x, r.1, r.3, ink);
             x += text::measure(st, &row.name, 0.0) + 10.0;
         }
@@ -190,7 +198,7 @@ impl SocialFrame {
                 let w = text::measure(s, tag, 0.0) + 12.0;
                 let t = (x, r.1 + (r.3 - 18.0) * 0.5, w, 18.0);
                 rc.stroke_rounded_rect(t.0, t.1, t.2, t.3, CornerRadii::all(3.0), bronze(0.3), 1.0);
-                put_mid(rc, Some(s), tag, t.0 + 6.0, t.1, t.3, kit::SOFT);
+                put_mid(rc, Some(s), tag, t.0 + 6.0, t.1, t.3, tone::soft(1.0));
                 x += w + 6.0;
             }
         }
@@ -239,7 +247,7 @@ impl SocialFrame {
     /// The ignored page.
     #[allow(clippy::too_many_lines)]
     pub(super) fn draw_ignored(&mut self, rc: &mut RenderContext<'_>, h: &mut Hits) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = self.fonts.clone();
         let people = self.screen.people.clone();
         let count = people.ignored.len();
@@ -269,13 +277,13 @@ impl SocialFrame {
             WIDTH - PAD,
             field.1,
             field.3,
-            MUTED,
+            tone::muted(1.0),
         );
         // The people.
         let top = BODY + 58.0;
         kit::group_heading(
             rc,
-            &self.theme,
+            &Horizon::current(),
             f.label.as_ref(),
             PAD,
             top,
@@ -283,7 +291,7 @@ impl SocialFrame {
             WIDTH - PAD - 120.0,
             "PEOPLE",
             None,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         if let Some(l) = &f.label {
             let words = "WHAT IS HIDDEN";
@@ -294,7 +302,7 @@ impl SocialFrame {
                 words,
                 WIDTH - PAD - w,
                 top + ((28.0 - l.line_height) * 0.5).round(),
-                TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
         let everyone_top = HEIGHT - 16.0 - 40.0 - 46.0 - 38.0;
@@ -314,7 +322,7 @@ impl SocialFrame {
                 "Nobody is ignored.",
                 room.0,
                 room.1 + 8.0,
-                MUTED,
+                tone::muted(1.0),
             );
         }
         let mut menu_at = None;
@@ -335,7 +343,14 @@ impl SocialFrame {
                 y + 7.0,
                 p.text,
             );
-            put(rc, f.small.as_ref(), row.scope, r.0 + 12.0, y + 26.0, MUTED);
+            put(
+                rc,
+                f.small.as_ref(),
+                row.scope,
+                r.0 + 12.0,
+                y + 26.0,
+                tone::muted(1.0),
+            );
             let cross = (r.0 + r.2 - 6.0 - 30.0, y + 8.0, 30.0, 30.0);
             let lit = h.add(
                 cross,
@@ -357,7 +372,7 @@ impl SocialFrame {
                 cross.1 + 7.0,
                 16.0,
                 CROSS,
-                if lit { kit::HARM } else { kit::SOFT },
+                if lit { kit::HARM } else { tone::soft(1.0) },
                 1.6,
             );
             let what = self.what_button(
@@ -385,7 +400,7 @@ impl SocialFrame {
         // Everyone.
         kit::group_heading(
             rc,
-            &self.theme,
+            &Horizon::current(),
             f.label.as_ref(),
             PAD,
             everyone_top,
@@ -393,7 +408,7 @@ impl SocialFrame {
             WIDTH - PAD,
             "FROM EVERYONE",
             None,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         let r = (
             PAD,
@@ -417,7 +432,7 @@ impl SocialFrame {
             "Hidden whoever sends it",
             r.0 + 12.0,
             r.1 + 26.0,
-            MUTED,
+            tone::muted(1.0),
         );
         let what = self.what_button(
             rc,
@@ -438,7 +453,7 @@ impl SocialFrame {
                 "Ignoring a whole account hides every character on it, including ones made later. Click a name in chat to ignore someone from there.",
                 PAD,
                 HEIGHT - 16.0 - s.line_height,
-                MUTED,
+                tone::muted(1.0),
             );
         }
         if let Some((at, who, kinds)) = menu_at {
@@ -472,7 +487,16 @@ impl SocialFrame {
             + if enabled { 18.0 } else { 0.0 };
         let r = (right - w, y, w, 30.0);
         let lit = if enabled { h.add(r, hit) } else { false };
-        kit::button(rc, &self.theme, r, "", None, ButtonLook::Plain, lit, true);
+        kit::button(
+            rc,
+            &Horizon::current(),
+            r,
+            "",
+            None,
+            ButtonLook::Plain,
+            lit,
+            true,
+        );
         put_mid(
             rc,
             f.strong.as_ref(),
@@ -480,10 +504,18 @@ impl SocialFrame {
             r.0 + 10.0,
             r.1,
             r.3,
-            self.theme.palette.text,
+            Horizon::current().palette.text,
         );
         if enabled {
-            stroke(rc, r.0 + r.2 - 22.0, r.1 + 8.0, 14.0, DOWN, kit::WARM, 1.6);
+            stroke(
+                rc,
+                r.0 + r.2 - 22.0,
+                r.1 + 8.0,
+                14.0,
+                DOWN,
+                tone::warm(1.0),
+                1.6,
+            );
         }
         r
     }
@@ -497,7 +529,7 @@ impl SocialFrame {
         who: Option<String>,
         kinds: &std::collections::HashSet<u32>,
     ) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let items: Vec<_> = HIDEABLE
             .iter()
@@ -517,7 +549,7 @@ impl SocialFrame {
             b.2,
             b.3,
             CornerRadii::all(6.0),
-            hex(0x18_130E, 0.98),
+            tone::raised(0.98),
         );
         rc.stroke_rounded_rect(b.0, b.1, b.2, b.3, CornerRadii::all(6.0), bronze(0.8), 1.0);
         h.add(b, Hit::Swallow);
@@ -531,7 +563,7 @@ impl SocialFrame {
             &title,
             b.0 + 14.0,
             b.1 + 9.0,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         let all = kinds.contains(&1);
         for (i, k) in items.iter().enumerate() {
@@ -579,7 +611,7 @@ impl SocialFrame {
                 1.5,
             );
             if on {
-                stroke(rc, bx.0, bx.1, 16.0, TICK, hex(0x1A_140D, 1.0), 2.0);
+                stroke(rc, bx.0, bx.1, 16.0, TICK, tone::ink(1.0), 2.0);
             }
             let font = if k.kind == 1 {
                 f.strong.as_ref()

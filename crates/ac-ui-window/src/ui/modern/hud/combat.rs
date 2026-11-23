@@ -12,6 +12,7 @@
 //! crossbow Missile, anything else or nothing Melee). Repeat attacks, Auto
 //! target and Keep in view are not here: they are options.
 
+use ac_ui::modern::tone;
 use std::f32::consts::TAU;
 use std::sync::Arc;
 
@@ -61,9 +62,6 @@ pub const LOW_AMMO: i32 = 20;
 const FLASH_SECONDS: f32 = 0.3;
 /// One glow of the full meter, seconds.
 const FULL_PULSE_SECONDS: f32 = 0.7;
-/// The meter's fill at nothing and at full, its full end, the notch and
-/// the flash.
-const FILL_START: Color = hex(0xE0_B068, 0.5);
 const FULL_END: Color = hex(0xFF_E2A8, 1.0);
 const NOTCH_COLOR: Color = hex(0xFF_E2A8, 1.0);
 const FULL_GLOW: Color = hex(0xFF_D68C, 0.75);
@@ -187,7 +185,6 @@ pub struct StripFonts {
 /// The combat strip piece.
 #[derive(Debug)]
 pub struct CombatStrip {
-    theme: Horizon,
     fonts: StripFonts,
     /// What it shows.
     pub view: CombatView,
@@ -212,9 +209,8 @@ pub struct CombatStrip {
 impl CombatStrip {
     /// The strip in `theme`, its words in `fonts`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: StripFonts) -> Self {
+    pub fn new(fonts: StripFonts) -> Self {
         Self {
-            theme,
             fonts,
             view: CombatView::default(),
             hovered: None,
@@ -403,13 +399,13 @@ impl CombatStrip {
     }
 
     fn draw_pill(&self, rc: &mut RenderContext<'_>, parts: &Parts) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (left, w) = parts.body;
         let top = (HEIGHT - PILL) * 0.5;
         let round = CornerRadii::all(PILL * 0.5);
         let hovered = self.hovered == Some(Part::Mode);
         let fill = if hovered {
-            hex(0x2A_2116, 0.8)
+            tone::field(0.8)
         } else {
             hex(0, 0.55)
         };
@@ -439,7 +435,7 @@ impl CombatStrip {
     }
 
     fn draw_strip(&self, rc: &mut RenderContext<'_>, parts: &Parts, form: Form) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let shadow = p.text_shadow;
         let (left, w) = parts.body;
         let round = CornerRadii::all(HEIGHT * 0.5);
@@ -450,9 +446,9 @@ impl CombatStrip {
         let my = (HEIGHT - MODE) * 0.5;
         let lit = form == Form::Strip && self.hovered == Some(Part::Mode);
         let fill = if lit {
-            hex(0xE0_B068, 0.24)
+            tone::gold(0.24)
         } else {
-            hex(0xE0_B068, 0.12)
+            tone::gold(0.12)
         };
         rc.fill_rounded_rect(mx, my, mw, MODE, CornerRadii::all(MODE * 0.5), fill);
         let icon_y = (HEIGHT - MODE_ICON) * 0.5;
@@ -512,7 +508,7 @@ impl CombatStrip {
     }
 
     fn draw_heights(&self, rc: &mut RenderContext<'_>, parts: &Parts) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let top = (HEIGHT - HEIGHT_BUTTON) * 0.5;
         let round = CornerRadii::all(HEIGHT_BUTTON * 0.5);
         for (i, (height, word, ..)) in HEIGHTS.iter().enumerate() {
@@ -523,9 +519,9 @@ impl CombatStrip {
             let fill = if on {
                 if held { p.accent } else { p.accent_fill }
             } else if held {
-                hex(0xE0_B068, 0.3)
+                tone::gold(0.3)
             } else if hovered {
-                hex(0xE0_B068, 0.14)
+                tone::gold(0.14)
             } else {
                 hex(0, 0.0)
             };
@@ -554,7 +550,7 @@ impl CombatStrip {
     }
 
     fn draw_meter(&self, rc: &mut RenderContext<'_>, parts: &Parts, form: Form) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let (x, w) = parts.meter;
         let y = (HEIGHT - TROUGH) * 0.5;
         let round = CornerRadii::all(TROUGH * 0.5);
@@ -589,7 +585,7 @@ impl CombatStrip {
         rc.fill_rounded_rect(x, y, w, TROUGH, round, hex(0, 0.6));
         if level > 0.0 {
             let end = if full { FULL_END } else { p.accent };
-            let start = if full { p.accent } else { FILL_START };
+            let start = if full { p.accent } else { tone::gold(0.5) };
             rc.fill_horizontal_gradient(x, y, w * level, TROUGH, round, start, end);
         }
         if self.flash > 0.0 {
@@ -863,7 +859,7 @@ mod tests {
     use super::*;
 
     fn strip(mode: CombatMode) -> CombatStrip {
-        let mut s = CombatStrip::new(Horizon::BRONZE, StripFonts::default());
+        let mut s = CombatStrip::new(StripFonts::default());
         s.set_view(CombatView {
             mode: Some(mode),
             ..CombatView::default()
@@ -877,7 +873,7 @@ mod tests {
         assert_eq!(strip(CombatMode::MAGIC).form(), Form::Pill);
         assert_eq!(strip(CombatMode::MELEE).form(), Form::Strip);
         assert_eq!(strip(CombatMode::MISSILE).form(), Form::Strip);
-        let outside = CombatStrip::new(Horizon::BRONZE, StripFonts::default());
+        let outside = CombatStrip::new(StripFonts::default());
         assert_eq!(outside.form(), Form::Hidden);
     }
 

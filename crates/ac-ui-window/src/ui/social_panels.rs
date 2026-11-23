@@ -379,6 +379,7 @@ impl WindowUi {
             content,
             experience,
             status,
+            pregame_hidden,
             ..
         } = self;
         let split = host.with_controller::<ToolbarWindowController, _>(TOOLBAR_WINDOW, |c, _| {
@@ -420,6 +421,13 @@ impl WindowUi {
                     host.with_controller::<SocialPanelController, _>(SOCIAL_WINDOW, |c, _| {
                         c.reset_session_declaration();
                     });
+                    // The game's in-game windows go with the world: a
+                    // trade window left up, emptied, after its trade ended
+                    // does not come back with the next character (nor
+                    // when the pre-game screens give back the windows they
+                    // covered).
+                    host.root.hide_window(TRADE_WINDOW);
+                    pregame_hidden.retain(|name| name != TRADE_WINDOW);
                 }
                 (Some(false), true) => {
                     host.with_controller::<SocialPanelController, _>(SOCIAL_WINDOW, |c, ui| {
@@ -514,6 +522,10 @@ impl WindowUi {
                 true
             }
             PanelOutput::ResetSplitQuantity { stack } => {
+                if let Some(modern) = self.modern.as_mut() {
+                    modern.split.reset_to_whole(*stack);
+                    return true;
+                }
                 self.host
                     .with_controller::<ToolbarWindowController, _>(TOOLBAR_WINDOW, |c, ui| {
                         c.split.reset_to_whole(ui, *stack);

@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use crate::json::{self, Member, Node, Value};
 
 mod bars;
+mod characters;
 mod chat;
 mod layout;
 mod markup_controls;
@@ -20,6 +21,7 @@ pub mod render_pack;
 mod sections;
 
 pub use bars::{BarData, BarLayoutData, CharacterBars, SavedBars, SlotData};
+pub use characters::{RememberedCharacter, RememberedCharacters, RememberedLook};
 pub use chat::ChatTabData;
 pub use layout::{UiWindowLayout, UiWindowPlacement, UiWindowPosition};
 pub use markup_controls::MarkupControlKey;
@@ -177,6 +179,103 @@ pub struct ModernHudSettings {
     /// The helpful effects' count turns amber this many minutes before one
     /// ends (0: never).
     pub effect_warning_minutes: i32,
+    /// The key held to move the modern pieces anywhere (quick move).
+    pub quick_move_key: QuickMoveKey,
+    /// Windows and pop-ups show the world behind them blurred, as frosted
+    /// glass (off: a plain see-through fill).
+    pub glass_blur: bool,
+    /// The modern map's picture: the game's, or a detailed map tier
+    /// (drawn once downloaded).
+    pub map_detail: MapDetail,
+}
+
+/// The modern map's picture.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MapDetail {
+    /// The game's own map.
+    Game,
+    /// The detailed map, Standard tier.
+    #[default]
+    Standard,
+    /// HD tier.
+    Hd,
+    /// Ultra tier.
+    Ultra,
+    /// Extreme tier.
+    Extreme,
+}
+
+impl MapDetail {
+    /// Every choice, in the order offered.
+    pub const ALL: [Self; 5] = [
+        Self::Game,
+        Self::Standard,
+        Self::Hd,
+        Self::Ultra,
+        Self::Extreme,
+    ];
+
+    /// The name saved in the settings (a tier's own name).
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Game => "game",
+            Self::Standard => "standard",
+            Self::Hd => "hd",
+            Self::Ultra => "ultra",
+            Self::Extreme => "extreme",
+        }
+    }
+
+    /// The choice saved as `name`.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|k| k.name() == name)
+    }
+}
+
+/// The key held for quick move.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuickMoveKey {
+    /// Control.
+    Ctrl,
+    /// Alt (Option on a Mac).
+    Alt,
+    /// Command on a Mac, the Windows key elsewhere.
+    Cmd,
+}
+
+impl Default for QuickMoveKey {
+    /// Command on a Mac, where Control with a click is a right-click;
+    /// Control elsewhere.
+    fn default() -> Self {
+        if cfg!(target_os = "macos") {
+            Self::Cmd
+        } else {
+            Self::Ctrl
+        }
+    }
+}
+
+impl QuickMoveKey {
+    /// Every choice, in the order offered.
+    pub const ALL: [Self; 3] = [Self::Ctrl, Self::Alt, Self::Cmd];
+
+    /// The name saved in the settings.
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Ctrl => "ctrl",
+            Self::Alt => "alt",
+            Self::Cmd => "cmd",
+        }
+    }
+
+    /// The choice saved as `name`.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|k| k.name() == name)
+    }
 }
 
 impl Default for ModernHudSettings {
@@ -187,6 +286,9 @@ impl Default for ModernHudSettings {
             low_health_percent: 25,
             low_health_edge_glow: true,
             effect_warning_minutes: 5,
+            quick_move_key: QuickMoveKey::default(),
+            glass_blur: true,
+            map_detail: MapDetail::Standard,
         }
     }
 }
@@ -719,6 +821,19 @@ fn read_display(d: &[Member], version: i32) -> Result<DisplaySettings, Unreadabl
                     m.effect_warning_minutes,
                 )?
                 .clamp(0, 60),
+                quick_move_key: QuickMoveKey::from_name(&read_string(
+                    d,
+                    "modernQuickMoveKey",
+                    m.quick_move_key.name(),
+                ))
+                .unwrap_or(m.quick_move_key),
+                glass_blur: read_bool(d, "modernGlassBlur", m.glass_blur),
+                map_detail: MapDetail::from_name(&read_string(
+                    d,
+                    "modernMapDetail",
+                    m.map_detail.name(),
+                ))
+                .unwrap_or(m.map_detail),
             }
         },
     })
@@ -780,7 +895,7 @@ fn display_object(d: &DisplaySettings) -> String {
             out
         },
     );
-    let fields: [(&str, String); 30] = [
+    let fields: [(&str, String); 33] = [
         ("automaticDegrades", boolean(d.automatic_degrades)),
         (
             "buildingDetailTextures",
@@ -818,6 +933,12 @@ fn display_object(d: &DisplaySettings) -> String {
             "modernEffectWarningMinutes",
             d.modern_hud.effect_warning_minutes.to_string(),
         ),
+        (
+            "modernQuickMoveKey",
+            string(d.modern_hud.quick_move_key.name()),
+        ),
+        ("modernGlassBlur", boolean(d.modern_hud.glass_blur)),
+        ("modernMapDetail", string(d.modern_hud.map_detail.name())),
         (
             "modernLowHealthEdgeGlow",
             boolean(d.modern_hud.low_health_edge_glow),
@@ -988,12 +1109,33 @@ mod tests {
                 low_health_percent: 33,
                 low_health_edge_glow: false,
                 effect_warning_minutes: 2,
+                quick_move_key: QuickMoveKey::Alt,
+                glass_blur: false,
+                map_detail: MapDetail::Extreme,
             },
         };
         t.store().save_display(&original).unwrap();
         let (loaded, warning) = t.store().load_display();
         assert_eq!(warning, None);
         assert_eq!(loaded, original);
+    }
+
+    #[test]
+    fn quick_move_key_defaults_to_command_on_a_mac_and_control_elsewhere() {
+        let expected = if cfg!(target_os = "macos") {
+            QuickMoveKey::Cmd
+        } else {
+            QuickMoveKey::Ctrl
+        };
+        assert_eq!(
+            DisplaySettings::default().modern_hud.quick_move_key,
+            expected
+        );
+        // A file from before the option reads the system's default.
+        let t = Temp::new("quickmovedefault");
+        t.write(r#"{ "version": 4, "display": {} }"#);
+        let (loaded, _) = t.store().load_display();
+        assert_eq!(loaded.modern_hud.quick_move_key, expected);
     }
 
     #[test]

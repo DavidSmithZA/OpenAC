@@ -386,7 +386,7 @@ impl VitalsHud {
     }
 
     fn draw_bar(&self, rc: &mut RenderContext<'_>, bar: &BarMotion, x: f32) {
-        let p = &self.theme.palette;
+        let p = &Horizon::current().palette;
         let radius = self.theme.metrics.radius;
         let (w, h) = (BAR_WIDTH, BAR_HEIGHT);
         let x = x + bar.need.map_or(0.0, |(_, age)| shake(age / SHAKE_SECONDS));
@@ -439,7 +439,7 @@ impl VitalsHud {
             };
             part(rc, fill, ghost, color);
         }
-        part(rc, 0.0, fill, bar.vital.color(&self.theme));
+        part(rc, 0.0, fill, bar.vital.color(&Horizon::current()));
         if let Some(age) = bar.sheen {
             // A glint 40 units wide runs along the filled part.
             let band = 40.0;
@@ -694,7 +694,7 @@ mod tests {
 
     #[test]
     fn low_health_is_under_a_quarter() {
-        let mut hud = VitalsHud::new(Horizon::BRONZE, None, None);
+        let mut hud = VitalsHud::new(Horizon::current(), None, None);
         assert!(!hud.health_is_low());
         let vitals = VitalsView {
             health: reading(88, 450),
@@ -707,7 +707,7 @@ mod tests {
 
     #[test]
     fn the_low_health_warning_follows_its_setting() {
-        let mut hud = VitalsHud::new(Horizon::BRONZE, None, None);
+        let mut hud = VitalsHud::new(Horizon::current(), None, None);
         hud.apply(&VitalsView {
             health: reading(200, 450),
             stamina: reading(104, 410),

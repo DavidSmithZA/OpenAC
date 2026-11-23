@@ -13,6 +13,7 @@ use ac_core::chat::{CombatLineKind, LogTextType, MAIN_WINDOW_DEFAULT_FILTER};
 use ac_runtime::communication::{ChatChannelKind, ChatLine};
 use ac_ui::draw::Color;
 use ac_ui::modern::theme::hex;
+use ac_ui::modern::tone;
 
 /// What a line is, for its tag and colour.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -53,8 +54,6 @@ pub enum LineKind {
     System,
 }
 
-/// The line's text colour: the canvas's table.
-const TEXT: Color = hex(0xF4_EBDC, 1.0);
 const TELL: Color = hex(0xC9_A2FF, 1.0);
 const FELLOW: Color = hex(0x7F_D08A, 1.0);
 const ALLEG: Color = hex(0xF0_A04B, 1.0);
@@ -64,7 +63,6 @@ const EMOTE: Color = hex(0xD2_D2C8, 1.0);
 const MAGIC: Color = hex(0x7F_B2FF, 1.0);
 const HIT: Color = hex(0xFF_9A6B, 1.0);
 const HURT: Color = hex(0xFF_8A8E, 1.0);
-const XP: Color = hex(0xE0_B068, 1.0);
 
 impl LineKind {
     /// The kind of `line`.
@@ -127,7 +125,7 @@ impl LineKind {
     #[must_use]
     pub fn color(self) -> Color {
         match self {
-            Self::Say => TEXT,
+            Self::Say => tone::words(1.0),
             Self::Tell | Self::TellOut => TELL,
             Self::Fellow => FELLOW,
             Self::Alleg => ALLEG,
@@ -141,7 +139,7 @@ impl LineKind {
             Self::Magic => MAGIC,
             Self::Hit => HIT,
             Self::Hurt => HURT,
-            Self::Xp => XP,
+            Self::Xp => tone::gold(1.0),
             Self::System => SYSTEM,
         }
     }

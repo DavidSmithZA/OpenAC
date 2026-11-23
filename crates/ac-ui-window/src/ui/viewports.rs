@@ -71,6 +71,13 @@ impl std::fmt::Debug for UiViewports {
 }
 
 impl UiViewports {
+    /// The creation tables, always read from the dats (the modern Studio
+    /// and barber take their colours from them).
+    #[must_use]
+    pub(crate) fn catalog(&self) -> &DatChargenCatalog {
+        &self.catalog
+    }
+
     /// Viewports reading the creation tables from `dats`.
     #[must_use]
     pub fn new(dats: Arc<DatCollection>) -> Self {
@@ -120,6 +127,16 @@ impl UiViewports {
         let look = compose(options, &self.catalog, preview, (body != 0).then_some(body));
         self.barber_composed = Some((key, look.clone()));
         look
+    }
+
+    /// The creation look for `preview` (cached while the choices stay), for
+    /// the modern Studio.
+    pub(crate) fn look_for(
+        &mut self,
+        options: &ChargenOptions,
+        preview: &ChargenPreview,
+    ) -> Option<ChargenLook> {
+        self.look(options, preview)
     }
 
     /// The creation look for `preview` (cached while the choices stay).
@@ -225,6 +242,58 @@ pub fn compose(
         key,
         backdrop_setup,
     })
+}
+
+/// A character's look in the world as the modern character selection
+/// remembers it.
+#[must_use]
+pub fn remembered_look(key: &AppearanceKey) -> ac_host::settings::RememberedLook {
+    ac_host::settings::RememberedLook {
+        setup: key.setup_id,
+        base_palette: key.palette.as_ref().map_or(0, |p| p.base_palette_id),
+        palettes: key.palette.as_ref().map_or_else(Vec::new, |p| {
+            p.ranges
+                .iter()
+                .map(|r| (r.palette_id, r.offset, r.count))
+                .collect()
+        }),
+        textures: key.texture_changes.clone(),
+        parts: key.part_changes.clone(),
+    }
+}
+
+/// The figure of a remembered look, standing as a creation preview stands
+/// (its heritage's rest pose and idle), with no scenery behind it.
+#[must_use]
+pub fn stage_look(
+    look: &ac_host::settings::RememberedLook,
+    heritage: u32,
+    gender: u32,
+) -> ChargenLook {
+    ChargenLook {
+        heritage,
+        gender: i32::try_from(gender).unwrap_or(0),
+        selection: ChargenAppearanceSelection::default(),
+        key: AppearanceKey {
+            setup_id: look.setup,
+            palette: (!look.palettes.is_empty()).then(|| PaletteSpec {
+                base_palette_id: look.base_palette,
+                ranges: look
+                    .palettes
+                    .iter()
+                    .map(|&(palette_id, offset, count)| SubPaletteRange {
+                        palette_id,
+                        offset,
+                        count,
+                    })
+                    .collect(),
+            }),
+            texture_changes: look.textures.clone(),
+            part_changes: look.parts.clone(),
+            close_degrades: false,
+        },
+        backdrop_setup: 0,
+    }
 }
 
 /// Whether `id` and every element above it show.
@@ -459,6 +528,63 @@ impl WindowUi {
                 ));
             }
         }
+        // The modern Studio's figure: the whole body, or the face up close
+        // on the appearance step's face.
+        let studio = self
+            .modern
+            .as_mut()
+            .and_then(|m| m.pregame.as_mut())
+            .and_then(|p| p.studio.as_mut())
+            .map(|s| {
+                (
+                    s.figure,
+                    s.figure_look.clone(),
+                    std::mem::take(&mut s.turns),
+                )
+            });
+        if let Some((figure, look, turns)) = studio {
+            let slot = if look.as_ref().is_some_and(|(_, face)| *face) {
+                ViewportSlot::ChargenAppearance
+            } else {
+                ViewportSlot::ChargenSummary
+            };
+            controls.extend(turns.into_iter().map(|r| (slot, r)));
+            if let Some((look, _)) = look
+                && shown(&self.host.root, figure)
+                && let Some((size, aspect)) = extent(&self.host.root, figure, pixels_per_unit)
+            {
+                requests.push((
+                    figure,
+                    ViewportRequest {
+                        slot,
+                        size,
+                        aspect,
+                        subject: ViewportSubject::Chargen(Box::new(look)),
+                    },
+                ));
+            }
+        }
+        // The modern character selection's figure: the picked character as
+        // this computer remembers it.
+        let stage = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.pregame.as_ref())
+            .and_then(|p| Some((p.figure, p.figure_look.clone()?)));
+        if let Some((figure, look)) = stage
+            && shown(&self.host.root, figure)
+            && let Some((size, aspect)) = extent(&self.host.root, figure, pixels_per_unit)
+        {
+            requests.push((
+                figure,
+                ViewportRequest {
+                    slot: ViewportSlot::Stage,
+                    size,
+                    aspect,
+                    subject: ViewportSubject::Chargen(Box::new(look)),
+                },
+            ));
+        }
         let mut out = Vec::with_capacity(requests.len());
         for (element, request) in requests {
             self.viewports.elements[request.slot.index()] = Some(element);
@@ -602,5 +728,29 @@ mod tests {
             selection(&CreationAppearance::default()),
             ChargenAppearanceSelection::default()
         );
+    }
+
+    #[test]
+    fn a_remembered_look_stands_as_it_was_seen() {
+        use crate::appearance::{AppearanceKey, PaletteSpec, SubPaletteRange};
+        let key = AppearanceKey {
+            setup_id: 0x0200_004E,
+            palette: Some(PaletteSpec {
+                base_palette_id: 0x0400_007E,
+                ranges: vec![SubPaletteRange::from_wire(0x0400_1071, 3, 1)],
+            }),
+            texture_changes: vec![(16, 0x0500_0001, 0x0500_0002)],
+            part_changes: vec![(9, 0x0100_1234)],
+            close_degrades: true,
+        };
+        let look = super::stage_look(&super::remembered_look(&key), 1, 2);
+        assert_eq!(
+            look.key,
+            AppearanceKey {
+                close_degrades: false,
+                ..key
+            }
+        );
+        assert_eq!((look.heritage, look.gender, look.backdrop_setup), (1, 2, 0));
     }
 }

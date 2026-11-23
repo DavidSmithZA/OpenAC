@@ -5,6 +5,7 @@
 //! visitors out, abandon); with no house, when another may be bought and
 //! buttons that show free houses on the map.
 
+use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext};
@@ -19,7 +20,7 @@ use ac_ui::{UiFont, UiRoot};
 use super::model::{HouseScreen, OwnedHouse, Standing};
 use crate::ui::modern::hud::lines::stroke;
 use crate::ui::modern::kit::{
-    self, ButtonLook, Hits, MUTED, Rect, bronze, gold, put, put_mid, put_right, spaced,
+    self, ButtonLook, Hits, Rect, bronze, gold, put, put_mid, put_right, spaced,
 };
 
 /// The window's size.
@@ -95,7 +96,6 @@ pub enum HouseAsk {
 /// The House window's frame.
 #[derive(Debug)]
 pub struct HouseFrame {
-    theme: Horizon,
     fonts: HouseFonts,
     /// What it shows.
     pub screen: HouseScreen,
@@ -110,9 +110,8 @@ pub struct HouseFrame {
 impl HouseFrame {
     /// A frame in `theme`.
     #[must_use]
-    pub fn new(theme: Horizon, fonts: HouseFonts) -> Self {
+    pub fn new(fonts: HouseFonts) -> Self {
         Self {
-            theme,
             fonts,
             screen: HouseScreen::default(),
             guest_empty: true,
@@ -156,7 +155,7 @@ impl HouseFrame {
         let lit = h.add(r, on.then_some(ask)) && on;
         kit::button(
             rc,
-            &self.theme,
+            &Horizon::current(),
             r,
             words,
             self.fonts.strong.as_ref(),
@@ -173,7 +172,7 @@ impl HouseFrame {
         h: &mut Hits<Option<HouseAsk>>,
         o: &OwnedHouse,
     ) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let x = PAD;
         let mut y = TOP;
@@ -222,12 +221,12 @@ impl HouseFrame {
                 &kit::fit(s, &place, right - x - 56.0),
                 x + 56.0,
                 y + 26.0,
-                kit::SOFT,
+                tone::soft(1.0),
             );
         }
         y += 56.0;
         for (k, v, red) in &o.rows {
-            put_mid(rc, f.body.as_ref(), k, x, y, 26.0, kit::WARM);
+            put_mid(rc, f.body.as_ref(), k, x, y, 26.0, tone::warm(1.0));
             put_right(
                 rc,
                 f.strong.as_ref(),
@@ -242,7 +241,7 @@ impl HouseFrame {
         y += 10.0;
         kit::group_heading(
             rc,
-            &self.theme,
+            &Horizon::current(),
             f.label.as_ref(),
             x,
             y,
@@ -250,13 +249,13 @@ impl HouseFrame {
             x + LEFT_W - 70.0,
             "MAINTENANCE",
             None,
-            kit::SOFT,
+            tone::soft(1.0),
         );
         if let Some(l) = &f.label {
             let ink = match o.period {
                 "NOT PAID" => kit::HARM,
                 "PAID" => kit::GOOD,
-                _ => kit::SOFT,
+                _ => tone::soft(1.0),
             };
             let w = text::measure(l, o.period, kit::LABEL_TRACKING);
             text::draw(
@@ -293,7 +292,7 @@ impl HouseFrame {
         let (edge, fill, ink): (Color, Color, Color) = if o.warns {
             (hex(0xE5_484D, 0.6), hex(0xE5_484D, 0.10), p.text)
         } else {
-            (hex(0x7F_D08A, 0.45), hex(0x7F_D08A, 0.08), kit::WARM)
+            (hex(0x7F_D08A, 0.45), hex(0x7F_D08A, 0.08), tone::warm(1.0))
         };
         rc.fill_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(4.0), fill);
         rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, CornerRadii::all(4.0), edge, 1.0);
@@ -314,14 +313,14 @@ impl HouseFrame {
             let lines = kit::wrap(s, &foot, LEFT_W);
             let lh = s.line_height + 4.0;
             let top = HEIGHT - PAD - lines.len() as f32 * lh;
-            kit::lines(rc, s, &lines, x, top, lh, MUTED);
+            kit::lines(rc, s, &lines, x, top, lh, tone::muted(1.0));
         }
         self.draw_access(rc, h);
     }
 
     #[allow(clippy::too_many_lines)]
     fn draw_access(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Option<HouseAsk>>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let b = Self::right_box();
         kit::panel(rc, b, 0.3);
@@ -334,7 +333,7 @@ impl HouseFrame {
         let Some(a) = &self.screen.access else {
             if let Some(bf) = &f.body {
                 let lines = kit::wrap(bf, "The server has not said who may come in yet.", w);
-                y = kit::lines(rc, bf, &lines, x, y, bf.line_height + 4.0, MUTED) + 8.0;
+                y = kit::lines(rc, bf, &lines, x, y, bf.line_height + 4.0, tone::muted(1.0)) + 8.0;
             }
             self.button(
                 rc,
@@ -372,14 +371,21 @@ impl HouseFrame {
             let lit = h.add(r, Some(ask));
             kit::switch(rc, (x, y + 8.0, 38.0, 20.0), on, lit);
             put(rc, f.strong.as_ref(), words, x + 48.0, y + 1.0, p.text);
-            put(rc, f.small.as_ref(), note, x + 48.0, y + 19.0, MUTED);
+            put(
+                rc,
+                f.small.as_ref(),
+                note,
+                x + 48.0,
+                y + 19.0,
+                tone::muted(1.0),
+            );
             y += 40.0;
         }
         y += 4.0;
         let count = format!("· {}", a.guests.len());
         kit::group_heading(
             rc,
-            &self.theme,
+            &Horizon::current(),
             f.label.as_ref(),
             x,
             y,
@@ -387,7 +393,7 @@ impl HouseFrame {
             x + w - 70.0,
             "GUESTS",
             Some(&count),
-            kit::SOFT,
+            tone::soft(1.0),
         );
         if let Some(l) = &f.label {
             let words = "STORAGE";
@@ -398,7 +404,7 @@ impl HouseFrame {
                 words,
                 x + w - lw,
                 y + ((18.0 - l.line_height) * 0.5).round(),
-                text::TextStyle::plain(kit::SOFT).tracked(kit::LABEL_TRACKING),
+                text::TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
         y += 26.0;
@@ -410,7 +416,7 @@ impl HouseFrame {
                 x,
                 y,
                 GUEST_ROW,
-                MUTED,
+                tone::muted(1.0),
             );
         }
         for (name, store) in &a.guests {
@@ -425,7 +431,7 @@ impl HouseFrame {
                 cross.1 + 6.0,
                 16.0,
                 CROSS,
-                if lit { kit::HARM } else { kit::SOFT },
+                if lit { kit::HARM } else { tone::soft(1.0) },
                 1.6,
             );
             let bx = (x + w - 30.0 - 30.0, y + 8.0, 18.0, 18.0);
@@ -451,14 +457,14 @@ impl HouseFrame {
                 1.5,
             );
             if *store {
-                stroke(rc, bx.0, bx.1, 18.0, TICK, hex(0x1A_140D, 1.0), 2.0);
+                stroke(rc, bx.0, bx.1, 18.0, TICK, tone::ink(1.0), 2.0);
             }
             y += GUEST_ROW + 2.0;
         }
         if let Some(r) = self.guest_field_rect() {
             kit::field_box(
                 rc,
-                &self.theme,
+                &Horizon::current(),
                 r,
                 "Add a guest by name",
                 self.guest_empty,
@@ -508,7 +514,7 @@ impl HouseFrame {
     }
 
     fn draw_none(&self, rc: &mut RenderContext<'_>, h: &mut Hits<Option<HouseAsk>>) {
-        let p = self.theme.palette;
+        let p = Horizon::current().palette;
         let f = &self.fonts;
         let cx = WIDTH * 0.5;
         let mut y = HEADER + (HEIGHT - HEADER) * 0.5 - 110.0;
@@ -525,7 +531,7 @@ impl HouseFrame {
         }
         if let Some(b) = &f.body {
             for line in kit::wrap(b, &self.screen.buy_another, 460.0) {
-                text::draw_centred(rc, b, &line, cx, y, text::TextStyle::plain(kit::SOFT));
+                text::draw_centred(rc, b, &line, cx, y, text::TextStyle::plain(tone::soft(1.0)));
                 y += b.line_height + 4.0;
             }
         }
@@ -536,7 +542,7 @@ impl HouseFrame {
             .as_ref()
             .map_or(180.0, |b| text::measure(b, words, 0.0));
         let tx = cx - (tw + 10.0 + 58.0) * 0.5;
-        put_mid(rc, f.body.as_ref(), words, tx, y, 20.0, kit::WARM);
+        put_mid(rc, f.body.as_ref(), words, tx, y, 20.0, tone::warm(1.0));
         kit::openac_tag(rc, f.label.as_ref(), tx + tw + 10.0, y + 10.0);
         y += 30.0;
         let kinds = [("Cottages", 1), ("Villas", 2), ("Mansions", 3)];
@@ -566,7 +572,7 @@ impl HouseFrame {
                 "Apartments have no place on the map; the server says how many are free.",
                 cx,
                 y,
-                text::TextStyle::plain(MUTED),
+                text::TextStyle::plain(tone::muted(1.0)),
             );
         }
     }
@@ -611,7 +617,7 @@ impl Widget for HouseFrame {
 
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
         let mut h = Hits::new(self.hits.hover);
-        let theme = self.theme;
+        let theme = Horizon::current();
         kit::window_back(rc, &theme, WIDTH, HEIGHT, HEADER, true);
         let right = kit::title(
             rc,
@@ -628,7 +634,7 @@ impl Widget for HouseFrame {
             right + 10.0,
             0.0,
             HEADER,
-            theme.palette.muted,
+            Horizon::current().palette.muted,
         );
         let close = kit::close_rect(WIDTH, HEADER);
         let lit = h.add(close, Some(HouseAsk::Close));
