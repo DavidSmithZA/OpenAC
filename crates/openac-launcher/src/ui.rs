@@ -771,7 +771,7 @@ fn group_header(
                             .response;
                         let toggle = ui.interact(
                             toggle.rect,
-                            egui::Id::new(("group", &group.account_name)),
+                            egui::Id::unique(("group", &group.account_name)),
                             egui::Sense::click(),
                         );
                         if toggle
@@ -983,7 +983,7 @@ fn account_row(
                 // OpenAC's "Options ▾": room for the arrow at the right, drawn below
                 // (the font has no ▾).
                 let arrow_room =
-                    egui::Atom::custom(egui::Id::new("options-arrow"), Vec2::new(8.0, 6.0));
+                    egui::Atom::custom(egui::IdSalt::new("options-arrow"), Vec2::new(8.0, 6.0));
                 let options = egui::Button::new("Options")
                     .right_text(arrow_room)
                     .min_size(size);
@@ -1548,7 +1548,7 @@ fn bottom_bar(app: &mut LauncherApp, root: &mut Ui) {
 /// margin), it narrows with the window.
 fn modal(ctx: &egui::Context, id: &str, width: f32, add: impl FnOnce(&mut Ui)) {
     let width = width.min(ctx.content_rect().width() - 2.0 * 24.0 - 2.0 * 16.0);
-    egui::Modal::new(egui::Id::new(id))
+    egui::Modal::new(egui::Id::unique(id))
         .frame(card_frame())
         .show(ctx, |ui| {
             ui.set_width(width);
@@ -2046,7 +2046,7 @@ fn known_server_cell(
             ui.add_space(4.0);
             if row.is_added {
                 ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
-                    ui.label(RichText::new("Added ✓").size(12.0).color(hex("#8FD18F")));
+                    ui.label(RichText::new("Added ✔").size(12.0).color(hex("#8FD18F")));
                 });
             } else {
                 let label = RichText::new("Add").strong().color(theme::ON_GOLD);
@@ -2799,7 +2799,7 @@ fn consoles(app: &mut LauncherApp, ctx: &egui::Context) {
     for (index, console) in window.consoles.iter_mut().enumerate() {
         let mut open = console.is_open;
         egui::Window::new(console.title.clone())
-            .id(egui::Id::new(("console", &console.session_id)))
+            .id(egui::Id::unique(("console", &console.session_id)))
             .open(&mut open)
             .default_size([720.0, 420.0])
             .show(ctx, |ui| {
@@ -2857,6 +2857,23 @@ fn consoles(app: &mut LauncherApp, ctx: &egui::Context) {
 mod tests {
     use super::*;
     use ac_launcher_core::window::profile_editor::ProfileTextEditor;
+
+    /// The symbols the launcher writes (the header's Settings gear, the
+    /// tick on an added plugin, the plain-text password warning, a hidden
+    /// password's dots) need a symbol font; since egui 0.37 that is a
+    /// feature of its own, and without it they are empty boxes.
+    #[test]
+    fn the_symbols_the_launcher_writes_have_glyphs() {
+        let ctx = egui::Context::default();
+        let mut output = ctx.run_ui(egui::RawInput::default(), |_| {});
+        output.textures_delta.clear();
+        let font = egui::FontId::proportional(16.0);
+        let missing: Vec<char> = ['⚙', '✔', '⚠', '•', '…', '·']
+            .into_iter()
+            .filter(|symbol| !ctx.fonts_mut(|fonts| fonts.has_glyph(&font, *symbol)))
+            .collect();
+        assert!(missing.is_empty(), "no glyph for {missing:?}");
+    }
 
     /// Runs frames of the profile editor body in a headless egui context,
     /// feeding each frame its events.
