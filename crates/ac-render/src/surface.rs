@@ -2594,14 +2594,20 @@ impl AttachedWindow {
     }
 
     /// Place the items the UI saw let go over the world: on the object
-    /// under each, or on the ground.
+    /// under each, or on the ground (never the ground through the
+    /// see-through window the item was dragged out of: nothing there is
+    /// left as it was).
     fn place_world_drops(&mut self) {
         let Some(ui) = self.ui.as_mut() else {
             return;
         };
         let drops = ui.take_world_drops();
-        for (payload, x, y) in drops {
-            let picked = self.pick_at_ui(x, y);
+        for drop in drops {
+            let picked = self.pick_at_ui(drop.x, drop.y);
+            if drop.through_window && picked.is_none() {
+                continue;
+            }
+            let payload = drop.item;
             let amount = self
                 .ui
                 .as_mut()

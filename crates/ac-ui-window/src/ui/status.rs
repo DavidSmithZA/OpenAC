@@ -49,6 +49,20 @@ const STATE_MANAGED: [&str; 15] = [
 /// The jump power bar's window.
 pub const JUMP_POWERBAR_WINDOW: &str = "jump-powerbar";
 
+/// An item let go over the world (no UI element under it).
+#[derive(Debug, Clone)]
+pub struct WorldDrop {
+    /// What was dragged.
+    pub item: ac_ui::event::ItemDragPayload,
+    /// Where it was let go, window pixels.
+    pub x: i32,
+    pub y: i32,
+    /// Let go over the window it was dragged out of, which had gone
+    /// see-through: only an object in the world behind takes it, never the
+    /// ground.
+    pub through_window: bool,
+}
+
 /// A clock started with the window's UI.
 #[derive(Debug, Clone, Copy)]
 pub struct StatusClock(ac_clock::Instant);
@@ -116,9 +130,9 @@ pub struct StatusUi {
     /// The object the world pick found under the pointer, with its name in
     /// the world (the window sets it each frame).
     pub world_hover: Option<(u32, Option<String>)>,
-    /// Items let go over the world (no UI element under them), with the
-    /// window pixel, for the window to place.
-    pub world_drops: Vec<(ac_ui::event::ItemDragPayload, i32, i32)>,
+    /// Items let go over the world (no UI element under them), for the
+    /// window to place.
+    pub world_drops: Vec<WorldDrop>,
     /// Press points of left presses on the world that moved past the drag
     /// distance, for the window to pick and maybe lift.
     pub world_drag_starts: Vec<(i32, i32)>,
@@ -614,7 +628,7 @@ impl WindowUi {
     }
 
     /// Items let go over the world since last asked.
-    pub fn take_world_drops(&mut self) -> Vec<(ac_ui::event::ItemDragPayload, i32, i32)> {
+    pub fn take_world_drops(&mut self) -> Vec<WorldDrop> {
         std::mem::take(&mut self.status.world_drops)
     }
 
