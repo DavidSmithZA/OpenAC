@@ -1139,6 +1139,8 @@ impl AttachedWindow {
         };
         let feedback = ui.cursor_feedback();
         let dats = ui.dats().clone();
+        self.cursor_art
+            .set_modern(ui.interface() == ac_host::Interface::Modern);
         let notices = self
             .cursor_art
             .apply(event_loop, &self.window, &dats, feedback);

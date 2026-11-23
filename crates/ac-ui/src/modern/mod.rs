@@ -10,6 +10,7 @@
 //! The modern screens themselves live with the game window
 //! (`ac-ui-window`); what is here knows nothing of the game.
 
+pub mod cursors;
 pub mod flex;
 pub mod hover;
 pub mod kit;

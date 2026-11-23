@@ -1,7 +1,9 @@
 //! The OS cursor for the window: the retail cursor art the UI decided on
 //! ([`ac_ui::cursor`]), decoded from the dats with its key colour made
 //! transparent and handed to the window as a custom cursor; a global
-//! cursor the dats lack falls back to the nearest system cursor.
+//! cursor the dats lack falls back to the nearest system cursor. With the
+//! modern interface the global cursors are its own
+//! ([`ac_ui::modern::cursors`]).
 
 use std::collections::{HashMap, HashSet};
 
@@ -19,6 +21,7 @@ use winit::window::{CursorIcon, CustomCursor, Window};
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Shown {
     Custom(CursorMedia),
+    Modern(GlobalCursorKind),
     System(CursorIcon),
 }
 
@@ -31,6 +34,9 @@ pub struct CursorManager {
     customs: HashMap<CursorMedia, Option<CustomCursor>>,
     reported: HashSet<GlobalCursorKind>,
     shown: Option<Shown>,
+    /// The modern interface's own global cursors are shown.
+    modern: bool,
+    moderns: HashMap<GlobalCursorKind, Option<CustomCursor>>,
 }
 
 impl CursorManager {
@@ -38,6 +44,17 @@ impl CursorManager {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// The modern interface's global cursors (`true`) or retail's from now
+    /// on.
+    pub fn set_modern(&mut self, on: bool) {
+        if self.modern != on {
+            self.modern = on;
+            // Everything is shown again in the new look.
+            self.previous = None;
+            self.shown = None;
+        }
     }
 
     /// Show `feedback` on `window`, changing only the layers that changed.
@@ -73,6 +90,19 @@ impl CursorManager {
         kind: GlobalCursorKind,
         notices: &mut Vec<String>,
     ) {
+        if self.modern
+            && let Some(cursor) = self
+                .moderns
+                .entry(kind)
+                .or_insert_with(|| modern_cursor(event_loop, kind))
+                .clone()
+        {
+            if self.shown != Some(Shown::Modern(kind)) {
+                window.set_cursor(cursor);
+                self.shown = Some(Shown::Modern(kind));
+            }
+            return;
+        }
         let media = *self
             .globals
             .entry(kind)
@@ -127,6 +157,23 @@ impl CursorManager {
             })
             .clone()
     }
+}
+
+/// The modern interface's cursor for `kind`; `None` when the platform
+/// refuses it.
+fn modern_cursor(event_loop: &ActiveEventLoop, kind: GlobalCursorKind) -> Option<CustomCursor> {
+    use ac_ui::modern::cursors::{SIZE, draw};
+    let c = draw(kind, SIZE);
+    let side = u16::try_from(c.size).ok()?;
+    let source = CustomCursor::from_rgba(
+        c.rgba,
+        side,
+        side,
+        u16::try_from(c.hot_spot.0).ok()?,
+        u16::try_from(c.hot_spot.1).ok()?,
+    )
+    .ok()?;
+    Some(event_loop.create_custom_cursor(source))
 }
 
 /// Cursor art `file` as RGBA with its key colour knocked out.
