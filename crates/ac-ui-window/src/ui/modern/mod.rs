@@ -60,6 +60,8 @@ pub struct ModernLayer {
     pub target: Option<ElementId>,
     /// The low-health glow round the screen's edge.
     pub edge_glow: Option<ElementId>,
+    /// What shows while an item waits for a target.
+    pub target_guide: Option<ElementId>,
     /// The revision of the last cast answer looked at.
     seen_cast: Option<u64>,
     /// The effects counts and status chips, top left.
@@ -257,6 +259,12 @@ const PANEL_NOTE_SIZE: f32 = 11.5;
 const CARD_TITLE_SIZE: f32 = 13.5;
 const CARD_BODY_SIZE: f32 = 12.0;
 
+/// The target guide's pill, pixels to the em.
+const TARGET_GUIDE_SIZE: f32 = 12.5;
+
+/// Its cancel button and the label at the pointer, pixels to the em.
+const TARGET_GUIDE_SMALL_SIZE: f32 = 11.5;
+
 /// An item's mana now and at most (property ints).
 const ITEM_CUR_MANA: u32 = 107;
 const ITEM_MAX_MANA: u32 = 108;
@@ -300,6 +308,12 @@ impl WindowUi {
         let label = self.modern_font(Weight::SemiBold, VITALS_LABEL_SIZE);
         let number = self.modern_font(Weight::SemiBold, VITALS_NUMBER_SIZE);
         let glow = hud::edge_glow::EdgeGlow::mount(&mut self.host.root);
+        let guide_fonts = hud::target_guide::GuideFonts {
+            name: self.modern_font(Weight::SemiBold, TARGET_GUIDE_SIZE),
+            body: self.modern_font(Weight::Regular, TARGET_GUIDE_SIZE),
+            small: self.modern_font(Weight::SemiBold, TARGET_GUIDE_SMALL_SIZE),
+        };
+        let guide = hud::target_guide::TargetGuide::mount(&mut self.host.root, guide_fonts);
         let vitals = hud::mount_piece(
             &mut self.host.root,
             hud::VITALS,
@@ -411,6 +425,7 @@ impl WindowUi {
             return;
         };
         modern.edge_glow = Some(glow);
+        modern.target_guide = Some(guide);
         match combat {
             Ok(id) => {
                 modern.combat = Some(id);
@@ -1098,6 +1113,158 @@ impl WindowUi {
         true
     }
 
+    /// The play windows (used while looking at the world) that are shown:
+    /// the ones that step aside while an item waits for a target.
+    fn shown_play_windows(&self) -> Vec<ElementId> {
+        let Some(m) = self.modern.as_ref() else {
+            return Vec::new();
+        };
+        let ui = &self.host.root;
+        [
+            m.inventory.as_ref().map(|i| i.frame),
+            m.loot.as_ref().map(|l| l.frame),
+            m.salvage.as_ref().map(|s| s.frame),
+            m.effects_window.as_ref().map(|e| e.frame),
+            m.inspect.as_ref().map(|i| i.sheet),
+        ]
+        .into_iter()
+        .flatten()
+        .filter(|&w| ui.element(w).is_some_and(|e| e.visible()))
+        .collect()
+    }
+
+    /// One frame of choosing a target: while an item waits for one, the
+    /// shown play windows fade and let the pointer through to the world,
+    /// all but their cells holding something it can be used on; the guide
+    /// names the item and what the pointer would use it on, and its button
+    /// cancels.
+    pub(super) fn tick_modern_target_mode(&mut self) {
+        use items::cell::ItemCell;
+        let Some(guide) = self.modern.as_ref().and_then(|m| m.target_guide) else {
+            return;
+        };
+        let cancelled = self
+            .host
+            .root
+            .widget_mut::<hud::target_guide::TargetGuide>(guide)
+            .is_some_and(|g| std::mem::take(&mut g.cancelled));
+        if cancelled {
+            ac_ui::panels::items::emit(
+                &mut self.host.root,
+                ac_ui::panels::PanelOutput::CancelTargetMode,
+            );
+        }
+        let source = match self.facts.state.mode {
+            ac_runtime::inventory::InteractionMode::UseItemOnTarget(s) if !cancelled => Some(s),
+            _ => None,
+        };
+        let Some(source) = source else {
+            let ui = &mut self.host.root;
+            ui.set_target_see_through(Vec::new(), Vec::new());
+            if ui.element(guide).is_some_and(|e| e.visible()) {
+                ui.set_visible(guide, false);
+            }
+            return;
+        };
+        let windows = self.shown_play_windows();
+        let figure = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.inventory.as_ref())
+            .map(|i| i.figure);
+        let combat_top = self
+            .modern
+            .as_ref()
+            .and_then(|m| m.combat)
+            .map(|c| self.host.root.screen_position(c).1);
+        let objects = &self.facts.objects;
+        let player = self.facts.state.player;
+        let compatible =
+            |target: u32| ac_runtime::inventory::target_compatible(objects, player, source, target);
+        let names = super::facts::composed_names(&self.status.names);
+        // One of a stack: "Use Healing Kit on …", not "Healing Kits".
+        let name_of = |id: u32| {
+            objects.get(id).map(|o| {
+                let mut one = o.clone();
+                one.stack_size = 1;
+                names(&one)
+            })
+        };
+        let ui = &mut self.host.root;
+        // The cells that can take the item stay.
+        let mut keep = Vec::new();
+        let mut stack: Vec<ElementId> = windows.clone();
+        while let Some(id) = stack.pop() {
+            if !ui.element(id).is_some_and(|e| e.visible()) {
+                continue;
+            }
+            if let Some(cell) = ui.widget::<ItemCell>(id) {
+                if cell.view.id != 0 && compatible(cell.view.id) {
+                    keep.push(id);
+                }
+                continue;
+            }
+            stack.extend(ui.children(id));
+        }
+        // The figure stands for the player.
+        if let Some(f) = figure
+            && compatible(player)
+            && ui.element(f).is_some_and(|e| e.drawn())
+        {
+            keep.push(f);
+        }
+        ui.set_target_see_through(windows.clone(), keep.clone());
+        // What the pointer would use the item on: a cell kept, else what
+        // the world pick found where no window takes the pointer.
+        let (mx, my) = ui.mouse();
+        let picked = ui.pick(mx, my);
+        let over = match picked {
+            Some(hit) => keep
+                .iter()
+                .find(|k| ui.is_within(Some(hit), **k))
+                .and_then(|&k| {
+                    if Some(k) == figure {
+                        return Some("yourself".to_owned());
+                    }
+                    let c = ui.widget::<ItemCell>(k)?;
+                    name_of(c.view.id).or_else(|| Some(c.view.name.clone()))
+                }),
+            None => self
+                .status
+                .world_hover
+                .as_ref()
+                .filter(|(guid, _)| compatible(*guid))
+                .and_then(|(guid, name)| name.clone().or_else(|| name_of(*guid))),
+        };
+        let screen = ui.size();
+        let pill_bottom = combat_top
+            .filter(|top| *top > screen.1 * 0.5)
+            .map_or(screen.1 - hud::target_guide::PILL_ABOVE_BOTTOM, |top| {
+                top - hud::target_guide::PILL_GAP
+            });
+        let view = hud::target_guide::GuideView {
+            item: name_of(source).unwrap_or_default(),
+            faded: windows
+                .iter()
+                .filter_map(|&w| {
+                    let (x, y) = ui.screen_position(w);
+                    ui.element(w).map(|e| (x, y, e.width, e.height))
+                })
+                .collect(),
+            pill_bottom,
+            over: over.map(|name| (name, (mx as f32, my as f32))),
+        };
+        if let Some(g) = ui.widget_mut::<hud::target_guide::TargetGuide>(guide)
+            && g.view != view
+        {
+            g.view = view;
+        }
+        if !ui.element(guide).is_some_and(|e| e.visible()) {
+            ui.set_visible(guide, true);
+        }
+        ui.bring_to_front(guide);
+    }
+
     /// One frame of the effects pane: opens, moves or closes it for the
     /// count the pointer rests on, and fills it when it opens.
     pub(super) fn tick_modern_effects(&mut self, dt: f64) {
@@ -1375,6 +1542,8 @@ impl WindowUi {
                 .map(ac_host::settings::SettingsStore::load_hud_pieces)
                 .unwrap_or_default()
         });
+        let outlines = modern.outlines;
+        let editing = modern.bars.as_ref().is_some_and(bars::run::BarsUi::editing);
         let ui = &mut self.host.root;
         for name in hud::PIECES {
             let Some(frame) = ui.window(name).map(|w| w.frame) else {
@@ -1386,10 +1555,30 @@ impl WindowUi {
             {
                 e.quick_move = movable;
             }
+            if let Some(o) = outlines
+                && let Some(l) = ui.widget_mut::<QuickMoveOutlines>(o)
+            {
+                l.set_name(frame, hud::piece_words(name));
+            }
+            if name == hud::DOCK {
+                // The dock shows itself while it has slots: it is told
+                // instead, below.
+                continue;
+            }
             if pieces.is_hidden(name) && ui.is_window_visible(name) {
                 ui.hide_window(name);
             }
         }
+        // Its grip follows quick move and Edit layout.
+        let (hidden, locked) = (pieces.is_hidden(hud::DOCK), pieces.is_locked(hud::DOCK));
+        let rule = ac_ui::plugin::dock::GripRule::QuickMove { editing, locked };
+        self.host
+            .with_controller::<ac_ui::plugin::dock::PluginDock, _>(hud::DOCK, |c, ui| {
+                c.set_grip_rule(rule);
+                if hidden && c.is_shown() {
+                    c.set_hidden(ui, true);
+                }
+            });
     }
 
     /// Hides HUD piece `name` (or shows it again) and saves that.
@@ -1399,7 +1588,12 @@ impl WindowUi {
             .as_mut()
             .and_then(|m| m.pieces.as_mut())
             .is_some_and(|p| p.set_hidden(name, on));
-        if !on {
+        if name == hud::DOCK {
+            self.host
+                .with_controller::<ac_ui::plugin::dock::PluginDock, _>(name, |c, ui| {
+                    c.set_hidden(ui, on);
+                });
+        } else if !on {
             self.host.root.show_window(name);
         }
         if changed {

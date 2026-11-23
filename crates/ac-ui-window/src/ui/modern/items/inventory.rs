@@ -1,10 +1,12 @@
-//! The inventory window: a header with search and close; the equipment
-//! (slots round the figure, the jewelry row, the held and Aetheria row);
-//! the pack rail; the grid's title, Group and Sort, the compact and list
-//! buttons and the filter chips; the item details on the right; burden and
-//! pyreals in the foot. The frame draws the chrome and answers its own
-//! buttons; the cells, the grid, the pack buttons, the search field and the
-//! details are elements of their own inside it.
+//! The inventory window: a slim panel at the screen's edge. The header
+//! holds the Gear button and close; under it the search, the Show, Group
+//! and Sort menus, the pack column and the grid; under the grid the
+//! chosen item's action row (Use or Equip, Split, Give, Drop, Salvage,
+//! More, and Inspect); burden and pyreals in the foot. The equipment (the
+//! figure and every slot) folds out to the left from the Gear button. The
+//! frame draws the chrome and answers its own buttons; the cells, the
+//! grid, the pack buttons, the search field and the figure are elements of
+//! their own inside it.
 
 use ac_ui::modern::tone;
 use std::sync::Arc;
@@ -23,100 +25,99 @@ use super::fit;
 use super::model::{Burden, GroupBy, Kind, SortBy};
 use crate::ui::modern::hud::lines::stroke;
 
-/// The window's size with the details docked, and without them.
-pub const WIDE: f32 = 1080.0;
-pub const NARROW: f32 = 792.0;
-pub const HEIGHT: f32 = 640.0;
+/// The packs' width: the window without the gear.
+pub const WIDTH: f32 = 400.0;
+/// The gear's width, folded out to the left of the packs.
+pub const GEAR_W: f32 = 332.0;
+/// The window with the gear out.
+pub const WITH_GEAR: f32 = WIDTH + GEAR_W;
+pub const HEIGHT: f32 = 600.0;
 /// The header's and the foot's heights.
-const HEADER: f32 = 52.0;
-const FOOT: f32 = 58.0;
-/// The equipment column.
-pub const EQUIP_X: f32 = 24.0;
-pub const EQUIP_Y: f32 = 68.0;
+const HEADER: f32 = 48.0;
+const FOOT: f32 = 48.0;
+/// The equipment, in the gear pane (its left edge at the window's).
+pub const EQUIP_X: f32 = 16.0;
+const EQUIP_TITLE_Y: f32 = HEADER + 14.0;
 pub const SLOT: f32 = 40.0;
 pub const SLOT_GAP: f32 = 6.0;
 /// The figure between the two columns of slots.
 pub const FIGURE_X: f32 = EQUIP_X + SLOT + 8.0;
-pub const FIGURE_W: f32 = 204.0;
-pub const FIGURE_Y: f32 = EQUIP_Y + 34.0;
+pub const FIGURE_W: f32 = GEAR_W - 2.0 * (EQUIP_X + SLOT + 8.0);
+pub const FIGURE_Y: f32 = EQUIP_TITLE_Y + 24.0;
 pub const FIGURE_H: f32 = 270.0;
 /// The rows under the figure: their titles' and slots' tops.
 pub const JEWELRY_TITLE: f32 = FIGURE_Y + FIGURE_H + 10.0;
 pub const JEWELRY_Y: f32 = JEWELRY_TITLE + 16.0;
 pub const HELD_TITLE: f32 = JEWELRY_Y + SLOT + 10.0;
 pub const HELD_Y: f32 = HELD_TITLE + 16.0;
-/// The pack rail.
-pub const RAIL_X: f32 = 348.0;
-pub const RAIL_W: f32 = 56.0;
-/// The grid's column.
-pub const GRID_X: f32 = RAIL_X + RAIL_W + 12.0;
-pub const GRID_W: f32 = 352.0;
-const TOOLBAR_Y: f32 = EQUIP_Y + 26.0;
-const CHIPS_Y: f32 = TOOLBAR_Y + 34.0;
-pub const GRID_Y: f32 = CHIPS_Y + 30.0;
-pub const GRID_H: f32 = HEIGHT - FOOT - 8.0 - GRID_Y;
-/// The details.
-pub const DETAILS_X: f32 = 792.0;
-pub const DETAILS_W: f32 = 264.0;
-pub const DETAILS_H: f32 = HEIGHT - FOOT - 8.0 - EQUIP_Y;
+/// The packs' parts, from the packs' left edge.
+const PAD: f32 = 16.0;
+const INNER_W: f32 = WIDTH - 2.0 * PAD;
 /// The search box.
-pub const SEARCH_W: f32 = 240.0;
-/// The details as a card over the equipment column, when the wide window
-/// does not fit the screen.
-pub const CARD_X: f32 = 16.0;
-pub const CARD_Y: f32 = EQUIP_Y - 4.0;
-pub const CARD_W: f32 = RAIL_X - 8.0 - CARD_X;
-pub const CARD_H: f32 = HEIGHT - FOOT - 8.0 - CARD_Y;
-/// The card's title strip, over the sheet.
-const CARD_TITLE: f32 = 32.0;
-
-/// Where the sheet sits in the card.
-#[must_use]
-pub fn card_sheet_rect() -> (f32, f32, f32, f32) {
-    (
-        CARD_X + 6.0,
-        CARD_Y + CARD_TITLE,
-        CARD_W - 12.0,
-        CARD_H - CARD_TITLE - 6.0,
-    )
-}
-
-/// The search box's left edge in a window `w` wide.
-#[must_use]
-pub fn search_x(w: f32) -> f32 {
-    w - 16.0 - 30.0 - 12.0 - SEARCH_W
-}
+pub const SEARCH_X: f32 = PAD;
+pub const SEARCH_Y: f32 = HEADER + 10.0;
+pub const SEARCH_H: f32 = 30.0;
+/// The Show, Group and Sort menus' row.
+const DROPS_Y: f32 = SEARCH_Y + SEARCH_H + 8.0;
+const DROPS_H: f32 = 26.0;
+/// The pack column and the grid.
+pub const BODY_Y: f32 = DROPS_Y + DROPS_H + 8.0;
+pub const RAIL_X: f32 = PAD;
+pub const RAIL_W: f32 = 48.0;
+pub const GRID_X: f32 = RAIL_X + RAIL_W + 10.0;
+pub const GRID_W: f32 = WIDTH - PAD - GRID_X;
+/// The chosen item's row, over the foot.
+const ACTIONS_H: f32 = 100.0;
+pub const ACTIONS_Y: f32 = HEIGHT - FOOT - ACTIONS_H;
+pub const GRID_Y: f32 = BODY_Y;
+pub const GRID_H: f32 = ACTIONS_Y - 8.0 - BODY_Y;
+/// The action buttons.
+const ACT_H: f32 = 40.0;
+const PRIMARY_W: f32 = 76.0;
+const ACT_GAP: f32 = 6.0;
 
 /// The fonts the frame draws with.
 #[derive(Debug, Clone, Default)]
 pub struct FrameFonts {
-    /// The window's title.
+    /// The window's title, the chosen item's name.
     pub title: Option<Arc<UiFont>>,
-    /// The grid's title, buttons' chosen words.
+    /// Menus' chosen words, the primary button, the pyreals.
     pub strong: Option<Arc<UiFont>>,
-    /// Buttons' words, the character's name, counts.
+    /// Menus' words, buttons.
     pub body: Option<Arc<UiFont>>,
     /// Small capitals.
     pub label: Option<Arc<UiFont>>,
-    /// The burden's small words.
+    /// The burden's and the chosen item's small words.
     pub small: Option<Arc<UiFont>>,
-    /// The filter chips.
+    /// The action buttons' words.
     pub chip: Option<Arc<UiFont>>,
+}
+
+/// The chosen item, as its action row shows it.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Chosen {
+    /// The item.
+    pub id: u32,
+    /// Its icon.
+    pub icon: Option<TextureRef>,
+    /// Its name and the line under it.
+    pub name: String,
+    pub sub: String,
+    /// The main button: Use, Equip or Take off.
+    pub primary: &'static str,
+    /// A stack: it splits.
+    pub splits: bool,
+    /// It can be salvaged (not worn).
+    pub salvages: bool,
 }
 
 /// What the frame shows.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FrameView {
-    /// The character.
-    pub name: String,
-    /// The details are docked (the window is wide).
-    pub details: bool,
-    /// The details are a card over the equipment column (a small
-    /// screen); the equipment is hidden under it.
-    pub card: bool,
-    /// The grid's title and count.
-    pub title: String,
-    pub count: String,
+    /// The gear is folded out.
+    pub gear: bool,
+    /// It is out only for the drag under way.
+    pub gear_for_drag: bool,
     /// Group applies (all packs, or a search).
     pub grouped: bool,
     pub group: GroupBy,
@@ -125,10 +126,21 @@ pub struct FrameView {
     pub kind: Option<Kind>,
     pub burden: Burden,
     pub pyreals: i64,
-    /// The foot's hint.
-    pub hint: String,
-    /// A drag is under way: the hint names it.
-    pub dragging: bool,
+    /// The chosen item (none: the row asks for one).
+    pub chosen: Option<Chosen>,
+}
+
+/// An action row button.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Act {
+    /// Use, Equip or Take off.
+    Primary,
+    Split,
+    Give,
+    Drop,
+    Salvage,
+    /// The More menu, at this screen point.
+    More,
 }
 
 /// What the frame asks of the window.
@@ -136,16 +148,19 @@ pub struct FrameView {
 pub enum FrameRequest {
     /// Close it.
     Close,
+    /// Fold the gear out or away.
+    Gear,
+    /// The Show menu (kinds and looks), at this screen point.
+    ShowMenu((f32, f32)),
     /// The Group menu, at this screen point.
     GroupMenu((f32, f32)),
     /// The Sort and Tidy menu, at this screen point.
     SortMenu((f32, f32)),
-    /// Cells drawn so.
-    Look(CellLook),
-    /// One kind shown (none: all).
-    Kind(Option<Kind>),
-    /// Put the details card away.
-    CloseCard,
+    /// An action row button on the chosen item; the screen point under
+    /// the button (for More's menu).
+    Act(u32, Act, (f32, f32)),
+    /// The chosen item's full sheet.
+    Inspect(u32),
 }
 
 /// The inventory's frame.
@@ -167,6 +182,25 @@ fn inside((x, y, w, h): Rect, px: f32, py: f32) -> bool {
     px >= x && px < x + w && py >= y && py < y + h
 }
 
+/// The packs' left edge in the window: right of the gear when it is out.
+#[must_use]
+pub fn packs_x(gear: bool) -> f32 {
+    if gear { GEAR_W } else { 0.0 }
+}
+
+/// The action buttons, left to right, with their words and tips.
+const ACTS: [(Act, &str, &str); 5] = [
+    (Act::Split, "Split", "Split the stack"),
+    (Act::Give, "Give", "Give to your target"),
+    (Act::Drop, "Drop", "Drop on the ground"),
+    (Act::Salvage, "Salvage", "Salvage"),
+    (
+        Act::More,
+        "More",
+        "Inscribe, add to a bar, link in chat, plugin entries",
+    ),
+];
+
 impl InventoryFrame {
     /// A frame in `theme`.
     #[must_use]
@@ -181,77 +215,497 @@ impl InventoryFrame {
     }
 
     fn width(&self) -> f32 {
-        if self.view.details { WIDE } else { NARROW }
+        if self.view.gear { WITH_GEAR } else { WIDTH }
+    }
+
+    fn px(&self) -> f32 {
+        packs_x(self.view.gear)
     }
 
     fn close_rect(&self) -> Rect {
-        (self.width() - 16.0 - 30.0, 11.0, 30.0, 30.0)
+        (self.width() - 10.0 - 30.0, 9.0, 30.0, 30.0)
     }
 
-    fn card_rect() -> Rect {
-        (CARD_X, CARD_Y, CARD_W, CARD_H)
+    fn gear_words(&self) -> &'static str {
+        if self.view.gear && !self.view.gear_for_drag {
+            "Hide gear"
+        } else {
+            "Gear"
+        }
     }
 
-    fn card_close_rect() -> Rect {
-        (CARD_X + CARD_W - 6.0 - 26.0, CARD_Y + 3.0, 26.0, 26.0)
+    fn gear_rect(&self) -> Rect {
+        let words = self
+            .fonts
+            .body
+            .as_ref()
+            .map_or(40.0, |f| text::measure(f, self.gear_words(), 0.0));
+        let w = 10.0 + 14.0 + 6.0 + words + 10.0;
+        let close = self.close_rect();
+        (close.0 - 6.0 - w, 9.0, w, 30.0)
     }
 
-    fn button_width(&self, label: &str, value: &str) -> f32 {
-        let m = |f: &Option<Arc<UiFont>>, s: &str| {
-            f.as_ref().map_or(40.0, |f| text::measure(f, s, 0.0))
-        };
-        8.0 + m(&self.fonts.body, label) + 6.0 + m(&self.fonts.strong, value) + 6.0 + 8.0 + 8.0
+    /// The Show, Group and Sort buttons.
+    fn drop_rects(&self) -> [Rect; 3] {
+        let w = (INNER_W - 2.0 * 6.0) / 3.0;
+        let x = self.px() + PAD;
+        [0.0, 1.0, 2.0].map(|i| (x + i * (w + 6.0), DROPS_Y, w, DROPS_H))
     }
 
-    fn group_rect(&self) -> Option<Rect> {
-        self.view.grouped.then(|| {
-            (
-                GRID_X,
-                TOOLBAR_Y,
-                self.button_width("Group", self.view.group.words()),
-                26.0,
-            )
-        })
+    /// The chosen item's name row and its Inspect link.
+    fn inspect_rect(&self) -> Rect {
+        let w = self
+            .fonts
+            .body
+            .as_ref()
+            .map_or(50.0, |f| text::measure(f, "Inspect", 0.0))
+            + 16.0;
+        (self.px() + WIDTH - PAD - w, ACTIONS_Y + 12.0, w, 26.0)
     }
 
-    fn sort_rect(&self) -> Rect {
-        let x = self.group_rect().map_or(GRID_X, |r| r.0 + r.2 + 6.0);
-        (
-            x,
-            TOOLBAR_Y,
-            self.button_width("Sort", self.view.sort.words()),
-            26.0,
-        )
-    }
-
-    fn look_rects(&self) -> [Rect; 2] {
-        let right = GRID_X + GRID_W - 12.0;
-        [
-            (right - 26.0 - 6.0 - 26.0, TOOLBAR_Y, 26.0, 26.0),
-            (right - 26.0, TOOLBAR_Y, 26.0, 26.0),
-        ]
-    }
-
-    fn chip_rects(&self) -> Vec<(Option<Kind>, Rect)> {
-        let mut x = GRID_X;
-        let mut out = Vec::new();
-        let kinds = std::iter::once(None).chain(Kind::ALL.into_iter().map(Some));
-        for k in kinds {
-            let words = k.map_or("All", Kind::words);
-            let w = self
-                .fonts
-                .chip
-                .as_ref()
-                .map_or(40.0, |f| text::measure(f, words, 0.0))
-                + 16.0;
-            out.push((k, (x, CHIPS_Y, w, 22.0)));
-            x += w + 4.0;
+    /// The action buttons: the primary first.
+    fn act_rects(&self) -> Vec<(Act, Rect)> {
+        let y = ACTIONS_Y + 10.0 + 30.0 + 9.0;
+        let x0 = self.px() + PAD;
+        let mut out = vec![(Act::Primary, (x0, y, PRIMARY_W, ACT_H))];
+        let w = (INNER_W - PRIMARY_W - ACT_GAP * ACTS.len() as f32) / ACTS.len() as f32;
+        let mut x = x0 + PRIMARY_W + ACT_GAP;
+        for (act, _, _) in ACTS {
+            out.push((act, (x, y, w, ACT_H)));
+            x += w + ACT_GAP;
         }
         out
     }
 
+    fn act_on(&self, act: Act) -> bool {
+        let Some(c) = &self.view.chosen else {
+            return false;
+        };
+        match act {
+            Act::Split => c.splits,
+            Act::Salvage => c.salvages,
+            _ => true,
+        }
+    }
+
     fn hot(&self, r: Rect) -> bool {
         self.hover.is_some_and(|(x, y)| inside(r, x, y))
+    }
+
+    fn draw_header(&self, rc: &mut RenderContext<'_>, w: f32) {
+        let p = Horizon::current().palette;
+        rc.fill_vertical_gradient(
+            1.0,
+            1.0,
+            w - 2.0,
+            HEADER - 1.0,
+            CornerRadii::new(5.0, 5.0, 0.0, 0.0),
+            tone::bronze(0.10),
+            tone::bronze(0.0),
+        );
+        rc.fill(0.0, HEADER - 1.0, w, 1.0, tone::bronze(0.35));
+        stroke(rc, 16.0, 15.5, 17.0, BAG, p.accent, 1.8);
+        if let Some(t) = &self.fonts.title {
+            text::draw(
+                rc,
+                t,
+                "Inventory",
+                42.0,
+                ((HEADER - t.line_height) * 0.5).round(),
+                TextStyle::plain(p.text),
+            );
+        }
+        let r = CornerRadii::all(4.0);
+        let g = self.gear_rect();
+        let on = self.view.gear;
+        rc.fill_rounded_rect(
+            g.0,
+            g.1,
+            g.2,
+            g.3,
+            r,
+            if on { tone::gold(0.18) } else { hex(0, 0.35) },
+        );
+        let edge = if on || self.hot(g) {
+            p.accent
+        } else {
+            tone::bronze(0.45)
+        };
+        rc.stroke_rounded_rect(g.0, g.1, g.2, g.3, r, edge, 1.0);
+        stroke(rc, g.0 + 10.0, g.1 + 8.0, 14.0, SHIRT, p.text_soft, 1.6);
+        if let Some(b) = &self.fonts.body {
+            text::draw(
+                rc,
+                b,
+                self.gear_words(),
+                g.0 + 30.0,
+                g.1 + ((g.3 - b.line_height) * 0.5).round(),
+                TextStyle::plain(p.text),
+            );
+        }
+        let close = self.close_rect();
+        stroke(
+            rc,
+            close.0 + 7.0,
+            close.1 + 7.0,
+            16.0,
+            &[&[(6.0, 6.0), (18.0, 18.0)], &[(18.0, 6.0), (6.0, 18.0)]],
+            if self.hot(close) { p.accent } else { p.icon },
+            1.8,
+        );
+    }
+
+    fn draw_gear_pane(&self, rc: &mut RenderContext<'_>) {
+        let p = Horizon::current().palette;
+        let fill = if self.view.gear_for_drag {
+            tone::gold(0.05)
+        } else {
+            hex(0, 0.12)
+        };
+        rc.fill(1.0, HEADER, GEAR_W - 1.0, HEIGHT - HEADER - FOOT, fill);
+        rc.fill(
+            GEAR_W - 1.0,
+            HEADER,
+            1.0,
+            HEIGHT - HEADER - FOOT,
+            tone::bronze(0.35),
+        );
+        if let Some(l) = &self.fonts.label {
+            let tracked = TextStyle::plain(p.text_soft).tracked(1.2);
+            text::draw(rc, l, "EQUIPPED", EQUIP_X, EQUIP_TITLE_Y, tracked);
+            text::draw(rc, l, "JEWELRY", EQUIP_X, JEWELRY_TITLE, tracked);
+            text::draw(rc, l, "HELD \u{b7} AETHERIA", EQUIP_X, HELD_TITLE, tracked);
+        }
+        if let Some(s) = &self.fonts.small {
+            let (note, ink) = if self.view.gear_for_drag {
+                ("opened for the drag", p.accent)
+            } else {
+                ("stays open until you hide it", p.text_soft)
+            };
+            let nw = text::measure(s, note, 0.0);
+            text::draw(
+                rc,
+                s,
+                note,
+                GEAR_W - EQUIP_X - nw,
+                EQUIP_TITLE_Y,
+                TextStyle::plain(ink),
+            );
+        }
+        let r = CornerRadii::all(4.0);
+        rc.fill_rounded_rect(FIGURE_X, FIGURE_Y, FIGURE_W, FIGURE_H, r, tone::gold(0.05));
+    }
+
+    fn draw_drops(&self, rc: &mut RenderContext<'_>) {
+        let p = Horizon::current().palette;
+        let (Some(b), Some(s)) = (&self.fonts.body, &self.fonts.strong) else {
+            return;
+        };
+        let show = match (self.view.kind, self.view.look) {
+            (Some(k), _) => k.words(),
+            (None, CellLook::List) => "All, list",
+            (None, _) => "All",
+        };
+        let r = CornerRadii::all(4.0);
+        let rows = [
+            ("Show", show, true, self.view.kind.is_some()),
+            ("Group", self.view.group.words(), self.view.grouped, false),
+            (
+                "Sort",
+                self.view.sort.words(),
+                true,
+                self.view.sort != SortBy::Mine,
+            ),
+        ];
+        for ((label, value, on, chosen), rect) in rows.into_iter().zip(self.drop_rects()) {
+            let (bx, by, bw, bh) = rect;
+            rc.fill_rounded_rect(
+                bx,
+                by,
+                bw,
+                bh,
+                r,
+                if chosen {
+                    tone::gold(0.18)
+                } else {
+                    hex(0, 0.35)
+                },
+            );
+            let edge = if on && (chosen || self.hot(rect)) {
+                p.accent
+            } else {
+                tone::bronze(if on { 0.45 } else { 0.2 })
+            };
+            rc.stroke_rounded_rect(bx, by, bw, bh, r, edge, 1.0);
+            let a = if on { 1.0 } else { 0.4 };
+            let ty = by + ((bh - b.line_height) * 0.5).round();
+            text::draw(rc, b, label, bx + 8.0, ty, TextStyle::plain(tone::soft(a)));
+            let vx = bx + 8.0 + text::measure(b, label, 0.0) + 5.0;
+            let room = bx + bw - 18.0 - vx;
+            text::draw(
+                rc,
+                s,
+                &fit(s, value, room),
+                vx,
+                ty,
+                TextStyle::plain(tone::words(a)),
+            );
+            caret(rc, bx + bw - 10.0, by + bh * 0.5, tone::soft(a));
+        }
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn draw_actions(&self, rc: &mut RenderContext<'_>) {
+        let p = Horizon::current().palette;
+        let f = &self.fonts;
+        let px = self.px();
+        rc.fill(px, ACTIONS_Y, WIDTH, 1.0, tone::bronze(0.35));
+        rc.fill(px, ACTIONS_Y + 1.0, WIDTH, ACTIONS_H - 1.0, hex(0, 0.25));
+        let r = CornerRadii::all(4.0);
+        // The name row.
+        let ny = ACTIONS_Y + 10.0;
+        let tile = (px + PAD, ny, 30.0, 30.0);
+        rc.fill_rounded_rect(tile.0, tile.1, tile.2, tile.3, r, hex(0, 0.35));
+        rc.stroke_rounded_rect(tile.0, tile.1, tile.2, tile.3, r, tone::bronze(0.6), 1.0);
+        let words_x = tile.0 + tile.2 + 10.0;
+        let link = self.inspect_rect();
+        let room = link.0 - 6.0 - words_x;
+        match &self.view.chosen {
+            Some(c) => {
+                if let Some(icon) = c.icon {
+                    rc.sprite(
+                        icon,
+                        tile.0 + 1.0,
+                        tile.1 + 1.0,
+                        28.0,
+                        28.0,
+                        (0.0, 0.0, 1.0, 1.0),
+                        Color::WHITE,
+                    );
+                }
+                if let (Some(t), Some(s)) = (&f.strong, &f.small) {
+                    text::draw(
+                        rc,
+                        t,
+                        &fit(t, &c.name, room),
+                        words_x,
+                        ny,
+                        TextStyle::plain(p.text),
+                    );
+                    text::draw(
+                        rc,
+                        s,
+                        &fit(s, &c.sub, room),
+                        words_x,
+                        ny + 17.0,
+                        TextStyle::plain(p.text_soft),
+                    );
+                }
+                if let Some(b) = &f.body {
+                    let ink = if self.hot(link) {
+                        p.accent_light
+                    } else {
+                        p.accent
+                    };
+                    text::draw(
+                        rc,
+                        b,
+                        "Inspect",
+                        link.0 + 8.0,
+                        link.1 + ((link.3 - b.line_height) * 0.5).round(),
+                        TextStyle::plain(ink),
+                    );
+                }
+            }
+            None => {
+                if let Some(b) = &f.body {
+                    text::draw(
+                        rc,
+                        b,
+                        "Click an item to choose it",
+                        words_x,
+                        ny + ((30.0 - b.line_height) * 0.5).round(),
+                        TextStyle::plain(p.text_soft),
+                    );
+                }
+            }
+        }
+        // The buttons.
+        for (act, rect) in self.act_rects() {
+            let (bx, by, bw, bh) = rect;
+            let on = self.act_on(act);
+            let hot = on && self.hot(rect);
+            if act == Act::Primary {
+                let words = self.view.chosen.as_ref().map_or("Use", |c| c.primary);
+                let a = if on { 1.0 } else { 0.4 };
+                let fill = if hot {
+                    tone::gold(a)
+                } else {
+                    tone::gold(0.88 * a)
+                };
+                rc.fill_rounded_rect(bx, by, bw, bh, r, fill);
+                rc.stroke_rounded_rect(bx, by, bw, bh, r, tone::gold(a), 1.0);
+                if let Some(s) = &f.strong {
+                    text::draw_centred(
+                        rc,
+                        s,
+                        words,
+                        bx + bw * 0.5,
+                        by + ((bh - s.line_height) * 0.5).round(),
+                        TextStyle::plain(tone::ink(a)),
+                    );
+                }
+                continue;
+            }
+            let a = if on { 1.0 } else { 0.4 };
+            rc.fill_rounded_rect(
+                bx,
+                by,
+                bw,
+                bh,
+                r,
+                if hot {
+                    tone::gold(0.18)
+                } else {
+                    hex(0, 0.35 * a)
+                },
+            );
+            let edge = if hot {
+                p.accent
+            } else {
+                tone::bronze(0.45 * a)
+            };
+            rc.stroke_rounded_rect(bx, by, bw, bh, r, edge, 1.0);
+            let ink = tone::warm(a);
+            let icon = match act {
+                Act::Split => Some(SPLIT),
+                Act::Give => Some(GIVE),
+                Act::Drop => Some(DROP),
+                Act::Salvage => Some(SALVAGE),
+                _ => None,
+            };
+            let iy = by + 6.0;
+            match icon {
+                Some(lines) => stroke(rc, bx + (bw - 14.0) * 0.5, iy, 14.0, lines, ink, 1.6),
+                None => {
+                    for i in 0..3 {
+                        let dx = bx + bw * 0.5 - 7.0 + i as f32 * 6.0;
+                        rc.fill_ellipse(dx, iy + 6.0, 2.5, 2.5, ink);
+                    }
+                }
+            }
+            if let Some(c) = &f.chip {
+                let words = ACTS
+                    .iter()
+                    .find(|(a, _, _)| *a == act)
+                    .map_or("", |(_, w, _)| *w);
+                text::draw_centred(
+                    rc,
+                    c,
+                    words,
+                    bx + bw * 0.5,
+                    by + bh - 6.0 - c.line_height,
+                    TextStyle::plain(ink),
+                );
+            }
+        }
+    }
+
+    fn draw_foot(&self, rc: &mut RenderContext<'_>, w: f32) {
+        let p = Horizon::current().palette;
+        let f = &self.fonts;
+        let fy = HEIGHT - FOOT;
+        rc.fill(0.0, fy, w, 1.0, tone::bronze(0.35));
+        let (Some(l), Some(s), Some(body)) = (&f.label, &f.small, &f.body) else {
+            return;
+        };
+        let mut x = PAD;
+        if self.view.gear {
+            let note = if self.view.gear_for_drag {
+                "Drop on a lit slot to wear it. Let go anywhere else and the gear folds away again."
+            } else {
+                "Drag to turn your figure. Gear hides it again."
+            };
+            let ink = if self.view.gear_for_drag {
+                p.accent
+            } else {
+                p.text_soft
+            };
+            let lines = ac_ui::modern::kit::wrap(s, note, GEAR_W - 2.0 * PAD);
+            let top = fy + (FOOT - s.line_height * lines.len().min(2) as f32) * 0.5;
+            for (i, line) in lines.iter().take(2).enumerate() {
+                text::draw(
+                    rc,
+                    s,
+                    line,
+                    PAD,
+                    top + s.line_height * i as f32,
+                    TextStyle::plain(ink),
+                );
+            }
+            x = GEAR_W + PAD;
+        }
+        // Pyreals, right.
+        let strong = f.strong.as_ref().unwrap_or(body);
+        let coins = ac_ui::panels::appraisal::group_thousands(self.view.pyreals);
+        let cw = text::measure(strong, &coins, 0.0);
+        let cy = fy + FOOT * 0.5;
+        let coins_x = w - PAD - cw;
+        text::draw(
+            rc,
+            strong,
+            &coins,
+            coins_x,
+            (cy - strong.line_height * 0.5).round(),
+            TextStyle::plain(p.text),
+        );
+        rc.fill_ellipse(coins_x - 15.0, cy - 4.5, 9.0, 9.0, p.accent);
+        // Burden, between.
+        let b = self.view.burden;
+        let slowed = b.slowed();
+        let color = if slowed {
+            hex(0xFF_8A5B, 1.0)
+        } else {
+            p.accent
+        };
+        let bar_w = (coins_x - 15.0 - 14.0 - x).max(40.0);
+        let ty = fy + 11.0;
+        text::draw(
+            rc,
+            l,
+            "BURDEN",
+            x,
+            ty + 1.0,
+            TextStyle::plain(p.text_soft).tracked(1.2),
+        );
+        let lw = text::measure(l, "BURDEN", 1.2);
+        let pct = if slowed {
+            format!("{}% \u{b7} slowed", b.percent)
+        } else {
+            format!("{}%", b.percent)
+        };
+        text::draw(rc, s, &pct, x + lw + 8.0, ty, TextStyle::plain(color));
+        let units = format!(
+            "{} of {}",
+            ac_ui::panels::appraisal::group_thousands(i64::from(b.carried)),
+            ac_ui::panels::appraisal::group_thousands(i64::from(b.capacity))
+        );
+        let uw = text::measure(s, &units, 0.0);
+        text::draw(
+            rc,
+            s,
+            &units,
+            x + bar_w - uw,
+            ty,
+            TextStyle::plain(p.text_soft),
+        );
+        let by = ty + s.line_height + 4.0;
+        let pill = CornerRadii::all(2.5);
+        rc.fill_rounded_rect(x, by, bar_w, 5.0, pill, hex(0xFF_FFFF, 0.1));
+        let share = (b.percent as f32 / 300.0).clamp(0.0, 1.0);
+        rc.fill_rounded_rect(x, by, bar_w * share, 5.0, pill, color);
+        // 100% (slowed from here) a third of the way along.
+        rc.fill(x + bar_w / 3.0 - 1.0, by - 2.0, 2.0, 9.0, tone::words(0.6));
     }
 }
 
@@ -298,6 +752,64 @@ pub const STACK: &[&[(f32, f32)]] = &[
     &[(2.0, 17.5), (12.0, 22.5), (22.0, 17.5)],
 ];
 
+/// The shirt on the Gear button.
+const SHIRT: &[&[(f32, f32)]] = &[&[
+    (8.0, 3.0),
+    (3.0, 6.0),
+    (5.0, 11.0),
+    (7.0, 10.0),
+    (7.0, 21.0),
+    (17.0, 21.0),
+    (17.0, 10.0),
+    (19.0, 11.0),
+    (21.0, 6.0),
+    (16.0, 3.0),
+    (14.0, 5.0),
+    (12.0, 5.5),
+    (10.0, 5.0),
+    (8.0, 3.0),
+]];
+
+/// A fork: Split.
+const SPLIT: &[&[(f32, f32)]] = &[
+    &[
+        (6.0, 3.0),
+        (6.0, 9.0),
+        (7.5, 12.5),
+        (12.0, 15.0),
+        (16.5, 12.5),
+        (18.0, 9.0),
+        (18.0, 3.0),
+    ],
+    &[(12.0, 15.0), (12.0, 21.0)],
+];
+
+/// An arrow to a bar: Give.
+const GIVE: &[&[(f32, f32)]] = &[
+    &[(3.0, 12.0), (16.0, 12.0)],
+    &[(12.0, 7.0), (17.0, 12.0), (12.0, 17.0)],
+    &[(20.0, 4.0), (20.0, 20.0)],
+];
+
+/// An arrow down to the ground: Drop.
+const DROP: &[&[(f32, f32)]] = &[
+    &[(12.0, 3.0), (12.0, 16.0)],
+    &[(7.0, 11.0), (12.0, 16.0), (17.0, 11.0)],
+    &[(5.0, 21.0), (19.0, 21.0)],
+];
+
+/// A hammer: Salvage.
+const SALVAGE: &[&[(f32, f32)]] = &[
+    &[(4.0, 20.0), (13.0, 11.0)],
+    &[
+        (10.0, 8.0),
+        (15.0, 3.0),
+        (21.0, 9.0),
+        (16.0, 14.0),
+        (10.0, 8.0),
+    ],
+];
+
 impl Widget for InventoryFrame {
     fn hit_test(&self, _element: &Element, _x: f32, _y: f32) -> bool {
         true
@@ -327,36 +839,30 @@ impl Widget for InventoryFrame {
             }
             kind::CLICK => {
                 let (sx, sy) = ui.screen_position(me);
+                let below = |r: Rect| (sx + r.0, sy + r.1 + r.3 + 4.0);
+                let drops = self.drop_rects();
                 if inside(self.close_rect(), x, y) {
                     self.requests.push(FrameRequest::Close);
-                } else if self.view.card && inside(Self::card_close_rect(), x, y) {
-                    self.requests.push(FrameRequest::CloseCard);
-                } else if self.view.card && inside(Self::card_rect(), x, y) {
-                    // The card's own title strip: nothing.
-                } else if let Some(r) = self.group_rect().filter(|r| inside(*r, x, y)) {
-                    self.requests
-                        .push(FrameRequest::GroupMenu((sx + r.0, sy + r.1 + r.3 + 4.0)));
-                } else if inside(self.sort_rect(), x, y) {
-                    let r = self.sort_rect();
-                    self.requests
-                        .push(FrameRequest::SortMenu((sx + r.0, sy + r.1 + r.3 + 4.0)));
-                } else if let Some(i) = self.look_rects().iter().position(|r| inside(*r, x, y)) {
-                    let look = match (i, self.view.look) {
-                        (0, CellLook::Compact) => CellLook::Grid,
-                        (0, _) => CellLook::Compact,
-                        (_, CellLook::List) => CellLook::Grid,
-                        _ => CellLook::List,
-                    };
-                    self.requests.push(FrameRequest::Look(look));
-                } else if let Some((k, _)) = self
-                    .chip_rects()
-                    .into_iter()
-                    .find(|(_, r)| inside(*r, x, y))
-                {
-                    self.requests.push(FrameRequest::Kind(k));
-                } else if self.view.card {
-                    // A click on empty space puts the card away.
-                    self.requests.push(FrameRequest::CloseCard);
+                } else if inside(self.gear_rect(), x, y) {
+                    self.requests.push(FrameRequest::Gear);
+                } else if inside(drops[0], x, y) {
+                    self.requests.push(FrameRequest::ShowMenu(below(drops[0])));
+                } else if inside(drops[1], x, y) {
+                    if self.view.grouped {
+                        self.requests.push(FrameRequest::GroupMenu(below(drops[1])));
+                    }
+                } else if inside(drops[2], x, y) {
+                    self.requests.push(FrameRequest::SortMenu(below(drops[2])));
+                } else if let Some(c) = &self.view.chosen {
+                    let id = c.id;
+                    if inside(self.inspect_rect(), x, y) {
+                        self.requests.push(FrameRequest::Inspect(id));
+                    } else if let Some((act, r)) =
+                        self.act_rects().into_iter().find(|(_, r)| inside(*r, x, y))
+                        && self.act_on(act)
+                    {
+                        self.requests.push(FrameRequest::Act(id, act, below(r)));
+                    }
                 }
                 true
             }
@@ -366,74 +872,55 @@ impl Widget for InventoryFrame {
 
     fn tooltip_text(&self, _element: &Element) -> Option<String> {
         let (x, y) = self.hover?;
-        let looks = self.look_rects();
-        if inside(looks[0], x, y) {
-            return Some("Smaller icons".to_owned());
-        }
-        if inside(looks[1], x, y) {
-            return Some("List with names".to_owned());
-        }
         if inside(self.close_rect(), x, y) {
             return Some("Close".to_owned());
         }
-        if self.view.card && inside(Self::card_close_rect(), x, y) {
-            return Some("Close the details".to_owned());
+        if inside(self.gear_rect(), x, y) {
+            return Some("Equipment: fold out your worn and wielded items".to_owned());
         }
-        None
+        let drops = self.drop_rects();
+        if inside(drops[1], x, y) && !self.view.grouped {
+            return Some("Grouping applies to All packs and to a search".to_owned());
+        }
+        if self.view.chosen.is_some() && inside(self.inspect_rect(), x, y) {
+            return Some("Inspect: the full sheet (or right-click the item)".to_owned());
+        }
+        let c = self.view.chosen.as_ref()?;
+        let (act, _) = self
+            .act_rects()
+            .into_iter()
+            .find(|(_, r)| inside(*r, x, y))?;
+        Some(match act {
+            Act::Primary => format!("{} (or double-click the item)", c.primary),
+            Act::Split if !c.splits => "Not a stack".to_owned(),
+            Act::Salvage if !c.salvages => "Take it off to salvage it".to_owned(),
+            other => ACTS
+                .iter()
+                .find(|(a, _, _)| *a == other)
+                .map_or_else(String::new, |(_, _, tip)| (*tip).to_owned()),
+        })
     }
 
-    #[allow(clippy::too_many_lines)]
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
-        let p = Horizon::current().palette;
-        let f = &self.fonts;
         let w = self.width();
         let h = HEIGHT;
         let round = CornerRadii::all(self.theme.metrics.window_radius);
         rc.soft_shadow(0.0, 0.0, w, h, 6.0, 18.0, 50.0, hex(0, 0.55));
         fill_glass(rc, (0.0, 0.0, w, h), round, tone::ground(0.97));
-        // The header.
-        rc.fill_vertical_gradient(
-            1.0,
-            1.0,
-            w - 2.0,
-            HEADER - 1.0,
-            CornerRadii::new(5.0, 5.0, 0.0, 0.0),
-            tone::bronze(0.10),
-            tone::bronze(0.0),
-        );
-        rc.fill(0.0, HEADER - 1.0, w, 1.0, tone::bronze(0.35));
-        stroke(rc, 20.0, 17.0, 18.0, BAG, p.accent, 1.8);
-        let mut x = 48.0;
-        if let Some(t) = &f.title {
-            text::draw(
-                rc,
-                t,
-                "Inventory",
-                x,
-                (HEADER - t.line_height) * 0.5,
-                TextStyle::plain(p.text),
-            );
-            x += text::measure(t, "Inventory", 0.0) + 12.0;
-        }
-        if let Some(b) = &f.body {
-            text::draw(
-                rc,
-                b,
-                &fit(b, &self.view.name, search_x(w) - x - 12.0),
-                x,
-                ((HEADER - b.line_height) * 0.5).round() + 1.0,
-                TextStyle::plain(p.text_soft),
-            );
+        self.draw_header(rc, w);
+        if self.view.gear {
+            self.draw_gear_pane(rc);
         }
         // The search box (its field is a child).
-        let sx = search_x(w);
+        let p = Horizon::current().palette;
+        let sx = self.px() + SEARCH_X;
         let r = CornerRadii::all(4.0);
-        rc.fill_rounded_rect(sx, 11.0, SEARCH_W, 30.0, r, hex(0, 0.35));
-        rc.stroke_rounded_rect(sx, 11.0, SEARCH_W, 30.0, r, tone::bronze(0.45), 1.0);
+        rc.fill_rounded_rect(sx, SEARCH_Y, INNER_W, SEARCH_H, r, hex(0, 0.35));
+        rc.stroke_rounded_rect(sx, SEARCH_Y, INNER_W, SEARCH_H, r, tone::bronze(0.45), 1.0);
         stroke(
             rc,
             sx + 9.0,
-            19.0,
+            SEARCH_Y + 8.0,
             14.0,
             &[
                 &[
@@ -452,285 +939,9 @@ impl Widget for InventoryFrame {
             p.text_soft,
             1.6,
         );
-        let close = self.close_rect();
-        stroke(
-            rc,
-            close.0 + 7.0,
-            close.1 + 7.0,
-            16.0,
-            &[&[(6.0, 6.0), (18.0, 18.0)], &[(18.0, 6.0), (6.0, 18.0)]],
-            if self.hot(close) { p.accent } else { p.icon },
-            1.8,
-        );
-        if self.view.card {
-            // The details' card, over the equipment column.
-            let (cx, cy, cw, ch) = Self::card_rect();
-            let round = CornerRadii::all(self.theme.metrics.window_radius);
-            rc.soft_shadow(cx, cy, cw, ch, 6.0, 8.0, 24.0, hex(0, 0.5));
-            rc.fill_rounded_rect(cx, cy, cw, ch, round, tone::ground(1.0));
-            rc.stroke_rounded_rect(cx, cy, cw, ch, round, tone::bronze(0.45), 1.0);
-            if let Some(l) = &f.label {
-                let tracked = TextStyle::plain(p.text_soft).tracked(1.2);
-                text::draw(rc, l, "ITEM DETAILS", cx + 12.0, cy + 12.0, tracked);
-            }
-            let close = Self::card_close_rect();
-            stroke(
-                rc,
-                close.0 + 5.0,
-                close.1 + 5.0,
-                16.0,
-                &[&[(6.0, 6.0), (18.0, 18.0)], &[(18.0, 6.0), (6.0, 18.0)]],
-                if self.hot(close) { p.accent } else { p.icon },
-                1.6,
-            );
-        } else {
-            // The equipment's labels and the figure's place.
-            if let Some(l) = &f.label {
-                let tracked = TextStyle::plain(p.text_soft).tracked(1.2);
-                text::draw(rc, l, "EQUIPPED", EQUIP_X, EQUIP_Y + 6.0, tracked);
-                text::draw(rc, l, "JEWELRY", EQUIP_X, JEWELRY_TITLE, tracked);
-                text::draw(rc, l, "HELD \u{b7} AETHERIA", EQUIP_X, HELD_TITLE, tracked);
-            }
-            rc.fill_rounded_rect(FIGURE_X, FIGURE_Y, FIGURE_W, FIGURE_H, r, tone::gold(0.05));
-        }
-        // The rail's and the grid's dividing room.
-        if let (Some(s), Some(b)) = (&f.strong, &f.body) {
-            text::draw(
-                rc,
-                s,
-                &fit(s, &self.view.title, 200.0),
-                GRID_X,
-                EQUIP_Y,
-                TextStyle::plain(p.text),
-            );
-            let cw = text::measure(b, &self.view.count, 0.0);
-            text::draw(
-                rc,
-                b,
-                &self.view.count,
-                GRID_X + GRID_W - 12.0 - cw,
-                EQUIP_Y + 1.0,
-                TextStyle::plain(p.text_soft),
-            );
-        }
-        // Group and Sort.
-        let mut buttons = Vec::new();
-        if let Some(g) = self.group_rect() {
-            buttons.push((g, "Group", self.view.group.words(), false));
-        }
-        buttons.push((
-            self.sort_rect(),
-            "Sort",
-            self.view.sort.words(),
-            self.view.sort != SortBy::Mine,
-        ));
-        for ((bx, by, bw, bh), label, value, on) in buttons {
-            let edge = if on || self.hot((bx, by, bw, bh)) {
-                p.accent
-            } else {
-                tone::bronze(0.45)
-            };
-            let fill = if on { tone::gold(0.18) } else { hex(0, 0.35) };
-            rc.fill_rounded_rect(bx, by, bw, bh, r, fill);
-            rc.stroke_rounded_rect(bx, by, bw, bh, r, edge, 1.0);
-            if let (Some(b), Some(s)) = (&f.body, &f.strong) {
-                let ty = by + (bh - b.line_height) * 0.5;
-                text::draw(rc, b, label, bx + 8.0, ty, TextStyle::plain(p.text_soft));
-                let vx = bx + 8.0 + text::measure(b, label, 0.0) + 6.0;
-                text::draw(rc, s, value, vx, ty, TextStyle::plain(p.text));
-                caret(rc, bx + bw - 12.0, by + bh * 0.5, p.text_soft);
-            }
-        }
-        // Compact and list.
-        let looks = self.look_rects();
-        for (i, rect) in looks.iter().enumerate() {
-            let on = matches!(
-                (i, self.view.look),
-                (0, CellLook::Compact) | (1, CellLook::List)
-            );
-            let (bx, by, bw, bh) = *rect;
-            if on {
-                rc.fill_rounded_rect(bx, by, bw, bh, r, tone::gold(0.18));
-            }
-            let edge = if on || self.hot(*rect) {
-                p.accent
-            } else {
-                tone::bronze(0.3)
-            };
-            rc.stroke_rounded_rect(bx, by, bw, bh, r, edge, 1.0);
-            if i == 0 {
-                for row in 0..3 {
-                    for col in 0..3 {
-                        rc.fill(
-                            bx + 7.0 + col as f32 * 4.5,
-                            by + 7.0 + row as f32 * 4.5,
-                            3.0,
-                            3.0,
-                            p.icon,
-                        );
-                    }
-                }
-            } else {
-                for row in 0..3 {
-                    let ly = by + 8.0 + row as f32 * 5.0;
-                    rc.fill(bx + 7.0, ly, 2.0, 2.0, p.icon);
-                    rc.fill(bx + 11.0, ly, 9.0, 1.5, p.icon);
-                }
-            }
-        }
-        // The chips.
-        if let Some(s) = &f.chip {
-            for (k, (cx, cy, cw, ch)) in self.chip_rects() {
-                let on = k == self.view.kind;
-                let pill = CornerRadii::all(ch * 0.5);
-                if on {
-                    rc.fill_rounded_rect(cx, cy, cw, ch, pill, tone::gold(0.18));
-                }
-                let edge = if on || self.hot((cx, cy, cw, ch)) {
-                    p.accent
-                } else {
-                    tone::bronze(0.3)
-                };
-                rc.stroke_rounded_rect(cx, cy, cw, ch, pill, edge, 1.0);
-                text::draw_centred(
-                    rc,
-                    s,
-                    k.map_or("All", Kind::words),
-                    cx + cw * 0.5,
-                    cy + (ch - s.line_height) * 0.5,
-                    TextStyle::plain(if on { p.text } else { p.text_soft }),
-                );
-            }
-        }
-        // The details' well when docked.
-        if self.view.details {
-            rc.fill_rounded_rect(DETAILS_X, EQUIP_Y, DETAILS_W, DETAILS_H, r, hex(0, 0.28));
-            rc.stroke_rounded_rect(
-                DETAILS_X,
-                EQUIP_Y,
-                DETAILS_W,
-                DETAILS_H,
-                r,
-                tone::bronze(0.35),
-                1.0,
-            );
-        }
-        // The foot: burden and pyreals.
-        let fy = h - FOOT;
-        rc.fill(0.0, fy, w, 1.0, tone::bronze(0.35));
-        let b = self.view.burden;
-        let slowed = b.slowed();
-        let color = if slowed {
-            hex(0xFF_8A5B, 1.0)
-        } else {
-            p.accent
-        };
-        if let (Some(l), Some(s), Some(body)) = (&f.label, &f.small, &f.body) {
-            let ty = fy + 10.0;
-            text::draw(
-                rc,
-                l,
-                "BURDEN",
-                24.0,
-                ty + 1.0,
-                TextStyle::plain(p.text_soft).tracked(1.2),
-            );
-            let pct = format!("{}%", b.percent);
-            let lw = text::measure(l, "BURDEN", 1.2);
-            text::draw(
-                rc,
-                body,
-                &pct,
-                24.0 + lw + 8.0,
-                ty - 1.0,
-                TextStyle::plain(color),
-            );
-            let units = format!(
-                "{} of {}",
-                ac_ui::panels::appraisal::group_thousands(i64::from(b.carried)),
-                ac_ui::panels::appraisal::group_thousands(i64::from(b.capacity))
-            );
-            let uw = text::measure(s, &units, 0.0);
-            text::draw(
-                rc,
-                s,
-                &units,
-                24.0 + 420.0 - uw,
-                ty,
-                TextStyle::plain(p.text_soft),
-            );
-            let by = ty + 16.0;
-            let pill = CornerRadii::all(3.0);
-            rc.fill_rounded_rect(24.0, by, 420.0, 6.0, pill, hex(0xFF_FFFF, 0.1));
-            let share = (b.percent as f32 / 300.0).clamp(0.0, 1.0);
-            rc.fill_rounded_rect(24.0, by, 420.0 * share, 6.0, pill, color);
-            rc.fill(24.0 + 140.0 - 1.0, by - 3.0, 2.0, 12.0, tone::words(0.6));
-            let marks = by + 9.0;
-            text::draw(rc, s, "0%", 24.0, marks, TextStyle::plain(p.text_soft));
-            text::draw(
-                rc,
-                s,
-                "100% \u{b7} slowed",
-                24.0 + 140.0 - 4.0,
-                marks,
-                TextStyle::plain(p.text_soft),
-            );
-            let tw = text::measure(s, "300%", 0.0);
-            text::draw(
-                rc,
-                s,
-                "300%",
-                24.0 + 420.0 - tw,
-                marks,
-                TextStyle::plain(p.text_soft),
-            );
-            // Pyreals.
-            let px = 24.0 + 420.0 + 24.0;
-            let cy = fy + FOOT * 0.5;
-            rc.fill_ellipse(px, cy - 5.0, 10.0, 10.0, p.accent);
-            let coins = ac_ui::panels::appraisal::group_thousands(self.view.pyreals);
-            let strong = f.strong.as_ref().unwrap_or(body);
-            text::draw(
-                rc,
-                strong,
-                &coins,
-                px + 16.0,
-                cy - strong.line_height * 0.5,
-                TextStyle::plain(p.text),
-            );
-            let cw = text::measure(strong, &coins, 0.0);
-            text::draw(
-                rc,
-                body,
-                "pyreals",
-                px + 16.0 + cw + 6.0,
-                cy - body.line_height * 0.5,
-                TextStyle::plain(p.text_soft),
-            );
-            // The hint.
-            let hint = if slowed && !self.view.dragging {
-                "You are slowed. Drop, sell or salvage something."
-            } else {
-                self.view.hint.as_str()
-            };
-            // Right of the pyreals, on two lines where one does not fit
-            // (the narrow window).
-            let room =
-                w - 24.0 - (px + 16.0 + cw + 6.0 + text::measure(body, "pyreals", 0.0) + 16.0);
-            let lines = ac_ui::modern::kit::wrap(s, hint, room.max(40.0));
-            let top = cy - s.line_height * lines.len() as f32 * 0.5;
-            for (i, line) in lines.iter().take(2).enumerate() {
-                let lw = text::measure(s, line, 0.0);
-                text::draw(
-                    rc,
-                    s,
-                    line,
-                    w - 24.0 - lw,
-                    top + s.line_height * i as f32,
-                    TextStyle::plain(p.text_soft),
-                );
-            }
-        }
+        self.draw_drops(rc);
+        self.draw_actions(rc);
+        self.draw_foot(rc, w);
         rc.stroke_rounded_rect(0.0, 0.0, w, h, round, tone::bronze(0.8), 1.0);
     }
 }
@@ -804,14 +1015,8 @@ impl PackButton {
         }
     }
 
-    /// Its height on the rail.
-    #[must_use]
-    pub fn height(face: PackFace) -> f32 {
-        match face {
-            PackFace::Main => 50.0,
-            _ => 40.0,
-        }
-    }
+    /// Its height in the pack column, at most.
+    pub const HEIGHT: f32 = 32.0;
 }
 
 fn item_payload(p: Option<&DragPayload>) -> Option<&ItemDragPayload> {
@@ -907,52 +1112,36 @@ impl Widget for PackButton {
             rc.fill_rounded_rect(0.0, 0.0, w, h, r, hex(0, 0.35));
         }
         let ink = if s.chosen { p.accent } else { p.text_soft };
-        let has_bar = self.face != PackFace::All;
-        let icon_size = match self.face {
-            PackFace::Main => 18.0,
-            PackFace::All => 16.0,
-            PackFace::Side => 14.0,
-        };
-        let block = icon_size + if has_bar { 3.0 + 11.0 + 3.0 + 2.0 } else { 0.0 };
-        let top = ((h - block) * 0.5).round();
+        let icon = 13.0;
+        let words_h = self.font.as_ref().map_or(0.0, |f| f.line_height);
+        let top = ((h - icon - 2.0 - words_h) * 0.5).round();
         match (self.face, s.icon) {
-            (PackFace::Side, Some(icon)) => {
-                let side = 20.0;
+            (PackFace::Side, Some(i)) => {
+                let side = 16.0;
                 rc.sprite(
-                    icon,
+                    i,
                     (w - side) * 0.5,
-                    top - 3.0,
+                    top - 2.0,
                     side,
                     side,
                     (0.0, 0.0, 1.0, 1.0),
                     Color::WHITE,
                 );
             }
-            (PackFace::All, _) => {
-                stroke(rc, (w - icon_size) * 0.5, top, icon_size, STACK, ink, 1.6)
-            }
-            _ => stroke(rc, (w - icon_size) * 0.5, top, icon_size, BAG, ink, 1.6),
+            (PackFace::All, _) => stroke(rc, (w - icon) * 0.5, top, icon, STACK, ink, 1.6),
+            _ => stroke(rc, (w - icon) * 0.5, top, icon, BAG, ink, 1.6),
         }
-        if !has_bar {
-            return;
-        }
-        let mut y = top + icon_size + 3.0;
         if let Some(f) = &self.font {
+            let full = self.face != PackFace::All && s.fill >= 1.0;
             text::draw_centred(
                 rc,
                 f,
                 &s.fill_words,
                 w * 0.5,
-                y,
-                TextStyle::plain(tone::warm(1.0)),
+                top + icon + 2.0,
+                TextStyle::plain(if full { p.bad_text } else { tone::warm(1.0) }),
             );
-            y += f.line_height + 2.0;
         }
-        let bw = 36.0;
-        let bx = (w - bw) * 0.5;
-        rc.fill(bx, y, bw, 2.0, hex(0xFF_FFFF, 0.12));
-        let bar = if s.fill >= 1.0 { p.bad } else { p.accent };
-        rc.fill(bx, y, bw * s.fill.clamp(0.0, 1.0), 2.0, bar);
     }
 }
 

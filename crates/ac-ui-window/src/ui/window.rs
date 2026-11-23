@@ -1194,8 +1194,11 @@ impl WindowUi {
             if let Some(view) = view {
                 self.feed_modern_cast(view.last_cast);
             }
+            // Modern has no lock (its pieces move with quick move): a lock
+            // the character keeps from retail is left to retail.
             if let Some(view) = view {
-                self.host.root.set_ui_locked(view.ui_locked);
+                let locked = view.ui_locked && self.modern.is_none();
+                self.host.root.set_ui_locked(locked);
             }
         }
         self.follow_side_by_side_vitals();
@@ -1276,7 +1279,6 @@ impl WindowUi {
         self.update_journal_pages(dirty, scene);
         self.tick_modern_journal(scene);
         self.refresh_examined_spell(dirty);
-        self.keep_modern_appraisals();
         self.feed_modern_inspect();
         self.show_appraisals();
         self.follow_confirmation();
@@ -1563,6 +1565,7 @@ impl WindowUi {
         self.tick_modern_connection();
         self.tick_modern_recalls();
         self.tick_modern_chat();
+        self.tick_modern_target_mode();
         self.follow_modern_pieces();
         let list = self
             .host
@@ -1661,17 +1664,6 @@ impl WindowUi {
         }
         // Escape closes the map next.
         if pressed && key == Key::Escape && !self.pregame_active() && self.modern_map_escape() {
-            return Routed {
-                world: None,
-                outputs: self.host.take_outputs(),
-            };
-        }
-        // Then it puts the inventory's details card away (a small screen).
-        if pressed
-            && key == Key::Escape
-            && !self.pregame_active()
-            && self.modern_inventory_card_escape()
-        {
             return Routed {
                 world: None,
                 outputs: self.host.take_outputs(),

@@ -1,9 +1,10 @@
-//! The Salvage window's frame: the header (the tool and the player's
-//! Salvaging skill), the items to salvage (each with its material and
-//! workmanship, taken out with its cross or a double click) over the drop
-//! zone (which shows why a drop was refused), the bags they make, the foot
-//! (Clear, what the options allow, Salvage N items), Add from packs with its
-//! material chips, and what a salvage produced.
+//! The Salvage window's frame, a slim play window beside the inventory:
+//! the header (the tool and the player's Salvaging skill), the items to
+//! salvage (each with its material and workmanship, taken out with its
+//! cross or a double click) over the drop zone (which shows why a drop was
+//! refused), the bags they make underneath, the foot (Clear, Salvage N
+//! items), Add from packs with its material chips, and what a salvage
+//! produced, one bag under another.
 
 use ac_ui::modern::tone;
 use std::sync::Arc;
@@ -23,18 +24,20 @@ use crate::ui::modern::hud::lines::stroke;
 use crate::ui::modern::kit::{self, ButtonLook, Rect, Scroll, bronze, gold, hot, inside};
 
 /// The window's size.
-pub const WIDTH: f32 = 820.0;
-pub const HEIGHT: f32 = 540.0;
+pub const WIDTH: f32 = 420.0;
+pub const HEIGHT: f32 = 600.0;
 const HEADER: f32 = 52.0;
 const FOOT: f32 = 72.0;
-const PAD: f32 = 20.0;
-const TOP: f32 = 68.0;
-const LEFT_W: f32 = 470.0;
-const RIGHT_X: f32 = 506.0;
-const RIGHT_W: f32 = 294.0;
-const BODY_H: f32 = 384.0;
+const PAD: f32 = 16.0;
+const TOP: f32 = 64.0;
+const LEFT_W: f32 = WIDTH - 2.0 * PAD;
+const BODY_H: f32 = 300.0;
+/// The bags, under the items.
+const BAGS_Y: f32 = TOP + BODY_H + 8.0;
+const BAGS_H: f32 = HEIGHT - FOOT - 8.0 - BAGS_Y;
+const BAG_ROW: f32 = 30.0;
 const ROW: f32 = 46.0;
-const PICK_X: f32 = 110.0;
+const PICK_X: f32 = 10.0;
 const PICK_Y: f32 = 100.0;
 const PICK_W: f32 = 400.0;
 const PICK_ROW: f32 = 40.0;
@@ -160,7 +163,7 @@ impl SalvageFrame {
         if self.screen.rows.is_empty() {
             200.0
         } else {
-            74.0
+            52.0
         }
     }
 
@@ -546,7 +549,7 @@ impl SalvageFrame {
     fn draw_bags(&self, rc: &mut RenderContext<'_>) {
         let p = Horizon::current().palette;
         let f = &self.fonts;
-        let b = (RIGHT_X, TOP, RIGHT_W, BODY_H);
+        let b = (PAD, BAGS_Y, LEFT_W, BAGS_H);
         let round = CornerRadii::all(4.0);
         rc.fill_rounded_rect(b.0, b.1, b.2, b.3, round, hex(0, 0.28));
         rc.stroke_rounded_rect(b.0, b.1, b.2, b.3, round, bronze(0.35), 1.0);
@@ -555,12 +558,12 @@ impl SalvageFrame {
                 rc,
                 t,
                 "YOU GET ONE BAG PER MATERIAL",
-                b.0 + 14.0,
-                b.1 + 12.0,
+                b.0 + 12.0,
+                b.1 + 10.0,
                 TextStyle::plain(tone::soft(1.0)).tracked(kit::LABEL_TRACKING),
             );
         }
-        let mut y = b.1 + 34.0;
+        let mut y = b.1 + 28.0;
         if self.screen.bags.is_empty()
             && let Some(sm) = &f.body
         {
@@ -569,12 +572,19 @@ impl SalvageFrame {
                 sm,
                 "Add items to see which bags you get.",
                 b.0 + b.2 * 0.5,
-                y + 20.0,
+                y + 24.0,
                 TextStyle::plain(tone::muted(1.0)),
             );
         }
-        for bag in &self.screen.bags {
-            let tile = (b.0 + 14.0, y + 7.0, 26.0, 26.0);
+        let shown = ((b.1 + b.3 - 6.0 - y) / BAG_ROW).floor().max(0.0) as usize;
+        let more = self.screen.bags.len().saturating_sub(shown);
+        let fits = if more > 0 {
+            shown.saturating_sub(1)
+        } else {
+            shown
+        };
+        for bag in self.screen.bags.iter().take(fits) {
+            let tile = (b.0 + 12.0, y + 4.0, 22.0, 22.0);
             rc.fill_rounded_rect(
                 tile.0,
                 tile.1,
@@ -587,55 +597,47 @@ impl SalvageFrame {
                 },
             );
             rc.fill_rounded_rect(
-                tile.0 + 8.0,
-                tile.1 + 8.0,
-                10.0,
-                10.0,
+                tile.0 + 7.0,
+                tile.1 + 7.0,
+                8.0,
+                8.0,
                 CornerRadii::all(2.0),
                 bag.color,
             );
+            let nx = tile.0 + 32.0;
+            let mut sub_x = nx;
             if let Some(st) = &f.strong {
-                text::draw(
-                    rc,
-                    st,
-                    &bag.name,
-                    tile.0 + 36.0,
-                    y + 5.0,
-                    TextStyle::plain(p.text),
-                );
+                let ty = y + ((BAG_ROW - st.line_height) * 0.5).round();
+                text::draw(rc, st, &bag.name, nx, ty, TextStyle::plain(p.text));
+                sub_x += text::measure(st, &bag.name, 0.0) + 10.0;
             }
             if let Some(sm) = &f.small {
+                let room = b.0 + b.2 - 12.0 - sub_x;
+                let ty = y + ((BAG_ROW - sm.line_height) * 0.5).round() + 1.0;
                 text::draw(
                     rc,
                     sm,
-                    &bag.sub,
-                    tile.0 + 36.0,
-                    y + 22.0,
+                    &kit::fit(sm, &bag.sub, room),
+                    sub_x,
+                    ty,
                     TextStyle::plain(tone::soft(1.0)),
                 );
             }
-            rc.fill(b.0 + 10.0, y + 40.0, b.2 - 20.0, 1.0, bronze(0.12));
-            y += 42.0;
-            if y > b.1 + b.3 - 80.0 {
-                break;
-            }
+            rc.fill(b.0 + 10.0, y + BAG_ROW - 1.0, b.2 - 20.0, 1.0, bronze(0.12));
+            y += BAG_ROW;
         }
-        let fy = b.1 + b.3 - 64.0;
-        rc.fill(b.0 + 1.0, fy, b.2 - 2.0, 1.0, bronze(0.2));
-        if let Some(sm) = &f.small {
-            let lines = kit::wrap(
-                sm,
-                "How much goes in each bag depends on your Salvaging skill and each item's workmanship.",
-                b.2 - 28.0,
-            );
-            kit::lines(
+        if more > 0
+            && let Some(sm) = &f.small
+        {
+            let words = format!("and {} more", more + usize::from(shown > 0));
+            let ty = y + ((BAG_ROW - sm.line_height) * 0.5).round();
+            text::draw(
                 rc,
                 sm,
-                &lines,
-                b.0 + 14.0,
-                fy + 12.0,
-                sm.line_height + 4.0,
-                tone::muted(1.0),
+                &words,
+                b.0 + 44.0,
+                ty,
+                TextStyle::plain(tone::muted(1.0)),
             );
         }
     }
@@ -688,16 +690,6 @@ impl SalvageFrame {
             hot(self.hover, clear),
             any,
         );
-        if let Some(sm) = &f.small {
-            text::draw(
-                rc,
-                sm,
-                &self.screen.rule,
-                clear.0 + clear.2 + 12.0,
-                fy + ((FOOT - sm.line_height) * 0.5).round(),
-                TextStyle::plain(tone::muted(1.0)),
-            );
-        }
         let go = Self::go_rect();
         kit::button(
             rc,
@@ -717,27 +709,28 @@ impl SalvageFrame {
         };
         let p = Horizon::current().palette;
         let f = &self.fonts;
-        let mut x = PAD;
+        let mut top = TOP;
         if let Some(t) = &f.title {
-            text::draw(rc, t, &d.title, x, TOP, TextStyle::plain(p.text));
-            x += text::measure(t, &d.title, 0.0) + 12.0;
+            text::draw(rc, t, &d.title, PAD, top, TextStyle::plain(p.text));
+            top += t.line_height + 4.0;
         }
         if let Some(sm) = &f.small {
             text::draw(
                 rc,
                 sm,
                 "The bags are in your main pack.",
-                x,
-                TOP + 3.0,
+                PAD,
+                top,
                 TextStyle::plain(tone::soft(1.0)),
             );
+            top += sm.line_height;
         }
-        let w = (WIDTH - 2.0 * PAD - 8.0) / 2.0;
+        let w = LEFT_W;
         let round = CornerRadii::all(4.0);
-        let mut bottom = TOP + 30.0;
+        let first = top + 12.0;
+        let mut bottom = first;
         for (i, c) in d.cards.iter().enumerate() {
-            let (col, line) = ((i % 2) as f32, (i / 2) as f32);
-            let r = (PAD + col * (w + 8.0), TOP + 30.0 + line * 72.0, w, 64.0);
+            let r = (PAD, first + i as f32 * 72.0, w, 64.0);
             rc.fill_rounded_rect(r.0, r.1, r.2, r.3, round, hex(0, 0.28));
             rc.stroke_rounded_rect(r.0, r.1, r.2, r.3, round, bronze(0.35), 1.0);
             let tile = (r.0 + 12.0, r.1 + 12.0, 40.0, 40.0);
@@ -1085,6 +1078,16 @@ impl Widget for SalvageFrame {
         }
     }
 
+    fn tooltip_text(&self, _element: &Element) -> Option<String> {
+        let (x, y) = self.hover?;
+        // What the options allow, on the button it bears on.
+        (self.screen.done.is_none()
+            && !self.picking
+            && !self.screen.rule.is_empty()
+            && inside(Self::go_rect(), x, y))
+        .then(|| self.screen.rule.clone())
+    }
+
     fn tick(&mut self, ui: &mut UiRoot, _me: ElementId, _dt: f64) {
         if self.over && ui.drag_payload().is_none() {
             self.over = false;
@@ -1106,20 +1109,10 @@ impl Widget for SalvageFrame {
             HEADER,
         );
         if let Some(sm) = &f.small {
-            let w = kit::fit(sm, &self.screen.sub, 380.0);
+            let c = Self::close_rect();
+            let w = kit::fit(sm, &self.screen.sub, c.0 - 12.0 - (x + 14.0));
             let ty = ((HEADER - sm.line_height) * 0.5).round();
             text::draw(rc, sm, &w, x + 14.0, ty, TextStyle::plain(tone::soft(1.0)));
-            let hint = "Right-click an item to inspect it";
-            let hw = text::measure(sm, hint, 0.0);
-            let c = Self::close_rect();
-            text::draw(
-                rc,
-                sm,
-                hint,
-                c.0 - 12.0 - hw,
-                ty,
-                TextStyle::plain(tone::muted(1.0)),
-            );
         }
         kit::close(
             rc,

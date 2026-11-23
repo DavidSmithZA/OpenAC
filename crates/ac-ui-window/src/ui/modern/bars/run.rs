@@ -107,6 +107,12 @@ pub struct BarsUi {
 }
 
 impl BarsUi {
+    /// Edit layout is on.
+    #[must_use]
+    pub fn editing(&self) -> bool {
+        self.edit
+    }
+
     /// How a character is saved: its world and its name.
     fn key(world: Option<&str>, name: &str) -> String {
         format!("{}/{name}", world.unwrap_or(""))
@@ -1648,11 +1654,9 @@ impl WindowUi {
                 w.open_bar_menu(b, bar, at, true);
                 return;
             }
-            let name = w
-                .host
-                .root
-                .element(piece)
-                .and_then(|e| e.name.clone())
+            let name = piece_name(&w.host.root, piece)
+                .map(str::to_owned)
+                .or_else(|| w.host.root.element(piece).and_then(|e| e.name.clone()))
                 .unwrap_or_default();
             let mut rows = vec![MenuRow::Header(hud::piece_words(&name).to_owned())];
             if hud::PIECES.contains(&name.as_str()) {
@@ -2082,8 +2086,9 @@ fn cast(ui: &mut ac_ui::UiRoot, spell: u32) {
 }
 
 fn piece_name(ui: &ac_ui::UiRoot, piece: ElementId) -> Option<&'static str> {
-    let name = ui.element(piece)?.name.as_deref()?;
-    hud::PIECES.into_iter().find(|n| *n == name)
+    hud::PIECES
+        .into_iter()
+        .find(|n| ui.window(n).is_some_and(|w| w.frame == piece))
 }
 
 #[cfg(test)]

@@ -8,7 +8,6 @@ use ac_ui::modern::tone;
 use std::collections::{HashMap, HashSet};
 
 use ac_core::items::{ClientObject, EquipMask};
-use ac_proto::appraise::IdentifyObjectResponse;
 use ac_runtime::inventory::{InteractionMode, ItemCommand, ObjectRef};
 use ac_runtime::session::SessionCommand;
 use ac_ui::bundled_font::Weight;
@@ -26,12 +25,11 @@ use ac_ui::widgets::Field;
 
 use super::cell::{CellLook, CellRequest, CellView, ItemCell};
 use super::grid::{GridFonts, GridGroup, ItemGrid};
-use super::inventory::{self as inv, FrameFonts, FrameRequest, InventoryFrame, PackButton};
+use super::inventory::{self as inv, Act, FrameFonts, FrameRequest, InventoryFrame, PackButton};
 use super::inventory::{PackFace, PackRequest, PackShown};
 use super::menu::{MenuFonts, PopMenu, Row};
-use super::model::{self, EQUIP_SLOTS, GroupBy, PackChoice, SlotRow, SortBy, ViewOptions};
-use super::sheet_view::{Foot, FootIcon, SheetFonts, SheetRequest, SheetView};
-use super::sheets::{item_sheet, sub_line};
+use super::model::{self, EQUIP_SLOTS, GroupBy, Kind, PackChoice, SlotRow, SortBy, ViewOptions};
+use super::sheets::sub_line;
 use crate::ui::modern::hud;
 use crate::ui::window::WindowUi;
 
@@ -43,6 +41,7 @@ const MENU_ITEM: u32 = 1;
 const MENU_GROUP: u32 = 2;
 const MENU_SORT: u32 = 3;
 const MENU_MORE: u32 = 4;
+const MENU_SHOW: u32 = 5;
 
 /// The item menu's entries.
 const DO_INSPECT: u32 = 1;
@@ -59,6 +58,13 @@ const DO_SPLIT: u32 = 11;
 /// The sort menu's own entries (the sorts are their index).
 const DO_REVERSE: u32 = 100;
 const DO_MERGE: u32 = 200;
+/// The show menu's entries: every kind (its index past this), then the
+/// looks.
+const SHOW_ALL: u32 = 0;
+const SHOW_KIND: u32 = 1;
+const SHOW_GRID: u32 = 50;
+const SHOW_COMPACT: u32 = 51;
+const SHOW_LIST: u32 = 52;
 
 /// The inventory's elements and what it remembers.
 #[derive(Debug)]
@@ -69,10 +75,6 @@ pub struct InventoryUi {
     pub search: ElementId,
     /// The grid.
     pub grid: ElementId,
-    /// The item details.
-    pub details: ElementId,
-    /// The field writing an inscription in the details.
-    pub scribe: super::scribe::Scribe,
     /// The equipment slots, in [`EQUIP_SLOTS`]' order.
     pub slots: Vec<ElementId>,
     /// The pack rail's buttons: All, Main, then the side packs.
@@ -96,23 +98,16 @@ pub struct InventoryUi {
     /// When each item was first seen (Newest first).
     arrivals: HashMap<u32, u64>,
     clock: u64,
-    /// The answers about the player's items, by item.
-    pub appraisals: HashMap<u32, IdentifyObjectResponse>,
-    /// Items asked about for the details.
-    pub asked: HashSet<u32>,
-    /// Those whose answers have not come yet (they open nothing).
-    pub quiet: HashSet<u32>,
     /// The item being dragged from the window.
     lifted: Option<u32>,
+    /// The gear is folded out (until hidden).
+    pub gear: bool,
+    /// The gear as last laid out (out for the player or for a drag).
+    gear_laid: bool,
     /// Stacks still to merge (Tidy), one request at a time.
     merges: Vec<(u32, u32, u32)>,
     /// The window showed last frame.
     was_open: bool,
-    /// The item whose details card was put away (a small screen); it
-    /// shows again when another item is picked, or this one again.
-    card_closed: Option<u32>,
-    /// The details card showed last frame.
-    card_shown: bool,
     /// The rail's font.
     rail_font: Option<std::sync::Arc<ac_ui::UiFont>>,
 }
@@ -126,35 +121,27 @@ impl WindowUi {
         let body = self.modern_font(Weight::Regular, 12.0);
         let strong = self.modern_font(Weight::SemiBold, 12.0);
         let frame_fonts = FrameFonts {
-            title: self.modern_font(Weight::SemiBold, 15.0),
-            strong: strong.clone(),
-            body: body.clone(),
+            title: self.modern_font(Weight::SemiBold, 14.0),
+            strong: self.modern_font(Weight::SemiBold, 11.5),
+            body: self.modern_font(Weight::Regular, 11.5),
             label: label.clone(),
             small: small.clone(),
-            chip: self.modern_font(Weight::SemiBold, 11.0),
+            chip: self.modern_font(Weight::SemiBold, 9.5),
         };
         let grid_fonts = GridFonts {
             heading: self.modern_font(Weight::SemiBold, 11.0),
             small: self.modern_font(Weight::SemiBold, 9.5),
             name: strong.clone(),
         };
-        let sheet_fonts = SheetFonts {
-            name: self.modern_font(Weight::SemiBold, 14.0),
-            small: self.modern_font(Weight::Regular, 11.0),
-            label: self.modern_font(Weight::SemiBold, 9.5),
-            body: body.clone(),
-            strong: strong.clone(),
-            big: self.modern_font(Weight::SemiBold, 18.0),
-        };
         let menu_fonts = MenuFonts {
             body: body.clone(),
             small: small.clone(),
         };
-        let rail_font = self.modern_font(Weight::SemiBold, 9.5);
+        let rail_font = self.modern_font(Weight::SemiBold, 9.0);
         let frame = match hud::mount_piece(
             &mut self.host.root,
             INVENTORY,
-            (inv::WIDE, inv::HEIGHT),
+            (inv::WIDTH, inv::HEIGHT),
             InventoryFrame::new(theme, frame_fonts),
         ) {
             Ok(id) => id,
@@ -172,15 +159,15 @@ impl WindowUi {
         }
         // The search field.
         let mut e = Element::at(
-            inv::search_x(inv::WIDE) + 30.0,
-            14.0,
-            inv::SEARCH_W - 36.0,
+            inv::SEARCH_X + 30.0,
+            inv::SEARCH_Y + 3.0,
+            inv::WIDTH - 2.0 * inv::SEARCH_X - 36.0,
             24.0,
         )
         .with_anchors(AnchorEdges::NONE);
         Field::configure(&mut e);
         let mut f = Field::default();
-        f.font = self.fonts_small_for_search(&body);
+        f.font = body.clone();
         f.one_line = true;
         f.selectable = true;
         f.padding = 3.0;
@@ -247,16 +234,6 @@ impl WindowUi {
                 .with_anchors(AnchorEdges::NONE),
             ItemGrid::new(grid_fonts),
         );
-        let mut sheet = SheetView::new(theme, sheet_fonts);
-        sheet.foot = Some(Foot::default());
-        let details = ui.add(
-            frame,
-            Element::at(inv::DETAILS_X, inv::EQUIP_Y, inv::DETAILS_W, inv::DETAILS_H)
-                .with_anchors(AnchorEdges::NONE)
-                .with_visible(false),
-            sheet,
-        );
-        let scribe = super::scribe::Scribe::mount(ui, details, theme, body.clone());
         let menu = PopMenu::mount(ui, theme, menu_fonts);
         let split_fonts = super::split::SplitFonts {
             title: self.modern_font(Weight::SemiBold, 13.0),
@@ -285,8 +262,6 @@ impl WindowUi {
             frame,
             search,
             grid,
-            details,
-            scribe,
             slots,
             packs: Vec::new(),
             menu,
@@ -299,26 +274,16 @@ impl WindowUi {
             look: CellLook::Grid,
             arrivals: HashMap::new(),
             clock: 0,
-            appraisals: HashMap::new(),
-            asked: HashSet::new(),
-            quiet: HashSet::new(),
             lifted: None,
+            gear: false,
+            gear_laid: false,
             merges: Vec::new(),
             was_open: false,
-            card_closed: None,
-            card_shown: false,
             rail_font,
         });
         modern.replace(crate::ui::window::INVENTORY_WINDOW);
         self.panels
             .stand_in(ac_ui::panels::panel_id::INVENTORY, INVENTORY);
-    }
-
-    fn fonts_small_for_search(
-        &self,
-        body: &Option<std::sync::Arc<ac_ui::UiFont>>,
-    ) -> Option<std::sync::Arc<ac_ui::UiFont>> {
-        body.clone()
     }
 
     /// Packs used anywhere open in the inventory (the window itself shows
@@ -338,20 +303,6 @@ impl WindowUi {
             } else {
                 PackChoice::Side(pack)
             };
-        }
-    }
-
-    /// The answers about the player's items, kept for the details (taken
-    /// before retail's examination code takes them).
-    pub(in crate::ui) fn keep_modern_appraisals(&mut self) {
-        let Some(inv) = self.modern.as_mut().and_then(|m| m.inventory.as_mut()) else {
-            return;
-        };
-        for a in &self.facts.appraisals {
-            let guid = a.response.guid;
-            if a.response.success || !inv.appraisals.contains_key(&guid) {
-                inv.appraisals.insert(guid, a.response.clone());
-            }
         }
     }
 
@@ -440,7 +391,6 @@ impl WindowUi {
         }
         inv.was_open = open;
         if !open {
-            self.write_inscriptions();
             return;
         }
         let search = self
@@ -452,34 +402,7 @@ impl WindowUi {
         inv.options.search = search;
         self.next_tidy_merge();
         self.feed_modern_inventory(frame);
-        self.write_inscriptions();
         self.answer_pack_drags();
-    }
-
-    /// The details' inscription field: what was written goes out, and
-    /// the kept answer takes it so the details show it from now on.
-    fn write_inscriptions(&mut self) {
-        let open = self.host.root.is_window_visible(INVENTORY);
-        let me = self.status.playing.clone().unwrap_or_default();
-        let Some(inv) = self.modern.as_mut().and_then(|m| m.inventory.as_mut()) else {
-            return;
-        };
-        let ui = &mut self.host.root;
-        if !open && ui.keyboard_focus() == Some(inv.scribe.field) {
-            ui.set_keyboard_focus(None);
-        }
-        let Some(command) = inv.scribe.tick(ui, inv.details) else {
-            return;
-        };
-        if let ItemCommand::Inscribe {
-            item: ObjectRef::Guid(id),
-            text,
-        } = &command
-            && let Some(a) = inv.appraisals.get_mut(id)
-        {
-            super::sheets::note_inscription(a, text, &me);
-        }
-        self.send_item(command);
     }
 
     /// Carries out what the window's parts asked for.
@@ -488,7 +411,7 @@ impl WindowUi {
         let Some(inv) = self.modern.as_ref().and_then(|m| m.inventory.as_ref()) else {
             return;
         };
-        let (frame, grid, details, menu) = (inv.frame, inv.grid, inv.details, inv.menu);
+        let (frame, grid, menu) = (inv.frame, inv.grid, inv.menu);
         let (band, split, turner) = (inv.band, inv.split, inv.turner);
         let slots = inv.slots.clone();
         let packs = inv.packs.clone();
@@ -523,13 +446,6 @@ impl WindowUi {
                 )
             })
             .unwrap_or_default();
-        let sheet_asks = ui
-            .widget_mut::<SheetView>(details)
-            .map(|s| std::mem::take(&mut s.requests))
-            .unwrap_or_default();
-        let clicked_away = ui
-            .widget_mut::<ItemGrid>(grid)
-            .is_some_and(|g| std::mem::take(&mut g.clicked_away));
         let chosen = PopMenu::take(ui, menu);
         let pressed = super::plugin_notes::FootBand::take(ui, band);
         for (owner, id) in pressed {
@@ -546,9 +462,6 @@ impl WindowUi {
         }
         for ask in frame_asks {
             self.run_frame_request(ask);
-        }
-        if clicked_away {
-            self.close_inventory_card();
         }
         // In a use or examine mode the figure is the player, as retail's
         // paperdoll is: a mana stone used on it fills what is worn.
@@ -596,20 +509,12 @@ impl WindowUi {
         }
         for (slot, ask) in cell_asks {
             match ask {
-                CellRequest::Select(id) => {
-                    if let Some(inv) = self.inventory_mut() {
-                        inv.card_closed = None;
-                    }
-                    self.select_item(id);
-                }
+                CellRequest::Select(id) => self.select_item(id),
                 CellRequest::Use(id) => self.send_item(ItemCommand::Use(ObjectRef::Guid(id))),
                 CellRequest::Menu(id, at) => self.open_item_menu(id, at),
                 CellRequest::Inspect(id) => self.item_do(id, DO_INSPECT),
                 CellRequest::Loot(_) => {}
-                // A click on an empty slot is empty space.
-                CellRequest::Empty => {
-                    self.close_inventory_card();
-                }
+                CellRequest::Empty => {}
                 CellRequest::Lifted(id) => {
                     if let Some(inv) = self.inventory_mut() {
                         inv.lifted = Some(id);
@@ -635,52 +540,6 @@ impl WindowUi {
                 }
             }
         }
-        for ask in sheet_asks {
-            let Some(id) = self
-                .host
-                .root
-                .widget::<SheetView>(details)
-                .map(|s| s.sheet().subject)
-                .filter(|&id| id != 0)
-            else {
-                continue;
-            };
-            match ask {
-                SheetRequest::Close => {}
-                SheetRequest::Primary => self.item_primary(id),
-                SheetRequest::Small(0, _) => self.item_do(id, DO_GIVE),
-                SheetRequest::Small(1, _) => self.item_do(id, DO_DROP),
-                SheetRequest::Small(2, _) => self.item_do(id, DO_SALVAGE),
-                SheetRequest::Small(_, (x, y)) => {
-                    let stack = self.own_item(id).is_some_and(|o| o.stack_size > 1);
-                    let mut rows = Vec::new();
-                    if stack {
-                        rows.push(Row::entry(DO_SPLIT, "Split the stack\u{2026}"));
-                    }
-                    rows.extend([
-                        Row::entry(DO_INSCRIBE, "Inscribe"),
-                        Row::entry(DO_BAR, "Add to a shortcut bar"),
-                        Row::entry(DO_LINK, "Link in chat"),
-                        Row::Line,
-                        Row::entry(DO_INSPECT, "Inspect"),
-                    ]);
-                    let (extra, tags) = super::plugin_notes::menu_rows(&self.facts.plugin_ui, id);
-                    rows.extend(extra);
-                    if let Some(inv) = self.inventory_mut() {
-                        inv.plugin_menu = tags;
-                    }
-                    PopMenu::open(
-                        &mut self.host.root,
-                        menu,
-                        MENU_MORE,
-                        id,
-                        rows,
-                        220.0,
-                        (x as f32 - 188.0, y as f32 + 4.0),
-                    );
-                }
-            }
-        }
         if let Some((kind, about, tag)) = chosen {
             self.run_menu_choice(kind, about, tag);
         }
@@ -690,36 +549,57 @@ impl WindowUi {
         self.modern.as_mut().and_then(|m| m.inventory.as_mut())
     }
 
-    /// Puts the details card away (a small screen) until another item is
-    /// picked; false when none showed.
-    fn close_inventory_card(&mut self) -> bool {
-        let selected = self.player_view.and_then(|v| v.selected);
-        let Some(inv) = self.inventory_mut() else {
-            return false;
-        };
-        if !inv.card_shown {
-            return false;
-        }
-        inv.card_closed = selected;
-        inv.card_shown = false;
-        true
-    }
-
-    /// Escape puts the inventory's details card away first, while it
-    /// shows.
-    pub(in crate::ui) fn modern_inventory_card_escape(&mut self) -> bool {
-        self.host.root.is_window_visible(INVENTORY) && self.close_inventory_card()
-    }
-
     fn run_frame_request(&mut self, ask: FrameRequest) {
         let Some(inv) = self.modern.as_ref().and_then(|m| m.inventory.as_ref()) else {
             return;
         };
-        let (menu, grid) = (inv.menu, inv.grid);
+        let menu = inv.menu;
         let options = inv.options.clone();
         match ask {
-            FrameRequest::CloseCard => {
-                self.close_inventory_card();
+            FrameRequest::Gear => {
+                if let Some(inv) = self.inventory_mut() {
+                    inv.gear = !inv.gear;
+                }
+            }
+            FrameRequest::Inspect(id) => self.item_do(id, DO_INSPECT),
+            FrameRequest::Act(id, act, at) => match act {
+                Act::Primary => self.item_primary(id),
+                Act::Split => self.item_do(id, DO_SPLIT),
+                Act::Give => self.item_do(id, DO_GIVE),
+                Act::Drop => self.item_do(id, DO_DROP),
+                Act::Salvage => self.item_do(id, DO_SALVAGE),
+                Act::More => {
+                    let mut rows = vec![
+                        Row::entry(DO_INSCRIBE, "Inscribe\u{2026}"),
+                        Row::entry(DO_BAR, "Add to a shortcut bar"),
+                        Row::entry(DO_LINK, "Link in chat"),
+                    ];
+                    let (extra, tags) = super::plugin_notes::menu_rows(&self.facts.plugin_ui, id);
+                    rows.extend(extra);
+                    if let Some(inv) = self.inventory_mut() {
+                        inv.plugin_menu = tags;
+                    }
+                    PopMenu::open(&mut self.host.root, menu, MENU_MORE, id, rows, 220.0, at);
+                }
+            },
+            FrameRequest::ShowMenu(at) => {
+                let look = self.inventory_mut().map_or(CellLook::Grid, |i| i.look);
+                let mut rows = vec![Row::Header("SHOW".to_owned())];
+                rows.push(Row::entry(SHOW_ALL, "All").ticked(options.kind.is_none()));
+                for (i, k) in Kind::ALL.iter().enumerate() {
+                    rows.push(
+                        Row::entry(SHOW_KIND + i as u32, k.words())
+                            .ticked(options.kind == Some(*k)),
+                    );
+                }
+                rows.push(Row::Line);
+                rows.push(Row::Header("AS".to_owned()));
+                rows.push(Row::entry(SHOW_GRID, "Icons").ticked(look == CellLook::Grid));
+                rows.push(
+                    Row::entry(SHOW_COMPACT, "Smaller icons").ticked(look == CellLook::Compact),
+                );
+                rows.push(Row::entry(SHOW_LIST, "List with names").ticked(look == CellLook::List));
+                PopMenu::open(&mut self.host.root, menu, MENU_SHOW, 0, rows, 200.0, at);
             }
             FrameRequest::Close => {
                 self.panels.set_visibility(
@@ -760,18 +640,6 @@ impl WindowUi {
                 );
                 PopMenu::open(&mut self.host.root, menu, MENU_SORT, 0, rows, 240.0, at);
             }
-            FrameRequest::Look(look) => {
-                if let Some(inv) = self.inventory_mut() {
-                    inv.look = look;
-                }
-                ItemGrid::set_look(&mut self.host.root, grid, look);
-            }
-            FrameRequest::Kind(kind) => {
-                if let Some(inv) = self.inventory_mut() {
-                    inv.options.kind = kind;
-                }
-                ItemGrid::scroll_home(&mut self.host.root, grid);
-            }
         }
     }
 
@@ -795,6 +663,33 @@ impl WindowUi {
                         inv.options.reverse = !inv.options.reverse;
                     } else if let Some(&s) = SortBy::ALL.get(tag as usize) {
                         inv.options.sort = s;
+                    }
+                }
+            }
+            MENU_SHOW => {
+                let grid = self.inventory_mut().map(|i| i.grid);
+                let look = match tag {
+                    SHOW_GRID => Some(CellLook::Grid),
+                    SHOW_COMPACT => Some(CellLook::Compact),
+                    SHOW_LIST => Some(CellLook::List),
+                    _ => None,
+                };
+                if let Some(look) = look {
+                    if let Some(inv) = self.inventory_mut() {
+                        inv.look = look;
+                    }
+                    if let Some(g) = grid {
+                        ItemGrid::set_look(&mut self.host.root, g, look);
+                    }
+                } else {
+                    let kind = tag
+                        .checked_sub(SHOW_KIND)
+                        .and_then(|i| Kind::ALL.get(i as usize).copied());
+                    if let Some(inv) = self.inventory_mut() {
+                        inv.options.kind = kind;
+                    }
+                    if let Some(g) = grid {
+                        ItemGrid::scroll_home(&mut self.host.root, g);
                     }
                 }
             }
@@ -897,18 +792,8 @@ impl WindowUi {
             }
             DO_DROP => self.send_item(ItemCommand::Drop { item, amount: 0 }),
             DO_SALVAGE => self.send_item(ItemCommand::MarkSalvage(vec![id])),
-            DO_INSCRIBE => {
-                let details = self
-                    .modern
-                    .as_ref()
-                    .and_then(|m| m.inventory.as_ref())
-                    .map(|i| i.details);
-                if let Some(d) = details
-                    && let Some(s) = self.host.root.widget_mut::<SheetView>(d)
-                {
-                    s.choose_tab("Details");
-                }
-            }
+            // The inscription is written on the item's sheet.
+            DO_INSCRIBE => self.inspect_item_on_tab(id, "Details"),
             DO_BAR => self.put_item_on_bars(id),
             DO_LINK => self.link_item_in_chat(id),
             DO_SPLIT => self.open_split(id),
@@ -1156,7 +1041,6 @@ impl WindowUi {
         let player = self.facts.state.player;
         let pending = self.facts.state.pending_item;
         let strength = self.facts.strength();
-        let me = self.status.playing.clone().unwrap_or_default();
         let Some(modern) = self.modern.as_mut() else {
             return;
         };
@@ -1266,7 +1150,33 @@ impl WindowUi {
                 c.no_drops = !w.open;
             }
         }
-        // The pack rail.
+        // The gear: out while the player keeps it out, or for a drag of
+        // something wearable. The window grows to the left, so the packs
+        // stay where they are on screen.
+        let gear = inv.gear || !lit_slots.is_empty();
+        if gear != inv.gear_laid {
+            let shift = if gear { -inv::GEAR_W } else { inv::GEAR_W };
+            if let Some(e) = ui.element_mut(frame) {
+                e.left += shift;
+            }
+            inv.gear_laid = gear;
+        }
+        if let Some(e) = ui.element_mut(frame) {
+            e.width = if gear { inv::WITH_GEAR } else { inv::WIDTH };
+        }
+        for &id in inv.slots.iter().chain([&inv.figure, &inv.turner]) {
+            if ui.element(id).is_some_and(|e| e.visible) != gear {
+                ui.set_visible(id, gear);
+            }
+        }
+        let px = inv::packs_x(gear);
+        if let Some(e) = ui.element_mut(inv.search) {
+            e.left = px + inv::SEARCH_X + 30.0;
+        }
+        if let Some(e) = ui.element_mut(inv.grid) {
+            e.left = px + inv::GRID_X;
+        }
+        // The pack column.
         let all_packs = model::packs(objects, player);
         let wanted = all_packs.len() + 1;
         while inv.packs.len() < wanted {
@@ -1277,20 +1187,21 @@ impl WindowUi {
             };
             let b = ui.add(
                 frame,
-                Element::at(inv::RAIL_X, 0.0, inv::RAIL_W, PackButton::height(face))
+                Element::at(inv::RAIL_X, 0.0, inv::RAIL_W, PackButton::HEIGHT)
                     .with_anchors(AnchorEdges::NONE),
                 PackButton::new(inv.rail_font.clone(), face),
             );
             inv.packs.push(b);
         }
-        let mut y = inv::EQUIP_Y;
+        // As tall as fits beside the grid.
+        let gap = 4.0;
+        let n = wanted as f32;
+        let h = ((inv::GRID_H + gap) / n - gap)
+            .clamp(20.0, PackButton::HEIGHT)
+            .floor();
+        let mut y = inv::BODY_Y;
         let searching = !inv.options.search.trim().is_empty();
         for (i, &b) in inv.packs.iter().enumerate() {
-            let face = match i {
-                0 => PackFace::All,
-                1 => PackFace::Main,
-                _ => PackFace::Side,
-            };
             let shown = match i {
                 0 => Some(PackShown {
                     id: 0,
@@ -1325,12 +1236,13 @@ impl WindowUi {
                 ui.set_visible(b, false);
                 continue;
             };
-            let h = PackButton::height(face);
             if let Some(e) = ui.element_mut(b) {
+                e.left = px + inv::RAIL_X;
                 e.top = y;
+                e.height = h;
                 e.visible = true;
             }
-            y += h + if i == 0 { 12.0 } else { 6.0 };
+            y += h + gap;
             if let Some(button) = ui.widget_mut::<PackButton>(b) {
                 button.shown = shown;
             }
@@ -1342,105 +1254,34 @@ impl WindowUi {
         {
             inv.options.pack = PackChoice::Main;
         }
-        // The details.
-        let item = selected
+        // The chosen item's row.
+        let chosen = selected
             .filter(|&id| id != player && objects.is_owned_by_object(id, player))
-            .and_then(|id| objects.get(id));
-        // A screen too small for the wide window: the details are a card
-        // over the equipment column, which can be put away; it stands
-        // aside while something is dragged (to equip it).
-        let small =
-            crate::ui::modern::dealing::width_for(ui.size().0, inv::WIDE, inv::NARROW) < inv::WIDE;
-        if inv.card_closed.is_some() && inv.card_closed != item.map(ClientObject::object_id) {
-            inv.card_closed = None;
-        }
-        let docked = item.is_some() && !small;
-        let card = item.is_some_and(|o| inv.card_closed != Some(o.object_id()))
-            && small
-            && lifted.is_none();
-        inv.card_shown = card;
-        if let Some(o) = item {
-            let id = o.object_id();
-            if !inv.appraisals.contains_key(&id) && inv.asked.insert(id) {
-                inv.quiet.insert(id);
-                emit(
-                    ui,
-                    PanelOutput::Session(SessionCommand::Item(ItemCommand::Appraise(
-                        ObjectRef::Guid(id),
-                    ))),
-                );
-            }
-        }
-        let width = if docked { inv::WIDE } else { inv::NARROW };
-        if let Some(e) = ui.element_mut(frame) {
-            e.width = width;
-        }
-        if let Some(e) = ui.element_mut(inv.search) {
-            e.left = inv::search_x(width) + 30.0;
-        }
-        ui.set_visible(inv.details, docked || card);
-        let (dx, dy, dw, dh) = if card {
-            inv::card_sheet_rect()
-        } else {
-            (inv::DETAILS_X, inv::EQUIP_Y, inv::DETAILS_W, inv::DETAILS_H)
-        };
-        if let Some(e) = ui.element_mut(inv.details)
-            && (e.left != dx || e.top != dy || e.width != dw || e.height != dh)
-        {
-            e.left = dx;
-            e.top = dy;
-            e.width = dw;
-            e.height = dh;
-        }
-        for &id in inv.slots.iter().chain([&inv.figure, &inv.turner]) {
-            ui.set_visible(id, !card);
-        }
-        if let Some(o) = item {
-            let numbers = facts.numbers();
-            let book = numbers.and_then(|n| n.spellbook());
-            let spell = |sid| book.and_then(|b| b.try_get_metadata(sid)).cloned();
-            let sheet = item_sheet(
-                o,
-                inv.appraisals.get(&o.object_id()),
-                &names,
-                &spell,
-                &status.names,
-                numbers,
-                &me,
-                true,
-                objects,
-                icons,
-            );
-            let sheet = super::plugin_notes::with_cards(
-                sheet,
-                super::plugin_notes::cards(&facts.plugin_ui, &Horizon::current(), o.object_id()),
-            );
-            let worn = o.currently_equipped_location != EquipMask::NONE;
-            let primary = if worn {
-                "Take off"
-            } else if o.valid_locations != EquipMask::NONE {
-                "Equip"
-            } else {
-                "Use"
-            };
-            if let Some(s) = ui.widget_mut::<SheetView>(inv.details) {
-                s.set(sheet);
-                s.foot = Some(Foot {
-                    primary: primary.to_owned(),
-                    primary_on: true,
-                    small: vec![
-                        (FootIcon::Give, "Give to your target".to_owned(), true),
-                        (FootIcon::Drop, "Drop on the ground".to_owned(), true),
-                        (FootIcon::Salvage, "Salvage".to_owned(), true),
-                        (
-                            FootIcon::More,
-                            "More: inscribe, add to a shortcut bar, link in chat".to_owned(),
-                            true,
-                        ),
-                    ],
-                });
-            }
-        }
+            .and_then(|id| objects.get(id))
+            .map(|o| {
+                let worn = o.currently_equipped_location != EquipMask::NONE;
+                inv::Chosen {
+                    id: o.object_id(),
+                    icon: icons.item_icon(
+                        o.item_type,
+                        o.icon_id,
+                        o.icon_underlay_id,
+                        o.icon_overlay_id,
+                        o.effects,
+                    ),
+                    name: names(o),
+                    sub: sub_line(o),
+                    primary: if worn {
+                        "Take off"
+                    } else if o.valid_locations != EquipMask::NONE {
+                        "Equip"
+                    } else {
+                        "Use"
+                    },
+                    splits: o.stack_size > 1,
+                    salvages: !worn,
+                }
+            });
         // The plugins' band, over the grid's foot; the grid gives it room.
         let rows =
             super::plugin_notes::feet_of(&facts.plugin_ui, ac_plugin_ui::ItemWindow::Inventory);
@@ -1452,6 +1293,9 @@ impl WindowUi {
             inv::GRID_Y + inv::GRID_H - band_h,
             inv::GRID_W + 24.0,
         );
+        if let Some(e) = ui.element_mut(inv.band) {
+            e.left = px + inv::GRID_X - 12.0;
+        }
         if let Some(e) = ui.element_mut(inv.grid)
             && (e.height - (inv::GRID_H - band_h)).abs() > 0.5
         {
@@ -1459,36 +1303,23 @@ impl WindowUi {
         }
         // The frame.
         let burden = model::Burden::of(objects, player, strength);
-        let hint = if let Some(o) = lifted {
-            if lit_slots.is_empty() {
-                format!("Moving {}", o.name)
-            } else {
-                "Drop on a highlighted slot to equip \u{b7} Esc cancels".to_owned()
-            }
-        } else if docked || card {
-            "Double-click to use \u{b7} right-click for more".to_owned()
-        } else {
-            "Select an item for details".to_owned()
-        };
         let options = inv.options.clone();
-        let look = inv.look;
-        if let Some(f) = ui.widget_mut::<InventoryFrame>(frame) {
-            f.view = inv::FrameView {
-                name: me,
-                details: docked,
-                card,
-                title: grid_view.title,
-                count: grid_view.count,
-                grouped: options.pack == PackChoice::All || searching,
-                group: options.group,
-                sort: options.sort,
-                look,
-                kind: options.kind,
-                burden,
-                pyreals: model::pyreals(objects, player),
-                hint,
-                dragging: lifted.is_some(),
-            };
+        let view = inv::FrameView {
+            gear,
+            gear_for_drag: gear && !inv.gear,
+            grouped: options.pack == PackChoice::All || searching,
+            group: options.group,
+            sort: options.sort,
+            look: inv.look,
+            kind: options.kind,
+            burden,
+            pyreals: model::pyreals(objects, player),
+            chosen,
+        };
+        if let Some(f) = ui.widget_mut::<InventoryFrame>(frame)
+            && f.view != view
+        {
+            f.view = view;
         }
     }
 

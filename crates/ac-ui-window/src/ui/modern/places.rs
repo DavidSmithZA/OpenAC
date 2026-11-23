@@ -190,21 +190,23 @@ const PLACES: &[(&str, Place)] = &[
         },
     ),
     (
+        // A play window: at the left edge, under the counts that open it.
         super::magic::effects_run::EFFECTS_WINDOW,
         Place {
-            anchor: Anchor::Center,
-            dx: 0.0,
-            dy: 0.0,
+            anchor: Anchor::TopLeft,
+            dx: EDGE,
+            dy: 14.0 + super::hud::effects::CHIP_HEIGHT + 14.0,
             width: super::magic::effects_window::WIDTH,
             height: super::magic::effects_window::HEIGHT,
         },
     ),
     (
+        // A play window: beside the inventory, at its top.
         super::dealing::salvage_run::SALVAGE,
         Place {
-            anchor: Anchor::Center,
-            dx: 0.0,
-            dy: 0.0,
+            anchor: Anchor::TopRight,
+            dx: -(EDGE + super::items::inventory::WIDTH + EDGE),
+            dy: PLAY_TOP,
             width: super::dealing::salvage_window::WIDTH,
             height: super::dealing::salvage_window::HEIGHT,
         },
@@ -230,22 +232,25 @@ const PLACES: &[(&str, Place)] = &[
         },
     ),
     (
+        // Beside the inventory, at its top.
         super::items::loot::LOOT,
         Place {
             anchor: Anchor::TopRight,
-            dx: -60.0,
-            dy: 250.0,
+            dx: -(EDGE + super::items::inventory::WIDTH + EDGE),
+            dy: PLAY_TOP,
             width: super::items::loot::WIDTH,
             height: super::items::loot::HEIGHT,
         },
     ),
     (
+        // A play window: at the right edge, between the radar and the
+        // panel strip.
         super::items::run::INVENTORY,
         Place {
-            anchor: Anchor::Center,
-            dx: 0.0,
-            dy: 0.0,
-            width: super::items::inventory::WIDE,
+            anchor: Anchor::TopRight,
+            dx: -EDGE,
+            dy: PLAY_TOP,
+            width: super::items::inventory::WIDTH,
             height: super::items::inventory::HEIGHT,
         },
     ),
@@ -331,6 +336,13 @@ const PLACES: &[(&str, Place)] = &[
         },
     ),
 ];
+
+/// The room kept between a play window and the screen's edge.
+const EDGE: f32 = 16.0;
+
+/// Where the play windows at the right edge start: under the radar's
+/// ring.
+const PLAY_TOP: f32 = 226.0;
 
 /// How far above the screen's bottom the combat strip starts: over three
 /// rows of shortcut slots and the experience line.

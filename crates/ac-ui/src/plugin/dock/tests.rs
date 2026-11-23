@@ -1414,6 +1414,31 @@ fn the_grip_shows_only_while_windows_are_unlocked_and_the_dock_changes_to_fit() 
 }
 
 #[test]
+fn on_modern_the_grip_follows_the_quick_move_key_and_edit_layout_not_the_lock() {
+    use crate::event::Modifiers;
+    let mut rig = Rig::in_mode(DockMode::Floating);
+    rig.host.root.set_ui_locked(false);
+    rig.host.root.set_quick_move_key(Some(Modifiers::CTRL));
+    let rule = |editing, locked| super::GripRule::QuickMove { editing, locked };
+    rig.with(|c, _| c.set_grip_rule(rule(false, false)));
+    rig.tick();
+    assert!(
+        !rig.grip_shows(),
+        "no grip without the key, unlocked or not"
+    );
+    rig.host.root.set_modifiers(Modifiers::CTRL);
+    rig.tick();
+    assert!(rig.grip_shows(), "the key held shows it");
+    rig.with(|c, _| c.set_grip_rule(rule(false, true)));
+    rig.tick();
+    assert!(!rig.grip_shows(), "not for a dock locked in place");
+    rig.host.root.set_modifiers(Modifiers::NONE);
+    rig.with(|c, _| c.set_grip_rule(rule(true, false)));
+    rig.tick();
+    assert!(rig.grip_shows(), "Edit layout shows it");
+}
+
+#[test]
 fn only_the_grip_shows_the_move_cursor() {
     let mut rig = Rig::in_mode(DockMode::Floating);
     let (grip, tile) = {
