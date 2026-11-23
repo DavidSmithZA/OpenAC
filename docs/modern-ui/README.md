@@ -59,28 +59,38 @@ recall, quick move and plugin hook boards.
 
 ## Inventory
 
-- One window: equipment (figure plus all 24 retail slots) | pack column
-  and grid | item details.
-- Pack column: All packs, Main pack, side packs, each showing how full it
-  is. All packs groups everything by pack, by category, or not at all.
-  Search covers every pack.
+Redrawn 2026-11-23 (canvas page "Sizes", approved): the first design
+was one 1080-wide window (equipment, packs, item details). In play it
+hid the middle of the screen, so a lockpick could not reach the chest
+behind it.
+
+- A slim panel, 400 x 600, at the right edge between the radar and the
+  panel strip: pack column (48 wide), a grid seven across, search, and
+  Show / Group / Sort menus, burden and pyreals in the foot.
+- Equipment (figure plus all 24 retail slots) folds out to the left
+  from the Gear button in the header (Shift+I), making the window 732
+  wide; it stays until you hide it. Dragging something wearable while
+  it is shut opens it for the drag (the slots the item covers light
+  up) and folds it away when you let go anywhere else.
+- No item details column. A click selects; an action row under the grid
+  names the item and holds Use or Equip, Split, Give, Drop, Salvage and
+  More (inscribe, add to a bar, link in chat, plugin entries), plus an
+  Inspect link. Buttons that do not apply are greyed, not hidden, so
+  the row never moves. Double-click still uses or equips.
+- Right-click opens the item menu with Inspect first, which opens the
+  Inspect sheet (the same four item tabs as anywhere else). Hovering
+  shows the quick pane.
+- Pack column: All packs, Main pack, side packs, each showing how full
+  it is. All packs groups everything by pack, by category, or not at
+  all. Search covers every pack.
 - Sort by name, type, value, burden, workmanship, newest, or your own
   order. Tidy: merge partial stacks, close gaps. Automatic rules such as
   sorting items into packs belong in plugins, not the client.
-- Item details: fixed header, then the same four tabs as the inspect
-  sheet (Overview, Spells, Needs, Details; empty tabs are left out), a
-  scrolling body and fixed action buttons. The main button says Equip
-  for things you wear or wield and Use for things you use. The small
-  buttons are Give, Drop, Salvage, and More (split, inscribe, add to
-  bar, link in chat).
-- Small screens: with nothing selected the window narrows to 792 px.
-  Where the wide window (1080) does not fit, it stays at 792 and the
-  details show as a card inside the window, over the equipment column,
-  with the grid still there to pick another item; Esc, its close button
-  or a click on empty space puts it away. No option and no pinning
-  (user, 2026-11-21: Docked / Pop-up / Auto cut).
-- Drag to equip (the slots an item covers light up), split a stack, and
-  an over-burdened state.
+- Split a stack from the action row (a popover with a slider and a
+  count); Shift-drag still splits onto a slot. An over-burdened state
+  as before.
+- Superseded: the details column, the 792/1080 widths and the
+  small-screen details card.
 
 ## Spellbook
 
@@ -217,6 +227,10 @@ recall, quick move and plugin hook boards.
 
 ## Salvage
 
+- A play window (2026-11-23): 420 x 600 beside the inventory, items to
+  salvage on top and the bags you get underneath (one row per bag);
+  after salvaging, the bags in one column. It was 820 x 540 with the
+  bags in a side column.
 - Using a salvaging tool (an Ust) opens the window; the header shows
   your Salvaging skill.
 - To salvage: each item with its material and workmanship. Take one out
@@ -468,8 +482,10 @@ recall, quick move and plugin hook boards.
   with the vitae line. Clicking a count opens the Effects window.
 - Nothing is drawn in the world: no icons over the character, in either
   camera.
-- Effects window, 760 x 560, with Helpful and Harmful tabs (retail's
-  separate positive, negative and vitae panels):
+- Effects window, 440 x 560 (2026-11-23; it was 760 with a details
+  side), with Helpful and Harmful tabs (retail's separate positive,
+  negative and vitae panels). The chosen row opens in place with what
+  the details showed:
   - Helpful: search, sort (time left, name, what it changes), filters
     Attributes / Skills / Vitals / Protections, the same three groups.
     Each row: what it changes, who cast it, time left with a bar.
@@ -706,6 +722,46 @@ Cmd+A and Cmd+Z in text fields (today they are Ctrl, as on Windows),
 with the other Mac text keys (Option+arrows by word, Cmd+arrows to the
 line's ends, Cmd+Backspace). Both interfaces get this; it is how the
 platform works, not a retail behaviour.
+
+## Sizes: play windows and stop windows (2026-11-23, approved)
+
+Canvas page "Sizes". After live use the inventory was too big to play
+with, so every window is one of two kinds:
+
+- Play windows are used while you keep looking at the world: slim,
+  against a screen edge. Inventory 400 (732 with gear), Loot 400 (opens
+  beside the inventory), Salvage 420, Effects 440, Inspect 360, Chat
+  440, Quests on screen 250.
+- Stop windows are used while standing still: centred, and they can stay
+  big. Vendor, Barber, Spellbook (user: stays big), Character, Options,
+  Journal, House, House sale, Chess, Book, Map (full screen), Trade and
+  Social.
+- Choosing a target (a lockpick, key, kit or salvage tool): every play
+  window goes see-through and lets clicks through until a target is
+  picked or Esc cancels. A pill above the bars names the item ("Intricate
+  Lockpick: pick what to use it on · Esc cancels"); over a target the
+  cursor shows "Use Intricate Lockpick on Chest". Retail needed the
+  target in view; this keeps the panels where they are.
+
+## Cursors (2026-11-23, approved)
+
+- One modern cursor for each retail one, so they behave exactly as now:
+  arrow, melee or missile, magic, examine, use and busy, each with an
+  "over something" version, and the three target cursors (pick a
+  target, can be used on this, not on this).
+- Cream with a dark edge, readable on sky, grass and dungeon; over
+  something you can act on the cursor turns bronze. Mode badges sit at
+  the lower right (crossed blades, a blue spark, a ring, a turning arc);
+  examine is a lens. Target: a ring with four ticks; bronze with a solid
+  centre when it can be used, red with a bar across when not.
+- Drawn at 32 px, sharp at 2x on Retina. Retail keeps the game's own.
+
+## Plugin dock on Modern (2026-11-23, approved)
+
+- No lock button: Modern has no retail UI lock. The dock's grip and
+  length handle show only while the quick-move key is held or in Edit
+  layout, like every other HUD piece; Lock and Hide sit in its piece
+  menu.
 
 ## Coverage
 

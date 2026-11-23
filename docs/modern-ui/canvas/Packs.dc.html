@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Packs panel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;color:inherit}
+button:disabled{opacity:0.4;cursor:default}
+.pk-scroll{scrollbar-width:thin;scrollbar-color:rgba(201,160,98,0.7) rgba(255,255,255,0.06)}
+.pk-scroll::-webkit-scrollbar{width:6px}
+.pk-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
+</style>
+</helmet>
+<div style="width: {{w}}; height: 600px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.92); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+
+  <!-- header -->
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 16px; box-sizing: border-box; border-bottom: 1px solid rgba(201,160,98,0.35); background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E0B068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2"></path></svg>
+    <h1 style="margin: 0; font-size: 14px; font-weight: 600;">Inventory</h1>
+    <span style="flex: 1;"></span>
+    <button aria-pressed="{{gearOpen}}" title="Equipment: fold out your worn and wielded items (Shift+I)" style="height: 30px; padding: 0 10px; border-radius: 4px; border: 1px solid {{gearEdge}}; background: {{gearBg}}; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 3 6l2 5 2-1v11h10V10l2 1 2-5-5-3a3 3 0 0 1-6 0z"></path></svg>
+      {{gearLabel}}
+    </button>
+    <button aria-label="Close inventory" style="width: 30px; height: 30px; padding: 0; border-radius: 4px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </div>
+
+  <!-- equipment: folds out to the left of the packs -->
+  <sc-if value="{{gearOpen}}" hint-placeholder-val="{{false}}">
+    <section aria-label="Equipment" style="position: absolute; left: 0; top: 48px; width: 332px; bottom: 48px; box-sizing: border-box; padding: 14px 16px 0 16px; border-right: 1px solid rgba(201,160,98,0.35); background: {{gearPaneBg}}; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">EQUIPPED</h2>
+        <span style="font-size: 10.5px; color: {{gearNoteColor}};">{{gearNote}}</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <sc-for list="{{leftCol}}" as="s" hint-placeholder-count="6">
+            <button aria-label="{{s.label}}" title="{{s.label}}" style="width: 40px; height: 40px; padding: 0; border-radius: 4px; border: 1px solid {{s.edge}}; background: {{s.bg}}; opacity: {{s.op}}; box-shadow: {{s.glow}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+            </button>
+          </sc-for>
+        </div>
+        <div style="flex: 1; height: 270px; position: relative; border-radius: 4px; background: radial-gradient(ellipse at 50% 60%, rgba(224,176,104,0.10), rgba(0,0,0,0) 70%);">
+          <svg width="188" height="270" viewBox="0 0 190 270" aria-hidden="true" style="position: absolute; left: 0; top: 0;">
+            <circle cx="95" cy="34" r="20" fill="rgba(255,255,255,0.04)" stroke="rgba(201,160,98,0.6)" stroke-width="1.5" stroke-dasharray="4 4"></circle>
+            <path d="M60 64 Q95 54 130 64 L146 148 L130 151 L120 104 L118 168 L126 262 L104 262 L95 178 L86 262 L64 262 L72 168 L70 104 L60 151 L44 148 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(201,160,98,0.6)" stroke-width="1.5" stroke-dasharray="4 4" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <sc-for list="{{rightCol}}" as="s" hint-placeholder-count="6">
+            <button aria-label="{{s.label}}" title="{{s.label}}" style="width: 40px; height: 40px; padding: 0; border-radius: 4px; border: 1px solid {{s.edge}}; background: {{s.bg}}; opacity: {{s.op}}; box-shadow: {{s.glow}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+      <sc-for list="{{rowsBelow}}" as="row" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">{{row.title}}</span>
+          <div style="display: flex; gap: 6px;">
+            <sc-for list="{{row.slots}}" as="s" hint-placeholder-count="6">
+              <button aria-label="{{s.label}}" title="{{s.label}}" style="width: 40px; height: 40px; padding: 0; border-radius: 4px; border: 1px solid {{s.edge}}; background: {{s.bg}}; opacity: {{s.op}}; box-shadow: {{s.glow}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{s.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.d}}"></path></svg>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </section>
+  </sc-if>
+
+  <!-- packs -->
+  <section aria-label="Packs" style="position: absolute; left: {{ox}}; top: 48px; width: 400px; bottom: 48px; box-sizing: border-box; padding: 10px 16px 0 16px; display: flex; flex-direction: column; gap: 8px;">
+    <label style="flex: none; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35);">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
+      <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Search all packs</span>
+      <input placeholder="Search all packs" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #F4EBDC; font: inherit; font-size: 12px;">
+    </label>
+    <div style="flex: none; display: flex; gap: 6px;">
+      <sc-for list="{{drops}}" as="d" hint-placeholder-count="3">
+        <button style="flex: 1; min-width: 0; height: 26px; padding: 0 8px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 5px; font-size: 11px; cursor: pointer;"><span style="color: #C8B89C;">{{d.k}}</span><span style="font-weight: 600; flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{d.v}}</span><span style="color: #C8B89C;">▾</span></button>
+      </sc-for>
+    </div>
+    <div style="flex: 1; min-height: 0; display: flex; gap: 10px;">
+      <nav aria-label="Containers" style="width: 48px; flex: none; display: flex; flex-direction: column; gap: 4px;">
+        <sc-for list="{{packs}}" as="p" hint-placeholder-count="9">
+          <button aria-label="{{p.label}}" title="{{p.label}} · {{p.fill}}" style="width: 48px; height: {{p.h}}; padding: 0; border-radius: 4px; border: 1px solid {{p.edge}}; background: {{p.bg}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{p.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.d}}"></path></svg>
+            <span style="font-size: 9px; font-weight: 600; color: #E9D3AE; font-variant-numeric: tabular-nums;">{{p.fill}}</span>
+          </button>
+        </sc-for>
+      </nav>
+      <div class="pk-scroll" style="flex: 1; min-width: 0; overflow-y: auto; padding-right: 2px;">
+        <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px;">
+          <sc-for list="{{cells}}" as="c" hint-placeholder-count="49">
+            <button aria-label="{{c.label}}" title="{{c.label}}" style="height: 40px; padding: 0; border-radius: 4px; border: {{c.border}}; background: {{c.bg}}; opacity: {{c.op}}; position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{c.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.d}}"></path></svg>
+              <span style="position: absolute; left: 3px; top: 1px; font-size: 9px; font-weight: 700; color: #E0B068;">{{c.stamp}}</span>
+              <span style="position: absolute; right: 3px; bottom: 1px; font-size: 9.5px; font-weight: 700; color: #FFFFFF; text-shadow: 0 1px 2px #000;">{{c.count}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- the selected item: its actions live here, no details column -->
+    <sc-if value="{{hasSel}}" hint-placeholder-val="{{true}}">
+      <div aria-label="Selected item" style="flex: none; margin: 0 -16px; padding: 10px 16px 12px; border-top: 1px solid rgba(201,160,98,0.35); background: rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 9px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="width: 30px; height: 30px; flex: none; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: {{sel.tile}}; display: flex; align-items: center; justify-content: center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{sel.color}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{sel.d}}"></path></svg>
+          </span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+            <span style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{sel.name}}</span>
+            <span style="font-size: 10.5px; color: #C8B89C; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{sel.sub}}</span>
+          </span>
+          <button title="Inspect: the full sheet (or right-click the item)" style="height: 26px; padding: 0 8px; border-radius: 4px; border: 0; background: transparent; color: #E0B068; font-size: 11.5px; font-weight: 600; cursor: pointer;">Inspect</button>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button style="width: 76px; height: 40px; flex: none; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.88); color: #1A140D; font-size: 12.5px; font-weight: 700; cursor: pointer;">{{sel.primary}}</button>
+          <sc-for list="{{acts}}" as="a" hint-placeholder-count="5">
+            <button disabled="{{a.off}}" title="{{a.tip}}" style="flex: 1; min-width: 0; height: 40px; padding: 0; border-radius: 4px; border: 1px solid {{a.edge}}; background: {{a.bg}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.d}}"></path></svg>
+              <span style="font-size: 9.5px; font-weight: 600; color: #E9D3AE;">{{a.label}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+  </section>
+
+  <!-- foot: burden + pyreals -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; gap: 14px; padding: 0 16px; box-sizing: border-box; border-top: 1px solid rgba(201,160,98,0.35);">
+    <sc-if value="{{gearOpen}}" hint-placeholder-val="{{false}}">
+      <span style="width: 302px; flex: none; font-size: 10.5px; color: {{gearNoteColor}};">{{footGear}}</span>
+    </sc-if>
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+      <div style="display: flex; justify-content: space-between; font-size: 10.5px;">
+        <span><span style="font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">BURDEN</span>  <span style="font-weight: 600; color: #E0B068;">61%</span></span>
+        <span style="color: #C8B89C; font-variant-numeric: tabular-nums;">2,840 of 4,650</span>
+      </div>
+      <div style="height: 5px; position: relative; border-radius: 3px; background: rgba(255,255,255,0.1);">
+        <div style="width: 20.3%; height: 100%; border-radius: 3px; background: #E0B068;"></div>
+        <div title="Above 100% you slow down" style="position: absolute; left: 33.3%; top: -2px; width: 2px; height: 9px; background: #F4EBDC; opacity: 0.6;"></div>
+      </div>
+    </div>
+    <div style="flex: none; display: flex; align-items: center; gap: 6px; font-size: 12px;">
+      <span style="width: 9px; height: 9px; border-radius: 50%; background: #E0B068;"></span>
+      <span style="font-weight: 600; font-variant-numeric: tabular-nums;">48,210</span>
+    </div>
+  </div>
+
+  <!-- right-click: the item menu, Inspect first -->
+  <sc-if value="{{isMenu}}" hint-placeholder-val="{{false}}">
+    <div role="menu" aria-label="Item menu" style="position: absolute; left: {{menuX}}; top: 182px; width: 214px; box-sizing: border-box; padding: 6px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.98); box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 1px; font-size: 12px;">
+      <span style="padding: 5px 8px 6px; font-size: 11px; font-weight: 700; color: #E9D3AE; border-bottom: 1px solid rgba(201,160,98,0.25); margin-bottom: 3px;">Intricate Lockpick</span>
+      <sc-for list="{{menu}}" as="m" hint-placeholder-count="9">
+        <sc-if value="{{m.rule}}" hint-placeholder-val="{{false}}">
+          <div style="height: 1px; margin: 4px 0; background: rgba(201,160,98,0.25);"></div>
+        </sc-if>
+        <button role="menuitem" disabled="{{m.off}}" style="height: 27px; padding: 0 8px; border: 0; border-radius: 4px; background: {{m.bg}}; display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: left; font-weight: {{m.weight}};">
+          <span style="flex: 1;">{{m.label}}</span><span style="font-size: 10.5px; color: #C8B89C;">{{m.note}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- split: a popover from the action row -->
+  <sc-if value="{{isSplit}}" hint-placeholder-val="{{false}}">
+    <div role="dialog" aria-label="Split stack" style="position: absolute; left: {{splitX}}; top: 318px; width: 250px; box-sizing: border-box; padding: 14px; border-radius: 6px; border: 1px solid rgba(201,160,98,0.8); background: rgba(24,19,14,0.98); box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 12px;">
+      <div style="position: absolute; left: 116px; bottom: -7px; width: 12px; height: 12px; background: rgba(24,19,14,0.98); border-right: 1px solid rgba(201,160,98,0.8); border-bottom: 1px solid rgba(201,160,98,0.8); transform: rotate(45deg);"></div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <span style="font-size: 13px; font-weight: 600;">Split Health Potions</span>
+        <span style="font-size: 11px; color: #C8B89C;">stack of 14</span>
+      </div>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: #C8B89C;">
+        Take
+        <input type="range" min="1" max="13" value="7" style="width: 100%; accent-color: #E0B068;">
+      </label>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #C8B89C;">Count
+          <input value="7" style="width: 48px; height: 28px; box-sizing: border-box; padding: 0 8px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.4); color: #F4EBDC; font: inherit; font-size: 12px; font-weight: 600;">
+        </label>
+        <span style="flex: 1;"></span>
+        <button style="height: 28px; padding: 0 8px; border-radius: 4px; border: 0; background: transparent; color: #C8B89C; font-size: 12px; font-weight: 600; cursor: pointer;">Cancel</button>
+        <button style="height: 28px; padding: 0 12px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.85); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Split</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- drag: the lifted coat over the slots it covers -->
+  <sc-if value="{{isDrag}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; left: 96px; top: 168px; display: flex; align-items: center; gap: 8px; pointer-events: none;">
+      <div style="width: 44px; height: 44px; border-radius: 4px; border: 2px solid #E0B068; background: linear-gradient(160deg, #7FB2FF55, rgba(0,0,0,0.7)); box-shadow: 0 8px 20px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; transform: rotate(-4deg);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7FB2FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path></svg>
+      </div>
+      <span style="padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.8); font-size: 11px; font-weight: 600;">Olthoi Amuli Coat · covers 4 slots</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["browse","gear","drag","menu","split","none"],"default":"browse"},"$preview":{"width":400,"height":600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const state = this.props.state ?? 'browse';
+    const P = {
+      helm: 'M5 14a7 7 0 0 1 14 0v4H5zM12 7V4M9 18v-4h6v4',
+      shirt: 'M8 3 3 6l2 5 2-1v11h10V10l2 1 2-5-5-3a3 3 0 0 1-6 0z',
+      pants: 'M6 3h12l1 18h-5l-2-11-2 11H5z',
+      glove: 'M7 11V5a1.5 1.5 0 0 1 3 0v5M10 10V4a1.5 1.5 0 0 1 3 0v6M13 10V5a1.5 1.5 0 0 1 3 0v7M16 12V8a1.5 1.5 0 0 1 3 0v6a7 7 0 0 1-7 7 6 6 0 0 1-5-3l-3-5a1.5 1.5 0 0 1 2.5-1.5L7 14',
+      boot: 'M8 3h5v10l6 3a2 2 0 0 1 1 2v3H5V3z',
+      shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      arm: 'M7 4h6l3 7-3 9H8l1-9z',
+      leg: 'M8 3h8l-1 9 1 9h-5l-1-9z',
+      neck: 'M5 4c0 6 3 9 7 9s7-3 7-9M12 13v3M10 18a2 2 0 1 0 4 0 2 2 0 0 0-4 0',
+      wrist: 'M6 12a6 4 0 1 0 12 0 6 4 0 1 0-12 0M6 12v2a6 4 0 0 0 12 0v-2',
+      ring: 'M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM9 4h6l-1.5 5h-3z',
+      trinket: 'M12 3l3 6 6 1-4.5 4 1 6-5.5-3-5.5 3 1-6L3 10l6-1z',
+      cloak: 'M8 3h8l1 3 3 15H4L7 6zM12 3v6',
+      wand: 'M4 20 16 8M14 4l1.5 3L19 8.5 15.5 10 14 13l-1.5-3L9 8.5 12.5 7z',
+      sword: 'M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2',
+      bow: 'M5 3c9 3 13 7 16 16M5 3l16 16M3 21l5-5',
+      arrow: 'M4 20 20 4M14 4h6v6M4 16v4h4',
+      sigil: 'M12 3l8 9-8 9-8-9z',
+      drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+      food: 'M12 21c-4 0-7-3-7-7 0-3 2-6 5-6 1 0 1.5.5 2 .5s1-.5 2-.5c3 0 5 3 5 6 0 4-3 7-7 7zM12 8c0-2 1-4 3-5',
+      gem: 'M6 3h12l4 6-10 12L2 9zM2 9h20M9 3l3 18 3-18',
+      key: 'M15 7a4 4 0 1 1-3.5 6L4 20H2v-3l1-1h2v-2h2v-2l2.5-2.5A4 4 0 0 1 15 7z',
+      pick: 'M3 21l8-8M11 13l2-2M13 11h3l2-2-1-1 2-2-1-1-2 2-1-1-2 2v3M15 9l-2 2',
+      scroll: 'M6 3h12v14a4 4 0 0 1-4 4H6M6 3a3 3 0 0 0-3 3v2h3M10 8h5M10 12h5',
+      salvage: 'M4 7h16v13H4zM8 7V4h8v3M9 12h6',
+      peas: 'M8 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+      bag: 'M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2',
+      stack: 'M12 3 2 8l10 5 10-5zM2 13l10 5 10-5M2 17.5l10 5 10-5',
+      split: 'M6 3v6a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3M12 15v6',
+      give: 'M3 12h13M12 7l5 5-5 5M20 4v16',
+      drop2: 'M12 3v13M7 11l5 5 5-5M5 21h14',
+      breakit: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z',
+      more: 'M5 12h.01M12 12h.01M19 12h.01'
+    };
+    const T = { weapon: '#FF9A6B', armor: '#7FB2FF', jewel: '#C9A2FF', cloth: '#9FC7B0', hp: '#FF6B70', mp: '#6EA8FF', st: '#E8C547', food: '#7FD08A', salv: '#D9B27A', misc: '#B3AA9C', key: '#E0B068', aeth: '#5FC3E8' };
+    const tile = (c) => 'linear-gradient(160deg, ' + c + '33, rgba(0,0,0,0.5))';
+    const MUTED = '#C8B89C';
+    const gearOpen = state === 'gear' || state === 'drag';
+    const drag = state === 'drag';
+
+    // equipment
+    const covers = ['Chest armor', 'Abdomen armor', 'Upper arm armor', 'Lower arm armor'];
+    const slot = (label, d, color, filled) => {
+      const s = { label, d, color: filled ? color : 'rgba(233,211,174,0.35)', edge: filled ? 'rgba(201,160,98,0.55)' : 'rgba(201,160,98,0.22)', bg: filled ? tile(color) : 'rgba(0,0,0,0.3)', op: '1', glow: 'none' };
+      if (drag) {
+        if (covers.indexOf(label) >= 0) { s.edge = '#E0B068'; s.glow = '0 0 0 2px rgba(224,176,104,0.45), 0 0 14px rgba(224,176,104,0.45)'; }
+        else { s.op = '0.35'; }
+      }
+      return s;
+    };
+    const leftCol = [slot('Head', P.helm, T.armor, true), slot('Chest armor', P.shield, T.armor, true), slot('Upper arm armor', P.arm, T.armor, true), slot('Lower arm armor', P.arm, T.armor, true), slot('Hands', P.glove, T.armor, true), slot('Shirt', P.shirt, T.cloth, true)];
+    const rightCol = [slot('Cloak', P.cloak, T.cloth, true), slot('Abdomen armor', P.shield, T.armor, true), slot('Upper leg armor', P.leg, T.armor, true), slot('Lower leg armor', P.leg, T.armor, true), slot('Feet', P.boot, T.armor, true), slot('Pants', P.pants, T.cloth, true)];
+    const rowsBelow = [
+      { title: 'JEWELRY', slots: [slot('Neck', P.neck, T.jewel, true), slot('Left wrist', P.wrist, T.jewel, true), slot('Right wrist', P.wrist, T.jewel, true), slot('Left ring', P.ring, T.jewel, true), slot('Right ring', P.ring, T.jewel, false), slot('Trinket', P.trinket, T.jewel, true)] },
+      { title: 'HELD · AETHERIA', slots: [slot('Weapon', P.wand, T.weapon, true), slot('Shield or off hand', P.shield, T.weapon, false), slot('Ammunition', P.arrow, T.weapon, false), slot('Blue Aetheria', P.sigil, T.aeth, true), slot('Yellow Aetheria', P.sigil, '#E8C547', true), slot('Red Aetheria (locked)', P.sigil, '#FF6B70', false)] }
+    ];
+
+    // main pack
+    const items = [
+      ['Ornate Gold Wand', P.wand, T.weapon], ['Health Potion', P.drop, T.hp, '14', '-'], ['Mana Potion', P.drop, T.mp, '9', '='], ['Intricate Lockpick', P.pick, T.key], ['Olthoi Amuli Coat', P.shield, T.armor], ['Celdon Leggings', P.leg, T.armor], ['Silver Bracelet', P.wrist, T.jewel],
+      ['Sapphire Ring', P.ring, T.jewel], ['Lifestone Recall Gem', P.gem, T.key, '3', '0'], ['Cooked Meat', P.food, T.food, '20'], ['Steel Salvage (100)', P.salvage, T.salv], ['Gold Salvage (62)', P.salvage, T.salv], ['Stamina Elixir', P.drop, T.st, '6'], ['Spiked Gauntlets', P.glove, T.armor],
+      ['Yumi', P.bow, T.weapon], ['Greater Fire Peas', P.peas, T.weapon, '12'], ['Scroll of Flame Arc VI', P.scroll, T.misc], ['Ring of Focus', P.ring, T.jewel], ['Hood of the Wise', P.helm, T.armor], ['Healing Kit', P.drop, T.food, '42'], ['Sturdy Iron Key', P.key, T.key],
+      ['Quest: Drudge Charm', P.trinket, T.key], ['Leather Boots', P.boot, T.armor], ['Robe of Shadows', P.cloak, T.cloth], ['Iron Salvage (88)', P.salvage, T.salv], ['Tusker Paw', P.food, T.misc, '7'], ['Ivory', P.gem, T.misc, '3'], ['Major Coordination Scroll', P.scroll, T.misc],
+      ['Atlatl', P.bow, T.weapon], ['Hollow Minion Cap', P.helm, T.armor], ['Fire Wand', P.wand, T.weapon], ['Amber Necklace', P.neck, T.jewel], ['Dried Rations', P.food, T.food, '15'], ['Mana Stone', P.gem, T.mp, '5'], ['Mithril Salvage (25)', P.salvage, T.salv],
+      ['Pine Arrows', P.arrow, T.weapon, '250'], ['Drudge Skin', P.salvage, T.misc, '9'], ['Short Sword', P.sword, T.weapon], ['Silk Shirt', P.shirt, T.cloth], ['Wool Pants', P.pants, T.cloth], ['Blue Aetheria (unattuned)', P.sigil, T.aeth], ['Rare: Pearl of Life', P.gem, '#FF6B70'],
+      ['Note', P.scroll, T.misc], ['Gem of Strength', P.gem, T.jewel], ['Platinum Bracelet', P.wrist, T.jewel]
+    ];
+    while (items.length < 68) items.push(items[(items.length * 7) % 45]);
+    const selIndex = { browse: 3, menu: 3, split: 1 }[state];
+    const cells = [];
+    for (let i = 0; i < 102; i++) {
+      const it = items[i];
+      if (!it) { cells.push({ label: 'Empty', d: '', color: 'transparent', bg: 'rgba(0,0,0,0.28)', border: '1px solid rgba(201,160,98,0.14)', op: '1', stamp: '', count: '' }); continue; }
+      const [label, d, c, count, stamp] = it;
+      const cell = { label, d, color: c, bg: tile(c), border: '1px solid rgba(201,160,98,0.3)', op: '1', stamp: stamp || '', count: count || '' };
+      if (i === selIndex) cell.border = '2px solid #E0B068';
+      if (drag && i === 4) { cell.d = ''; cell.bg = 'rgba(0,0,0,0.2)'; cell.border = '1px dashed #E0B068'; }
+      else if (drag) cell.op = '0.55';
+      cells.push(cell);
+    }
+
+    const packDefs = [['Spell components', '22/24'], ['Salvage', '24/24'], ['Potions', '9/24'], ['Keys and quest items', '15/24'], ['Spare armor', '6/24'], ['Trade', '0/24'], ['Foci of Enchantment', '—']];
+    const packs = [{ label: 'All packs', fill: 'All', d: P.stack, sel: false }, { label: 'Main pack', fill: '68/102', d: P.bag, sel: true }]
+      .concat(packDefs.map(([label, fill]) => ({ label: 'Pack: ' + label, fill, d: P.bag, sel: false })))
+      .map((p) => ({ ...p, h: '32px', edge: p.sel ? '#E0B068' : 'rgba(201,160,98,0.3)', bg: p.sel ? 'rgba(224,176,104,0.16)' : 'rgba(0,0,0,0.3)', color: p.sel ? '#E0B068' : MUTED }));
+
+    // the selected item
+    const pick = { name: 'Intricate Lockpick', sub: 'Lockpick · 12 uses left · Main pack', d: P.pick, color: T.key, tile: tile(T.key), primary: 'Use' };
+    const potion = { name: 'Health Potion', sub: 'Stack of 14 · restores 200 health', d: P.drop, color: T.hp, tile: tile(T.hp), primary: 'Use' };
+    const sel = state === 'split' ? potion : pick;
+    const stack = state === 'split';
+    const act = (label, d, tip, off, on) => ({ label, d, tip, off: !!off, edge: on ? '#E0B068' : 'rgba(201,160,98,0.45)', bg: on ? 'rgba(224,176,104,0.18)' : 'rgba(0,0,0,0.35)' });
+    const acts = [
+      act('Split', P.split, stack ? 'Split the stack' : 'Not a stack', !stack, stack),
+      act('Give', P.give, 'Give to your target'),
+      act('Drop', P.drop2, 'Drop on the ground'),
+      act('Salvage', P.breakit, stack ? 'Cannot be salvaged' : 'Lockpicks cannot be salvaged', true),
+      act('More', P.more, 'Inscribe, add to a bar, link in chat, plugin entries')
+    ];
+
+    const mi = (label, note, x) => ({ label, note: note || '', off: !!(x && x.off), rule: !!(x && x.rule), weight: x && x.bold ? '700' : '500', bg: x && x.bold ? 'rgba(224,176,104,0.14)' : 'transparent' });
+    const menu = [
+      mi('Inspect', 'full sheet', { bold: true }), mi('Use', 'double-click'), mi('Split…', '', { off: true }), mi('Give to target', 'Drudge Ravener'), mi('Drop on the ground'), mi('Salvage', '', { off: true }),
+      mi('Inscribe…', '', { rule: true }), mi('Add to a bar'), mi('Link in chat'), mi('Aethrix: keep it', 'plugin', { rule: true })
+    ];
+
+    const wide = gearOpen;
+    return {
+      w: wide ? '732px' : '400px', ox: wide ? '332px' : '0px',
+      gearOpen, gearLabel: gearOpen ? 'Hide gear' : 'Gear',
+      gearEdge: gearOpen ? '#E0B068' : 'rgba(201,160,98,0.45)', gearBg: gearOpen ? 'rgba(224,176,104,0.18)' : 'rgba(0,0,0,0.35)',
+      gearPaneBg: drag ? 'rgba(224,176,104,0.05)' : 'rgba(0,0,0,0.12)',
+      gearNote: drag ? 'opened for the drag' : 'stays open until you hide it',
+      gearNoteColor: drag ? '#E0B068' : MUTED,
+      footGear: drag ? 'Drop on a lit slot to wear it. Let go anywhere else and the gear folds away again.' : 'Drag to turn your figure. Shift+I opens or hides the gear.',
+      leftCol, rightCol, rowsBelow, packs, cells,
+      drops: [{ k: 'Show', v: 'All' }, { k: 'Group', v: 'None' }, { k: 'Sort', v: 'Type' }],
+      hasSel: !(drag || state === 'gear' || state === 'none'), sel, acts,
+      isMenu: state === 'menu', menu, menuX: '150px',
+      isSplit: state === 'split', splitX: '30px',
+      isDrag: drag
+    };
+  }
+}
+</script>
+</body>
+</html>

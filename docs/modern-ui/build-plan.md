@@ -968,6 +968,26 @@ be checked live.
   client fetches it, and whether it shares `ac-world-map`'s download
   code (likely, moved to a neutral name).
 
+### Sizes round, decided 2026-11-23
+
+From live use (README "Sizes", canvas page "Sizes"):
+
+- Inventory as the slim panel: 400 wide at the right edge, grid seven
+  across, Gear fold-out (Shift+I, 732 wide), gear opening for a drag of
+  something wearable, the action row under the grid, the item menu with
+  Inspect first. The details column, the 792/1080 widths and the
+  small-screen details card go.
+- Target mode fades the play windows and lets clicks through
+  (inventory, loot, salvage, effects, inspect), with the pill above the
+  bars and the "Use X on Y" label at the cursor.
+- Effects at 440, the chosen row opening in place.
+- Salvage at 420, bags under the list.
+- Modern cursors: one image per global cursor kind (15), used when
+  Modern is on; retail keeps the dat cursors.
+- Plugin dock on Modern: grip and length handle follow the quick-move
+  key and Edit layout instead of the retail UI lock; Lock and Hide in
+  its piece menu.
+
 ### Later, not blocking
 
 Nothing left here: the frosted glass was built (`feat/modern-ui-blur`,

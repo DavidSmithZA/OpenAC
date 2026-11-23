@@ -19,7 +19,7 @@ button:disabled{opacity:0.45;cursor:default}
 .fx-scroll::-webkit-scrollbar-thumb{background:rgba(201,160,98,0.7);border-radius:3px}
 </style>
 </helmet>
-<div style="width: 760px; height: 560px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.93); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
+<div style="width: {{w}}; height: 560px; position: relative; box-sizing: border-box; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: rgba(20,16,12,0.93); backdrop-filter: blur(14px); border: 1px solid rgba(201,160,98,0.8); border-radius: 6px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;">
 
   <!-- header -->
   <div style="position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 20px; box-sizing: border-box; background: linear-gradient(180deg, rgba(201,160,98,0.10), rgba(201,160,98,0));">
@@ -42,7 +42,7 @@ button:disabled{opacity:0.45;cursor:default}
   </div>
 
   <!-- list -->
-  <div style="position: absolute; left: 20px; top: 104px; width: 420px; bottom: 64px; display: flex; flex-direction: column; gap: 8px;">
+  <div style="position: absolute; left: {{listL}}; top: 104px; width: {{listW}}; bottom: 64px; display: flex; flex-direction: column; gap: 8px;">
     <div style="flex: none; display: flex; gap: 8px;">
       <label style="flex: 1; height: 32px; box-sizing: border-box; padding: 0 10px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.45); background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 8px;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C8B89C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3"></path></svg>
@@ -94,12 +94,25 @@ button:disabled{opacity:0.45;cursor:default}
               </sc-if>
             </span>
           </button>
+          <sc-if value="{{r.open}}" hint-placeholder-val="{{false}}">
+            <div style="flex: none; margin: -2px 0 6px; padding: 10px 12px 12px; border-radius: 0 0 4px 4px; border: 1px solid #E0B068; border-top: 0; background: rgba(224,176,104,0.07); display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-size: 11px; color: #C8B89C;">{{r.school}} · {{r.timeText}}</span>
+              <span style="font-size: 12px; line-height: 1.5; color: #E9D3AE;">{{r.desc}}</span>
+              <sc-if value="{{r.canCast}}" hint-placeholder-val="{{true}}">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <button style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid #E0B068; background: rgba(224,176,104,0.9); color: #1A140D; font-size: 12px; font-weight: 700; cursor: pointer;">Cast again</button>
+                  <span style="font-size: 10.5px; color: #A89A82;">{{r.bar}}</span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
         </sc-for>
       </sc-for>
     </div>
   </div>
 
   <!-- details -->
+  <sc-if value="{{wide}}" hint-placeholder-val="{{true}}">
   <section aria-label="{{s.name}}" style="position: absolute; left: 456px; right: 20px; top: 104px; bottom: 64px; box-sizing: border-box; border-radius: 4px; border: 1px solid rgba(201,160,98,0.3); background: rgba(0,0,0,0.28); display: flex; flex-direction: column;">
     <div style="flex: none; padding: 14px 14px 12px; display: flex; gap: 10px; align-items: flex-start; border-bottom: 1px solid rgba(201,160,98,0.2);">
       <span style="width: 40px; height: 40px; flex: none; border-radius: 4px; border: 1px solid {{s.tileEdge}}; background: {{s.tile}}; display: flex; align-items: center; justify-content: center;">
@@ -143,11 +156,12 @@ button:disabled{opacity:0.45;cursor:default}
       </sc-if>
     </div>
   </section>
+  </sc-if>
 
   <!-- foot -->
   <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 52px; padding: 0 20px; box-sizing: border-box; border-top: 1px solid rgba(201,160,98,0.3); display: flex; align-items: center; gap: 14px; font-size: 11px; color: #A89A82;">
     <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #FFB547;"></span>Warns 5 min before a helpful one ends</span>
-    <span>Hover a count on screen for a quick list</span>
+    <sc-if value="{{wide}}" hint-placeholder-val="{{true}}"><span>Hover a count on screen for a quick list</span></sc-if>
     <span style="flex: 1;"></span>
     <button title="Options › Interface › Effects" style="height: 30px; padding: 0 12px; border-radius: 4px; border: 1px solid rgba(201,160,98,0.6); background: rgba(0,0,0,0.35); font-size: 12px; font-weight: 600; color: #F4EBDC; display: flex; align-items: center; gap: 6px; cursor: pointer;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E9D3AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"></path></svg>
@@ -156,7 +170,7 @@ button:disabled{opacity:0.45;cursor:default}
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"tab":{"editor":"enum","options":["helpful","harmful"],"default":"helpful"},"vitae":{"editor":"enum","options":["no","yes"],"default":"no"},"$preview":{"width":760,"height":560}}'>
+<script type="text/x-dc" data-dc-script data-props='{"tab":{"editor":"enum","options":["helpful","harmful"],"default":"helpful"},"vitae":{"editor":"enum","options":["no","yes"],"default":"no"},"size":{"editor":"enum","options":["wide","slim"],"default":"wide"},"$preview":{"width":760,"height":560}}'>
 class Component extends DCLogic {
   renderVals() {
     const st = this.state || {};
@@ -164,6 +178,7 @@ class Component extends DCLogic {
     const tab = st.tab || this.props.tab || 'helpful';
     const harmTab = tab === 'harmful';
     const vitae = (this.props.vitae ?? 'no') === 'yes';
+    const slim = (this.props.size ?? 'wide') === 'slim';
     const P = {
       star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
       shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
@@ -244,6 +259,7 @@ class Component extends DCLogic {
         by: e.gear ? e.by : e.by === 'You' ? 'cast by you' : 'from ' + e.by,
         t: e.gear ? 'worn' : e.time, tc: timeColor(e), timed: !e.gear, pct: e.pct + '%', on,
         edge: on ? GOLD : 'transparent', bg: on ? 'rgba(224,176,104,0.12)' : 'rgba(0,0,0,0.2)',
+        open: on && slim, school: e.school, timeText: e.gear ? 'While you wear it' : e.time + ' of ' + e.total, desc: e.desc, canCast: !!e.cast, bar: e.bar || '',
         pick: () => this.setState({ sel: e.key }) };
     };
     const shown = list.filter((e) => filter === 'all' || e.kind === filter);
@@ -273,7 +289,8 @@ class Component extends DCLogic {
     };
     return {
       tabs: [T('helpful', 'Helpful', '42'), T('harmful', 'Harmful', vitae ? '3 · vitae' : '3', true)],
-      hasChips: !harmTab, chips, groups, showVitae: harmTab && vitae, s
+      hasChips: !harmTab, chips, groups, showVitae: harmTab && vitae, s,
+      wide: !slim, w: slim ? '440px' : '760px', listL: slim ? '16px' : '20px', listW: slim ? '408px' : '420px'
     };
   }
 }

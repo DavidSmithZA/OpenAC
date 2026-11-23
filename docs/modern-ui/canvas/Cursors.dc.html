@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Modern cursors</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1240px; height: 700px; box-sizing: border-box; padding: 32px 36px; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: #17130F; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; flex-direction: column; gap: 4px;">
+    <h1 style="margin: 0; font-size: 20px; font-weight: 700;">Cursors for the modern look</h1>
+    <p style="margin: 0; font-size: 12.5px; color: #C8B89C;">Cream with a dark edge so they read on sky, grass and dungeon alike. Over something you can act on, the cursor turns bronze. Each one replaces one of the retail cursors, so they behave exactly as they do now. Drawn at 32 px, sharp at 2× on Retina.</p>
+  </div>
+
+  <sc-for list="{{rows}}" as="row" hint-placeholder-count="3">
+    <section style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0; font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; color: #C8B89C;">{{row.title}}</h2>
+      <div style="display: flex; gap: 16px;">
+        <sc-for list="{{row.cards}}" as="c" hint-placeholder-count="6">
+          <div style="width: 180px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="height: 84px; display: flex; border-radius: 6px; overflow: hidden; border: 1px solid rgba(201,160,98,0.35);">
+              <div style="flex: 1; background: linear-gradient(180deg, #A9C4C2, #8FA97A); display: flex; align-items: center; justify-content: center;">
+                <svg width="40" height="40" viewBox="0 0 24 24" role="img" aria-label="{{c.name}} on a light background" style="overflow: visible;">
+                  <path d="{{c.a.d}}" fill="{{c.a.f}}" stroke="{{c.a.s}}" stroke-width="{{c.a.w}}" stroke-linejoin="round" stroke-linecap="round"></path>
+                  <path d="{{c.b.d}}" fill="{{c.b.f}}" stroke="{{c.b.s}}" stroke-width="{{c.b.w}}" stroke-linejoin="round" stroke-linecap="round"></path>
+                  <path d="{{c.c.d}}" fill="{{c.c.f}}" stroke="{{c.c.s}}" stroke-width="{{c.c.w}}" stroke-linejoin="round" stroke-linecap="round"></path>
+                  <path d="{{c.e.d}}" fill="{{c.e.f}}" stroke="{{c.e.s}}" stroke-width="{{c.e.w}}" stroke-linejoin="round" stroke-linecap="round"></path>
+                  <path d="{{c.g.d}}" fill="{{c.g.f}}" stroke="{{c.g.s}}" stroke-width="{{c.g.w}}" stroke-linejoin="round" stroke-linecap="round"></path>
+                </svg>
+              </div>
+              <div style="flex: 1; background: linear-gradient(180deg, #2A2620, #14110D); display: flex; align-items: center; justify-content: center;">
+                <svg width="40" height="40" viewBox="0 0 24 24" role="img" aria-label="{{c.name}} on a dark background" style="overflow: visible;">
+                  <path d="{{c.a.d}}" fill="{{c.a.f}}" stroke="{{c.a.s}}" stroke-width="{{c.a.w}}" stroke-linejoin="round" stroke-linecap="round"></path>
+                  <path d="{{c.b.d}}" fill="{{c.b.f}}" stroke="{{c.b.s}}" stroke-width="{{c.b.w}}" stroke-linejoin="round" stroke-linecap="round"></path>
+                  <path d="{{c.c.d}}" fill="{{c.c.f}}" stroke="{{c.c.s}}" stroke-width="{{c.c.w}}" stroke-linejoin="round" stroke-linecap="round"></path>
+                  <path d="{{c.e.d}}" fill="{{c.e.f}}" stroke="{{c.e.s}}" stroke-width="{{c.e.w}}" stroke-linejoin="round" stroke-linecap="round"></path>
+                  <path d="{{c.g.d}}" fill="{{c.g.f}}" stroke="{{c.g.s}}" stroke-width="{{c.g.w}}" stroke-linejoin="round" stroke-linecap="round"></path>
+                </svg>
+              </div>
+            </div>
+            <span style="font-size: 12.5px; font-weight: 600;">{{c.name}}</span>
+            <span style="font-size: 11px; line-height: 1.4; color: #C8B89C;">{{c.note}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1240,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const DARK = '#14100C', CREAM = '#F4EBDC', GOLD = '#E0B068', BLUE = '#8FC1FF', RED = '#FF6B70';
+    const none = { d: '', f: 'none', s: 'none', w: 0 };
+    const ARROW = 'M4 2.5L4 19.5L8.6 15.4L11.6 21.8L14.6 20.4L11.6 14.2L17.6 14.2Z';
+    const arrow = (fill) => ({ d: ARROW, f: fill, s: DARK, w: 1.6 });
+    const badgeBg = { d: 'M18.5 13a5.5 5.5 0 1 0 .01 0z', f: DARK, s: GOLD, w: 1 };
+    const pack = (list) => { const p = list.concat([none, none, none, none, none]); return { a: p[0], b: p[1], c: p[2], e: p[3], g: p[4] }; };
+    const withBadge = (found, badge) => pack([arrow(found ? GOLD : CREAM), badgeBg].concat(badge));
+    const B = {
+      combat: [{ d: 'M16 16l5 5M21 16l-5 5', f: 'none', s: CREAM, w: 1.5 }],
+      magic: [{ d: 'M18.5 14.8l.9 2.8 2.8.9-2.8.9-.9 2.8-.9-2.8-2.8-.9 2.8-.9z', f: BLUE, s: 'none', w: 0 }],
+      use: [{ d: 'M18.5 15.2a3.3 3.3 0 1 0 .01 0z', f: 'none', s: CREAM, w: 0.9 }, { d: 'M18.5 16.8a1.7 1.7 0 1 0 .01 0z', f: CREAM, s: 'none', w: 0 }],
+      busy: [{ d: 'M18.5 15a3.5 3.5 0 1 1 -3.5 3.5', f: 'none', s: GOLD, w: 1.6 }]
+    };
+    const LENS = 'M10 3.5a6.5 6.5 0 1 0 .01 0zM14.8 14.8L21 21';
+    const examine = (found) => pack([
+      { d: LENS, f: 'none', s: DARK, w: 4.4 },
+      { d: 'M10 4.4a5.6 5.6 0 1 0 .01 0z', f: found ? 'rgba(224,176,104,0.35)' : 'rgba(244,235,220,0.18)', s: 'none', w: 0 },
+      { d: LENS, f: 'none', s: found ? GOLD : CREAM, w: 2 }
+    ]);
+    const RING = 'M12 4a8 8 0 1 0 .01 0z', TICKS = 'M12 0.5v5M12 18.5v5M0.5 12h5M18.5 12h5';
+    const target = (c, centre) => pack([
+      { d: RING + 'M12 0.5v5M12 18.5v5M0.5 12h5M18.5 12h5', f: 'none', s: DARK, w: 4 },
+      { d: RING, f: 'none', s: c, w: 2 },
+      { d: TICKS, f: 'none', s: c, w: 1.8 },
+      centre
+    ]);
+    const card = (name, note, shape) => Object.assign({ name, note }, shape);
+    return {
+      rows: [
+        { title: 'POINTER MODES', cards: [
+          card('Arrow', 'Default', withBadge(false, [])),
+          card('Melee or missile', 'In melee or missile combat', withBadge(false, B.combat)),
+          card('Magic', 'In magic combat', withBadge(false, B.magic)),
+          card('Examine', 'Examine mode', examine(false)),
+          card('Use', 'Use mode', withBadge(false, B.use)),
+          card('Busy', 'Waiting on the server', withBadge(false, B.busy))
+        ] },
+        { title: 'OVER SOMETHING YOU CAN ACT ON', cards: [
+          card('Arrow', 'Over an object', withBadge(true, [])),
+          card('Melee or missile', 'Over an object', withBadge(true, B.combat)),
+          card('Magic', 'Over an object', withBadge(true, B.magic)),
+          card('Examine', 'Over an object', examine(true)),
+          card('Use', 'Over an object', withBadge(true, B.use)),
+          card('Busy', 'Over an object', withBadge(true, B.busy))
+        ] },
+        { title: 'CHOOSING A TARGET (A KIT, KEY, LOCKPICK, SALVAGE TOOL)', cards: [
+          card('Pick a target', 'Over nothing yet', target(CREAM, { d: 'M12 10.2a1.8 1.8 0 1 0 .01 0z', f: 'none', s: CREAM, w: 1.2 })),
+          card('Can be used on this', 'Bronze ring, solid centre', target(GOLD, { d: 'M12 9.2a2.8 2.8 0 1 0 .01 0z', f: GOLD, s: DARK, w: 1 })),
+          card('Not on this', 'Red ring with a bar across', target(RED, { d: 'M6.6 6.6l10.8 10.8', f: 'none', s: RED, w: 2.2 }))
+        ] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Salvage beside the slim inventory</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; position: relative; overflow: hidden;">
+  <div style="position: absolute; left: 0; top: 0;">
+    <dc-import name="Horizon" trim="bronze" hint-size="1440px,900px"></dc-import>
+  </div>
+  <div style="position: absolute; left: 588px; top: 226px;">
+    <dc-import name="Salvage" state="staged" size="slim" hint-size="420px,600px"></dc-import>
+  </div>
+  <div style="position: absolute; left: 1024px; top: 226px;">
+    <dc-import name="Packs" state="none" hint-size="400px,600px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

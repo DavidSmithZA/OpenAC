@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Play and stop windows</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1240px; height: 720px; box-sizing: border-box; padding: 32px 36px; font-family: Inter, system-ui, sans-serif; color: #F4EBDC; background: #17130F; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; flex-direction: column; gap: 4px;">
+    <h1 style="margin: 0; font-size: 20px; font-weight: 700;">Play windows and stop windows</h1>
+    <p style="margin: 0; font-size: 12.5px; color: #C8B89C;">Play windows are used while you keep looking at the world: slim, against a screen edge, and see-through while you pick a target. Stop windows are used while standing still: centred, and they can stay big. Widths in px; a laptop screen is about 1440 wide.</p>
+  </div>
+  <div style="flex: 1; min-height: 0; display: flex; gap: 20px;">
+    <sc-for list="{{cols}}" as="col" hint-placeholder-count="3">
+      <section style="flex: 1; min-width: 0; box-sizing: border-box; padding: 16px; overflow: hidden; border-radius: 6px; border: 1px solid {{col.edge}}; background: rgba(255,255,255,0.03); display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <h2 style="margin: 0; font-size: 14px; font-weight: 700; color: {{col.color}};">{{col.title}}</h2>
+          <span style="font-size: 11.5px; color: #C8B89C;">{{col.sub}}</span>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <sc-for list="{{col.rows}}" as="r" hint-placeholder-count="7">
+            <div style="padding: 8px 0; border-top: 1px solid rgba(201,160,98,0.18); display: flex; flex-direction: column; gap: 3px;">
+              <div style="display: flex; align-items: baseline; gap: 8px;">
+                <span style="flex: 1; font-size: 13px; font-weight: 600;">{{r.name}}</span>
+                <span style="font-size: 11.5px; color: #A89A82; text-decoration: {{r.strike}}; font-variant-numeric: tabular-nums;">{{r.now}}</span>
+                <span style="font-size: 12px; font-weight: 700; color: {{r.toColor}}; font-variant-numeric: tabular-nums;">{{r.to}}</span>
+              </div>
+              <span style="font-size: 11px; line-height: 1.4; color: #C8B89C;">{{r.why}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1240,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const GOLD = '#E0B068';
+    const r = (name, now, to, why) => {
+      const same = to === '' || to === now;
+      return { name, now, to: same ? '' : '→ ' + to, why, strike: same ? 'none' : 'line-through', toColor: GOLD };
+    };
+    return {
+      cols: [
+        { title: 'Play: slim, at an edge', sub: 'You keep playing while it is open', color: GOLD, edge: 'rgba(224,176,104,0.7)', rows: [
+          r('Inventory', '1080', '400', 'Packs only; Gear folds out to 732 when you want it.'),
+          r('Loot', '400', '', 'Already slim; opens beside the inventory.'),
+          r('Salvage', '820', '420', 'Items to salvage on top, the bags you get underneath.'),
+          r('Effects on you', '760', '440', 'One column; a row opens in place instead of a details side.'),
+          r('Inspect', '360', '', 'Already a side sheet.'),
+          r('Chat', '440', '', 'Unchanged.'),
+          r('Quests on screen', '250', '', 'Unchanged.')
+        ] },
+        { title: 'Stop: centred, can be big', sub: 'You stand still to use it', color: '#F4EBDC', edge: 'rgba(201,160,98,0.35)', rows: [
+          r('Vendor', '1040', '', 'You said stop. Sell lists your items, so the inventory is not needed.'),
+          r('Barber', '760', '', 'You said stop.'),
+          r('Spellbook', '940', '', 'You said it stays big.'),
+          r('Character', '1100', '', 'Raising skills and attributes.'),
+          r('Options', '1000', '', 'Settings.'),
+          r('Journal, House', '900', '', 'Reading and planning.'),
+          r('Chess, Book, House sale', '560 to 800', '', 'Sit-down activities.'),
+          r('Map', 'full screen', '', 'Already its own screen.'),
+          r('Trade', '900', '', 'You stand with the other player; Add from packs means it needs no inventory.'),
+          r('Social', '792', '', 'Fellows already show on screen while hunting; the window is for managing.')
+        ] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

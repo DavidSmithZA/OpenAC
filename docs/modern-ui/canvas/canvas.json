@@ -4,7 +4,7 @@
  "boards": {
   "Horizon.dc.html": {
    "h": 900,
-   "title": "D · Horizon (neutral): world first, chrome barely there",
+   "title": "D \u00b7 Horizon (neutral): world first, chrome barely there",
    "w": 1440,
    "x": 0,
    "y": 0,
@@ -12,7 +12,7 @@
   },
   "HorizonBronze.dc.html": {
    "h": 900,
-   "title": "D · Horizon (bronze trim): same layout, warmer edges",
+   "title": "D \u00b7 Horizon (bronze trim): same layout, warmer edges",
    "w": 1440,
    "x": 1520,
    "y": 0,
@@ -20,7 +20,7 @@
   },
   "Main.dc.html": {
    "h": 900,
-   "title": "A · Glass: quiet, floating, fades away",
+   "title": "A \u00b7 Glass: quiet, floating, fades away",
    "w": 1440,
    "x": 0,
    "y": 0,
@@ -28,7 +28,7 @@
   },
   "Orbit.dc.html": {
    "h": 900,
-   "title": "C · Orbit: everything around one centre",
+   "title": "C \u00b7 Orbit: everything around one centre",
    "w": 1440,
    "x": 3040,
    "y": 0,
@@ -36,7 +36,7 @@
   },
   "Tactical.dc.html": {
    "h": 900,
-   "title": "B · Tactical: solid, dense, numbers first",
+   "title": "B \u00b7 Tactical: solid, dense, numbers first",
    "w": 1440,
    "x": 1520,
    "y": 0,
@@ -184,7 +184,7 @@
    "w": 1440,
    "h": 900,
    "page": "bars",
-   "title": "Edit layout: move, turn, resize bars; set each slot’s keys"
+   "title": "Edit layout: move, turn, resize bars; set each slot\u2019s keys"
   },
   "HudBarsDrag.dc.html": {
    "x": 1520,
@@ -796,7 +796,7 @@
    "w": 792,
    "h": 600,
    "page": "social",
-   "title": "Fellowship: everyone’s share and vitals",
+   "title": "Fellowship: everyone\u2019s share and vitals",
    "is_interactive": true
   },
   "SocialFellowLead.dc.html": {
@@ -978,7 +978,7 @@
    "w": 560,
    "h": 620,
    "page": "journal",
-   "title": "Book: reading someone else’s page",
+   "title": "Book: reading someone else\u2019s page",
    "is_interactive": true
   },
   "BookWrite.dc.html": {
@@ -1029,7 +1029,7 @@
    "w": 1440,
    "h": 1400,
    "page": "dialogs",
-   "title": "Every kind: the server’s seven questions, message, wait, typed answer, choice",
+   "title": "Every kind: the server\u2019s seven questions, message, wait, typed answer, choice",
    "is_interactive": true
   },
   "Slumlord.dc.html": {
@@ -1056,7 +1056,7 @@
    "w": 640,
    "h": 560,
    "page": "dialogs",
-   "title": "Paying someone else’s house: asked first",
+   "title": "Paying someone else\u2019s house: asked first",
    "is_interactive": true
   },
   "LootInGame.dc.html": {
@@ -1228,7 +1228,7 @@
    "w": 1440,
    "h": 900,
    "page": "login",
-   "title": "Stage · Choose: the picked character stands in its remembered place",
+   "title": "Stage \u00b7 Choose: the picked character stands in its remembered place",
    "is_interactive": true
   },
   "LoginStageConnecting.dc.html": {
@@ -1237,7 +1237,7 @@
    "w": 1440,
    "h": 900,
    "page": "login",
-   "title": "Stage · Connecting: the portal ring charges, two meters on its arcs (from Lineup)"
+   "title": "Stage \u00b7 Connecting: the portal ring charges, two meters on its arcs (from Lineup)"
   },
   "LoginStageDelete.dc.html": {
    "x": 3040,
@@ -1245,7 +1245,7 @@
    "w": 1440,
    "h": 900,
    "page": "login",
-   "title": "Stage · Delete: type DELETE to delete Brannoch Stoneheart"
+   "title": "Stage \u00b7 Delete: type DELETE to delete Brannoch Stoneheart"
   },
   "LoginStageEmpty.dc.html": {
    "x": 4560,
@@ -1253,7 +1253,7 @@
    "w": 1440,
    "h": 900,
    "page": "login",
-   "title": "Stage · New account: one Create your first character button"
+   "title": "Stage \u00b7 New account: one Create your first character button"
   },
   "LoginLineup.dc.html": {
    "x": 0,
@@ -1261,7 +1261,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Lineup · Choose: the picked one steps forward into the light",
+   "title": "Lineup \u00b7 Choose: the picked one steps forward into the light",
    "is_interactive": true
   },
   "LoginLineupConnecting.dc.html": {
@@ -1270,7 +1270,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Lineup · Connecting: the portal ring charges, two meters on its arcs"
+   "title": "Lineup \u00b7 Connecting: the portal ring charges, two meters on its arcs"
   },
   "LoginLineupDelete.dc.html": {
    "x": 3040,
@@ -1278,7 +1278,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Lineup · Delete: type DELETE"
+   "title": "Lineup \u00b7 Delete: type DELETE"
   },
   "LoginLineupEmpty.dc.html": {
    "x": 4560,
@@ -1286,7 +1286,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Lineup · New account: an empty stage with one lit slot"
+   "title": "Lineup \u00b7 New account: an empty stage with one lit slot"
   },
   "LoginAtlas.dc.html": {
    "x": 0,
@@ -1294,7 +1294,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Atlas · Choose: the map flies to the picked character's last place",
+   "title": "Atlas \u00b7 Choose: the map flies to the picked character's last place",
    "is_interactive": true
   },
   "LoginAtlasConnecting.dc.html": {
@@ -1303,7 +1303,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Atlas · Connecting: the map draws itself in, meters in a slim bar"
+   "title": "Atlas \u00b7 Connecting: the map draws itself in, meters in a slim bar"
   },
   "LoginAtlasDelete.dc.html": {
    "x": 3040,
@@ -1311,7 +1311,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Atlas · Delete: type DELETE"
+   "title": "Atlas \u00b7 Delete: type DELETE"
   },
   "LoginAtlasEmpty.dc.html": {
    "x": 4560,
@@ -1319,7 +1319,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Atlas · New account: the four starting towns and a welcome card"
+   "title": "Atlas \u00b7 New account: the four starting towns and a welcome card"
   },
   "CreateStudio.dc.html": {
    "x": 0,
@@ -1327,7 +1327,7 @@
    "w": 1440,
    "h": 900,
    "page": "create",
-   "title": "Studio · Heritage: 13 tiles and gender; the figure on the plinth, So far on the right",
+   "title": "Studio \u00b7 Heritage: 13 tiles and gender; the figure on the plinth, So far on the right",
    "is_interactive": true
   },
   "CreateStudioProfession.dc.html": {
@@ -1336,7 +1336,7 @@
    "w": 1440,
    "h": 900,
    "page": "create",
-   "title": "Studio · Profession: templates, attribute sliders with locks, points left, vitals"
+   "title": "Studio \u00b7 Profession: templates, attribute sliders with locks, points left, vitals"
   },
   "CreateStudioSkills.dc.html": {
    "x": 3040,
@@ -1344,7 +1344,7 @@
    "w": 1440,
    "h": 900,
    "page": "create",
-   "title": "Studio · Skills: grouped with train and specialize costs, credits, info pane"
+   "title": "Studio \u00b7 Skills: grouped with train and specialize costs, credits, info pane"
   },
   "CreateStudioAppearance.dc.html": {
    "x": 4560,
@@ -1352,7 +1352,7 @@
    "w": 1440,
    "h": 900,
    "page": "create",
-   "title": "Studio · Appearance: face and clothes parts, styles, colours, shade"
+   "title": "Studio \u00b7 Appearance: face and clothes parts, styles, colours, shade"
   },
   "CreateStudioTown.dc.html": {
    "x": 6080,
@@ -1360,7 +1360,7 @@
    "w": 1440,
    "h": 900,
    "page": "create",
-   "title": "Studio · Town: four town cards; the backdrop takes the town's colours"
+   "title": "Studio \u00b7 Town: four town cards; the backdrop takes the town's colours"
   },
   "CreateStudioName.dc.html": {
    "x": 7600,
@@ -1368,7 +1368,7 @@
    "w": 1440,
    "h": 900,
    "page": "create",
-   "title": "Studio · Name: name field, suggestions, Before you finish, summary"
+   "title": "Studio \u00b7 Name: name field, suggestions, Before you finish, summary"
   },
   "CreateStudioDialog.dc.html": {
    "x": 9120,
@@ -1376,7 +1376,7 @@
    "w": 1440,
    "h": 900,
    "page": "create",
-   "title": "Studio · Name refused by the server; three near names (OPENAC)"
+   "title": "Studio \u00b7 Name refused by the server; three near names (OPENAC)"
   },
   "CreateSheet.dc.html": {
    "x": 0,
@@ -1384,7 +1384,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Sheet · Heritage open; only the name is still needed",
+   "title": "Sheet \u00b7 Heritage open; only the name is still needed",
    "is_interactive": true
   },
   "CreateSheetLook.dc.html": {
@@ -1393,7 +1393,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Sheet · Look open: face and clothes, part, style, colour, shade"
+   "title": "Sheet \u00b7 Look open: face and clothes, part, style, colour, shade"
   },
   "CreateSheetProfession.dc.html": {
    "x": 3040,
@@ -1401,7 +1401,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Sheet · Profession open: seven templates with a line each"
+   "title": "Sheet \u00b7 Profession open: seven templates with a line each"
   },
   "CreateSheetAttributes.dc.html": {
    "x": 4560,
@@ -1409,7 +1409,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Sheet · Attributes moved off War Mage: 4 points left, now Custom"
+   "title": "Sheet \u00b7 Attributes moved off War Mage: 4 points left, now Custom"
   },
   "CreateSheetSkills.dc.html": {
    "x": 6080,
@@ -1417,7 +1417,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Sheet · Skills open: credits, the four groups, info box"
+   "title": "Sheet \u00b7 Skills open: credits, the four groups, info box"
   },
   "CreateSheetTown.dc.html": {
    "x": 7600,
@@ -1425,7 +1425,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Sheet · Starting town open: four town cards"
+   "title": "Sheet \u00b7 Starting town open: four town cards"
   },
   "CreateSheetFinish.dc.html": {
    "x": 9120,
@@ -1433,7 +1433,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Sheet · Named Aerin Vale, ready to create"
+   "title": "Sheet \u00b7 Named Aerin Vale, ready to create"
   },
   "CreateSheetRefused.dc.html": {
    "x": 10640,
@@ -1441,7 +1441,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Sheet · The server refused the name"
+   "title": "Sheet \u00b7 The server refused the name"
   },
   "CreateSheetGearKnight.dc.html": {
    "x": 12160,
@@ -1449,7 +1449,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Sheet · Gear Knight: Look picks the whole body"
+   "title": "Sheet \u00b7 Gear Knight: Look picks the whole body"
   },
   "CreateSheetOlthoi.dc.html": {
    "x": 13680,
@@ -1457,7 +1457,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Sheet · Olthoi: four sections fold into one line"
+   "title": "Sheet \u00b7 Olthoi: four sections fold into one line"
   },
   "CreateJourney.dc.html": {
    "x": 0,
@@ -1465,7 +1465,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Journey · Who are you? 13 heritage panels, the picked one opens",
+   "title": "Journey \u00b7 Who are you? 13 heritage panels, the picked one opens",
    "is_interactive": true
   },
   "CreateJourneyProfession.dc.html": {
@@ -1474,7 +1474,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Journey · How do you fight? Template cards over an attribute hexagon"
+   "title": "Journey \u00b7 How do you fight? Template cards over an attribute hexagon"
   },
   "CreateJourneySkills.dc.html": {
    "x": 3040,
@@ -1482,7 +1482,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Journey · What have you learned? A 50-credit purse and three skill trays"
+   "title": "Journey \u00b7 What have you learned? A 50-credit purse and three skill trays"
   },
   "CreateJourneyAppearance.dc.html": {
    "x": 4560,
@@ -1490,7 +1490,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Journey · How do you look? The figure large, parts around it"
+   "title": "Journey \u00b7 How do you look? The figure large, parts around it"
   },
   "CreateJourneyTown.dc.html": {
    "x": 6080,
@@ -1498,7 +1498,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Journey · Where does it begin? Four towns on the map, a view of the picked one"
+   "title": "Journey \u00b7 Where does it begin? Four towns on the map, a view of the picked one"
   },
   "CreateJourneyName.dc.html": {
    "x": 7600,
@@ -1506,7 +1506,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Journey · What is your name? One sentence tells the whole build"
+   "title": "Journey \u00b7 What is your name? One sentence tells the whole build"
   },
   "CreateJourneyOlthoi.dc.html": {
    "x": 9120,
@@ -1514,7 +1514,7 @@
    "w": 1440,
    "h": 900,
    "page": "pregame-alt",
-   "title": "Journey · Olthoi Spitter: the journey drops to three steps"
+   "title": "Journey \u00b7 Olthoi Spitter: the journey drops to three steps"
   },
   "SmallLink.dc.html": {
    "x": 0,
@@ -1562,7 +1562,7 @@
    "w": 520,
    "h": 440,
    "page": "radar",
-   "title": "A · As designed: north up, dots, a bronze rim"
+   "title": "A \u00b7 As designed: north up, dots, a bronze rim"
   },
   "RadarBearing.dc.html": {
    "x": 600,
@@ -1570,7 +1570,7 @@
    "w": 520,
    "h": 440,
    "page": "radar",
-   "title": "B · Bearing ring: CHOSEN. Heading up, a turning compass ring, retail blip shapes"
+   "title": "B \u00b7 Bearing ring: CHOSEN. Heading up, a turning compass ring, retail blip shapes"
   },
   "RadarLens.dc.html": {
    "x": 1200,
@@ -1578,7 +1578,7 @@
    "w": 520,
    "h": 440,
    "page": "radar",
-   "title": "C · Lens: no disc, glowing blips fade into the world"
+   "title": "C \u00b7 Lens: no disc, glowing blips fade into the world"
   },
   "RadarTerrain.dc.html": {
    "x": 1800,
@@ -1586,7 +1586,7 @@
    "w": 520,
    "h": 440,
    "page": "radar",
-   "title": "D · Terrain: the land itself under the blips; walls indoors"
+   "title": "D \u00b7 Terrain: the land itself under the blips; walls indoors"
   },
   "RadarStrip.dc.html": {
    "x": 0,
@@ -1594,7 +1594,7 @@
    "w": 1040,
    "h": 340,
    "page": "radar",
-   "title": "E · Compass strip: no round radar, a strip across the top"
+   "title": "E \u00b7 Compass strip: no round radar, a strip across the top"
   },
   "Recalls.dc.html": {
    "x": 1120,
@@ -1651,6 +1651,110 @@
    "h": 620,
    "page": "hooks",
    "title": "Options: each plugin gets a page under Plugins"
+  },
+  "SizesInGame.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Inventory is a slim Packs panel at the right edge: no figure, no details column",
+   "page": "sizes"
+  },
+  "SizesTarget.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Using a lockpick: play windows go see-through and let the click reach the chest",
+   "page": "sizes"
+  },
+  "SizesLoot.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Loot opens beside the packs; the middle of the screen stays clear",
+   "page": "sizes"
+  },
+  "Packs.dc.html": {
+   "x": 0,
+   "y": 1020,
+   "w": 400,
+   "h": 600,
+   "title": "Packs: click selects; Use, Split, Give, Drop, Salvage and More sit under the grid",
+   "page": "sizes"
+  },
+  "PacksGear.dc.html": {
+   "x": 480,
+   "y": 1020,
+   "w": 732,
+   "h": 600,
+   "title": "Gear folds out to the left (Shift+I) and stays until you hide it",
+   "page": "sizes"
+  },
+  "PacksDrag.dc.html": {
+   "x": 1292,
+   "y": 1020,
+   "w": 732,
+   "h": 600,
+   "title": "Dragging something wearable opens the gear for the drag, then folds it away",
+   "page": "sizes"
+  },
+  "PacksMenu.dc.html": {
+   "x": 2104,
+   "y": 1020,
+   "w": 400,
+   "h": 600,
+   "title": "Right-click: the item menu, Inspect first (opens the Inspect sheet)",
+   "page": "sizes"
+  },
+  "PacksSplit.dc.html": {
+   "x": 2584,
+   "y": 1020,
+   "w": 400,
+   "h": 600,
+   "title": "Split from the action row",
+   "page": "sizes"
+  },
+  "SizesEffects.dc.html": {
+   "x": 0,
+   "y": 1740,
+   "w": 440,
+   "h": 560,
+   "title": "Effects on you, slim (440): the chosen row opens in place",
+   "page": "sizes"
+  },
+  "Cursors.dc.html": {
+   "x": 520,
+   "y": 1740,
+   "w": 1240,
+   "h": 700,
+   "title": "Modern cursors: one for each retail cursor",
+   "page": "sizes"
+  },
+  "WindowKinds.dc.html": {
+   "x": 1840,
+   "y": 1740,
+   "w": 1240,
+   "h": 720,
+   "title": "Which windows are play and which are stop",
+   "page": "sizes"
+  },
+  "SizesSalvage.dc.html": {
+   "x": 0,
+   "y": 2580,
+   "w": 1440,
+   "h": 900,
+   "title": "Salvage is slim too (420): items on top, the bags you get underneath",
+   "page": "sizes"
+  },
+  "SizesSalvageDone.dc.html": {
+   "x": 1520,
+   "y": 2580,
+   "w": 420,
+   "h": 600,
+   "title": "Salvage slim, done: one bag per row",
+   "page": "sizes"
   }
  },
  "createdOnFiles": {
@@ -1835,7 +1939,7 @@
   "t22": {
    "kind": "title1",
    "maxW": 6000,
-   "text": "Login B · Lineup (not chosen; its connecting screen went to Stage)",
+   "text": "Login B \u00b7 Lineup (not chosen; its connecting screen went to Stage)",
    "x": 0,
    "y": -300,
    "page": "pregame-alt"
@@ -1843,7 +1947,7 @@
   "t23": {
    "kind": "title1",
    "maxW": 6000,
-   "text": "Login C · Atlas (not chosen)",
+   "text": "Login C \u00b7 Atlas (not chosen)",
    "x": 0,
    "y": 1000,
    "page": "pregame-alt"
@@ -1859,7 +1963,7 @@
   "t25": {
    "kind": "title1",
    "maxW": 15120,
-   "text": "Creation B · Sheet (not chosen)",
+   "text": "Creation B \u00b7 Sheet (not chosen)",
    "x": 0,
    "y": 2300,
    "page": "pregame-alt"
@@ -1867,7 +1971,7 @@
   "t26": {
    "kind": "title1",
    "maxW": 10560,
-   "text": "Creation C · Journey (not chosen)",
+   "text": "Creation C \u00b7 Journey (not chosen)",
    "x": 0,
    "y": 3600,
    "page": "pregame-alt"
@@ -1906,7 +2010,7 @@
    "y": 0,
    "w": 520,
    "page": "small",
-   "text": "Every retail panel and pre-game screen was checked against the design (README, \"Coverage\"). These are the pieces that had no modern design yet.\n\nAlso: Options › Graphics gains \"Show frame rate\"."
+   "text": "Every retail panel and pre-game screen was checked against the design (README, \"Coverage\"). These are the pieces that had no modern design yet.\n\nAlso: Options \u203a Graphics gains \"Show frame rate\"."
   },
   "t_radar": {
    "kind": "title1",
@@ -1951,7 +2055,23 @@
    "y": 0,
    "w": 520,
    "page": "hooks",
-   "text": "The client asks plugins about what is on screen and draws their answers in its own style. It never acts on them itself: anything that does something (loot the kept items) is the plugin's own button or menu entry.\n\nHook points: a card on Inspect and in the inventory's item details; a mark beside items in loot, inventory, trade and the vendor's sell list; entries in item menus; a page in Options › Plugins; buttons in a window's foot; buttons on the panel strip and dock.\n\nLooter and Value Check are made-up plugins for the example."
+   "text": "The client asks plugins about what is on screen and draws their answers in its own style. It never acts on them itself: anything that does something (loot the kept items) is the plugin's own button or menu entry.\n\nHook points: a card on Inspect and in the inventory's item details; a mark beside items in loot, inventory, trade and the vendor's sell list; entries in item menus; a page in Options \u203a Plugins; buttons in a window's foot; buttons on the panel strip and dock.\n\nLooter and Value Check are made-up plugins for the example."
+  },
+  "sizesTitle": {
+   "x": 0,
+   "y": -300,
+   "text": "Sizes: play windows slim, stop windows big",
+   "kind": "title1",
+   "maxW": 4480,
+   "page": "sizes"
+  },
+  "sizesDock": {
+   "x": 3160,
+   "y": 1740,
+   "w": 380,
+   "page": "sizes",
+   "fill": "orange",
+   "text": "Plugin dock on Modern: no lock button. Its grip and length handle show only while you hold Command (quick move) or in Edit layout, like every other HUD piece; Lock and Hide sit in its piece menu. Behaviour only, nothing to draw."
   }
  },
  "order": [
@@ -2149,7 +2269,20 @@
   "HookInspect.dc.html",
   "HookLoot.dc.html",
   "HookMenu.dc.html",
-  "HookOptions.dc.html"
+  "HookOptions.dc.html",
+  "SizesInGame.dc.html",
+  "SizesTarget.dc.html",
+  "SizesLoot.dc.html",
+  "Packs.dc.html",
+  "PacksGear.dc.html",
+  "PacksDrag.dc.html",
+  "PacksMenu.dc.html",
+  "PacksSplit.dc.html",
+  "SizesEffects.dc.html",
+  "Cursors.dc.html",
+  "WindowKinds.dc.html",
+  "SizesSalvage.dc.html",
+  "SizesSalvageDone.dc.html"
  ],
  "pages": [
   {
@@ -2251,6 +2384,10 @@
   {
    "id": "hooks",
    "name": "Plugin hooks"
+  },
+  {
+   "id": "sizes",
+   "name": "Sizes"
   },
   {
    "id": "pregame-alt",
