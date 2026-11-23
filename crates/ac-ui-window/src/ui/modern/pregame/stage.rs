@@ -24,6 +24,8 @@ use ac_ui::shapes::CornerRadii;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
 
+use ac_ui::pregame::chargen::appearance::{PreviewRequest, drag_turn};
+
 use super::scenery::{self, Sky};
 use crate::ui::modern::hud::lines::stroke;
 use crate::ui::modern::kit::{self, HARM, Hits, RED, Rect, bronze, gold, put, put_mid, put_right};
@@ -316,6 +318,10 @@ pub struct StageView {
     hits: Hits<Hit>,
     /// The last row clicked and when (a second click soon after enters).
     last_click: Option<(u32, f64)>,
+    /// Where a drag turning the figure was last (none: not turning).
+    turning: Option<f32>,
+    /// The figure's turns asked for since the window last looked.
+    pub turns: Vec<PreviewRequest>,
 }
 
 impl StageView {
@@ -343,6 +349,8 @@ impl StageView {
             clock: 0.0,
             hits: Hits::default(),
             last_click: None,
+            turning: None,
+            turns: Vec::new(),
         }
     }
 
@@ -350,6 +358,16 @@ impl StageView {
     #[must_use]
     pub fn stage_centre(&self) -> f32 {
         STAGE_X + (self.size.0 - STAGE_X) * 0.5
+    }
+
+    /// Whether a press at (`x`, `y`) turns the figure: a character picked,
+    /// no card over the stage, and the press on the figure, not a button.
+    fn turns_figure(&self, x: f32, y: f32) -> bool {
+        matches!(self.screen.mode, StageMode::Choose)
+            && self.screen.picked.is_some()
+            && matches!(self.screen.card, Card::None)
+            && kit::inside(self.figure_rect(), x, y)
+            && matches!(self.hits.at(x, y), None | Some(Hit::Swallow))
     }
 
     /// Where the figure is drawn.
@@ -1569,7 +1587,7 @@ impl Widget for StageView {
         true
     }
 
-    fn on_event(&mut self, _ui: &mut UiRoot, me: ElementId, e: &UiEvent) -> bool {
+    fn on_event(&mut self, ui: &mut UiRoot, me: ElementId, e: &UiEvent) -> bool {
         if e.target != Some(me) {
             return false;
         }
@@ -1577,7 +1595,26 @@ impl Widget for StageView {
         match e.kind {
             kind::MOUSE_MOVE | kind::HOVER_ENTER => {
                 self.hits.hover = Some((x, y));
+                if let Some(last) = self.turning {
+                    if let Some(turn) = drag_turn(x - last) {
+                        self.turns.push(turn);
+                        self.turning = Some(x);
+                    }
+                    return true;
+                }
                 false
+            }
+            // A drag across the figure turns it.
+            kind::MOUSE_DOWN => {
+                if self.turns_figure(x, y) {
+                    self.turning = Some(x);
+                    ui.set_capture(me);
+                }
+                true
+            }
+            kind::MOUSE_UP | kind::CAPTURE_CHANGED => {
+                self.turning = None;
+                true
             }
             kind::HOVER_LEAVE => {
                 self.hits.hover = None;
@@ -1688,7 +1725,34 @@ pub fn ago(then: u64, now: u64) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{ago, countdown};
+    use super::{Picked, StageMode, StageView, ago, countdown};
+    use ac_ui::UiRoot;
+    use ac_ui::event::{UiEvent, kind};
+    use ac_ui::pregame::chargen::appearance::PreviewRequest;
+    use ac_ui::tree::Element;
+
+    #[test]
+    fn a_drag_across_the_picked_figure_turns_it() {
+        let mut ui = UiRoot::new();
+        ui.set_size(1440.0, 900.0);
+        let mut view = StageView::new(super::StageFonts::default());
+        view.screen.mode = StageMode::Choose;
+        view.screen.picked = Some(Picked::default());
+        let r = view.figure_rect();
+        let (x, y) = ((r.0 + r.2 * 0.5) as i32, (r.1 + r.3 * 0.5) as i32);
+        let root = ui.root();
+        let me = ui.add(root, Element::at(0.0, 0.0, 1440.0, 900.0), view);
+        for (k, at) in [
+            (kind::MOUSE_DOWN, x),
+            (kind::MOUSE_MOVE, x + 10),
+            (kind::MOUSE_UP, x + 10),
+            (kind::MOUSE_MOVE, x + 40),
+        ] {
+            ui.send_event(me, &UiEvent::new(0, me, k).with_data(0, at, y));
+        }
+        let turns = ui.widget::<StageView>(me).map(|v| v.turns.clone());
+        assert_eq!(turns, Some(vec![PreviewRequest::TurnBy(50)]));
+    }
 
     #[test]
     fn the_restore_countdown_reads_as_a_clock() {

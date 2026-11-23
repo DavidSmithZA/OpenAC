@@ -570,8 +570,21 @@ impl WindowUi {
             .modern
             .as_ref()
             .and_then(|m| m.pregame.as_ref())
-            .and_then(|p| Some((p.figure, p.figure_look.clone()?)));
-        if let Some((figure, look)) = stage
+            .map(|p| (p.stage, p.figure, p.figure_look.clone()));
+        // A drag across it turns it.
+        if let Some((view, _, _)) = stage
+            && let Some(v) = self
+                .host
+                .root
+                .widget_mut::<super::modern::pregame::stage::StageView>(view)
+        {
+            controls.extend(
+                std::mem::take(&mut v.turns)
+                    .into_iter()
+                    .map(|r| (ViewportSlot::Stage, r)),
+            );
+        }
+        if let Some((_, figure, Some(look))) = stage
             && shown(&self.host.root, figure)
             && let Some((size, aspect)) = extent(&self.host.root, figure, pixels_per_unit)
         {
