@@ -383,7 +383,7 @@ dependencies = [
 
 [[package]]
 name = "ac-world-map"
-version = "0.2.15"
+version = "0.2.16"
 dependencies = [
  "ac-host-core",
  "ac-launcher-core",

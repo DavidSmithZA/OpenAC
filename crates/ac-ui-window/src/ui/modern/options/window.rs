@@ -1496,7 +1496,7 @@ impl OptionsFrame {
                         };
                         kit::button(
                             rc,
-                            &self.theme,
+                            &Horizon::current(),
                             r,
                             words,
                             self.fonts.control.as_ref(),

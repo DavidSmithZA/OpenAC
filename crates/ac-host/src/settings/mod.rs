@@ -895,7 +895,7 @@ fn display_object(d: &DisplaySettings) -> String {
             out
         },
     );
-    let fields: [(&str, String); 32] = [
+    let fields: [(&str, String); 33] = [
         ("automaticDegrades", boolean(d.automatic_degrades)),
         (
             "buildingDetailTextures",

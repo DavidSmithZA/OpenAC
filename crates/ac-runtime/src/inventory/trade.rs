@@ -380,7 +380,7 @@ mod tests {
             &RegisterTrade {
                 initiator: PARTNER,
                 partner: SELF,
-                stamp: 0,
+                stamp: 0.0,
             },
             SELF,
         );
