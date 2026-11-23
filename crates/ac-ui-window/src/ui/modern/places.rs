@@ -190,21 +190,23 @@ const PLACES: &[(&str, Place)] = &[
         },
     ),
     (
+        // A play window: at the left edge, under the counts that open it.
         super::magic::effects_run::EFFECTS_WINDOW,
         Place {
-            anchor: Anchor::Center,
-            dx: 0.0,
-            dy: 0.0,
+            anchor: Anchor::TopLeft,
+            dx: EDGE,
+            dy: 14.0 + super::hud::effects::CHIP_HEIGHT + 14.0,
             width: super::magic::effects_window::WIDTH,
             height: super::magic::effects_window::HEIGHT,
         },
     ),
     (
+        // A play window: beside the inventory, at its top.
         super::dealing::salvage_run::SALVAGE,
         Place {
-            anchor: Anchor::Center,
-            dx: 0.0,
-            dy: 0.0,
+            anchor: Anchor::TopRight,
+            dx: -(EDGE + super::items::inventory::WIDTH + EDGE),
+            dy: PLAY_TOP,
             width: super::dealing::salvage_window::WIDTH,
             height: super::dealing::salvage_window::HEIGHT,
         },

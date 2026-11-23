@@ -2990,7 +2990,7 @@ fn the_modern_salvage() {
     let frame = s.ui.host().root.window("modern-salvage").expect("it").frame;
     let (fx, fy, _, _) = rect_of(&s, frame);
     // Add from packs, then the first three.
-    s.click(0, fx + 20 + 470 - 70, fy + 68 + 14, Modifiers::NONE);
+    s.click(0, fx + 16 + 388 - 70, fy + 64 + 14, Modifiers::NONE);
     s.save("salvage-pick");
     for _ in 0..3 {
         // The first row not yet added sits lower each time.
@@ -3002,16 +3002,16 @@ fn the_modern_salvage() {
                 .unwrap_or(0) as i32;
         s.click(
             0,
-            fx + 110 + 400 - 12 - 6 - 32,
+            fx + 10 + 400 - 12 - 6 - 32,
             fy + 100 + 44 + 24 + 10 + pick * 42 + 20,
             Modifiers::NONE,
         );
     }
-    s.click(0, fx + 110 + 400 - 24, fy + 100 + 22, Modifiers::NONE);
+    s.click(0, fx + 10 + 400 - 24, fy + 100 + 22, Modifiers::NONE);
     s.save("salvage-staged");
     // Salvage.
     s.sent.clear();
-    s.click(0, fx + 820 - 20 - 95, fy + 540 - 36, Modifiers::NONE);
+    s.click(0, fx + 420 - 16 - 95, fy + 600 - 36, Modifiers::NONE);
     let salvaged = s.sent.iter().find_map(|c| match c {
         SessionCommand::Item(ItemCommand::Salvage { items, .. }) => Some(items.len()),
         _ => None,

@@ -1,8 +1,8 @@
-//! The Effects window's frame: Helpful and Harmful tabs; the list with its
-//! search, sort and filter chips, grouped (ending soon, timed, from your
-//! gear; harmful ending first) under a vitae card after a death; and the
-//! chosen effect's details with Cast again, Show item, or a word on how a
-//! harmful one ends.
+//! The Effects window's frame, a slim play window: Helpful and Harmful
+//! tabs; the list with its search, sort and filter chips, grouped (ending
+//! soon, timed, from your gear; harmful ending first) under a vitae card
+//! after a death. The chosen row opens in place with what the effect
+//! does, a weaker copy waiting under it, and Cast again or Show item.
 
 use ac_ui::modern::tone;
 use std::collections::HashMap;
@@ -24,24 +24,26 @@ use crate::ui::modern::hud::lines::stroke;
 use crate::ui::modern::kit::{self, ButtonLook, Rect, Scroll, Tab, hot, inside};
 
 /// The window's size.
-pub const WIDTH: f32 = 760.0;
+pub const WIDTH: f32 = 440.0;
 pub const HEIGHT: f32 = 560.0;
 const HEADER: f32 = 52.0;
 const TABS_H: f32 = 40.0;
 const BODY_TOP: f32 = HEADER + TABS_H + 12.0;
 const FOOT: f32 = 52.0;
 const BODY_BOTTOM: f32 = HEIGHT - FOOT - 12.0;
-const LIST_X: f32 = 20.0;
-const LIST_W: f32 = 420.0;
-const DETAIL_X: f32 = 456.0;
-const DETAIL_W: f32 = WIDTH - 20.0 - DETAIL_X;
-const SORT_W: f32 = 170.0;
+const LIST_X: f32 = 16.0;
+const LIST_W: f32 = WIDTH - 2.0 * LIST_X;
+const SORT_W: f32 = 150.0;
+const CHIP_H: f32 = 26.0;
 const GROUP_H: f32 = 26.0;
 const ROW_H: f32 = 44.0;
 const ROW_GAP: f32 = 2.0;
 const VITAE_H: f32 = 64.0;
-const DETAIL_HEAD: f32 = 68.0;
-const DETAIL_FOOT: f32 = 52.0;
+/// The chosen row's opened part: its padding, line steps and button.
+const OPEN_PAD: f32 = 12.0;
+const DESC_STEP: f32 = 18.0;
+const UNDER_STEP: f32 = 16.0;
+const ACTION_H: f32 = 30.0;
 const WHEEL: f32 = 2.0 * (ROW_H + ROW_GAP);
 
 /// The window's glyph: a star of eight points.
@@ -144,7 +146,6 @@ pub struct EffectsWindow {
     /// What it asked for since the window last looked.
     pub requests: Vec<EffectsRequest>,
     list_scroll: Scroll,
-    detail_scroll: Scroll,
     hover: Option<(f32, f32)>,
 }
 
@@ -164,7 +165,6 @@ impl EffectsWindow {
             chosen: None,
             requests: Vec::new(),
             list_scroll: Scroll::default(),
-            detail_scroll: Scroll::default(),
             hover: None,
         }
     }
@@ -175,7 +175,6 @@ impl EffectsWindow {
             self.harmful = harmful;
             self.chosen = None;
             self.list_scroll = Scroll::default();
-            self.detail_scroll = Scroll::default();
         }
     }
 
@@ -222,7 +221,7 @@ impl EffectsWindow {
         }
         let mut out = Vec::new();
         let mut x = LIST_X;
-        let y = BODY_TOP + 32.0 + 8.0;
+        let mut y = BODY_TOP + 32.0 + 8.0;
         let all = std::iter::once((None, "All")).chain(
             EffectKind::FILTERS
                 .into_iter()
@@ -236,18 +235,20 @@ impl EffectsWindow {
                 self.fonts.body.as_ref(),
                 self.fonts.badge.as_ref(),
             );
-            out.push((k, count, (x, y, w, 26.0)));
+            if x > LIST_X && x + w > LIST_X + LIST_W {
+                x = LIST_X;
+                y += CHIP_H + 4.0;
+            }
+            out.push((k, count, (x, y, w, CHIP_H)));
             x += w + 4.0;
         }
         out
     }
 
     fn list_top(&self) -> f32 {
-        if self.harmful {
-            BODY_TOP + 32.0 + 8.0
-        } else {
-            BODY_TOP + 32.0 + 8.0 + 26.0 + 8.0
-        }
+        self.chip_rects()
+            .last()
+            .map_or(BODY_TOP + 32.0 + 8.0, |(_, _, r)| r.1 + r.3 + 8.0)
     }
 
     fn list_room(&self) -> f32 {
@@ -270,7 +271,7 @@ impl EffectsWindow {
     }
 
     /// Each row's identity and its top within the list's content; and the
-    /// content's height.
+    /// content's height (the chosen row's opened part included).
     fn row_tops(&self) -> (Vec<(u32, f32)>, f32) {
         let mut y = if self.vitae_shown() {
             VITAE_H + 8.0
@@ -283,48 +284,72 @@ impl EffectsWindow {
             for r in rows {
                 out.push((r.identity, y));
                 y += ROW_H + ROW_GAP;
+                if self.chosen == Some(r.identity) {
+                    y += self.open_lines(r).2 - ROW_GAP + 6.0;
+                }
             }
         }
         (out, y)
     }
 
-    /// The effect the details show: the one chosen, else the first listed.
+    /// The chosen effect, while it is listed.
     #[must_use]
     pub fn shown(&self) -> Option<&Effect> {
+        let id = self.chosen?;
         let groups = self.groups();
-        let listed = || groups.iter().flat_map(|(_, r)| r.iter()).copied();
-        self.chosen
-            .and_then(|id| listed().find(|e| e.identity == id))
-            .or_else(|| listed().next())
-            .map(|e| self.list.find(e.identity).unwrap_or(e))
+        let listed = groups
+            .iter()
+            .flat_map(|(_, r)| r.iter())
+            .find(|e| e.identity == id)?;
+        Some(self.list.find(listed.identity).unwrap_or(listed))
     }
 
-    fn detail_rect() -> Rect {
-        (DETAIL_X, BODY_TOP, DETAIL_W, BODY_BOTTOM - BODY_TOP)
+    /// The opened part's button and its words: Cast again for the
+    /// player's own known spells, Show item for gear.
+    fn action_words(&self, e: &Effect) -> Option<String> {
+        match &e.source {
+            Source::You if self.extras.known.contains_key(&e.spell_id) => {
+                Some("Cast again".to_owned())
+            }
+            Source::Gear { .. } => Some("Show item".to_owned()),
+            _ => None,
+        }
     }
 
-    fn detail_body_room() -> f32 {
-        BODY_BOTTOM - BODY_TOP - DETAIL_HEAD - DETAIL_FOOT
+    /// Where the opened part of the chosen row starts, in the window
+    /// (scrolled), when it is listed.
+    fn open_top(&self) -> Option<f32> {
+        let id = self.chosen?;
+        let (rows, _) = self.row_tops();
+        let (_, top) = rows.into_iter().find(|(r, _)| *r == id)?;
+        Some(self.list_top() - self.list_scroll.at + top + ROW_H - 2.0)
     }
 
+    /// The opened part's button, in the window.
     fn action_rect(&self, e: &Effect) -> Option<(Rect, String)> {
-        let (x, y) = (DETAIL_X + 14.0, BODY_BOTTOM - DETAIL_FOOT + 10.0);
-        let words = match &e.source {
-            Source::You if self.extras.known.contains_key(&e.spell_id) => "Cast again".to_owned(),
-            Source::Gear { .. } => "Show item".to_owned(),
-            _ => return None,
-        };
+        let words = self.action_words(e)?;
+        let top = self.open_top()?;
+        let (_, _, h) = self.open_lines(e);
         let w = kit::button_width(&words, self.fonts.body.as_ref());
-        Some(((x, y, w, 32.0), words))
+        Some((
+            (
+                LIST_X + OPEN_PAD,
+                top + h - OPEN_PAD - ACTION_H,
+                w,
+                ACTION_H,
+            ),
+            words,
+        ))
     }
 
     fn settings_rect() -> Rect {
         (WIDTH - 20.0 - 100.0, HEIGHT - FOOT + 11.0, 100.0, 30.0)
     }
 
-    /// The details' body lines, wrapped, and its height.
-    fn detail_lines(&self, e: &Effect) -> (Vec<String>, Vec<String>, f32) {
-        let width = DETAIL_W - 28.0 - 8.0;
+    /// The opened part's description and waiting-copy lines, wrapped, and
+    /// its height.
+    fn open_lines(&self, e: &Effect) -> (Vec<String>, Vec<String>, f32) {
+        let width = LIST_W - 10.0 - 2.0 * OPEN_PAD;
         let desc = self
             .fonts
             .detail
@@ -335,17 +360,14 @@ impl EffectsWindow {
             (Some(u), Some(f)) => kit::wrap(f, u, width - 20.0),
             _ => Vec::new(),
         };
-        let grid = 3.0 * 22.0
-            + if e.left.is_some() && self.extras.show_times {
-                8.0
-            } else {
-                0.0
-            };
-        let mut h = 12.0 + grid + 12.0 + desc.len() as f32 * 18.0;
+        let mut h = 10.0 + 16.0 + 8.0 + desc.len() as f32 * DESC_STEP;
         if !under.is_empty() {
-            h += 12.0 + 16.0 + under.len() as f32 * 16.0;
+            h += 8.0 + 16.0 + under.len() as f32 * UNDER_STEP;
         }
-        (desc, under, h + 12.0)
+        if self.action_words(e).is_some() {
+            h += 10.0 + ACTION_H;
+        }
+        (desc, under, h + OPEN_PAD)
     }
 
     fn time_color(&self, e: &Effect) -> Color {
@@ -407,16 +429,9 @@ impl Widget for EffectsWindow {
                 false
             }
             kind::SCROLL => {
-                let at = self.hover.unwrap_or((x, y));
-                if inside(Self::detail_rect(), at.0, at.1) {
-                    let total = self.shown().map_or(0.0, |e| self.detail_lines(e).2);
-                    self.detail_scroll
-                        .wheel(e.data0, 48.0, total, Self::detail_body_room());
-                } else {
-                    let (_, total) = self.row_tops();
-                    let room = self.list_room();
-                    self.list_scroll.wheel(e.data0, WHEEL, total, room);
-                }
+                let (_, total) = self.row_tops();
+                let room = self.list_room();
+                self.list_scroll.wheel(e.data0, WHEEL, total, room);
                 true
             }
             kind::CLICK => {
@@ -441,11 +456,6 @@ impl Widget for EffectsWindow {
     fn draw(&mut self, _ui: &mut UiRoot, _me: ElementId, rc: &mut RenderContext<'_>) {
         self.draw_frame(rc);
         self.draw_list(rc);
-        if let Some(e) = self.shown().cloned() {
-            self.draw_details(rc, &e);
-        } else {
-            self.draw_empty_details(rc);
-        }
         self.draw_foot(rc);
     }
 }
@@ -493,10 +503,8 @@ impl EffectsWindow {
             let at = y - top + self.list_scroll.at;
             let (rows, _) = self.row_tops();
             if let Some((id, _)) = rows.into_iter().find(|(_, t)| at >= *t && at < *t + ROW_H) {
-                if self.chosen != Some(id) {
-                    self.detail_scroll = Scroll::default();
-                }
-                self.chosen = Some(id);
+                // A second click closes it again.
+                self.chosen = (self.chosen != Some(id)).then_some(id);
             }
         }
     }
@@ -657,10 +665,21 @@ impl EffectsWindow {
             }
             y += GROUP_H;
             for e in list {
+                let open = shown == Some(e.identity);
+                let extra = if open {
+                    let e = self.list.find(e.identity).unwrap_or(e);
+                    let h = self.open_lines(e).2;
+                    if y + ROW_H - 2.0 + h > top && y + ROW_H < top + room {
+                        self.draw_open(rc, e, y + ROW_H - 2.0, right, h);
+                    }
+                    h - ROW_GAP + 6.0
+                } else {
+                    0.0
+                };
                 if y + ROW_H > top && y < top + room {
-                    self.draw_row(rc, e, y, right, shown == Some(e.identity));
+                    self.draw_row(rc, e, y, right, open);
                 }
-                y += ROW_H + ROW_GAP;
+                y += ROW_H + ROW_GAP + extra;
             }
         }
         rc.pop_clip();
@@ -837,156 +856,60 @@ impl EffectsWindow {
         }
     }
 
-    fn draw_empty_details(&self, rc: &mut RenderContext<'_>) {
-        let (x, y, w, h) = Self::detail_rect();
-        let radius = CornerRadii::all(4.0);
-        rc.fill_rounded_rect(x, y, w, h, radius, hex(0, 0.28));
-        rc.stroke_rounded_rect(x, y, w, h, radius, kit::bronze(0.3), 1.0);
-        if let Some(f) = &self.fonts.detail {
-            let words = "Choose an effect to see what it does.";
-            for (i, line) in kit::wrap(f, words, w - 40.0).iter().enumerate() {
-                text::draw(
-                    rc,
-                    f,
-                    line,
-                    x + 20.0,
-                    y + 24.0 + i as f32 * 18.0,
-                    TextStyle::plain(Horizon::current().palette.muted),
-                );
-            }
-        }
-    }
-
-    #[allow(clippy::too_many_lines)]
-    fn draw_details(&mut self, rc: &mut RenderContext<'_>, e: &Effect) {
+    /// The chosen row's opened part, from `y`, `h` high: its school and
+    /// time, what it does, a weaker copy waiting under it, and its button.
+    fn draw_open(&self, rc: &mut RenderContext<'_>, e: &Effect, y: f32, right: f32, h: f32) {
         let p = Horizon::current().palette;
-        let (x, y, w, h) = Self::detail_rect();
-        let radius = CornerRadii::all(4.0);
-        rc.fill_rounded_rect(x, y, w, h, radius, hex(0, 0.28));
-        rc.stroke_rounded_rect(x, y, w, h, radius, kit::bronze(0.3), 1.0);
-        // The head.
-        self.draw_tile(rc, e, x + 14.0, y + 14.0, 40.0);
-        let tx = x + 14.0 + 40.0 + 10.0;
-        let room = x + w - 14.0 - tx;
-        let mut ty = y + 15.0;
-        if let Some(f) = &self.fonts.heading {
-            let lines = kit::wrap(f, &e.name, room);
-            for line in lines.iter().take(2) {
-                text::draw(rc, f, line, tx, ty, TextStyle::plain(p.text));
-                ty += 18.0;
-            }
-        }
+        let (x, w) = (LIST_X, right - LIST_X);
+        let radius = CornerRadii::new(0.0, 0.0, 4.0, 4.0);
+        rc.fill_rounded_rect(x, y, w, h, radius, kit::gold(0.07));
+        rc.stroke_rounded_rect(x, y, w, h, radius, kit::gold(1.0), 1.0);
+        let left = x + OPEN_PAD;
+        let mut by = y + 10.0;
         if let Some(f) = &self.fonts.small {
-            text::draw(
-                rc,
-                f,
-                &kit::fit(f, &e.school, room),
-                tx,
-                ty + 2.0,
-                TextStyle::plain(tone::soft(1.0)),
-            );
-        }
-        rc.fill(x, y + DETAIL_HEAD - 1.0, w, 1.0, kit::bronze(0.2));
-        // The body, scrolled.
-        let (desc, under, total) = self.detail_lines(e);
-        let body_top = y + DETAIL_HEAD;
-        let body_room = Self::detail_body_room();
-        self.detail_scroll.hold(total, body_room);
-        rc.push_clip(x, body_top, w, body_room);
-        let left = x + 14.0;
-        let value_x = left + 70.0 + 10.0;
-        let value_w = x + w - 14.0 - 8.0 - value_x;
-        let mut by = body_top + 12.0 - self.detail_scroll.at;
-        let label = |rc: &mut RenderContext<'_>, words: &str, at: f32| {
-            if let Some(f) = &self.fonts.small {
-                text::draw(rc, f, words, left, at + 1.0, TextStyle::plain(p.muted));
-            }
-        };
-        // Changes.
-        label(rc, "Changes", by);
-        if let Some(f) = &self.fonts.strong {
-            let stat = e.stat_words();
-            let stat = if stat.is_empty() {
-                "\u{2014}".to_owned()
-            } else {
-                stat
-            };
-            let shown = kit::fit(f, &stat, value_w - 50.0);
-            text::draw(rc, f, &shown, value_x, by, TextStyle::plain(p.text));
-            if !e.delta.is_empty() {
-                let dx = value_x + text::measure(f, &shown, 0.0) + 8.0;
-                let color = if e.harmful { kit::HARM } else { kit::GOOD };
-                text::draw(rc, f, &e.delta, dx, by, TextStyle::plain(color));
-            }
-        }
-        by += 22.0;
-        label(
-            rc,
-            if matches!(e.source, Source::Gear { .. }) {
-                "From"
-            } else {
-                "Cast by"
-            },
-            by,
-        );
-        if let Some(f) = &self.fonts.strong {
-            let who = kit::fit(f, &e.source.detail_words(), value_w);
-            text::draw(rc, f, &who, value_x, by, TextStyle::plain(p.text));
-        }
-        by += 22.0;
-        label(rc, "Time left", by);
-        if let Some(f) = &self.fonts.strong {
-            let words = if e.left.is_some() && !self.extras.show_times {
-                "Hidden (Options)".to_owned()
+            let time = if e.left.is_some() && !self.extras.show_times {
+                "time hidden (Options)".to_owned()
             } else {
                 self.time_words(e, true)
             };
+            let line = if e.school.is_empty() {
+                time
+            } else {
+                format!("{} \u{b7} {time}", e.school)
+            };
             text::draw(
                 rc,
                 f,
-                &words,
-                value_x,
+                &kit::fit(f, &line, w - 2.0 * OPEN_PAD),
+                left,
                 by,
-                TextStyle::plain(self.time_color(e)),
+                TextStyle::plain(tone::soft(1.0)),
             );
         }
-        by += 22.0;
-        if e.left.is_some() && self.extras.show_times {
-            kit::meter(
-                rc,
-                (value_x, by - 4.0, value_w, 4.0),
-                e.share_left(),
-                self.time_color(e),
-            );
-            by += 8.0;
-        }
-        by += 12.0;
+        by += 16.0 + 8.0;
+        let (desc, under, _) = self.open_lines(e);
         if let Some(f) = &self.fonts.detail {
-            by = kit::lines(rc, f, &desc, left, by, 18.0, tone::warm(1.0));
+            by = kit::lines(rc, f, &desc, left, by, DESC_STEP, tone::warm(1.0));
         }
         if !under.is_empty()
             && let Some(f) = &self.fonts.small
         {
-            by += 12.0;
-            let bh = 16.0 + under.len() as f32 * 16.0;
-            let bw = x + w - 14.0 - 8.0 - left;
-            dashed(rc, (left, by, bw, bh), kit::bronze(0.45));
-            kit::lines(rc, f, &under, left + 10.0, by + 8.0, 16.0, tone::soft(1.0));
+            by += 8.0;
+            let bh = 16.0 + under.len() as f32 * UNDER_STEP;
+            dashed(rc, (left, by, w - 2.0 * OPEN_PAD, bh), kit::bronze(0.45));
+            kit::lines(
+                rc,
+                f,
+                &under,
+                left + 10.0,
+                by + 8.0,
+                UNDER_STEP,
+                tone::soft(1.0),
+            );
         }
-        rc.pop_clip();
-        kit::scrollbar(
-            rc,
-            x + w - 8.0,
-            body_top + 4.0,
-            body_room - 8.0,
-            total,
-            self.detail_scroll.at,
-        );
-        // The foot.
-        let foot = y + h - DETAIL_FOOT;
-        rc.fill(x, foot, w, 1.0, kit::bronze(0.2));
-        let note_x;
         if let Some((r, words)) = self.action_rect(e) {
+            // Drawn where the scrolled list puts it.
+            let r = (r.0, y + h - OPEN_PAD - ACTION_H, r.2, r.3);
             let look = if matches!(e.source, Source::Gear { .. }) {
                 ButtonLook::Plain
             } else {
@@ -1002,7 +925,6 @@ impl EffectsWindow {
                 hot(self.hover, r),
                 true,
             );
-            note_x = r.0 + r.2 + 10.0;
             let note = match &e.source {
                 Source::Gear { .. } => "Lasts while you wear it".to_owned(),
                 _ => self
@@ -1013,20 +935,11 @@ impl EffectsWindow {
                     .unwrap_or_default(),
             };
             if let Some(f) = &self.fonts.small {
-                let shown = kit::fit(f, &note, x + w - 14.0 - note_x);
-                let ny = foot + ((DETAIL_FOOT - f.line_height) * 0.5).round();
-                text::draw(rc, f, &shown, note_x, ny, TextStyle::plain(p.muted));
+                let nx = r.0 + r.2 + 10.0;
+                let shown = kit::fit(f, &note, x + w - OPEN_PAD - nx);
+                let ny = r.1 + ((r.3 - f.line_height) * 0.5).round();
+                text::draw(rc, f, &shown, nx, ny, TextStyle::plain(p.muted));
             }
-        } else if let Some(f) = &self.fonts.small {
-            let words = if e.harmful {
-                "Ends on its own when the time runs out, or sooner if you dispel it."
-            } else {
-                "Cast on you by someone else; it ends when the time runs out."
-            };
-            let lines = kit::wrap(f, words, w - 28.0);
-            let step = 15.0;
-            let ny = foot + ((DETAIL_FOOT - lines.len() as f32 * step) * 0.5).round();
-            kit::lines(rc, f, &lines, x + 14.0, ny, step, tone::soft(1.0));
         }
     }
 
@@ -1056,15 +969,6 @@ impl EffectsWindow {
             );
             x += 12.0;
             text::draw(rc, f, &warn, x, y, TextStyle::plain(p.muted));
-            x += text::measure(f, &warn, 0.0) + 14.0;
-            text::draw(
-                rc,
-                f,
-                "Hover a count on screen for a quick list",
-                x,
-                y,
-                TextStyle::plain(p.muted),
-            );
         }
         let r = Self::settings_rect();
         let lit = hot(self.hover, r);
@@ -1146,23 +1050,27 @@ mod tests {
     }
 
     #[test]
-    fn the_details_show_the_first_listed_until_one_is_chosen() {
+    fn nothing_is_open_until_a_row_is_chosen_and_a_new_tab_closes_it() {
         let mut w = window();
-        assert_eq!(w.shown().map(|e| e.identity), Some(1));
+        assert_eq!(w.shown().map(|e| e.identity), None);
         w.chosen = Some(2);
         assert_eq!(w.shown().map(|e| e.identity), Some(2));
         w.show_tab(true);
         assert_eq!(w.chosen, None);
-        assert_eq!(w.shown().map(|e| e.identity), Some(3));
+        assert_eq!(w.shown().map(|e| e.identity), None);
     }
 
     #[test]
-    fn a_click_on_a_row_chooses_it() {
+    fn a_click_on_a_row_opens_it_in_place_and_a_second_closes_it() {
         let mut w = window();
-        let (rows, _) = w.row_tops();
+        let (rows, closed) = w.row_tops();
         let (id, top) = rows[1];
         w.click(LIST_X + 40.0, w.list_top() + top + 10.0);
         assert_eq!(w.chosen, Some(id));
+        let (_, open) = w.row_tops();
+        assert!(open > closed, "the row opens: {closed} to {open}");
+        w.click(LIST_X + 40.0, w.list_top() + top + 10.0);
+        assert_eq!(w.chosen, None);
     }
 
     #[test]
@@ -1177,6 +1085,7 @@ mod tests {
     fn cast_again_is_only_for_the_players_own_known_spells() {
         let mut w = window();
         let e = w.list.helpful[0].clone();
+        w.chosen = Some(e.identity);
         assert!(w.action_rect(&e).is_none());
         w.extras.known.insert(e.spell_id, "Not on a bar".to_owned());
         assert_eq!(
