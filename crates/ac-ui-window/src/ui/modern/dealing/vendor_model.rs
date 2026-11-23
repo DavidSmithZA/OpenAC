@@ -13,7 +13,8 @@ use ac_core::items::vendor::{
     NO_LIMIT, UNLIMITED_STOCK, buy_price, per_unit_value, resolve_authored_stack_size,
 };
 use ac_core::items::{
-    ClientObject, ClientObjectTable, EquipMask, VendorShopItem, VendorStagingEntry,
+    ClientObject, ClientObjectTable, EquipMask, VendorSellRejection, VendorShopItem,
+    VendorStagingEntry,
 };
 use ac_runtime::inventory::VendorView;
 use ac_runtime::inventory::shop::{group_thousands, has_room_in, listing_price};
@@ -916,27 +917,29 @@ fn count_words(n: usize) -> String {
     }
 }
 
-/// What the player is told when the vendor will not take `o`: the
+/// What the player is told beside `why` the vendor will not take `o`: the
 /// vendor's limit against the item's worth, when a limit is the reason.
 #[must_use]
-pub fn refusal_limit(view: &VendorView, o: &ClientObject, vendor: &str) -> Option<String> {
-    let each = per_unit_value(o.value, Some(o.stack_size));
+pub fn refusal_limit(
+    view: &VendorView,
+    o: &ClientObject,
+    vendor: &str,
+    why: VendorSellRejection,
+) -> Option<String> {
+    let each = group_thousands(per_unit_value(o.value, Some(o.stack_size)));
     let p = &view.profile;
-    if p.merchandise_max_value != NO_LIMIT && i64::from(each) > i64::from(p.merchandise_max_value) {
-        return Some(format!(
-            "{vendor} buys up to {}p. It is worth {}p.",
-            group_thousands(i32::try_from(p.merchandise_max_value).unwrap_or(i32::MAX)),
-            group_thousands(each)
-        ));
+    let limit = |v: u32| group_thousands(i32::try_from(v).unwrap_or(i32::MAX));
+    match why {
+        VendorSellRejection::TooValuable => Some(format!(
+            "{vendor} buys up to {}p. It is worth {each}p.",
+            limit(p.merchandise_max_value)
+        )),
+        VendorSellRejection::TooCheap => Some(format!(
+            "{vendor} buys from {}p. It is worth {each}p.",
+            limit(p.merchandise_min_value)
+        )),
+        _ => None,
     }
-    if p.merchandise_min_value != NO_LIMIT && i64::from(each) < i64::from(p.merchandise_min_value) {
-        return Some(format!(
-            "{vendor} buys from {}p. It is worth {}p.",
-            group_thousands(i32::try_from(p.merchandise_min_value).unwrap_or(i32::MAX)),
-            group_thousands(each)
-        ));
-    }
-    None
 }
 
 #[cfg(test)]
@@ -1011,6 +1014,22 @@ mod tests {
 
     fn no_icon(_: Iconed<'_>) -> Option<TextureRef> {
         None
+    }
+
+    #[test]
+    fn the_limit_is_told_only_when_it_is_the_reason() {
+        let view = shop();
+        let mut gem = ClientObject::new(0x5000_0101);
+        gem.value = 30_000;
+        gem.stack_size = 1;
+        assert_eq!(
+            refusal_limit(&view, &gem, "Ilsa", VendorSellRejection::TooValuable).as_deref(),
+            Some("Ilsa buys up to 25,000p. It is worth 30,000p.")
+        );
+        assert_eq!(
+            refusal_limit(&view, &gem, "Ilsa", VendorSellRejection::WrongType),
+            None
+        );
     }
 
     #[test]

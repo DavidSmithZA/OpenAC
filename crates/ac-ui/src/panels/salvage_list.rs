@@ -7,10 +7,11 @@
 
 use std::collections::HashSet;
 
-use ac_core::items::{ClientObject, ItemType, is_salvage_suitable};
+use ac_core::items::{ClientObject, ItemType, PublicWeenieFlags, is_salvage_suitable};
 use ac_runtime::inventory::{ItemCommand, ObjectRef};
 use ac_runtime::session::SessionCommand;
 
+use crate::event::{ItemDragPayload, ItemDragSource};
 use crate::panels::items::ItemsView;
 
 /// What a refused list says.
@@ -19,6 +20,62 @@ pub const INVALID_LIST: &str = "The list of items you are attempting to salvage 
 pub const CANNOT_SALVAGE_NOW: &str = "You cannot salvage those items right now.";
 
 /// See the module documentation.
+/// Why an item cannot go on the list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SalvageRefusal {
+    /// The list has no salvaging tool the player carries.
+    NoTool,
+    /// It is the tool the list salvages with.
+    IsTheTool,
+    /// The player does not carry it.
+    NotCarried,
+    /// It is on the list already.
+    AlreadyListed,
+    /// It is not in the object table.
+    Gone,
+    /// It is retained.
+    Retained,
+    /// It could be salvaged, but only one material goes at a time and the
+    /// list holds another.
+    OtherMaterial {
+        /// Its material.
+        item: u32,
+        /// The list's.
+        listed: u32,
+    },
+    /// It cannot be salvaged at all.
+    Unsuitable,
+}
+
+/// Whether a drag can stage its item at all: only what is carried in the
+/// packs comes in (worn gear and things on the ground do not).
+#[must_use]
+pub fn drag_stages(p: &ItemDragPayload) -> bool {
+    p.source_kind == ItemDragSource::Inventory && p.obj_id != 0
+}
+
+/// Why `item` itself cannot be salvaged with `material` on the list (0:
+/// none yet), if it cannot.
+#[must_use]
+pub fn item_refusal(
+    item: &ClientObject,
+    material: u32,
+    allow_multiple: bool,
+) -> Option<SalvageRefusal> {
+    if is_salvage_suitable(item, material, allow_multiple) {
+        None
+    } else if item.flags().contains(PublicWeenieFlags::RETAINED) {
+        Some(SalvageRefusal::Retained)
+    } else if is_salvage_suitable(item, 0, true) {
+        Some(SalvageRefusal::OtherMaterial {
+            item: item.material_type.unwrap_or(0),
+            listed: material,
+        })
+    } else {
+        Some(SalvageRefusal::Unsuitable)
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SalvageList {
     tool: u32,
@@ -82,18 +139,37 @@ impl SalvageList {
     /// the staged material when one material at a time is allowed).
     #[must_use]
     pub fn can_add(&self, item: u32, view: &ItemsView<'_>, allow_multiple: bool) -> bool {
-        if !Self::is_tool_available(self.tool, view)
-            || item == self.tool
-            || !is_owned(view, item)
-            || self.items.contains(&item)
-        {
-            return false;
+        self.refusal(item, view, allow_multiple).is_none()
+    }
+
+    /// Why `item` cannot go on the list, if it cannot (a pack with
+    /// contents can: its suitable contents go on).
+    #[must_use]
+    pub fn refusal(
+        &self,
+        item: u32,
+        view: &ItemsView<'_>,
+        allow_multiple: bool,
+    ) -> Option<SalvageRefusal> {
+        if !Self::is_tool_available(self.tool, view) {
+            return Some(SalvageRefusal::NoTool);
+        }
+        if item == self.tool {
+            return Some(SalvageRefusal::IsTheTool);
+        }
+        if !is_owned(view, item) {
+            return Some(SalvageRefusal::NotCarried);
+        }
+        if self.items.contains(&item) {
+            return Some(SalvageRefusal::AlreadyListed);
         }
         let Some(object) = view.get(item) else {
-            return false;
+            return Some(SalvageRefusal::Gone);
         };
-        !view.objects.get_contained_items(item).is_empty()
-            || is_salvage_suitable(object, self.material, allow_multiple)
+        if !view.objects.get_contained_items(item).is_empty() {
+            return None;
+        }
+        item_refusal(object, self.material, allow_multiple)
     }
 
     /// Stage `item` (a pack stages its suitable contents); the notices to

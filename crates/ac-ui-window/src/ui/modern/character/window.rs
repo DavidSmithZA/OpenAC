@@ -9,6 +9,7 @@
 //! children that scroll by themselves.
 
 use ac_ui::modern::tone;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext};
@@ -1420,10 +1421,9 @@ pub struct SkillList {
     fonts: CharacterFonts,
     /// The groups shown.
     pub groups: Vec<(SkillGroup, Vec<CharacterSkill>)>,
-    /// The sheet's unassigned experience and skill credits (which buttons
-    /// can be pressed).
-    pub unassigned: u64,
-    pub credits: i32,
+    /// The skills whose button the sheet pays for now (a raise by one,
+    /// or training with credits).
+    pub affordable: HashSet<u32>,
     /// A raise is on its way.
     pub waiting: bool,
     /// The skill chosen.
@@ -1441,8 +1441,7 @@ impl SkillList {
         Self {
             fonts,
             groups: Vec::new(),
-            unassigned: 0,
-            credits: 0,
+            affordable: HashSet::new(),
             waiting: false,
             chosen: None,
             requests: Vec::new(),
@@ -1457,8 +1456,16 @@ impl SkillList {
             .into_iter()
             .map(|(g, v)| (g, v.into_iter().cloned().collect()))
             .collect();
-        self.unassigned = sheet.unassigned_xp;
-        self.credits = sheet.skill_credits;
+        self.affordable = self
+            .groups
+            .iter()
+            .flat_map(|(_, skills)| skills)
+            .map(|s| s.id)
+            .filter(|id| {
+                affordable(sheet, Row::Skill(*id), Amount::One)
+                    || model::train(sheet, *id).is_some()
+            })
+            .collect();
     }
 
     fn row_tops(&self) -> (Vec<(u32, f32)>, f32) {
@@ -1688,10 +1695,10 @@ impl SkillList {
         }
         let lit = hot(self.hover, b);
         if trained {
-            let can = !self.waiting && s.raise_cost > 0 && self.unassigned >= s.raise_cost;
+            let can = !self.waiting && self.affordable.contains(&s.id);
             plus_button(rc, b, can, lit, self.fonts.strong.as_ref());
         } else {
-            let can = !self.waiting && s.trained_cost > 0 && self.credits >= s.trained_cost;
+            let can = !self.waiting && self.affordable.contains(&s.id);
             let a = if can { 1.0 } else { 0.45 };
             rc.stroke_rounded_rect(
                 b.0,

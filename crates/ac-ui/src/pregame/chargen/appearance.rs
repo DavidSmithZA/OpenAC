@@ -8,7 +8,7 @@ use ac_core::chargen::{
     CLOTHING_SAMPLE_INDEX, ChargenClothingTableSource, ChargenGearOption, ChargenGenderOptions,
     ChargenHeritageGroup as H, ChargenOptions, ChargenPalSetSource, ChargenPaletteColorSource,
     ChargenSwatchRgb, EYE_SAMPLE_INDEX, HAIR_SAMPLE_INDEX, SKIN_FAMILY_SAMPLE_INDEX,
-    clothing_swatch_pal_set_id, direct_color, pal_set_average_color,
+    clothing_swatch_pal_set_id, direct_color, get_palette_index, pal_set_average_color,
 };
 use ac_runtime::session::creation::{
     AppearanceSlot, CreationAppearance, CreationCommand, CreationSnapshot, ShadeSlot, UNSET,
@@ -469,12 +469,84 @@ fn clothing(
     }
 }
 
+/// The palette set and sample a part's shade track runs through: the
+/// picked hair colour's, or the skin's for the skin and the parts that
+/// follow it (none for the eyes and the clothes).
+#[must_use]
+pub fn shade_source(
+    part: Part,
+    a: &CreationAppearance,
+    g: &ChargenGenderOptions,
+) -> Option<(u32, i32)> {
+    match part {
+        Part::Hair => {
+            let i = if a.hair_color == UNSET {
+                0
+            } else {
+                a.hair_color as usize
+            };
+            g.hair_colors.get(i).map(|id| (*id, HAIR_SAMPLE_INDEX))
+        }
+        Part::Nose | Part::Mouth | Part::Skin => {
+            Some((g.skin_pal_set_id, SKIN_FAMILY_SAMPLE_INDEX))
+        }
+        _ => None,
+    }
+}
+
+/// Up to `stops` shades evenly along a palette set of `count` palettes:
+/// the palette index for each.
+#[must_use]
+pub fn shade_indices(count: usize, stops: usize) -> Vec<usize> {
+    let count_i = i32::try_from(count).unwrap_or(0);
+    if count_i <= 0 || stops == 0 {
+        return Vec::new();
+    }
+    let stops = stops.min(count).max(1);
+    let mut out: Vec<usize> = (0..stops)
+        .map(|k| {
+            let shade = if stops == 1 {
+                0.0
+            } else {
+                k as f64 / (stops - 1) as f64
+            };
+            usize::try_from(get_palette_index(count_i, shade)).unwrap_or(0)
+        })
+        .collect();
+    out.dedup();
+    out
+}
+
+/// The colours along `part`'s shade track, dark to light, up to `stops` of
+/// them (none when the part has no track or the dats lack its palettes).
+#[must_use]
+pub fn shade_stops(
+    part: Part,
+    gender: &ChargenGenderOptions,
+    appearance: &CreationAppearance,
+    sources: &dyn SwatchSourcesDyn,
+    stops: usize,
+) -> Vec<ChargenSwatchRgb> {
+    let Some((set, sample)) = shade_source(part, appearance, gender) else {
+        return Vec::new();
+    };
+    let Some(palettes) = sources.palettes(set) else {
+        return Vec::new();
+    };
+    shade_indices(palettes.len(), stops)
+        .into_iter()
+        .filter_map(|i| sources.direct(*palettes.get(i)?, sample))
+        .collect()
+}
+
 /// [`SwatchSources`] as an object.
 pub trait SwatchSourcesDyn {
     /// A palette set's average colour.
     fn average(&self, pal_set: u32, sample: i32) -> Option<ChargenSwatchRgb>;
     /// One colour of a palette.
     fn direct(&self, palette: u32, sample: i32) -> Option<ChargenSwatchRgb>;
+    /// A palette set's palettes, in order.
+    fn palettes(&self, pal_set: u32) -> Option<Vec<u32>>;
     /// The palette set a garment's dye shows.
     fn clothing_pal_set(&self, clothing_table: u32, template: u32) -> Option<u32>;
     /// Forget what was missing when asked for (see
@@ -489,6 +561,10 @@ impl<T: SwatchSources> SwatchSourcesDyn for T {
 
     fn direct(&self, palette: u32, sample: i32) -> Option<ChargenSwatchRgb> {
         direct_color(self, palette, sample)
+    }
+
+    fn palettes(&self, pal_set: u32) -> Option<Vec<u32>> {
+        self.pal_set(pal_set).map(|s| s.palette_ids.clone())
     }
 
     fn clothing_pal_set(&self, clothing_table: u32, template: u32) -> Option<u32> {
@@ -1071,6 +1147,41 @@ impl AppearancePage {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shade_stops_run_along_the_palettes() {
+        assert_eq!(shade_indices(3, 8), vec![0, 1, 2]);
+        assert_eq!(shade_indices(20, 5), vec![0, 4, 9, 14, 19]);
+        assert!(shade_indices(0, 5).is_empty());
+    }
+
+    #[test]
+    fn only_hair_and_skin_have_a_shade_track() {
+        let g = ChargenGenderOptions {
+            hair_colors: vec![0x0400_0001, 0x0400_0002],
+            skin_pal_set_id: 0x0400_0009,
+            ..ChargenGenderOptions::default()
+        };
+        let mut a = CreationAppearance {
+            hair_color: 1,
+            ..CreationAppearance::default()
+        };
+        assert_eq!(
+            shade_source(Part::Hair, &a, &g),
+            Some((0x0400_0002, HAIR_SAMPLE_INDEX))
+        );
+        a.hair_color = UNSET;
+        assert_eq!(
+            shade_source(Part::Hair, &a, &g),
+            Some((0x0400_0001, HAIR_SAMPLE_INDEX))
+        );
+        assert_eq!(
+            shade_source(Part::Mouth, &a, &g),
+            Some((0x0400_0009, SKIN_FAMILY_SAMPLE_INDEX))
+        );
+        assert_eq!(shade_source(Part::Eyes, &a, &g), None);
+        assert_eq!(shade_source(Part::Shirt, &a, &g), None);
+    }
 
     #[test]
     fn a_spin_wraps_and_headgear_passes_through_none() {

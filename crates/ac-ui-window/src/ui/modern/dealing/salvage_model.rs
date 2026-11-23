@@ -13,6 +13,7 @@ use ac_runtime::inventory::shop::group_thousands;
 use ac_ui::draw::{Color, TextureRef};
 use ac_ui::modern::theme::hex;
 use ac_ui::modern::tone;
+use ac_ui::panels::salvage_list::{SalvageRefusal, item_refusal};
 
 use super::vendor_model::carried;
 
@@ -150,24 +151,30 @@ fn workmanship(o: &ClientObject) -> f32 {
     o.workmanship
 }
 
+/// What the player is told for `why`.
+#[must_use]
+pub fn refusal_words(why: SalvageRefusal) -> String {
+    match why {
+        SalvageRefusal::IsTheTool => "That is the tool you are salvaging with.".to_owned(),
+        SalvageRefusal::NotCarried => "You can only salvage what you carry.".to_owned(),
+        SalvageRefusal::AlreadyListed => "It is on the list already.".to_owned(),
+        SalvageRefusal::Retained => "Retained items cannot be salvaged.".to_owned(),
+        SalvageRefusal::OtherMaterial { item, listed } => format!(
+            "One material at a time: this is {}, the list is {}.",
+            salvage_material_name(item),
+            salvage_material_name(listed)
+        ),
+        SalvageRefusal::NoTool | SalvageRefusal::Gone | SalvageRefusal::Unsuitable => {
+            "That cannot be salvaged.".to_owned()
+        }
+    }
+}
+
 /// Why `o` cannot be salvaged, if it cannot (`material` is the staged one
 /// when one material at a time is allowed).
 #[must_use]
 pub fn refusal(o: &ClientObject, material: u32, allow_multiple: bool) -> Option<String> {
-    if is_salvage_suitable(o, material, allow_multiple) {
-        return None;
-    }
-    if o.flags().contains(PublicWeenieFlags::RETAINED) {
-        return Some("Retained items cannot be salvaged.".to_owned());
-    }
-    if is_salvage_suitable(o, 0, true) {
-        return Some(format!(
-            "One material at a time: this is {}, the list is {}.",
-            salvage_material_name(o.material_type.unwrap_or(0)),
-            salvage_material_name(material)
-        ));
-    }
-    Some("That cannot be salvaged.".to_owned())
+    item_refusal(o, material, allow_multiple).map(refusal_words)
 }
 
 /// The Salvage window's view of the staging (`staged`, of `material`) with

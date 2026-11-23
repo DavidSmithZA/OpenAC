@@ -12,6 +12,7 @@ use ac_runtime::session::creation::{ChargenAttribute, UNSET};
 use ac_ui::draw::{Color, ColorVertex, RenderContext};
 use ac_ui::event::{UiEvent, kind};
 use ac_ui::modern::Horizon;
+use ac_ui::modern::picks::PickGrid;
 use ac_ui::modern::text::{self, TextStyle};
 use ac_ui::modern::theme::{fill_glass, hex};
 use ac_ui::pregame::chargen::appearance::{Part, PreviewRequest};
@@ -1477,25 +1478,20 @@ impl StudioView {
             }
             y += 38.0;
             // Eight to a row, up to three rows, paged round the picked one
-            // (the stepper reaches the rest).
-            let per_row = 8usize;
-            let page = per_row * 3;
-            let first = now.saturating_sub(1) / page * page;
-            let pick_w = (w - 4.0 * (per_row as f32 - 1.0)) / per_row as f32;
-            let mut shown: Vec<Option<usize>> =
-                (first..(first + page).min(count)).map(Some).collect();
-            if c.may_be_none {
-                shown.push(None);
-            }
-            for (i, pick) in shown.iter().enumerate() {
-                let r = (
-                    x + (i % per_row) as f32 * (pick_w + 4.0),
-                    y + (i / per_row) as f32 * 38.0,
-                    pick_w,
-                    34.0,
-                );
+            // (the stepper reaches the rest); "None", when the part may
+            // have none, is the last pick.
+            let total = count + usize::from(c.may_be_none);
+            let picked = if now == 0 && c.may_be_none {
+                total
+            } else {
+                now
+            };
+            let grid = PickGrid::paged(total, picked, 8, 3, w);
+            for i in grid.first..grid.last {
+                let pick = (i < count).then_some(i);
+                let r = grid.cell(i, x, y);
                 let on = match pick {
-                    Some(n) => *n + 1 == now,
+                    Some(n) => n + 1 == now,
                     None => now == 0,
                 };
                 let value = pick.map_or(UNSET, |n| u32::try_from(n).unwrap_or(0));
@@ -1526,7 +1522,7 @@ impl StudioView {
                     );
                 }
             }
-            y += shown.len().div_ceil(per_row) as f32 * 38.0 + 10.0;
+            y += grid.height_used() + 14.0;
         }
         if let Some((count, picked)) = c.colors {
             kit::spaced(rc, f.label.as_ref(), "COLOUR", x, y + 4.0);

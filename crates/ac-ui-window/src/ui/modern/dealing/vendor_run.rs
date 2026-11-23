@@ -619,7 +619,7 @@ impl WindowUi {
             let refused = self.facts.objects.get(p.obj_id).map(|o| Refused {
                 name: names(o),
                 reason: r.message().to_owned(),
-                limit: refusal_limit(shop, o, &vendor),
+                limit: refusal_limit(shop, o, &vendor, r),
             });
             if let Some(f) = self.host.root.widget_mut::<VendorFrame>(frame) {
                 f.refused = refused;
@@ -666,14 +666,6 @@ impl WindowUi {
             .numbers()
             .and_then(|n| n.spellbook())
             .map(|b| b.desired_components().clone());
-        let pyreals = self
-            .facts
-            .objects
-            .get(self.facts.state.player)
-            .map_or(0, |p| {
-                p.properties
-                    .get_int(ac_core::properties::PropertyInt::COIN_VALUE.0, 0)
-            });
         let selected = self.player_view.and_then(|v| v.selected);
         let pending: Vec<u32> = self.facts.state.pending_item.into_iter().collect();
         let Self {
@@ -684,6 +676,7 @@ impl WindowUi {
         } = self;
         let resolve = crate::ui::facts::composed_names(&status.names);
         let items = facts.items_view(selected, &pending, None, &resolve);
+        let pyreals = ac_ui::panels::vendor::coin_value(&items);
         let shop_facts = ShopFacts {
             view: shop,
             items: &items,

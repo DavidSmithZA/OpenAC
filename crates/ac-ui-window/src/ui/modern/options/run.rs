@@ -11,7 +11,7 @@ use ac_ui::input::action_map::RetailActionClass;
 use ac_ui::modern::Horizon;
 use ac_ui::panels::items::emit;
 use ac_ui::panels::keyboard_config::{
-    self, KeyConflict, KeyboardConfigController, KeyboardConfigOutput,
+    CaptureVerdict, KeyboardConfigController, KeyboardConfigOutput,
 };
 use ac_ui::panels::options::OptionValue;
 use ac_ui::panels::options::keys::{LiveValues, OptionKey};
@@ -42,9 +42,6 @@ pub struct OptionsUi {
     pub search: ElementId,
     /// It was showing last frame.
     was_open: bool,
-    /// A key pressed that others hold, waiting for the player: the
-    /// keyboard row and slot, the key, and the rows it would come from.
-    pending: Option<(usize, usize, KeyChord, Vec<usize>)>,
     /// The key dispatcher was capturing, last frame.
     dispatcher_capturing: bool,
 }
@@ -144,7 +141,6 @@ impl WindowUi {
             frame,
             search,
             was_open: false,
-            pending: None,
             dispatcher_capturing: false,
         });
         modern.replace(crate::ui::options::OPTIONS_WINDOW);
@@ -372,16 +368,7 @@ impl WindowUi {
                 });
             }
             OptionsRequest::TakeKey => {
-                let pending = self
-                    .modern
-                    .as_mut()
-                    .and_then(|m| m.options.as_mut())
-                    .and_then(|o| o.pending.take());
-                if let Some((row, slot, chord, takes)) = pending {
-                    self.with_key_config(|c, ui| {
-                        c.assign(ui, row, slot, chord, &takes);
-                    });
-                }
+                self.with_key_config(|c, ui| c.overwrite_answered(ui, true));
             }
             OptionsRequest::KeysRevert => {
                 self.with_key_config(|c, ui| {
@@ -437,10 +424,8 @@ impl WindowUi {
         if capturing {
             self.cancel_key_capture();
         }
-        if let Some(o) = self.modern.as_mut().and_then(|m| m.options.as_mut()) {
-            o.pending = None;
-        }
         self.with_key_config(|c, ui| {
+            c.overwrite_answered(ui, false);
             if c.changed() {
                 c.revert(ui);
             }
@@ -484,67 +469,50 @@ impl WindowUi {
     pub(in crate::ui) fn modern_key_captured(&mut self, chord: Option<KeyChord>) -> Option<bool> {
         let frame = self.modern.as_ref()?.options.as_ref()?.frame;
         let (row, slot) = self.host.root.widget::<OptionsFrame>(frame)?.capture?;
-        if let Some(c) = chord
-            && keyboard_config::is_unsupported_capture(c)
-        {
-            return Some(true);
-        }
-        if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
-            f.capture = None;
-        }
-        let Some(chord) = chord else {
-            return Some(false);
-        };
-        let found = self.with_key_config(|c, _| {
-            let held = c
-                .rows()
-                .get(row)
-                .is_some_and(|r| r.current.contains(&chord));
-            let name = key_words(c, chord);
+        let found = self.with_key_config(|c, ui| {
+            let verdict = c.judge_capture(row, chord);
             let labels = |rows: &[usize]| {
                 rows.iter()
                     .filter_map(|r| c.rows().get(*r).and_then(|r| r.label.clone()))
                     .collect::<Vec<_>>()
                     .join(", ")
             };
-            let conflict = c.conflict(chord, row);
-            let words = match &conflict {
-                KeyConflict::Reserved => {
-                    format!("{name} is kept by the game for its own use.")
-                }
-                KeyConflict::Rows(rows) => format!("{name} is used by {}.", labels(rows)),
-                KeyConflict::None => String::new(),
+            let clash = match &verdict {
+                CaptureVerdict::Reserved(chord) => Some(Clash {
+                    row,
+                    slot,
+                    words: format!(
+                        "{} is kept by the game for its own use.",
+                        key_words(c, *chord)
+                    ),
+                    can_take: false,
+                }),
+                CaptureVerdict::Taken(chord, rows) => Some(Clash {
+                    row,
+                    slot,
+                    words: format!("{} is used by {}.", key_words(c, *chord), labels(rows)),
+                    can_take: true,
+                }),
+                _ => None,
             };
-            (held, conflict, words)
-        });
-        let Some((held, conflict, words)) = found else {
-            return Some(false);
-        };
-        if held {
-            return Some(false);
-        }
-        match conflict {
-            KeyConflict::None => {
-                self.with_key_config(|c, ui| {
-                    c.assign(ui, row, slot, chord, &[]);
-                });
+            match &verdict {
+                CaptureVerdict::Free(chord) => c.assign(ui, row, slot, *chord, &[]),
+                CaptureVerdict::Taken(chord, rows) => {
+                    c.hold_overwrite(row, slot, *chord, rows.clone())
+                }
+                CaptureVerdict::Reserved(_) => c.overwrite_answered(ui, false),
+                _ => {}
             }
-            KeyConflict::Reserved | KeyConflict::Rows(_) => {
-                let takes = match conflict {
-                    KeyConflict::Rows(rows) => Some(rows),
-                    _ => None,
-                };
-                if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
-                    f.clash = Some(Clash {
-                        row,
-                        slot,
-                        words,
-                        can_take: takes.is_some(),
-                    });
-                }
-                if let Some(o) = self.modern.as_mut().and_then(|m| m.options.as_mut()) {
-                    o.pending = takes.map(|t| (row, slot, chord, t));
-                }
+            (verdict == CaptureVerdict::KeepWaiting, clash)
+        });
+        let (waiting, clash) = found.unwrap_or((false, None));
+        if waiting {
+            return Some(true);
+        }
+        if let Some(f) = self.host.root.widget_mut::<OptionsFrame>(frame) {
+            f.capture = None;
+            if clash.is_some() {
+                f.clash = clash;
             }
         }
         Some(false)

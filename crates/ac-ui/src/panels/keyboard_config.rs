@@ -221,6 +221,26 @@ pub enum CaptureReply {
     Ended,
 }
 
+/// What a key caught for a row comes to
+/// ([`KeyboardConfigController::judge_capture`]), whatever window asked.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CaptureVerdict {
+    /// A key that cannot be bound (a left or right mouse button, a device
+    /// the key map cannot name): keep waiting for another.
+    KeepWaiting,
+    /// Escape: the capture ends without a key.
+    Cancelled,
+    /// The row holds the key already: nothing changes.
+    AlreadyHeld,
+    /// Nothing holds the key: the row takes it.
+    Free(KeyChord),
+    /// The client keeps the key for an action of its own.
+    Reserved(KeyChord),
+    /// These rows hold the key: the row takes it from them only when the
+    /// player says so.
+    Taken(KeyChord, Vec<usize>),
+}
+
 /// What the screen is bound with.
 #[allow(missing_debug_implementations)]
 pub struct KeyboardConfigSources<'a> {
@@ -614,45 +634,77 @@ impl KeyboardConfigController {
         self.capture = None;
     }
 
+    /// What `chord` caught for row `row` comes to (`None`: Escape).
+    #[must_use]
+    pub fn judge_capture(&self, row: usize, chord: Option<KeyChord>) -> CaptureVerdict {
+        let Some(chord) = chord else {
+            return CaptureVerdict::Cancelled;
+        };
+        if is_unsupported_capture(chord) {
+            return CaptureVerdict::KeepWaiting;
+        }
+        if self
+            .rows
+            .get(row)
+            .is_some_and(|r| r.current.contains(&chord))
+        {
+            return CaptureVerdict::AlreadyHeld;
+        }
+        match self.conflict(chord, row) {
+            KeyConflict::None => CaptureVerdict::Free(chord),
+            KeyConflict::Reserved => CaptureVerdict::Reserved(chord),
+            KeyConflict::Rows(rows) => CaptureVerdict::Taken(chord, rows),
+        }
+    }
+
     /// The capture ended with `chord` (`None`: Escape).
     pub fn captured(&mut self, ui: &mut UiRoot, chord: Option<KeyChord>) -> CaptureReply {
         let Some(capture) = self.capture else {
             return CaptureReply::NotCapturing;
         };
-        if let Some(c) = chord
-            && is_unsupported_capture(c)
-        {
+        let verdict = self.judge_capture(capture.row, chord);
+        if verdict == CaptureVerdict::KeepWaiting {
             return CaptureReply::StillCapturing;
         }
         self.capture = None;
-        let Some(chord) = chord else {
-            return CaptureReply::Ended;
-        };
-        if self.rows[capture.row].current.contains(&chord) {
-            return CaptureReply::Ended;
-        }
-        match self.conflict(chord, capture.row) {
-            KeyConflict::Reserved => {
+        match verdict {
+            CaptureVerdict::KeepWaiting
+            | CaptureVerdict::Cancelled
+            | CaptureVerdict::AlreadyHeld => {}
+            CaptureVerdict::Reserved(chord) => {
                 let mut v = HashMap::new();
                 v.insert(compute_hash("KEY"), self.names.describe(chord));
                 if let Some(text) = (self.templates)("ID_ActionKeyMap_NonUserBindableBinding", &v) {
                     emit(ui, KeyboardConfigOutput::ShowMessage(text));
                 }
             }
-            KeyConflict::Rows(conflicts) => {
+            CaptureVerdict::Taken(chord, conflicts) => {
                 if let Some(message) = self.overwrite_message(chord, &conflicts) {
-                    self.pending = Some(PendingOverwrite {
-                        row: capture.row,
-                        slot: capture.slot,
-                        chord,
-                        conflicts,
-                    });
+                    self.hold_overwrite(capture.row, capture.slot, chord, conflicts);
                     emit(ui, KeyboardConfigOutput::ConfirmOverwrite(message));
                 }
             }
-            KeyConflict::None => self.apply_slot(ui, capture.row, capture.slot, chord),
+            CaptureVerdict::Free(chord) => self.apply_slot(ui, capture.row, capture.slot, chord),
         }
         CaptureReply::Ended
+    }
+
+    /// Key `chord` waits to go in slot `slot` of row `row`, taken from the
+    /// rows `conflicts`, until the player answers
+    /// ([`Self::overwrite_answered`]).
+    pub fn hold_overwrite(
+        &mut self,
+        row: usize,
+        slot: usize,
+        chord: KeyChord,
+        conflicts: Vec<usize>,
+    ) {
+        self.pending = Some(PendingOverwrite {
+            row,
+            slot,
+            chord,
+            conflicts,
+        });
     }
 
     /// Key `chord` in slot `slot` of row `row`, taken first from the rows

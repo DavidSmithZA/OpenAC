@@ -22,7 +22,8 @@ use ac_ui::input::unmapped::RetailUnmappedKeyBindings;
 use ac_ui::input::{ActivationType, Binding, InputAction, InputScope, KeyBindings, KeyChord};
 use ac_ui::panels::PanelOutput;
 use ac_ui::panels::keyboard_config::{
-    self as kb, CaptureReply, KeyboardConfigController, KeyboardConfigOutput, KeyboardConfigSources,
+    self as kb, CaptureReply, CaptureVerdict, KeyboardConfigController, KeyboardConfigOutput,
+    KeyboardConfigSources,
 };
 use ac_ui::root::{ElementMessage, UiOutput, UiRoot};
 use ac_ui::strings::compute_hash;
@@ -1093,4 +1094,77 @@ fn the_rows_without_the_screen_are_the_screens_rows_and_edit_alike() {
         [key(Key::W), key(Key::Up)]
     );
     assert!(!screenless.changed());
+}
+
+#[test]
+fn a_caught_key_is_judged_alike_for_any_window() {
+    use ac_ui::input::chord::mouse;
+    let mute = KeyChord::key(Key::M, Modifiers::CTRL);
+    let mut b = KeyBindings::new();
+    bind(&mut b, key(Key::W), InputAction::MovementForward);
+    bind(&mut b, key(Key::A), InputAction::MovementBackup);
+    bind(&mut b, mute, InputAction::AcdreamToggleAudioMute);
+    let mut s = screen(
+        snapshot(vec![
+            row(0x4, 0x29, RetailActionClass::Movement),
+            row(0x4, 0x2A, RetailActionClass::Movement),
+        ]),
+        b,
+    );
+    let rows = s.rows();
+    let at = |action| rows.iter().position(|r| r.action_id == action).unwrap();
+    let (forward, backup) = (at(0x29), at(0x2A));
+    s.with(|c, _| {
+        assert_eq!(c.judge_capture(forward, None), CaptureVerdict::Cancelled);
+        assert_eq!(
+            c.judge_capture(forward, Some(KeyChord::mouse(mouse::LEFT, Modifiers::NONE))),
+            CaptureVerdict::KeepWaiting
+        );
+        assert_eq!(
+            c.judge_capture(forward, Some(key(Key::W))),
+            CaptureVerdict::AlreadyHeld
+        );
+        assert_eq!(
+            c.judge_capture(forward, Some(key(Key::Q))),
+            CaptureVerdict::Free(key(Key::Q))
+        );
+        assert_eq!(
+            c.judge_capture(forward, Some(mute)),
+            CaptureVerdict::Reserved(mute)
+        );
+        assert_eq!(
+            c.judge_capture(forward, Some(key(Key::A))),
+            CaptureVerdict::Taken(key(Key::A), vec![backup])
+        );
+    });
+}
+
+#[test]
+fn an_overwrite_held_from_outside_the_screen_waits_for_the_answer() {
+    let mut b = KeyBindings::new();
+    bind(&mut b, key(Key::W), InputAction::MovementForward);
+    bind(&mut b, key(Key::A), InputAction::MovementBackup);
+    let mut s = screen(
+        snapshot(vec![
+            row(0x4, 0x29, RetailActionClass::Movement),
+            row(0x4, 0x2A, RetailActionClass::Movement),
+        ]),
+        b,
+    );
+    let rows = s.rows();
+    let at = |action| rows.iter().position(|r| r.action_id == action).unwrap();
+    let (forward, backup) = (at(0x29), at(0x2A));
+    s.with(|c, _| c.hold_overwrite(forward, 1, key(Key::A), vec![backup]));
+    s.answer(false);
+    assert_eq!(s.row(0x2A).current, [key(Key::A)], "no: nothing moves");
+    s.answer(true);
+    assert_eq!(
+        s.row(0x2A).current,
+        [key(Key::A)],
+        "the no let the held key go"
+    );
+    s.with(|c, _| c.hold_overwrite(forward, 1, key(Key::A), vec![backup]));
+    s.answer(true);
+    assert!(s.row(0x29).current.contains(&key(Key::A)));
+    assert!(s.row(0x2A).current.is_empty());
 }

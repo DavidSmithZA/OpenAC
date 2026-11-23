@@ -9,7 +9,6 @@
 pub mod model;
 pub mod view;
 
-use ac_core::chargen::ChargenPalSetSource;
 use ac_core::chargen::ChargenSkillAdvancementClass as Class;
 use ac_runtime::session::creation::{
     AppearanceSlot, ChargenRandom, CreationCommand, CreationRejection, CreationSnapshot,
@@ -200,19 +199,16 @@ impl WindowUi {
             .into_iter()
             .map(|c| c.map_or(Color::rgba(0.5, 0.5, 0.5, 1.0), rgb))
             .collect();
-        let source = crate::ui::modern::barber::model::shade_source(part, &s.appearance, g);
-        let stops = source
-            .and_then(|(set, sample)| {
-                let palettes = c.pal_set(set)?.palette_ids.clone();
-                Some(
-                    crate::ui::modern::barber::model::shade_indices(palettes.len(), 8)
-                        .into_iter()
-                        .filter_map(|i| (c as &dyn SwatchSourcesDyn).direct(palettes[i], sample))
-                        .map(rgb)
-                        .collect(),
-                )
-            })
-            .unwrap_or_default();
+        let stops = ac_ui::pregame::chargen::appearance::shade_stops(
+            part,
+            g,
+            &s.appearance,
+            c as &dyn SwatchSourcesDyn,
+            8,
+        )
+        .into_iter()
+        .map(rgb)
+        .collect();
         (colors, stops)
     }
 

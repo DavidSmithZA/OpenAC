@@ -2,7 +2,6 @@
 //! is used, stages what the player drops or adds (with the retail rules,
 //! shared), salvages, and shows the bags the salvage produced.
 
-use ac_core::items::PublicWeenieFlags;
 use ac_runtime::character::option_id;
 use ac_runtime::inventory::{ItemCommand, ObjectRef};
 use ac_runtime::session::SessionCommand;
@@ -14,7 +13,7 @@ use ac_ui::panels::items::{ItemsView, emit};
 use ac_ui::panels::salvage_list::SalvageList;
 use ac_ui::tree::ElementId;
 
-use super::salvage_model::{self, SALVAGING_SKILL, SalvageDone, refusal};
+use super::salvage_model::{self, SALVAGING_SKILL, SalvageDone, refusal_words};
 use super::salvage_window::{SalvageAsk, SalvageFonts, SalvageFrame};
 use crate::ui::modern::hud;
 use crate::ui::window::WindowUi;
@@ -311,22 +310,12 @@ impl WindowUi {
         frame: ElementId,
     ) {
         let names = crate::ui::facts::composed_names(&self.status.names);
-        let player = self.facts.state.player;
         let Some(o) = self.facts.objects.get(id) else {
             return;
         };
-        let why = if id == staging.tool() {
-            "That is the tool you are salvaging with.".to_owned()
-        } else if !self.facts.objects.is_owned_by_object(id, player) {
-            "You can only salvage what you carry.".to_owned()
-        } else if staging.items().contains(&id) {
-            "It is on the list already.".to_owned()
-        } else if o.flags().contains(PublicWeenieFlags::RETAINED) {
-            "Retained items cannot be salvaged.".to_owned()
-        } else {
-            refusal(o, staging.material(), allow_multiple)
-                .unwrap_or_else(|| "That cannot be salvaged.".to_owned())
-        };
+        let why = self
+            .with_salvage_items(|view| staging.refusal(id, view, allow_multiple))
+            .map_or_else(|| "That cannot be salvaged.".to_owned(), refusal_words);
         let name = names(o);
         if let Some(f) = self.host.root.widget_mut::<SalvageFrame>(frame) {
             f.refused = Some((name, why));

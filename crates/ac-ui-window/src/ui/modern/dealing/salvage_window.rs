@@ -9,10 +9,11 @@ use ac_ui::modern::tone;
 use std::sync::Arc;
 
 use ac_ui::draw::{Color, RenderContext, TextureRef};
-use ac_ui::event::{ItemDragPayload, ItemDragSource, UiEvent, kind};
+use ac_ui::event::{ItemDragPayload, UiEvent, kind};
 use ac_ui::modern::Horizon;
 use ac_ui::modern::text::{self, TextStyle};
 use ac_ui::modern::theme::hex;
+use ac_ui::panels::salvage_list::drag_stages;
 use ac_ui::shapes::CornerRadii;
 use ac_ui::tree::{Element, ElementId, Widget};
 use ac_ui::{UiFont, UiRoot};
@@ -1007,12 +1008,6 @@ fn dashed(rc: &mut RenderContext<'_>, r: Rect, color: Color) {
     }
 }
 
-/// Only what is carried in the packs comes in (as retail: worn gear and
-/// things on the ground do not).
-fn from_packs(p: &ItemDragPayload) -> bool {
-    p.source_kind == ItemDragSource::Inventory && p.obj_id != 0
-}
-
 impl Widget for SalvageFrame {
     fn hit_test(&self, _element: &Element, _x: f32, _y: f32) -> bool {
         true
@@ -1070,7 +1065,7 @@ impl Widget for SalvageFrame {
                     .payload
                     .as_ref()
                     .and_then(|p| p.get::<ItemDragPayload>())
-                    .is_some_and(from_packs);
+                    .is_some_and(drag_stages);
                 true
             }
             kind::DRAG_OVER => true,
@@ -1080,7 +1075,7 @@ impl Widget for SalvageFrame {
                     .payload
                     .as_ref()
                     .and_then(|p| p.get::<ItemDragPayload>())
-                    .filter(|p| from_packs(p))
+                    .filter(|p| drag_stages(p))
                 {
                     self.asks.push(SalvageAsk::Dropped(p.clone()));
                 }
