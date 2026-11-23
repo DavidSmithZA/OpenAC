@@ -1625,3 +1625,71 @@ fn a_world_lift_is_refused_once_the_button_is_up() {
     assert!(!ui.begin_world_drag(ac_ui::event::DragPayload::new(7u32), None));
     assert_eq!(ui.drag_source(), None);
 }
+
+// ── Target mode: windows step aside ─────────────────────────────────────
+
+/// Fills its rectangle white, so its opacity shows in the draw list.
+#[derive(Debug, Default)]
+struct Solid;
+
+impl ac_ui::tree::Widget for Solid {
+    fn draw(&mut self, ui: &mut UiRoot, me: ElementId, rc: &mut ac_ui::draw::RenderContext<'_>) {
+        let (w, h) = ui.element(me).map_or((0.0, 0.0), |e| (e.width, e.height));
+        rc.fill(0.0, 0.0, w, h, ac_ui::draw::Color::WHITE);
+    }
+}
+
+/// A window behind (0,0 400x400), one in front of it (0,0 200x200) and a
+/// cell in the front one (10,10 32x32).
+fn windows_for_a_target() -> (UiRoot, ElementId, ElementId, ElementId) {
+    let mut ui = root(800.0, 600.0);
+    let r = ui.root();
+    let behind = ui.add(r, at(0.0, 0.0, 400.0, 400.0), Solid);
+    let front = ui.add(r, at(0.0, 0.0, 200.0, 200.0), Solid);
+    let cell = ui.add(front, at(10.0, 10.0, 32.0, 32.0), Solid);
+    (ui, behind, front, cell)
+}
+
+fn fill_alphas(ui: &mut UiRoot) -> Vec<f32> {
+    ui.draw((800.0, 600.0), &NoSprites)
+        .main
+        .iter()
+        .filter_map(|c| match c {
+            DrawCmd::Fill { color, .. } => Some(color.a),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn a_window_stepping_aside_for_a_target_lets_the_pointer_through_but_not_over_a_kept_cell() {
+    let (mut ui, behind, front, cell) = windows_for_a_target();
+    assert_eq!(ui.pick(100, 100), Some(front));
+    ui.set_target_see_through(vec![front], vec![cell]);
+    assert_eq!(ui.target_see_through(), [front]);
+    assert_eq!(ui.pick(100, 100), Some(behind));
+    assert_eq!(ui.pick(15, 15), Some(cell));
+    // Done: the window takes the pointer again.
+    ui.set_target_see_through(Vec::new(), vec![cell]);
+    assert_eq!(ui.pick(100, 100), Some(front));
+    assert!(ui.target_see_through().is_empty());
+}
+
+#[test]
+fn a_window_stepping_aside_fades_and_its_kept_cell_stays_at_full_strength() {
+    let (mut ui, _, front, cell) = windows_for_a_target();
+    assert_eq!(fill_alphas(&mut ui), [1.0, 1.0, 1.0]);
+    ui.set_target_see_through(vec![front], vec![cell]);
+    assert_eq!(
+        fill_alphas(&mut ui),
+        [1.0, ac_ui::root::TARGET_SEE_THROUGH_OPACITY, 1.0]
+    );
+}
+
+#[test]
+fn a_removed_window_no_longer_steps_aside() {
+    let (mut ui, _, front, cell) = windows_for_a_target();
+    ui.set_target_see_through(vec![front], vec![cell]);
+    ui.destroy(front);
+    assert!(ui.target_see_through().is_empty());
+}

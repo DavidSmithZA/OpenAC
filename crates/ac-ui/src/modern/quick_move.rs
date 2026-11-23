@@ -103,7 +103,14 @@ impl Widget for QuickMoveOutlines {
 }
 
 /// A rectangle's outline in dashes one unit wide.
-fn dashed_rect(rc: &mut RenderContext<'_>, x: f32, y: f32, w: f32, h: f32, color: crate::Color) {
+pub fn dashed_rect(
+    rc: &mut RenderContext<'_>,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    color: crate::Color,
+) {
     let step = DASH + DASH_GAP;
     let mut along = |x0: f32, y0: f32, length: f32, across: bool| {
         let mut at = 0.0;

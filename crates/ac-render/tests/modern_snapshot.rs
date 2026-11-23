@@ -1095,6 +1095,96 @@ fn the_modern_inventory() {
     s.save("inventory-side-pack");
 }
 
+/// A lockpick waiting for a target: the shown play windows step aside
+/// and the guide names it; the cancel button ends it.
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_target_mode() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_runtime::inventory::{InteractionMode, ItemCommand};
+    use ac_runtime::session::SessionCommand;
+    use ac_ui::tree::Widget as _;
+    use ac_ui_window::ui::modern::hud::target_guide::TargetGuide;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    assert!(s.ui.run_hotkey(Hotkey::Inventory));
+    s.step();
+    let mode = |s: &mut Shot, mode: InteractionMode| {
+        s.scene
+            .apply(PresentationEvent::Interface(InterfaceEvent::State(
+                Box::new(InterfaceState {
+                    player: PLAYER,
+                    can_make_request: true,
+                    mode,
+                    ..InterfaceState::default()
+                }),
+            )));
+        s.step();
+        s.step();
+    };
+    mode(&mut s, InteractionMode::UseItemOnTarget(0x8000_0101));
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-inventory")
+            .expect("inventory")
+            .frame;
+    assert_eq!(s.ui.host().root.target_see_through(), [frame]);
+    let guide = shown::<TargetGuide>(&s).expect("the guide shows");
+    let (item, pill_bottom) =
+        s.ui.host()
+            .root
+            .widget::<TargetGuide>(guide)
+            .map(|g| (g.view.item.clone(), g.view.pill_bottom))
+            .expect("the guide");
+    assert_eq!(item, "Health Potion");
+    assert!(
+        pill_bottom > H as f32 * 0.5,
+        "above the bars: {pill_bottom}"
+    );
+    // The pointer passes through the window to the world.
+    let inside = (INV.0 + 200, INV.1 + 560);
+    let hit = s.ui.host_mut().root.pick(inside.0, inside.1);
+    assert!(
+        !s.ui.host().root.is_within(hit, frame),
+        "the window takes the pointer: {hit:?}"
+    );
+    s.save("target-mode");
+    // Its cancel button: the pill's right end, centred.
+    let (bx, by) = {
+        let root = &s.ui.host().root;
+        let g = root.widget::<TargetGuide>(guide).expect("the guide");
+        let bottom = g.view.pill_bottom;
+        let mut found = None;
+        for x in (0..W as i32).rev().step_by(4) {
+            let y =
+                (bottom - ac_ui_window::ui::modern::hud::target_guide::PILL_HEIGHT * 0.5) as i32;
+            if g.hit_test(
+                &ac_ui::tree::Element::at(0.0, 0.0, W as f32, H as f32),
+                x as f32,
+                y as f32,
+            ) {
+                found = Some((x - 4, y));
+                break;
+            }
+        }
+        found.expect("the cancel button")
+    };
+    s.sent.clear();
+    s.click(0, bx, by, Modifiers::NONE);
+    assert!(
+        s.sent
+            .iter()
+            .any(|c| matches!(c, SessionCommand::Item(ItemCommand::CancelTargetMode))),
+        "cancelled: {:?}",
+        s.sent
+    );
+    mode(&mut s, InteractionMode::None);
+    assert!(s.ui.host().root.target_see_through().is_empty());
+    assert!(shown::<TargetGuide>(&s).is_none());
+}
+
 /// The visible root child holding a `T`.
 fn shown<T: ac_ui::tree::Widget>(s: &Shot) -> Option<ac_ui::tree::ElementId> {
     let root = &s.ui.host().root;

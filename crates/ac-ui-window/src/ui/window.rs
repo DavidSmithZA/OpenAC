@@ -1563,6 +1563,7 @@ impl WindowUi {
         self.tick_modern_connection();
         self.tick_modern_recalls();
         self.tick_modern_chat();
+        self.tick_modern_target_mode();
         self.follow_modern_pieces();
         let list = self
             .host

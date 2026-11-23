@@ -13,6 +13,7 @@ pub mod radar;
 pub mod recall;
 pub mod recall_dialog;
 pub mod target;
+pub mod target_guide;
 pub mod vitals;
 
 use ac_ui::UiRoot;

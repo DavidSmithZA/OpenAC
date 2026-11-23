@@ -297,6 +297,10 @@ pub struct UiRoot {
     /// The window the running drag left that went see-through, and its
     /// opacity before.
     drag_see_through: Option<(ElementId, f32)>,
+    /// While an item waits for a target: the top-level windows that step
+    /// aside (fade and let the pointer through) and, inside them, the
+    /// elements that can still be the target.
+    target_see_through: (Vec<ElementId>, Vec<ElementId>),
     last_drag_hover: Option<ElementId>,
     press: (i32, i32),
     drag_candidate: bool,
@@ -393,6 +397,7 @@ impl UiRoot {
             drag_payload: None,
             drag_ghost: None,
             drag_see_through: None,
+            target_see_through: (Vec::new(), Vec::new()),
             last_drag_hover: None,
             press: (0, 0),
             drag_candidate: false,
@@ -1290,6 +1295,16 @@ impl UiRoot {
         if self.is_within(self.drag_see_through.map(|(w, _)| w), subtree) {
             self.drag_see_through = None;
         }
+        let (windows, keep) = std::mem::take(&mut self.target_see_through);
+        self.target_see_through = (
+            windows
+                .into_iter()
+                .filter(|w| !self.is_within(Some(*w), subtree))
+                .collect(),
+            keep.into_iter()
+                .filter(|k| !self.is_within(Some(*k), subtree))
+                .collect(),
+        );
         if self.is_within(self.last_click.map(|c| c.0), subtree) {
             self.last_click = None;
         }
@@ -1648,7 +1663,15 @@ impl UiRoot {
         };
         let clips = widget.clips_children();
         rc.push_transform(left, top);
-        rc.push_alpha(opacity);
+        if self.target_see_through.1.contains(&id) {
+            // What can take the target shows at full strength in its faded
+            // window.
+            rc.push_alpha_absolute(opacity);
+        } else if self.target_see_through.0.contains(&id) {
+            rc.push_alpha(opacity * TARGET_SEE_THROUGH_OPACITY);
+        } else {
+            rc.push_alpha(opacity);
+        }
         if clips {
             let (w, h) = self.element(id).map_or((0.0, 0.0), |e| (e.width, e.height));
             rc.push_clip(0.0, 0.0, w, h);
@@ -1817,6 +1840,17 @@ impl UiRoot {
             let (cx, cy) = self.screen_position(child);
             let (lx, ly) = (x as f32 - cx, y as f32 - cy);
             if let Some(hit) = self.hit_test(child, lx, ly) {
+                // A window stepping aside for a target takes the pointer
+                // only over what can be the target.
+                if self.target_see_through.0.contains(&child)
+                    && !self
+                        .target_see_through
+                        .1
+                        .iter()
+                        .any(|k| self.is_within(Some(hit), *k))
+                {
+                    continue;
+                }
                 return Some((hit, lx, ly));
             }
         }
@@ -3034,6 +3068,23 @@ impl UiRoot {
         self.last_drag_hover = None;
     }
 
+    /// While an item waits for a target: the top-level `windows` fade and
+    /// let the pointer through to what is behind them, except over `keep`
+    /// (elements in them that can be the target), which stay at full
+    /// strength and take clicks as ever. Empty `windows` ends it.
+    pub fn set_target_see_through(&mut self, windows: Vec<ElementId>, keep: Vec<ElementId>) {
+        let keep = if windows.is_empty() { Vec::new() } else { keep };
+        if self.target_see_through.0 != windows || self.target_see_through.1 != keep {
+            self.target_see_through = (windows, keep);
+        }
+    }
+
+    /// The windows stepping aside for a target now.
+    #[must_use]
+    pub fn target_see_through(&self) -> &[ElementId] {
+        &self.target_see_through.0
+    }
+
     /// The window the running drag left and that went see-through, if any.
     #[must_use]
     pub fn drag_see_through(&self) -> Option<ElementId> {
@@ -3084,6 +3135,9 @@ impl UiRoot {
 
 /// How opaque a window is while a drag that left it passes through it.
 const DRAG_SEE_THROUGH_OPACITY: f32 = 0.2;
+
+/// How opaque a window is while it steps aside for a target.
+pub const TARGET_SEE_THROUGH_OPACITY: f32 = 0.14;
 
 fn within_border_band(w: &Element, x: i32, y: i32, band: i32) -> bool {
     let (l, t, r, b) = (w.left, w.top, w.left + w.width, w.top + w.height);
