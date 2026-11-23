@@ -56,6 +56,9 @@ pub struct InspectUi {
         Option<std::sync::Arc<std::collections::BTreeMap<u32, Vec<ac_plugin_ui::ItemNoteEntry>>>>,
     /// Time since the last combat refresh.
     since: f64,
+    /// The tab to open when the answer about this item comes (the
+    /// inventory's Inscribe opens Details).
+    want_tab: Option<(u32, &'static str)>,
 }
 
 impl WindowUi {
@@ -97,40 +100,27 @@ impl WindowUi {
             base: None,
             notes_seen: None,
             since: 0.0,
+            want_tab: None,
         });
         modern.replace(crate::ui::window::EXAMINATION_WINDOW);
     }
 
     /// The answers that came: the sheet opens on the player's own question
-    /// (not on the inventory's quiet ones) and refreshes on any about what
-    /// it shows. Called before retail's examination code takes them.
+    /// and refreshes on any about what it shows. Called before retail's
+    /// examination code takes them.
     pub(in crate::ui) fn feed_modern_inspect(&mut self) {
-        let Some(modern) = self.modern.as_mut() else {
-            return;
-        };
-        let quiet = modern
-            .inventory
-            .as_mut()
-            .map(|i| std::mem::take(&mut i.quiet))
-            .unwrap_or_default();
-        let Some(inspect) = modern.inspect.as_ref() else {
+        let Some(inspect) = self.modern.as_ref().and_then(|m| m.inspect.as_ref()) else {
             return;
         };
         let sheet = inspect.sheet;
         let shown = inspect.subject;
-        let mut keep_quiet = quiet.clone();
         let mut chosen = None;
         for a in self.facts.appraisals.iter().filter(|a| a.present_in_ui) {
             let guid = a.response.guid;
-            let asked_quietly = keep_quiet.remove(&guid);
             let about_shown = matches!(shown, Some(Subject::Object(id, _)) if id == guid);
-            if (a.opens_window && !asked_quietly) || about_shown {
+            if a.opens_window || about_shown {
                 chosen = Some(a.clone());
             }
-        }
-        // Quiet questions still waiting stay quiet.
-        if let Some(inv) = self.modern.as_mut().and_then(|m| m.inventory.as_mut()) {
-            inv.quiet.extend(keep_quiet);
         }
         let Some(a) = chosen else {
             return;
@@ -200,14 +190,39 @@ impl WindowUi {
             i.base = item.then(|| made.clone());
             i.notes_seen = None;
         }
+        let tab = self
+            .modern
+            .as_mut()
+            .and_then(|m| m.inspect.as_mut())
+            .and_then(|i| i.want_tab.take_if(|(id, _)| *id == guid))
+            .map(|(_, tab)| tab);
         let ui = &mut self.host.root;
         if let Some(v) = ui.widget_mut::<SheetView>(sheet) {
             v.set(made);
+            if let Some(tab) = tab {
+                v.choose_tab(tab);
+            }
         }
         self.add_inspect_cards();
         if opens {
             self.show_modern_inspect();
         }
+    }
+
+    /// Asks about the player's item `id` for the sheet, which opens on
+    /// `tab` when the answer comes.
+    pub(in crate::ui) fn inspect_item_on_tab(&mut self, id: u32, tab: &'static str) {
+        if let Some(i) = self.modern.as_mut().and_then(|m| m.inspect.as_mut()) {
+            i.want_tab = Some((id, tab));
+        }
+        ac_ui::panels::items::emit(
+            &mut self.host.root,
+            ac_ui::panels::PanelOutput::Session(ac_runtime::session::SessionCommand::Item(
+                ac_runtime::inventory::ItemCommand::Appraise(
+                    ac_runtime::inventory::ObjectRef::Guid(id),
+                ),
+            )),
+        );
     }
 
     fn show_modern_inspect(&mut self) {

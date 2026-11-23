@@ -947,14 +947,21 @@ fn more_things(s: &mut Shot) {
     s.step();
 }
 
-/// The inventory window's top left on a 1440 x 900 screen (centred).
-const INV: (i32, i32) = (180, 130);
+/// The inventory window's top left on a 1440 x 900 screen (at the right
+/// edge, under the radar).
+const INV: (i32, i32) = (1440 - 16 - 400, 226);
+
+/// The middle of the grid's first cell, on a 1440 x 900 screen.
+const FIRST_CELL: (i32, i32) = (INV.0 + 74 + 20, INV.1 + 130 + 20);
 
 #[test]
 #[ignore = "needs the retail dat files; writes pictures"]
 fn the_modern_inventory() {
     use ac_core::combat::CombatMode;
     use ac_render::ui::window::Hotkey;
+    use ac_runtime::inventory::{ItemCommand, ObjectRef};
+    use ac_runtime::session::SessionCommand;
+    use ac_ui_window::ui::modern::items::menu::PopMenu;
     let mut s = Shot::new(CombatMode::NON_COMBAT);
     more_things(&mut s);
     assert!(s.ui.run_hotkey(Hotkey::Inventory));
@@ -981,8 +988,6 @@ fn the_modern_inventory() {
     // Let go over the see-through inventory with nothing behind it: it asks
     // before the item goes on the ground.
     {
-        use ac_runtime::inventory::{ItemCommand, ObjectRef};
-        use ac_runtime::session::SessionCommand;
         use ac_ui_window::ui::modern::dialogs::card::QuestionCard;
         let ground = |s: &Shot| {
             s.sent.iter().any(|c| {
@@ -1017,22 +1022,15 @@ fn the_modern_inventory() {
         assert!(ground(&s), "Drop puts 5 on the ground: {:?}", s.sent);
         s.step();
     }
-    // The figure is asked for, turned by a drag across it.
-    let figure = |s: &mut Shot| {
-        let (requests, _) = s.ui.viewport_requests(&s.scene, 1.0);
-        requests.into_iter().find_map(|r| match r.subject {
-            ac_render::viewport::ViewportSubject::Paperdoll { turn, .. } => Some(turn),
-            _ => None,
-        })
-    };
-    assert_eq!(figure(&mut s), Some(0.0));
-    s.drag((INV.0 + 100, INV.1 + 200), (INV.0 + 180, INV.1 + 200));
-    let turned = figure(&mut s).expect("the figure");
-    println!("figure turned {turned}");
-    assert!(turned > 0.5);
-    // The sword: the first cell of the grid.
-    let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
-    s.click(0, first.0, first.1, Modifiers::NONE);
+    use ac_ui_window::ui::modern::items::inventory as inv;
+    let frame_rect = rect_of(&s, frame);
+    assert_eq!(
+        frame_rect,
+        (INV.0, INV.1, inv::WIDTH as i32, inv::HEIGHT as i32),
+        "slim, at the right edge"
+    );
+    // The potions: the first cell of the grid.
+    s.click(0, FIRST_CELL.0, FIRST_CELL.1, Modifiers::NONE);
     // No server here to answer the selection: it is made as it would be.
     s.scene.apply(PresentationEvent::Player(PlayerView {
         selected: Some(0x8000_0101),
@@ -1041,58 +1039,137 @@ fn the_modern_inventory() {
     s.step();
     s.step();
     s.save("inventory-selected");
-    // Its appraisal answer.
-    let mut a = ac_proto::appraise::IdentifyObjectResponse {
-        guid: 0x8000_0101,
-        success: true,
-        ..Default::default()
+    let chosen = |s: &Shot| {
+        s.ui.host()
+            .root
+            .widget::<inv::InventoryFrame>(frame)
+            .and_then(|f| f.view.chosen.clone())
     };
-    a.properties.ints.insert(19, 18_400);
-    a.properties.ints.insert(5, 450);
-    a.properties.ints.insert(105, 8);
-    a.properties
-        .strings
-        .insert(16, "A plain sword, well kept.".to_owned());
-    s.scene
-        .apply(PresentationEvent::Interface(InterfaceEvent::Appraisal(
-            Box::new(ac_runtime::inventory::AppraisalView {
-                name: Some("Sword".to_owned()),
-                response: a,
-                present_in_ui: true,
-                opens_window: false,
-            }),
-        )));
-    s.step();
-    s.step();
-    s.save("inventory-details");
-    // Its menu.
-    s.click(1, first.0, first.1, Modifiers::NONE);
+    let c = chosen(&s).expect("the action row names it");
+    assert_eq!((c.primary, c.splits), ("Use", true));
+    // Drop, in the action row: the fourth of its buttons.
+    s.sent.clear();
+    let acts_y = INV.1 + inv::ACTIONS_Y as i32 + 10 + 30 + 9 + 20;
+    let act_w = (400.0 - 32.0 - 76.0 - 6.0 * 5.0) / 5.0;
+    let act_x =
+        |i: usize| INV.0 + (16.0 + 76.0 + 6.0 + i as f32 * (act_w + 6.0) + act_w / 2.0) as i32;
+    s.click(0, act_x(2), acts_y, Modifiers::NONE);
+    assert!(
+        s.sent.iter().any(|c| matches!(
+            c,
+            SessionCommand::Item(ItemCommand::Drop {
+                item: ObjectRef::Guid(0x8000_0101),
+                ..
+            })
+        )),
+        "Drop: {:?}",
+        s.sent
+    );
+    // More: its menu.
+    s.click(0, act_x(4), acts_y, Modifiers::NONE);
+    s.save("inventory-more-menu");
+    assert!(shown::<PopMenu>(&s).is_some(), "More opens its menu");
+    s.click(0, INV.0 + 200, INV.1 + 20, Modifiers::NONE);
+    // The item menu, Inspect first.
+    s.click(1, FIRST_CELL.0, FIRST_CELL.1, Modifiers::NONE);
     s.save("inventory-item-menu");
-    // A click away closes it.
-    let away = (INV.0 + 200, INV.1 + 560);
-    s.click(0, away.0, away.1, Modifiers::NONE);
-    // The sort menu.
-    s.click(0, INV.0 + 416 + 30, INV.1 + 94 + 13, Modifiers::NONE);
+    s.click(0, INV.0 + 200, INV.1 + 20, Modifiers::NONE);
+    // The Sort menu, third of the menus under the search.
+    let drop_w = (400.0 - 32.0 - 12.0) / 3.0;
+    let drops_y = INV.1 + 96 + 13;
+    s.click(
+        0,
+        INV.0 + (16.0 + 2.0 * (drop_w + 6.0) + drop_w / 2.0) as i32,
+        drops_y,
+        Modifiers::NONE,
+    );
     s.save("inventory-sort-menu");
-    s.click(0, away.0, away.1, Modifiers::NONE);
-    // All packs, as a list.
-    s.click(0, INV.0 + 348 + 28, INV.1 + 68 + 20, Modifiers::NONE);
+    s.click(0, INV.0 + 200, INV.1 + 20, Modifiers::NONE);
+    // All packs (the pack column's first), then the Show menu's list.
+    s.click(0, INV.0 + 16 + 24, INV.1 + 130 + 16, Modifiers::NONE);
     s.save("inventory-all");
     s.click(
         0,
-        INV.0 + 416 + 352 - 12 - 13,
-        INV.1 + 94 + 13,
+        INV.0 + (16.0 + drop_w / 2.0) as i32,
+        drops_y,
         Modifiers::NONE,
     );
+    let menu = shown::<PopMenu>(&s).expect("the Show menu");
+    let (mx, my, mw, _) = rect_of(&s, menu);
+    let (top, h) =
+        s.ui.host()
+            .root
+            .widget::<PopMenu>(menu)
+            .and_then(|m| m.entry_rows("List with names"))
+            .expect("a list entry");
+    s.click(0, mx + mw / 2, my + (top + h / 2.0) as i32, Modifiers::NONE);
     s.save("inventory-all-list");
-    // The side pack.
+    // The side pack (the third of the column).
     s.click(
         0,
-        INV.0 + 348 + 28,
-        INV.1 + 68 + 40 + 12 + 50 + 6 + 20,
+        INV.0 + 16 + 24,
+        INV.1 + 130 + 2 * 36 + 16,
         Modifiers::NONE,
     );
     s.save("inventory-side-pack");
+}
+
+/// The gear folds out to the left of the packs from the header's Gear
+/// button, the packs staying where they are on screen; the figure is
+/// asked for and turns; Gear again folds it away. Dragging something
+/// wearable while it is shut opens it for the drag.
+#[test]
+#[ignore = "needs the retail dat files; writes pictures"]
+fn the_modern_inventory_gear() {
+    use ac_core::combat::CombatMode;
+    use ac_render::ui::window::Hotkey;
+    use ac_ui_window::ui::modern::items::inventory as inv;
+    let mut s = Shot::new(CombatMode::NON_COMBAT);
+    more_things(&mut s);
+    assert!(s.ui.run_hotkey(Hotkey::Inventory));
+    s.step();
+    s.step();
+    let frame =
+        s.ui.host()
+            .root
+            .window("modern-inventory")
+            .expect("it")
+            .frame;
+    let figure = |s: &mut Shot| {
+        let (requests, _) = s.ui.viewport_requests(&s.scene, 1.0);
+        requests.into_iter().find_map(|r| match r.subject {
+            ac_render::viewport::ViewportSubject::Paperdoll { turn, .. } => Some(turn),
+            _ => None,
+        })
+    };
+    assert_eq!(figure(&mut s), None, "no figure while the gear is shut");
+    // Gear: left of the close button in the header.
+    let gear_at = |s: &Shot| {
+        let (fx, fy, fw, _) = rect_of(s, frame);
+        (fx + fw - 10 - 30 - 6 - 30, fy + 24)
+    };
+    let at = gear_at(&s);
+    s.click(0, at.0, at.1, Modifiers::NONE);
+    s.step();
+    let (fx, _, fw, _) = rect_of(&s, frame);
+    assert_eq!(fw, inv::WITH_GEAR as i32, "the gear folds out");
+    assert_eq!(fx + inv::GEAR_W as i32, INV.0, "the packs stay put");
+    assert_eq!(figure(&mut s), Some(0.0));
+    s.save("inventory-gear");
+    let fig = (
+        fx + inv::FIGURE_X as i32 + 100,
+        INV.1 + inv::FIGURE_Y as i32 + 100,
+    );
+    s.drag(fig, (fig.0 + 80, fig.1));
+    let turned = figure(&mut s).expect("the figure");
+    assert!(turned > 0.5, "the figure turns: {turned}");
+    let at = gear_at(&s);
+    s.click(0, at.0, at.1, Modifiers::NONE);
+    s.step();
+    assert_eq!(
+        rect_of(&s, frame),
+        (INV.0, INV.1, inv::WIDTH as i32, inv::HEIGHT as i32)
+    );
 }
 
 /// A lockpick waiting for a target: the shown play windows step aside
@@ -1206,7 +1283,7 @@ fn the_modern_split() {
     s.step();
     s.step();
     // The potions: the first cell of the grid, a stack of 12.
-    let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
+    let first = FIRST_CELL;
     s.click(1, first.0, first.1, Modifiers::NONE);
     let menu = shown::<PopMenu>(&s).expect("the menu");
     let (mx, my, mw, _) = rect_of(&s, menu);
@@ -1520,8 +1597,9 @@ fn open_corpse(s: &mut Shot, in_range: bool) {
     s.step();
 }
 
-/// The Loot window's top left on a 1440 x 900 screen.
-const LOOT: (i32, i32) = (1440 - 60 - 400, 250);
+/// The Loot window's top left on a 1440 x 900 screen: beside the
+/// inventory, at its top.
+const LOOT: (i32, i32) = (1440 - 16 - 400 - 16 - 400, 226);
 
 #[test]
 #[ignore = "needs the retail dat files; writes pictures"]
@@ -1655,8 +1733,9 @@ fn the_modern_plugin_notes() {
     s.step();
     s.step();
     s.save("plugin-notes-inventory");
-    // The potions selected: the details carry the plugin's card.
-    let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
+    // The potions chosen (their sheet, with the plugin's card, is the
+    // Inspect sheet's).
+    let first = FIRST_CELL;
     s.click(0, first.0, first.1, Modifiers::NONE);
     s.scene.apply(PresentationEvent::Player(PlayerView {
         selected: Some(0x8000_0101),
@@ -1668,7 +1747,7 @@ fn the_modern_plugin_notes() {
         ..Default::default()
     };
     answer(&mut s, a, false);
-    s.save("plugin-notes-details");
+    s.save("plugin-notes-chosen");
     // Its menu carries the plugin's entry; choosing it goes to the plugin.
     s.sent.clear();
     s.click(1, first.0, first.1, Modifiers::NONE);
@@ -2831,98 +2910,6 @@ fn the_modern_small_screen() {
             .map(|v| (v.compact(), v.side));
     assert_eq!(side, Some((true, false)), "the drawer starts shut");
     s.save("small-map");
-}
-
-/// The inventory on a screen too small for the wide window: an item's
-/// details are a card over the equipment column, put away by its close
-/// button, Escape or a click on empty space, and back when an item is
-/// picked again.
-#[test]
-#[ignore = "needs the retail dat files; writes pictures"]
-fn the_modern_small_inventory() {
-    use ac_core::combat::CombatMode;
-    use ac_render::ui::window::Hotkey;
-    use ac_ui_window::ui::modern::items::inventory as inv;
-    use ac_ui_window::ui::modern::items::sheet_view::SheetView;
-    let mut s = Shot::new(CombatMode::NON_COMBAT);
-    s.size = (1024, 700);
-    s.step();
-    more_things(&mut s);
-    assert!(s.ui.run_hotkey(Hotkey::Inventory));
-    s.step();
-    s.step();
-    let frame =
-        s.ui.host()
-            .root
-            .window("modern-inventory")
-            .expect("it")
-            .frame;
-    let (fx, fy, _, _) = rect_of(&s, frame);
-    let select = |s: &mut Shot| {
-        let first = (fx + inv::GRID_X as i32 + 20, fy + 158 + 20);
-        s.click(0, first.0, first.1, Modifiers::NONE);
-        s.scene.apply(PresentationEvent::Player(PlayerView {
-            selected: Some(0x8000_0101),
-            ..PlayerView::default()
-        }));
-        s.step();
-        s.step();
-    };
-    let card = |s: &Shot| {
-        let root = &s.ui.host().root;
-        let shown = root
-            .widget::<inv::InventoryFrame>(frame)
-            .is_some_and(|f| f.view.card);
-        let sheet = root.children(frame).into_iter().find(|&c| {
-            root.widget::<SheetView>(c).is_some() && root.element(c).is_some_and(|e| e.visible)
-        });
-        (shown, sheet.is_some())
-    };
-    select(&mut s);
-    let (_, _, fw, _) = rect_of(&s, frame);
-    assert_eq!(fw, inv::NARROW as i32, "the window stays narrow");
-    assert_eq!(card(&s), (true, true), "the details are a card");
-    s.save("small-inventory-card");
-    // Its close button.
-    s.click(
-        0,
-        fx + (inv::CARD_X + inv::CARD_W) as i32 - 6 - 13,
-        fy + inv::CARD_Y as i32 + 3 + 13,
-        Modifiers::NONE,
-    );
-    assert_eq!(card(&s), (false, false), "the close button puts it away");
-    s.save("small-inventory-closed");
-    // The same item again: back.
-    select(&mut s);
-    assert_eq!(card(&s), (true, true), "picking the item brings it back");
-    // Escape.
-    s.key(Key::Escape, Modifiers::NONE, true);
-    s.key(Key::Escape, Modifiers::NONE, false);
-    assert_eq!(card(&s), (false, false), "Escape puts it away");
-    assert!(
-        s.ui.host().root.is_window_visible("modern-inventory"),
-        "and leaves the window open"
-    );
-    // A click on the grid's empty space.
-    select(&mut s);
-    assert!(card(&s).0);
-    s.click(
-        0,
-        fx + inv::GRID_X as i32 + 150,
-        fy + inv::GRID_Y as i32 + inv::GRID_H as i32 - 30,
-        Modifiers::NONE,
-    );
-    assert_eq!(
-        card(&s),
-        (false, false),
-        "a click on empty space puts it away"
-    );
-    // On a screen with room, the details dock again.
-    s.size = (1440, 900);
-    select(&mut s);
-    let (_, _, fw, _) = rect_of(&s, frame);
-    assert_eq!(fw, inv::WIDE as i32, "the window widens");
-    assert!(!card(&s).0, "and the details dock");
 }
 
 /// An Ust and four things to salvage in the main pack.
@@ -4258,7 +4245,7 @@ fn the_modern_themes() {
         );
         assert!(s.ui.run_hotkey(Hotkey::Inventory));
         s.step();
-        let first = (INV.0 + 416 + 20, INV.1 + 158 + 20);
+        let first = FIRST_CELL;
         s.click(0, first.0, first.1, Modifiers::NONE);
         s.scene.apply(PresentationEvent::Player(PlayerView {
             selected: Some(0x8000_0101),
